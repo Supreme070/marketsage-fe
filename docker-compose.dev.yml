@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # Web application service
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: marketsage-web-dev
+    restart: always
+    ports:
+      - "3030:3000"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://marketsage:marketsage_password@db:5432/marketsage?schema=public
+      - NODE_ENV=development
+      - NEXTAUTH_URL=http://localhost:3030
+      - NEXTAUTH_SECRET=this-is-a-development-secret-key-replace-in-production
+      - PRISMA_SCHEMA_PATH=/app/prisma/schema.prisma
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - marketsage-network
+
+  # PostgreSQL database service
+  db:
+    image: postgres:16-alpine
+    container_name: marketsage-db
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=marketsage
+      - POSTGRES_PASSWORD=marketsage_password
+      - POSTGRES_DB=marketsage
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marketsage"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - marketsage-network
+
+volumes:
+  postgres-data:
+    driver: local
+
+networks:
+  marketsage-network:
+    driver: bridge 

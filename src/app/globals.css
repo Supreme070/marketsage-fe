@@ -1,0 +1,251 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Base colors */
+    --background: 210 40% 98%; /* Off-white: #F9FAFB as requested */
+    --foreground: 222 47% 11%; /* Charcoal for text in light mode */
+
+    /* Card and elements */
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Primary: Teal */
+    --primary: 169 71% 50%; /* Teal: #2DD4BF */
+    --primary-foreground: 222 47% 11%; /* Dark text on primary */
+
+    /* Secondary: Navy */
+    --secondary: 222 65% 33%; /* Navy: #1E3A8A */
+    --secondary-foreground: 210 40% 98%; /* Light text on secondary */
+
+    /* Accent: Amber */
+    --accent: 38 96% 56%; /* Amber: #FBBF24 */
+    --accent-foreground: 222 47% 11%; /* Dark text on accent */
+
+    /* Other UI colors */
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 169 71% 50%; /* Teal */
+
+    /* Destructive actions */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Border radius */
+    --radius: 0.5rem;
+
+    /* Chart colors */
+    --chart-1: 169 71% 50%;  /* Teal: #2DD4BF */
+    --chart-2: 38 96% 56%;   /* Amber: #FBBF24 */
+    --chart-3: 222 65% 33%;  /* Navy: #1E3A8A */
+    --chart-4: 142 72% 29%;  /* Green */
+    --chart-5: 217 91% 60%;  /* Blue */
+  }
+
+  .dark {
+    /* Base colors */
+    --background: 222 47% 11%; /* Charcoal: #111827 as requested */
+    --foreground: 210 40% 98%; /* Off-white text */
+
+    /* Card and elements */
+    --card: 217 38% 15%; /* Slightly lighter than background for contrast */
+    --card-foreground: 210 40% 98%;
+    --popover: 217 38% 15%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Primary: Teal */
+    --primary: 169 71% 50%; /* Teal: #2DD4BF */
+    --primary-foreground: 222 47% 11%; /* Dark text on primary */
+
+    /* Secondary: Navy */
+    --secondary: 222 65% 33%; /* Navy: #1E3A8A */
+    --secondary-foreground: 210 40% 98%; /* Light text on secondary */
+
+    /* Accent: Amber */
+    --accent: 38 96% 56%; /* Amber: #FBBF24 */
+    --accent-foreground: 222 47% 11%; /* Dark text on accent */
+
+    /* Other UI colors */
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 169 71% 50%;
+
+    /* Destructive actions */
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Chart colors */
+    --chart-1: 169 71% 55%;  /* Teal: #2DD4BF */
+    --chart-2: 38 96% 65%;   /* Amber: #FBBF24 */
+    --chart-3: 222 65% 40%;  /* Navy: #1E3A8A */
+    --chart-4: 142 72% 35%;  /* Green */
+    --chart-5: 217 91% 65%;  /* Blue */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+    font-family: 'Inter', sans-serif;
+  }
+  h1 {
+    @apply text-3xl lg:text-4xl;
+    line-height: 1.2;
+  }
+  h2 {
+    @apply text-2xl lg:text-3xl;
+    line-height: 1.3;
+  }
+  h3 {
+    @apply text-xl lg:text-2xl;
+    line-height: 1.4;
+  }
+}
+
+@layer components {
+  .container-wide {
+    @apply container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background h-10 py-2 px-4;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/90 inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background h-10 py-2 px-4;
+  }
+
+  .btn-accent {
+    @apply bg-accent text-accent-foreground hover:bg-accent/90 inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background h-10 py-2 px-4;
+  }
+
+  .card-feature {
+    @apply bg-card rounded-lg border border-border p-6 transition-all hover:shadow-md hover:border-primary/20;
+  }
+
+  .icon-container {
+    @apply w-12 h-12 rounded-lg flex items-center justify-center bg-primary/10 text-primary mb-4;
+  }
+}
+
+/* Import Inter font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* Brand logo styling */
+.brand-text {
+  letter-spacing: -0.5px;
+}
+
+.brand-text .market {
+  color: hsl(169, 71%, 50%);
+  font-weight: 700;
+}
+
+.brand-text .sage {
+  color: hsl(38, 96%, 56%);
+  font-weight: 700;
+}
+
+/* MarketSage specific brand colors */
+:root {
+  /* Primary brand color - Teal */
+  --ms-teal: #2DD4BF;
+  
+  /* Secondary brand color - Navy */
+  --ms-navy: #1E3A8A;
+  
+  /* Accent brand color - Amber */
+  --ms-amber: #FBBF24;
+  
+  /* Background colors */
+  --ms-charcoal: #111827;
+  --ms-offwhite: #F9FAFB;
+  
+  /* UI State Colors */
+  --ms-positive: #15803D;
+  --ms-negative: #DC2626;
+  --ms-warning: #FBBF24;
+  --ms-info: #2563EB;
+}
+
+/* Utility classes for the brand colors */
+.text-ms-teal {
+  color: var(--ms-teal);
+}
+
+.text-ms-navy {
+  color: var(--ms-navy);
+}
+
+.text-ms-amber {
+  color: var(--ms-amber);
+}
+
+/* Brand text styling for MarketSage name */
+.brand-text {
+  font-weight: 700;
+}
+
+.brand-text .market {
+  color: var(--ms-teal);
+}
+
+.brand-text .sage {
+  color: var(--ms-amber);
+}
+
+/* Dark theme specific overrides */
+.dark .brand-text .sage {
+  color: var(--ms-amber);
+}
+
+/* Metrics styling */
+.metric-positive {
+  color: var(--ms-positive);
+}
+
+.metric-negative {
+  color: var(--ms-negative);
+}
+
+.metric-neutral {
+  color: var(--ms-navy);
+}
+
+/* MarketSage Brand Typography */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Brand Colors */
+  --brand-teal: #2DD4BF;
+  --brand-navy: #1E3A8A;
+  --brand-amber: #FBBF24;
+  --brand-charcoal: #111827;
+  --brand-offwhite: #F9FAFB;
+}
+
+/* Logo styling */
+.brand-text .market {
+  color: var(--brand-teal);
+  font-weight: 500;
+}
+
+.brand-text .sage {
+  color: var(--brand-amber);
+  font-weight: 500;
+}
