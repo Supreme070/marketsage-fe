@@ -32,64 +32,210 @@ import {
   Edit,
   Mail,
   MessageSquare,
-  Phone
+  Phone,
+  Loader2
 } from "lucide-react";
-import { SampleContact } from "@/data/sampleContacts";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import ContactFormModal from "@/components/contacts/ContactFormModal";
+import ImportModal from "@/components/contacts/ImportModal";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import ContactForm from "@/components/contacts/ContactForm";
 
-// Enhance the sample contacts with the properties needed for the UI
-const enhanceContacts = (contacts: SampleContact[]) => {
-  return contacts.map((contact, index) => ({
-    ...contact,
-    id: index.toString(), // Add unique ID for React keys
-    name: contact.firstName && contact.lastName 
-      ? `${contact.firstName} ${contact.lastName}` 
-      : contact.company || 'Unknown',
-    position: contact.jobTitle || '',
-    // Generate a random status for demo purposes
-    status: ["ACTIVE", "UNSUBSCRIBED", "BOUNCED"][Math.floor(Math.random() * 3)],
-    // Ensure tags is an array
-    tags: contact.tags || [],
-    // Handle location data structure
-    location: {
-      city: contact.city || '',
-      country: contact.country || ''
-    }
-  }));
+// Add the interface for form values
+interface ContactFormData {
+  id?: string;
+  firstName: string;
+  lastName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  company?: string | null;
+  jobTitle?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  postalCode?: string | null;
+  notes?: string | null;
+  source?: string | null;
+  tags?: string[];
+}
+
+// Type for a contact from the API
+type Contact = {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  phone: string | null;
+  company: string | null;
+  jobTitle: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  postalCode: string | null;
+  notes: string | null;
+  source: string | null;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  createdById: string;
+  tags: string[];
+};
+
+// Type for a sample contact when using fallback data
+type SampleContact = {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  phone: string | null;
+  company: string | null;
+  jobTitle: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  postalCode: string | null;
+  notes: string | null;
+  source: string | null;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  createdById: string;
+  tags: string[];
 };
 
 export default function ContactsPage() {
-  const [contacts, setContacts] = useState<(SampleContact & {
-    id: string;
-    name: string;
-    status: string;
-    position?: string;
-    location?: { city: string; country: string };
-  })[]>([]);
+  const router = useRouter();
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const [selectedContact, setSelectedContact] = useState<ContactFormData | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
+  
+  // Function to fetch contacts from the API
+  const fetchContacts = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/contacts');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch contacts');
+      }
+      
+      const data = await response.json();
+      setContacts(data);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching contacts:', err);
+      setError('Failed to load contacts. Please try again.');
+      // Fall back to sample data if API fails
+      import('@/data/sampleContacts').then(module => {
+        // Convert sample data to match Contact type
+        const sampleContacts: Contact[] = module.allAfricanContacts.map((contact, index) => ({
+          id: `sample-${index}`,
+          firstName: contact.firstName || null,
+          lastName: contact.lastName || null,
+          email: contact.email || null,
+          phone: contact.phone || null,
+          company: contact.company || null,
+          jobTitle: contact.jobTitle || null,
+          address: contact.address || null,
+          city: contact.city || null,
+          state: contact.state || null,
+          country: contact.country || null,
+          postalCode: contact.postalCode || null,
+          notes: contact.notes || null,
+          source: 'sample',
+          status: ["ACTIVE", "UNSUBSCRIBED", "BOUNCED"][Math.floor(Math.random() * 3)],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          createdById: 'sample-user',
+          tags: contact.tags || [],
+        }));
+        setContacts(sampleContacts);
+        toast.error('Using sample data as API request failed');
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Load contacts on the client side
+  // Load contacts when the component mounts
   useEffect(() => {
-    import('@/data/sampleContacts').then(module => {
-      const enhancedContacts = enhanceContacts(module.allAfricanContacts);
-      setContacts(enhancedContacts);
-    });
+    fetchContacts();
   }, []);
 
-  const itemsPerPage = 10;
+  // Handle contact deletion
+  const handleDeleteContact = async (contactId: string) => {
+    if (!confirm('Are you sure you want to delete this contact?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/contacts/${contactId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete contact');
+      }
+
+      toast.success('Contact deleted successfully');
+      fetchContacts(); // Refresh the contacts list
+    } catch (err) {
+      console.error('Error deleting contact:', err);
+      toast.error('Failed to delete contact');
+    }
+  };
+
+  // Function to handle edit contact button click
+  const handleEditContact = (contact: Contact) => {
+    console.log("Editing contact:", contact);
+    
+    // Convert Contact type to ContactFormData type
+    const formContact: ContactFormData = {
+      id: contact.id,
+      firstName: contact.firstName || "",  // Ensure firstName is never null
+      lastName: contact.lastName,
+      email: contact.email,
+      phone: contact.phone,
+      company: contact.company,
+      jobTitle: contact.jobTitle,
+      address: contact.address,
+      city: contact.city,
+      state: contact.state,
+      country: contact.country,
+      postalCode: contact.postalCode,
+      notes: contact.notes,
+      source: contact.source,
+      tags: contact.tags,
+    };
+    
+    setSelectedContact(formContact);
+    setIsEditModalOpen(true);
+  };
+
+  // Filter contacts based on search, status, and tag
   const filteredContacts = contacts.filter(contact => {
     // Search filter
     if (searchQuery) {
       const searchLower = searchQuery.toLowerCase();
-      const name = contact.name || '';
+      const fullName = `${contact.firstName || ''} ${contact.lastName || ''}`.trim();
       const email = contact.email || '';
       const company = contact.company || '';
       
       return (
-        name.toLowerCase().includes(searchLower) ||
+        fullName.toLowerCase().includes(searchLower) ||
         email.toLowerCase().includes(searchLower) ||
         company.toLowerCase().includes(searchLower)
       );
@@ -101,13 +247,14 @@ export default function ContactsPage() {
     }
 
     // Tag filter
-    if (tagFilter && !(contact.tags || []).includes(tagFilter)) {
+    if (tagFilter && !contact.tags.includes(tagFilter)) {
       return false;
     }
 
     return true;
   });
 
+  const itemsPerPage = 10;
   const totalContacts = filteredContacts.length;
   const totalPages = Math.max(1, Math.ceil(totalContacts / itemsPerPage));
   const startIndex = (page - 1) * itemsPerPage;
@@ -124,7 +271,7 @@ export default function ContactsPage() {
   // Get unique tags and their counts
   const tagCounts: Record<string, number> = {};
   contacts.forEach(contact => {
-    (contact.tags || []).forEach(tag => {
+    contact.tags.forEach(tag => {
       tagCounts[tag] = (tagCounts[tag] || 0) + 1;
     });
   });
@@ -134,25 +281,78 @@ export default function ContactsPage() {
     .sort(([, countA], [, countB]) => countB - countA)
     .slice(0, 5);
 
+  // Handle export function
+  const handleExportContacts = async () => {
+    setExportLoading(true);
+    try {
+      // Create query params for any active filters
+      const params = new URLSearchParams();
+      if (activeFilter) {
+        params.append("status", activeFilter);
+      }
+      
+      // Create the download URL
+      const exportUrl = `/api/contacts/export?${params.toString()}`;
+      
+      // Create an invisible link to trigger download
+      const link = document.createElement("a");
+      link.href = exportUrl;
+      link.setAttribute("download", `contacts-export-${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success("Export started");
+    } catch (error) {
+      console.error("Error exporting contacts:", error);
+      toast.error("Failed to export contacts");
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Contacts</h2>
         <div className="flex items-center space-x-2">
-          <Button variant="outline">
+          <Button 
+            variant="outline" 
+            onClick={() => setIsImportModalOpen(true)}
+          >
             <Upload className="mr-2 h-4 w-4" />
             Import
           </Button>
-          <Button variant="outline">
-            <Download className="mr-2 h-4 w-4" />
+          <Button 
+            variant="outline" 
+            onClick={handleExportContacts}
+            disabled={exportLoading || contacts.length === 0}
+          >
+            {exportLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
             Export
           </Button>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Contact
-          </Button>
+          <ContactFormModal 
+            onSuccess={() => {
+              fetchContacts();
+              toast.success("Contact added successfully");
+            }}
+          />
         </div>
       </div>
+
+      {/* Import Modal */}
+      <ImportModal 
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={() => {
+          setIsImportModalOpen(false);
+          fetchContacts();
+        }}
+      />
 
       <Card>
         <CardHeader className="pb-3">
@@ -258,143 +458,209 @@ export default function ContactsPage() {
             </div>
           </div>
 
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Company</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Tags</TableHead>
-                  <TableHead className="w-[80px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {displayedContacts.map((contact) => (
-                  <TableRow key={contact.id}>
-                    <TableCell className="font-medium">{contact.name || 'Unknown'}</TableCell>
-                    <TableCell>{contact.email || 'N/A'}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span>{contact.company || 'N/A'}</span>
-                        <span className="text-xs text-muted-foreground">{contact.position || 'N/A'}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span>{contact.location?.city || contact.city || 'N/A'}</span>
-                        <span className="text-xs text-muted-foreground">{contact.location?.country || contact.country || 'N/A'}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          contact.status === "ACTIVE"
-                            ? "default"
-                            : contact.status === "UNSUBSCRIBED"
-                            ? "secondary"
-                            : "destructive"
-                        }
-                      >
-                        {contact.status ? contact.status.toLowerCase() : 'unknown'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {Array.isArray(contact.tags) && contact.tags.slice(0, 2).map((tag) => (
-                          <Badge key={tag} variant="outline">
-                            {tag}
-                          </Badge>
-                        ))}
-                        {Array.isArray(contact.tags) && contact.tags.length > 2 && (
-                          <Badge variant="outline">+{contact.tags.length - 2}</Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Open menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem>
-                            <Edit className="mr-2 h-4 w-4" /> Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Mail className="mr-2 h-4 w-4" /> Send Email
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <MessageSquare className="mr-2 h-4 w-4" /> Send SMS
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Phone className="mr-2 h-4 w-4" /> Call
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+          {loading ? (
+            <div className="flex justify-center items-center p-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : error && contacts.length === 0 ? (
+            <div className="text-center p-8 text-muted-foreground">
+              <p>{error}</p>
+              <Button variant="outline" className="mt-4" onClick={fetchContacts}>
+                Try Again
+              </Button>
+            </div>
+          ) : contacts.length === 0 ? (
+            <div className="text-center p-8 text-muted-foreground">
+              <p>No contacts found. Add your first contact to get started.</p>
+              <ContactFormModal 
+                trigger={
+                  <Button className="mt-4">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Your First Contact
+                  </Button>
+                }
+                onSuccess={() => {
+                  fetchContacts();
+                  toast.success("Contact added successfully");
+                }}
+              />
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Company</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Tags</TableHead>
+                    <TableHead className="w-[80px]">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {displayedContacts.map((contact) => (
+                    <TableRow key={contact.id}>
+                      <TableCell className="font-medium">
+                        {contact.firstName || contact.lastName 
+                          ? `${contact.firstName || ''} ${contact.lastName || ''}`.trim()
+                          : 'Unnamed Contact'}
+                      </TableCell>
+                      <TableCell>{contact.email || 'N/A'}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span>{contact.company || 'N/A'}</span>
+                          <span className="text-xs text-muted-foreground">{contact.jobTitle || 'N/A'}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span>{contact.city || 'N/A'}</span>
+                          <span className="text-xs text-muted-foreground">{contact.country || 'N/A'}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            contact.status === "ACTIVE"
+                              ? "default"
+                              : contact.status === "UNSUBSCRIBED"
+                              ? "secondary"
+                              : "destructive"
+                          }
+                        >
+                          {contact.status ? contact.status.toLowerCase() : 'unknown'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {contact.tags.slice(0, 2).map((tag) => (
+                            <Badge key={tag} variant="outline">
+                              {tag}
+                            </Badge>
+                          ))}
+                          {contact.tags.length > 2 && (
+                            <Badge variant="outline">+{contact.tags.length - 2}</Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Open menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => handleEditContact(contact)}>
+                              <Edit className="mr-2 h-4 w-4" /> Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Mail className="mr-2 h-4 w-4" /> Send Email
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <MessageSquare className="mr-2 h-4 w-4" /> Send SMS
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Phone className="mr-2 h-4 w-4" /> Call
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              className="text-destructive" 
+                              onClick={() => handleDeleteContact(contact.id)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
 
-          <div className="flex items-center justify-between space-x-2 py-4">
-            <div className="text-sm text-muted-foreground">
-              Showing <strong>{startIndex + 1}-{endIndex}</strong> of <strong>{totalContacts}</strong> contacts
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(page > 1 ? page - 1 : 1)}
-                disabled={page <= 1}
-              >
-                Previous
-              </Button>
-              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => (
+          {!loading && contacts.length > 0 && (
+            <div className="flex items-center justify-between space-x-2 py-4">
+              <div className="text-sm text-muted-foreground">
+                Showing <strong>{startIndex + 1}-{endIndex}</strong> of <strong>{totalContacts}</strong> contacts
+              </div>
+              <div className="flex items-center space-x-2">
                 <Button
-                  key={i}
-                  variant={page === i + 1 ? "default" : "outline"}
+                  variant="outline"
                   size="sm"
-                  onClick={() => setPage(i + 1)}
+                  onClick={() => setPage(page > 1 ? page - 1 : 1)}
+                  disabled={page <= 1}
                 >
-                  {i + 1}
+                  Previous
                 </Button>
-              ))}
-              {totalPages > 5 && page < totalPages - 2 && (
-                <span className="px-2">...</span>
-              )}
-              {totalPages > 5 && page < totalPages && (
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => (
+                  <Button
+                    key={i}
+                    variant={page === i + 1 ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setPage(i + 1)}
+                  >
+                    {i + 1}
+                  </Button>
+                ))}
+                {totalPages > 5 && page < totalPages - 2 && (
+                  <span className="px-2">...</span>
+                )}
+                {totalPages > 5 && page < totalPages && (
+                  <Button
+                    variant={page === totalPages ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setPage(totalPages)}
+                  >
+                    {totalPages}
+                  </Button>
+                )}
                 <Button
-                  variant={page === totalPages ? "default" : "outline"}
+                  variant="outline"
                   size="sm"
-                  onClick={() => setPage(totalPages)}
+                  onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
+                  disabled={page >= totalPages}
                 >
-                  {totalPages}
+                  Next
                 </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                disabled={page >= totalPages}
-              >
-                Next
-              </Button>
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Edit Contact Modal */}
+      {selectedContact && isEditModalOpen && (
+        <Dialog 
+          open={isEditModalOpen} 
+          onOpenChange={(open) => {
+            setIsEditModalOpen(open);
+            if (!open) setSelectedContact(null);
+          }}
+        >
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <ContactForm 
+              initialData={selectedContact}
+              isEdit={true}
+              onCancel={() => {
+                setIsEditModalOpen(false);
+                setSelectedContact(null);
+              }}
+              onSuccess={() => {
+                fetchContacts();
+                setSelectedContact(null);
+                setIsEditModalOpen(false);
+                toast.success("Contact updated successfully");
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

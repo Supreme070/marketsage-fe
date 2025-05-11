@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -37,124 +37,54 @@ import {
   CheckCircle,
   RefreshCw,
   FileText,
+  AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { getSMSCampaigns } from "@/lib/api";
+import toast from "react-hot-toast";
 
-// Sample SMS campaign data
-const smsCampaigns = [
-  {
-    id: "1",
-    name: "Ramadan Sale Reminder",
-    status: "COMPLETED",
-    recipients: 2130,
-    deliveryRate: 98.2,
-    clickRate: 8.9,
-    scheduledDate: "2024-04-01T12:00:00Z",
-    lastUpdated: "2024-04-01T12:15:00Z",
-    createdBy: "John Doe",
-    provider: "africastalking",
-    tags: ["promotion", "seasonal"]
-  },
-  {
-    id: "2",
-    name: "Flash Sale - 24 Hours Only",
-    status: "SCHEDULED",
-    recipients: 3750,
-    deliveryRate: null,
-    clickRate: null,
-    scheduledDate: "2024-05-10T08:00:00Z",
-    lastUpdated: "2024-05-02T11:15:00Z",
-    createdBy: "Jane Smith",
-    provider: "twilio",
-    tags: ["promotion", "flash-sale"]
-  },
-  {
-    id: "3",
-    name: "Lagos Conference Reminder",
-    status: "ACTIVE",
-    recipients: 156,
-    deliveryRate: 97.4,
-    clickRate: 12.3,
-    scheduledDate: "2024-05-01T09:00:00Z",
-    lastUpdated: "2024-05-01T09:05:00Z",
-    createdBy: "John Doe",
-    provider: "africastalking",
-    tags: ["events", "lagos", "reminders"]
-  },
-  {
-    id: "4",
-    name: "Account Security Alert",
-    status: "COMPLETED",
-    recipients: 427,
-    deliveryRate: 99.1,
-    clickRate: 32.6,
-    scheduledDate: "2024-04-15T10:30:00Z",
-    lastUpdated: "2024-04-15T10:35:00Z",
-    createdBy: "System",
-    provider: "mNotify",
-    tags: ["security", "alerts"]
-  },
-  {
-    id: "5",
-    name: "May Newsletter Opt-in",
-    status: "DRAFT",
-    recipients: 0,
-    deliveryRate: null,
-    clickRate: null,
-    scheduledDate: null,
-    lastUpdated: "2024-05-03T16:20:00Z",
-    createdBy: "Jane Smith",
-    provider: "africastalking",
-    tags: ["newsletter", "opt-in"]
-  },
-  {
-    id: "6",
-    name: "Order Delivery Update",
-    status: "ACTIVE",
-    recipients: 528,
-    deliveryRate: 96.8,
-    clickRate: 15.2,
-    scheduledDate: "2024-05-02T08:00:00Z",
-    lastUpdated: "2024-05-02T08:10:00Z",
-    createdBy: "System",
-    provider: "twilio",
-    tags: ["transactional", "delivery"]
-  },
-  {
-    id: "7",
-    name: "Kenya Independence Day Offer",
-    status: "SCHEDULED",
-    recipients: 1850,
-    deliveryRate: null,
-    clickRate: null,
-    scheduledDate: "2024-06-01T09:00:00Z",
-    lastUpdated: "2024-05-04T13:30:00Z",
-    createdBy: "John Doe",
-    provider: "mNotify",
-    tags: ["promotion", "kenya", "holiday"]
-  },
-  {
-    id: "8",
-    name: "Account Balance Notification",
-    status: "ACTIVE",
-    recipients: 765,
-    deliveryRate: 98.5,
-    clickRate: 5.7,
-    scheduledDate: "2024-04-28T00:00:00Z",
-    lastUpdated: "2024-04-28T00:10:00Z",
-    createdBy: "System",
-    provider: "africastalking",
-    tags: ["transactional", "banking"]
-  }
-];
+// Define interface for SMS Campaign
+interface SMSCampaign {
+  id: string;
+  name: string;
+  status: string;
+  recipients?: number;
+  deliveryRate?: number;
+  clickRate?: number | null;
+  scheduledDate?: string | null;
+  lastUpdated?: string;
+  createdBy?: string;
+  provider?: string;
+  tags?: string[];
+}
 
 export default function SMSCampaignsPage() {
-  const [campaigns] = useState(smsCampaigns);
+  const router = useRouter();
+  const [campaigns, setCampaigns] = useState<SMSCampaign[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [providerFilter, setProviderFilter] = useState<string | null>(null);
   
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getSMSCampaigns();
+        setCampaigns(data);
+      } catch (error) {
+        console.error("Failed to fetch SMS campaigns:", error);
+        toast.error("Failed to load SMS campaigns");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCampaigns();
+  }, []);
+
   const itemsPerPage = 5;
   const filteredCampaigns = campaigns.filter(campaign => {
     // Search filter
@@ -162,8 +92,8 @@ export default function SMSCampaignsPage() {
       const searchLower = searchQuery.toLowerCase();
       return (
         campaign.name.toLowerCase().includes(searchLower) ||
-        campaign.createdBy.toLowerCase().includes(searchLower) ||
-        campaign.provider.toLowerCase().includes(searchLower) ||
+        campaign.createdBy?.toLowerCase().includes(searchLower) ||
+        campaign.provider?.toLowerCase().includes(searchLower) ||
         (campaign.tags && campaign.tags.some(tag => tag.toLowerCase().includes(searchLower)))
       );
     }
@@ -188,7 +118,7 @@ export default function SMSCampaignsPage() {
   const displayedCampaigns = filteredCampaigns.slice(startIndex, endIndex);
 
   // Helper function to format date
-  const formatDate = (dateString: string | null) => {
+  const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return 'Not scheduled';
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { 
@@ -209,16 +139,18 @@ export default function SMSCampaignsPage() {
   };
 
   // Get unique providers
-  const providers = [...new Set(campaigns.map(c => c.provider))];
+  const providers = [...new Set(campaigns.map(c => c.provider))].filter(Boolean) as string[];
   const providerCounts: Record<string, number> = {};
   campaigns.forEach(campaign => {
-    providerCounts[campaign.provider] = (providerCounts[campaign.provider] || 0) + 1;
+    if (campaign.provider) {
+      providerCounts[campaign.provider] = (providerCounts[campaign.provider] || 0) + 1;
+    }
   });
 
   // Calculate total sent messages
   const totalSentMessages = campaigns
     .filter(c => c.status === "ACTIVE" || c.status === "COMPLETED")
-    .reduce((acc, curr) => acc + curr.recipients, 0);
+    .reduce((acc, curr) => acc + (curr.recipients || 0), 0);
 
   // Get campaign status badge
   const getStatusBadge = (status: string) => {
@@ -246,7 +178,51 @@ export default function SMSCampaignsPage() {
       case 'mNotify':
         return <Badge variant="outline" className="bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-200">mNotify</Badge>;
       default:
-        return <Badge variant="outline">{provider}</Badge>;
+        return <Badge variant="outline">{provider || "Unknown"}</Badge>;
+    }
+  };
+
+  // Handle campaign deletion with confirmation
+  const handleDeleteCampaign = async (id: string) => {
+    if (confirm("Are you sure you want to delete this campaign?")) {
+      try {
+        const response = await fetch(`/api/sms/campaigns/${id}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          toast.success("Campaign deleted successfully");
+          // Refresh campaigns list
+          setCampaigns(campaigns.filter(campaign => campaign.id !== id));
+        } else {
+          toast.error("Failed to delete campaign");
+        }
+      } catch (error) {
+        console.error("Error deleting campaign:", error);
+        toast.error("Failed to delete campaign");
+      }
+    }
+  };
+
+  // Handle campaign duplication
+  const handleDuplicateCampaign = async (id: string) => {
+    try {
+      const response = await fetch(`/api/sms/campaigns/${id}/duplicate`, {
+        method: 'POST'
+      });
+      
+      if (response.ok) {
+        const newCampaign = await response.json();
+        toast.success("Campaign duplicated successfully");
+        // Refresh campaigns list
+        const updatedCampaigns = await getSMSCampaigns();
+        setCampaigns(updatedCampaigns);
+      } else {
+        toast.error("Failed to duplicate campaign");
+      }
+    } catch (error) {
+      console.error("Error duplicating campaign:", error);
+      toast.error("Failed to duplicate campaign");
     }
   };
 
@@ -308,7 +284,7 @@ export default function SMSCampaignsPage() {
             <CardTitle className="text-sm font-medium">SMS Templates</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
+            <div className="text-2xl font-bold">-</div>
             <p className="text-xs text-muted-foreground mt-1">
               <FileText className="inline mr-1 h-3 w-3" />
               <Link href="/sms/templates" className="hover:underline">Manage templates</Link>
@@ -408,31 +384,35 @@ export default function SMSCampaignsPage() {
                     <Badge variant="outline" className="ml-2">{statusCounts.COMPLETED}</Badge>
                   </DropdownMenuItem>
                   
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel>Filter by Provider</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  
-                  {providers.map(provider => (
-                    <DropdownMenuItem
-                      key={provider}
-                      className="flex items-center justify-between"
-                      onClick={() => {
-                        setProviderFilter(providerFilter === provider ? null : provider);
-                        setPage(1);
-                      }}
-                    >
-                      <span className="flex items-center space-x-1">
-                        <div className={`w-2 h-2 rounded-full ${providerFilter === provider ? "bg-primary" : "bg-transparent border border-muted"}`}></div>
-                        <span className="capitalize">{provider === 'africastalking' ? "Africa's Talking" : provider}</span>
-                      </span>
-                      <Badge variant="outline" className="ml-2">{providerCounts[provider]}</Badge>
-                    </DropdownMenuItem>
-                  ))}
+                  {providers.length > 0 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel>Filter by Provider</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      
+                      {providers.map(provider => (
+                        <DropdownMenuItem
+                          key={provider}
+                          className="flex items-center justify-between"
+                          onClick={() => {
+                            setProviderFilter(providerFilter === provider ? null : provider);
+                            setPage(1);
+                          }}
+                        >
+                          <span className="flex items-center space-x-1">
+                            <div className={`w-2 h-2 rounded-full ${providerFilter === provider ? "bg-primary" : "bg-transparent border border-muted"}`}></div>
+                            <span className="capitalize">{provider === 'africastalking' ? "Africa's Talking" : provider}</span>
+                          </span>
+                          <Badge variant="outline" className="ml-2">{providerCounts[provider]}</Badge>
+                        </DropdownMenuItem>
+                      ))}
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
             <div className="text-sm text-muted-foreground">
-              Showing <strong>{startIndex + 1}-{endIndex}</strong> of <strong>{totalCampaigns}</strong> campaigns
+              Showing <strong>{Math.min(totalCampaigns, 1) === 0 ? 0 : startIndex + 1}-{endIndex}</strong> of <strong>{totalCampaigns}</strong> campaigns
             </div>
           </div>
 
@@ -450,122 +430,155 @@ export default function SMSCampaignsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {displayedCampaigns.map((campaign) => (
-                  <TableRow key={campaign.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex flex-col">
-                        <span>{campaign.name}</span>
-                        <span className="text-xs text-muted-foreground">by {campaign.createdBy}</span>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                      <div className="flex justify-center items-center">
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Loading campaigns...
                       </div>
-                    </TableCell>
-                    <TableCell>{getProviderBadge(campaign.provider)}</TableCell>
-                    <TableCell>{getStatusBadge(campaign.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <Users className="mr-2 h-4 w-4 text-muted-foreground" />
-                        {campaign.recipients.toLocaleString()}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {campaign.status === 'DRAFT' || campaign.status === 'SCHEDULED' ? (
-                        <span className="text-xs text-muted-foreground">Not sent yet</span>
-                      ) : (
-                        <div className="flex flex-col text-xs">
-                          <span>Delivery: {campaign.deliveryRate}%</span>
-                          {campaign.clickRate !== null && (
-                            <span>Click: {campaign.clickRate}%</span>
-                          )}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                        <span className="text-xs">{formatDate(campaign.scheduledDate)}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Open menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/sms/campaigns/${campaign.id}`}>
-                              <Edit className="mr-2 h-4 w-4" /> Edit
-                            </Link>
-                          </DropdownMenuItem>
-                          {(campaign.status === 'ACTIVE' || campaign.status === 'COMPLETED') && (
-                            <DropdownMenuItem asChild>
-                              <Link href={`/sms/campaigns/${campaign.id}/stats`}>
-                                <BarChart className="mr-2 h-4 w-4" /> View Stats
-                              </Link>
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem>
-                            <Copy className="mr-2 h-4 w-4" /> Duplicate
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : displayedCampaigns.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                      <div className="flex flex-col items-center justify-center text-muted-foreground">
+                        <AlertCircle className="h-8 w-8 mb-2" />
+                        <p>No SMS campaigns found</p>
+                        <Button variant="link" asChild className="mt-2">
+                          <Link href="/sms/campaigns/new">
+                            Create your first SMS campaign
+                          </Link>
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  displayedCampaigns.map((campaign) => (
+                    <TableRow key={campaign.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex flex-col">
+                          <span>{campaign.name}</span>
+                          <span className="text-xs text-muted-foreground">by {campaign.createdBy || 'Unknown'}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{campaign.provider ? getProviderBadge(campaign.provider) : '-'}</TableCell>
+                      <TableCell>{getStatusBadge(campaign.status)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <Users className="mr-2 h-4 w-4 text-muted-foreground" />
+                          {(campaign.recipients || 0).toLocaleString()}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {campaign.status === 'DRAFT' || campaign.status === 'SCHEDULED' ? (
+                          <span className="text-xs text-muted-foreground">Not sent yet</span>
+                        ) : (
+                          <div className="flex flex-col text-xs">
+                            <span>Delivery: {campaign.deliveryRate || '-'}%</span>
+                            {campaign.clickRate !== null && campaign.clickRate !== undefined && (
+                              <span>Click: {campaign.clickRate || '-'}%</span>
+                            )}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
+                          <span className="text-xs">{formatDate(campaign.scheduledDate)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Open menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/sms/campaigns/${campaign.id}/edit`}>
+                                <Edit className="mr-2 h-4 w-4" /> Edit
+                              </Link>
+                            </DropdownMenuItem>
+                            {(campaign.status === 'ACTIVE' || campaign.status === 'COMPLETED') && (
+                              <DropdownMenuItem asChild>
+                                <Link href={`/sms/campaigns/${campaign.id}/stats`}>
+                                  <BarChart className="mr-2 h-4 w-4" /> View Stats
+                                </Link>
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onClick={() => handleDuplicateCampaign(campaign.id)}>
+                              <Copy className="mr-2 h-4 w-4" /> Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => handleDeleteCampaign(campaign.id)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
 
           <div className="flex items-center justify-between space-x-2 py-4">
             <div className="text-sm text-muted-foreground">
-              Showing <strong>{startIndex + 1}-{endIndex}</strong> of <strong>{totalCampaigns}</strong> campaigns
+              Showing <strong>{totalCampaigns === 0 ? 0 : startIndex + 1}-{endIndex}</strong> of <strong>{totalCampaigns}</strong> campaigns
             </div>
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(page > 1 ? page - 1 : 1)}
-                disabled={page <= 1}
-              >
-                Previous
-              </Button>
-              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => (
+            {totalPages > 1 && (
+              <div className="flex items-center space-x-2">
                 <Button
-                  key={i}
-                  variant={page === i + 1 ? "default" : "outline"}
+                  variant="outline"
                   size="sm"
-                  onClick={() => setPage(i + 1)}
+                  onClick={() => setPage(page > 1 ? page - 1 : 1)}
+                  disabled={page <= 1}
                 >
-                  {i + 1}
+                  Previous
                 </Button>
-              ))}
-              {totalPages > 5 && page < totalPages - 2 && (
-                <span className="px-2">...</span>
-              )}
-              {totalPages > 5 && page < totalPages && (
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => (
+                  <Button
+                    key={i}
+                    variant={page === i + 1 ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setPage(i + 1)}
+                  >
+                    {i + 1}
+                  </Button>
+                ))}
+                {totalPages > 5 && page < totalPages - 2 && (
+                  <span className="px-2">...</span>
+                )}
+                {totalPages > 5 && page < totalPages && (
+                  <Button
+                    variant={page === totalPages ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setPage(totalPages)}
+                  >
+                    {totalPages}
+                  </Button>
+                )}
                 <Button
-                  variant={page === totalPages ? "default" : "outline"}
+                  variant="outline"
                   size="sm"
-                  onClick={() => setPage(totalPages)}
+                  onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
+                  disabled={page >= totalPages}
                 >
-                  {totalPages}
+                  Next
                 </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                disabled={page >= totalPages}
-              >
-                Next
-              </Button>
-            </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

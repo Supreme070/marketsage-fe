@@ -1,34 +1,24 @@
-import { PrismaClient } from "@/generated/prisma";
+import { PrismaClient } from "@prisma/client";
 
-// PrismaClient is attached to the `global` object in development to prevent
-// exhausting your database connection limit.
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
+// Prevent multiple instances of Prisma Client in development
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
 
 // Connection retry logic to handle temporary database disconnects
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 500;
 
-export const createPrismaClient = () => {
-  return new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
-    // Enable connection pooling in production
-    datasources: {
-      db: {
-        url: process.env.DATABASE_URL,
-      },
-    },
-    // Enable query engine metrics (helpful for monitoring)
-    __internal: {
-      engine: {
-        // For production configuration
-        metrics: process.env.NODE_ENV === "production",
-      },
-    },
+const createPrismaClient = () => {
+  const prisma = new PrismaClient({
+    log: ['query', 'error', 'warn'],
+    errorFormat: 'pretty',
   });
+  return prisma;
 };
 
 // Initialize Prisma client with automatic retries
-export const prisma = globalForPrisma.prisma || createPrismaClient();
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
 // Add middleware for query timeout and retry
 prisma.$use(async (params, next) => {

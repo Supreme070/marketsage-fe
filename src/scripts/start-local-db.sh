@@ -45,7 +45,7 @@ else
         -e POSTGRES_USER=${DB_USER} \
         -e POSTGRES_DB=${DB_NAME} \
         -p ${DB_PORT}:5432 \
-        -d postgres:16-alpine
+        -d postgres:15-alpine
 
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}Database container created and started successfully.${NC}"

@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole } from '../src/generated/prisma';
+import { PrismaClient, UserRole } from '@prisma/client';
 import { hash } from 'bcrypt';
 import { sampleContacts } from '../src/data/sampleContacts';
 

@@ -1,0 +1,23 @@
+FROM node:20-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Install dependencies
+RUN apk add --no-cache libc6-compat python3 make g++ openssl
+
+# Copy package files
+COPY package.json package-lock.json* ./
+
+# Copy all files
+COPY . .
+
+# Install dependencies and generate Prisma client (with a timeout)
+RUN npm ci --no-audit --no-fund && \
+    npx prisma generate 
+
+# Expose port
+EXPOSE 3000
+
+# Start development server
+CMD ["npm", "run", "dev"] 

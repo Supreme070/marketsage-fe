@@ -2,6 +2,7 @@
 const nextConfig = {
   output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
   serverExternalPackages: ['bcrypt'],
+  transpilePackages: ['next-auth'],
   images: {
     unoptimized: true,
     domains: [

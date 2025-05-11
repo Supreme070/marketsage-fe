@@ -6,8 +6,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
+      args:
+        - DATABASE_URL=postgresql://marketsage:marketsage_password@db:5432/marketsage?schema=public
     container_name: marketsage-web-dev
     restart: always
+    platform: linux/arm64
     ports:
       - "3030:3000"
     depends_on:
@@ -31,11 +34,39 @@ services:
       - /app/.next
     command: npm run dev
 
+  # Database seeder service
+  seed:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: marketsage-seed
+    restart: "no"
+    platform: linux/arm64
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://marketsage:marketsage_password@db:5432/marketsage?schema=public
+      - NODE_ENV=development
+    networks:
+      - marketsage-network
+    command: >
+      sh -c "
+        echo 'Waiting for database to be ready...' &&
+        sleep 10 &&
+        npm run db:migrate &&
+        npm run db:seed &&
+        npm run seed-contacts &&
+        npm run seed-lists &&
+        npm run assign-contacts &&
+        echo 'Database seeded successfully!'
+      "
+
   # PostgreSQL database service
   db:
-    image: postgres:16-alpine
+    image: postgres:15-alpine
     container_name: marketsage-db
     restart: always
+    platform: linux/arm64
     ports:
       - "5432:5432"
     environment:

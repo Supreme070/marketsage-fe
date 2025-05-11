@@ -1,23 +1,57 @@
 import { type NextAuthOptions, getServerSession } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import { PrismaClient, UserRole } from "@/generated/prisma";
+import { PrismaClient } from "@prisma/client";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 // Temporarily comment out bcrypt
 // import { compare } from "bcrypt";
 
+// Define UserRole enum to match Prisma schema
+export enum UserRole {
+  USER = "USER",
+  ADMIN = "ADMIN",
+  IT_ADMIN = "IT_ADMIN",
+  SUPER_ADMIN = "SUPER_ADMIN"
+}
+
+// Initialize Prisma Client
 const prisma = new PrismaClient();
 
-// Development user accounts
+// Development user accounts with correct passwords matching README
 const DEV_USERS = [
-  { email: "supreme@marketsage.africa", name: "Supreme Admin", role: "SUPER_ADMIN" as UserRole },
-  { email: "anita@marketsage.africa", name: "Anita Manager", role: "ADMIN" as UserRole },
-  { email: "kola@marketsage.africa", name: "Kola Techleads", role: "IT_ADMIN" as UserRole },
-  { email: "user@marketsage.africa", name: "Regular User", role: "USER" as UserRole }
+  { 
+    email: "supreme@marketsage.africa", 
+    name: "Supreme Admin", 
+    role: UserRole.SUPER_ADMIN,
+    password: "MS_Super2025!"
+  },
+  { 
+    email: "anita@marketsage.africa", 
+    name: "Anita Manager", 
+    role: UserRole.ADMIN,
+    password: "MS_Admin2025!"
+  },
+  { 
+    email: "kola@marketsage.africa", 
+    name: "Kola Techleads", 
+    role: UserRole.IT_ADMIN,
+    password: "MS_ITAdmin2025!"
+  },
+  { 
+    email: "user@marketsage.africa", 
+    name: "Regular User", 
+    role: UserRole.USER,
+    password: "MS_User2025!"
+  }
 ];
 
-// Simplified password for all users
-const DEV_PASSWORD = "pass1234";
+// Test development users with simple passwords
+const TEST_USERS = [
+  { email: "admin@marketsage.local", password: "password1234" },
+  { email: "user@marketsage.local", password: "Password123" },
+  { email: "testadmin@marketsage.local", password: "test1234" },
+  { email: "test@marketsage.local", password: "password123" }
+];
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -42,31 +76,17 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        console.log("DEBUG: Authorizing with credentials:", JSON.stringify({ 
-          email: credentials?.email,
-          passwordLength: credentials?.password?.length
-        }));
-        
         if (!credentials?.email || !credentials?.password) {
-          console.log("DEBUG: Missing credentials");
           return null;
         }
 
         try {
-          // Check for development users first
-          const isDevelopmentUser = DEV_USERS.some(u => u.email === credentials.email);
-          const isDevPassword = credentials.password === DEV_PASSWORD;
+          // Check for development users with specific passwords (from README)
+          const devUser = DEV_USERS.find(u => u.email === credentials.email);
+          const testUser = TEST_USERS.find(u => u.email === credentials.email);
           
-          if (isDevelopmentUser && isDevPassword) {
-            console.log("DEBUG: Using development account");
-            const devUser = DEV_USERS.find(u => u.email === credentials.email);
-            
-            // If devUser is not found (which shouldn't happen, but to satisfy TypeScript)
-            if (!devUser) {
-              console.log("DEBUG: Development user not found in array (shouldn't happen)");
-              return null;
-            }
-            
+          // First check if it's a development user with matching password
+          if (devUser && credentials.password === devUser.password) {
             // Check if user exists in the database
             let dbUser = await prisma.user.findUnique({
               where: { email: credentials.email },
@@ -74,22 +94,40 @@ export const authOptions: NextAuthOptions = {
             
             // If not found in DB, create the user
             if (!dbUser) {
-              console.log("DEBUG: Creating development user in database");
               dbUser = await prisma.user.create({
                 data: {
                   email: devUser.email,
                   name: devUser.name,
                   role: devUser.role,
-                  password: DEV_PASSWORD, // Store the dev password
+                  password: devUser.password, // Store the actual password
                 },
               });
             }
             
-            console.log("DEBUG: Development login successful");
             return {
               id: dbUser.id,
               email: dbUser.email,
               name: dbUser.name || devUser.name,
+              role: dbUser.role,
+              image: dbUser.image,
+            };
+          }
+          
+          // Next check if it's a test user with matching password
+          if (testUser && credentials.password === testUser.password) {
+            // Check if user exists in the database
+            let dbUser = await prisma.user.findUnique({
+              where: { email: credentials.email },
+            });
+            
+            if (!dbUser) {
+              return null;
+            }
+            
+            return {
+              id: dbUser.id,
+              email: dbUser.email,
+              name: dbUser.name,
               role: dbUser.role,
               image: dbUser.image,
             };
@@ -101,28 +139,15 @@ export const authOptions: NextAuthOptions = {
               email: credentials.email,
             },
           });
-
-          console.log("DEBUG: Found user:", user ? `${user.email} (exists)` : "user not found");
           
           if (!user || !user.password) {
-            console.log("DEBUG: User not found or has no password");
             return null;
           }
-
-          console.log("DEBUG: Password check:", {
-            inputPasswordLength: credentials.password.length,
-            storedPasswordLength: user.password.length,
-            storedPasswordPreview: user.password.substring(0, 5) + "...",
-            passwordsEqual: credentials.password === user.password
-          });
 
           // For development, bypass bcrypt check and compare directly
           const isPasswordValid = credentials.password === user.password;
           
-          console.log("DEBUG: Password valid:", isPasswordValid);
-
           if (!isPasswordValid) {
-            console.log("DEBUG: Invalid password");
             return null;
           }
 
@@ -132,7 +157,6 @@ export const authOptions: NextAuthOptions = {
             data: { lastLogin: new Date() },
           });
 
-          console.log("DEBUG: Login successful, returning user");
           return {
             id: user.id,
             email: user.email,
@@ -141,7 +165,7 @@ export const authOptions: NextAuthOptions = {
             image: user.image,
           };
         } catch (error) {
-          console.error("DEBUG: Auth error:", error);
+          console.error("Auth error:", error);
           return null;
         }
       },

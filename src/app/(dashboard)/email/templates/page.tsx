@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -37,97 +37,100 @@ import {
   Edit,
   Mail,
   Eye,
+  Loader2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/use-toast";
+import { format } from "date-fns";
 
-// Sample data for email templates
-const templates = [
-  {
-    id: "1",
-    name: "Welcome Email",
-    category: "Onboarding",
-    status: "ACTIVE",
-    lastModified: "2023-04-15",
-    createdBy: "Admin",
-  },
-  {
-    id: "2",
-    name: "Monthly Newsletter",
-    category: "Newsletter",
-    status: "ACTIVE",
-    lastModified: "2023-04-20",
-    createdBy: "Admin",
-  },
-  {
-    id: "3",
-    name: "Product Announcement",
-    category: "Marketing",
-    status: "DRAFT",
-    lastModified: "2023-04-22",
-    createdBy: "Marketing Team",
-  },
-  {
-    id: "4",
-    name: "Abandoned Cart Reminder",
-    category: "Sales",
-    status: "ACTIVE",
-    lastModified: "2023-04-10",
-    createdBy: "Admin",
-  },
-  {
-    id: "5",
-    name: "Event Registration Confirmation",
-    category: "Events",
-    status: "ACTIVE",
-    lastModified: "2023-04-05",
-    createdBy: "Events Team",
-  },
-  {
-    id: "6",
-    name: "Customer Feedback Request",
-    category: "Feedback",
-    status: "DRAFT",
-    lastModified: "2023-04-18",
-    createdBy: "Customer Success",
-  },
-];
+// Define template type
+interface EmailTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  subject: string;
+  content: string;
+  design: string | null;
+  previewText: string | null;
+  category: string | null;
+  createdAt: string;
+  updatedAt: string;
+  createdById: string;
+}
 
 export default function EmailTemplatesPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch templates from API
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      setIsLoading(true);
+      try {
+        // Include category and search query as parameters if they exist
+        let url = "/api/email/templates";
+        const params = new URLSearchParams();
+        
+        if (categoryFilter) {
+          params.append("category", categoryFilter);
+        }
+        
+        if (searchQuery) {
+          params.append("search", searchQuery);
+        }
+        
+        if (params.toString()) {
+          url += `?${params.toString()}`;
+        }
+        
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          throw new Error(`Error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        setTemplates(data);
+        setError(null);
+      } catch (err) {
+        console.error("Failed to fetch templates:", err);
+        setError("Failed to load templates. Please try again later.");
+        toast({
+          title: "Error",
+          description: "Failed to load templates. Please try again later.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTemplates();
+  }, [categoryFilter, searchQuery, toast]);
 
   // Calculate unique categories and their counts
   const categories: Record<string, number> = {};
   templates.forEach((template) => {
-    categories[template.category] = (categories[template.category] || 0) + 1;
+    if (template.category) {
+      categories[template.category] = (categories[template.category] || 0) + 1;
+    }
   });
-
-  // Calculate status counts
-  const statusCounts = {
-    ACTIVE: templates.filter((t) => t.status === "ACTIVE").length,
-    DRAFT: templates.filter((t) => t.status === "DRAFT").length,
-  };
 
   // Filter templates based on search query and filters
   const filteredTemplates = templates.filter((template) => {
-    // Search filter
-    if (searchQuery) {
-      const searchLower = searchQuery.toLowerCase();
-      if (!template.name.toLowerCase().includes(searchLower)) {
-        return false;
-      }
-    }
-
-    // Category filter
+    // Only filter by category locally if it wasn't already filtered on the server
     if (categoryFilter && template.category !== categoryFilter) {
       return false;
     }
 
-    // Status filter
-    if (statusFilter && template.status !== statusFilter) {
+    // Only filter by search locally if it wasn't already filtered on the server
+    if (searchQuery && !template.name.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }
 
@@ -140,6 +143,35 @@ export default function EmailTemplatesPage() {
 
   const handleEditTemplate = (id: string) => {
     router.push(`/email/templates/editor?id=${id}`);
+  };
+
+  const handleDeleteTemplate = async (id: string) => {
+    if (confirm("Are you sure you want to delete this template?")) {
+      try {
+        const response = await fetch(`/api/email/templates/${id}`, {
+          method: "DELETE",
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Error: ${response.status}`);
+        }
+        
+        // Remove template from state
+        setTemplates(templates.filter(template => template.id !== id));
+        
+        toast({
+          title: "Success",
+          description: "Template deleted successfully",
+        });
+      } catch (err) {
+        console.error("Failed to delete template:", err);
+        toast({
+          title: "Error",
+          description: "Failed to delete template. Please try again later.",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   return (
@@ -177,9 +209,9 @@ export default function EmailTemplatesPage() {
                   <Button variant="outline" size="sm">
                     <Filter className="mr-2 h-4 w-4" />
                     Filter
-                    {(categoryFilter || statusFilter) && (
+                    {categoryFilter && (
                       <Badge variant="secondary" className="ml-2 px-1">
-                        {categoryFilter && statusFilter ? "2" : "1"}
+                        1
                       </Badge>
                     )}
                   </Button>
@@ -208,49 +240,6 @@ export default function EmailTemplatesPage() {
                       </Badge>
                     </DropdownMenuItem>
                   ))}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="flex items-center justify-between"
-                    onClick={() =>
-                      setStatusFilter(statusFilter === "ACTIVE" ? null : "ACTIVE")
-                    }
-                  >
-                    <span className="flex items-center space-x-1">
-                      <div
-                        className={`w-2 h-2 rounded-full ${
-                          statusFilter === "ACTIVE"
-                            ? "bg-primary"
-                            : "bg-transparent border border-muted"
-                        }`}
-                      ></div>
-                      <span>Active</span>
-                    </span>
-                    <Badge variant="outline" className="ml-2">
-                      {statusCounts.ACTIVE}
-                    </Badge>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="flex items-center justify-between"
-                    onClick={() =>
-                      setStatusFilter(statusFilter === "DRAFT" ? null : "DRAFT")
-                    }
-                  >
-                    <span className="flex items-center space-x-1">
-                      <div
-                        className={`w-2 h-2 rounded-full ${
-                          statusFilter === "DRAFT"
-                            ? "bg-primary"
-                            : "bg-transparent border border-muted"
-                        }`}
-                      ></div>
-                      <span>Draft</span>
-                    </span>
-                    <Badge variant="outline" className="ml-2">
-                      {statusCounts.DRAFT}
-                    </Badge>
-                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -266,63 +255,77 @@ export default function EmailTemplatesPage() {
                 <TableRow>
                   <TableHead className="w-[250px]">Name</TableHead>
                   <TableHead>Category</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Subject</TableHead>
                   <TableHead>Last Modified</TableHead>
-                  <TableHead>Created By</TableHead>
                   <TableHead className="w-[80px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTemplates.map((template) => (
-                  <TableRow key={template.id}>
-                    <TableCell className="font-medium">
-                      {template.name}
-                    </TableCell>
-                    <TableCell>{template.category}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          template.status === "ACTIVE"
-                            ? "default"
-                            : "secondary"
-                        }
-                      >
-                        {template.status.toLowerCase()}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{template.lastModified}</TableCell>
-                    <TableCell>{template.createdBy}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Open menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleEditTemplate(template.id)}>
-                            <Edit className="mr-2 h-4 w-4" /> Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Eye className="mr-2 h-4 w-4" /> Preview
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Mail className="mr-2 h-4 w-4" /> Send Test
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Copy className="mr-2 h-4 w-4" /> Duplicate
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8">
+                      <div className="flex justify-center items-center">
+                        <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                        <span>Loading templates...</span>
+                      </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : error ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-destructive">
+                      {error}
+                    </TableCell>
+                  </TableRow>
+                ) : filteredTemplates.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8">
+                      No templates found. {searchQuery || categoryFilter ? "Try adjusting your filters." : "Create your first template!"}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredTemplates.map((template) => (
+                    <TableRow key={template.id}>
+                      <TableCell className="font-medium">
+                        {template.name}
+                      </TableCell>
+                      <TableCell>{template.category || "-"}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">{template.subject}</TableCell>
+                      <TableCell>{format(new Date(template.updatedAt), "MMM d, yyyy")}</TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Open menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => handleEditTemplate(template.id)}>
+                              <Edit className="mr-2 h-4 w-4" /> Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Eye className="mr-2 h-4 w-4" /> Preview
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Mail className="mr-2 h-4 w-4" /> Send Test
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Copy className="mr-2 h-4 w-4" /> Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => handleDeleteTemplate(template.id)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

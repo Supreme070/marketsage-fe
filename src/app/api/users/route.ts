@@ -1,9 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server";
-import type { UserRole } from "@/generated/prisma";
-import { PrismaClient } from "@/generated/prisma";
+import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { hash } from "bcrypt";
+
+// Define UserRole enum to match Prisma schema
+enum UserRole {
+  USER = "USER",
+  ADMIN = "ADMIN",
+  IT_ADMIN = "IT_ADMIN",
+  SUPER_ADMIN = "SUPER_ADMIN"
+}
 
 const prisma = new PrismaClient();
 

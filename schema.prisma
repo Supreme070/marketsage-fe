@@ -1,7 +1,6 @@
 generator client {
   provider      = "prisma-client-js"
-  output        = "../src/generated/prisma"
-  binaryTargets = ["native", "linux-musl", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x"]
+  binaryTargets = ["native", "linux-musl", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x", "darwin", "darwin-arm64"]
 }
 
 datasource db {
@@ -9,46 +8,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Updated UserRole enum to add more specific roles
-enum UserRole {
-  USER
-  ADMIN
-  IT_ADMIN
-  SUPER_ADMIN
-}
-
-// User model for authentication and platform access
-model User {
-  id             String    @id @default(cuid())
-  name           String?
-  email          String    @unique
-  emailVerified  DateTime?
-  password       String?
-  image          String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  lastLogin      DateTime?
-  isActive       Boolean   @default(true)
-  role           UserRole  @default(USER)
-
-  // Relations
-  accounts         Account[]
-  sessions         Session[]
-  contacts         Contact[]          @relation("CreatedBy")
-  emailCampaigns   EmailCampaign[]    @relation("CampaignCreator")
-  emailTemplates   EmailTemplate[]    @relation("TemplateCreator")
-  smsCampaigns     SMSCampaign[]      @relation("SMSCampaignCreator")
-  smsTemplates     SMSTemplate[]      @relation("SMSTemplateCreator")
-  waCampaigns      WhatsAppCampaign[] @relation("WACampaignCreator")
-  waTemplates      WhatsAppTemplate[] @relation("WATemplateCreator")
-  workflows        Workflow[]         @relation("WorkflowCreator")
-  lists            List[]             @relation("ListCreator")
-  segments         Segment[]          @relation("SegmentCreator")
-}
-
-// NextAuth.js required models
 model Account {
-  id                String   @id @default(cuid())
+  id                String  @id
   userId            String
   type              String
   provider          String
@@ -60,18 +21,237 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  User              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
 
+model Analytics {
+  id         String          @id
+  entityType EntityType
+  entityId   String
+  period     AnalyticsPeriod
+  metrics    String
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime
+
+  @@unique([entityType, entityId, period])
+}
+
+model Connection {
+  id                                             String       @id
+  sourceId                                       String
+  targetId                                       String
+  condition                                      String?
+  WorkflowNode_Connection_sourceIdToWorkflowNode WorkflowNode @relation("Connection_sourceIdToWorkflowNode", fields: [sourceId], references: [id], onDelete: Cascade)
+  WorkflowNode_Connection_targetIdToWorkflowNode WorkflowNode @relation("Connection_targetIdToWorkflowNode", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, targetId])
+}
+
+model Contact {
+  id               String             @id
+  email            String?
+  phone            String?
+  firstName        String?
+  lastName         String?
+  company          String?
+  jobTitle         String?
+  address          String?
+  city             String?
+  state            String?
+  country          String?
+  postalCode       String?
+  notes            String?
+  tagsString       String?
+  source           String?
+  status           ContactStatus      @default(ACTIVE)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime
+  createdById      String
+  User             User               @relation(fields: [createdById], references: [id])
+  EmailActivity    EmailActivity[]
+  ListMember       ListMember[]
+  SMSActivity      SMSActivity[]
+  WhatsAppActivity WhatsAppActivity[]
+}
+
+model EmailActivity {
+  id            String        @id
+  campaignId    String
+  contactId     String
+  type          ActivityType
+  timestamp     DateTime      @default(now())
+  metadata      String?
+  EmailCampaign EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  Contact       Contact       @relation(fields: [contactId], references: [id], onDelete: Cascade)
+}
+
+model EmailCampaign {
+  id            String          @id
+  name          String
+  description   String?
+  subject       String
+  from          String
+  replyTo       String?
+  templateId    String?
+  content       String?
+  design        String?
+  status        CampaignStatus  @default(DRAFT)
+  scheduledFor  DateTime?
+  sentAt        DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime
+  createdById   String
+  EmailActivity EmailActivity[]
+  User          User            @relation(fields: [createdById], references: [id])
+  EmailTemplate EmailTemplate?  @relation(fields: [templateId], references: [id])
+  List          List[]          @relation("CampaignLists")
+  Segment       Segment[]       @relation("CampaignSegments")
+}
+
+model EmailTemplate {
+  id            String          @id
+  name          String
+  description   String?
+  subject       String
+  content       String
+  design        String?
+  previewText   String?
+  category      String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime
+  createdById   String
+  EmailCampaign EmailCampaign[]
+  User          User            @relation(fields: [createdById], references: [id])
+}
+
+model IntegrationConnection {
+  id        String           @id
+  name      String
+  type      IntegrationType
+  config    String
+  status    ConnectionStatus @default(INACTIVE)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime
+}
+
+model List {
+  id               String             @id
+  name             String
+  description      String?
+  type             ListType           @default(STATIC)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime
+  createdById      String
+  User             User               @relation(fields: [createdById], references: [id])
+  ListMember       ListMember[]
+  EmailCampaign    EmailCampaign[]    @relation("CampaignLists")
+  SMSCampaign      SMSCampaign[]      @relation("SMSCampaignLists")
+  WhatsAppCampaign WhatsAppCampaign[] @relation("WACampaignLists")
+}
+
+model ListMember {
+  id        String   @id
+  listId    String
+  contactId String
+  addedAt   DateTime @default(now())
+  Contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  List      List     @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, contactId])
+}
+
+model SMSActivity {
+  id          String       @id
+  campaignId  String
+  contactId   String
+  type        ActivityType
+  timestamp   DateTime     @default(now())
+  metadata    String?
+  SMSCampaign SMSCampaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  Contact     Contact      @relation(fields: [contactId], references: [id], onDelete: Cascade)
+}
+
+model SMSCampaign {
+  id           String         @id
+  name         String
+  description  String?
+  from         String
+  templateId   String?
+  content      String?
+  status       CampaignStatus @default(DRAFT)
+  scheduledFor DateTime?
+  sentAt       DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime
+  createdById  String
+  SMSActivity  SMSActivity[]
+  User         User           @relation(fields: [createdById], references: [id])
+  SMSTemplate  SMSTemplate?   @relation(fields: [templateId], references: [id])
+  List         List[]         @relation("SMSCampaignLists")
+  Segment      Segment[]      @relation("SMSCampaignSegments")
+}
+
+model SMSTemplate {
+  id          String        @id
+  name        String
+  content     String
+  variables   String
+  category    String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime
+  createdById String
+  SMSCampaign SMSCampaign[]
+  User        User          @relation(fields: [createdById], references: [id])
+}
+
+model Segment {
+  id               String             @id
+  name             String
+  description      String?
+  rules            String
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime
+  createdById      String
+  User             User               @relation(fields: [createdById], references: [id])
+  EmailCampaign    EmailCampaign[]    @relation("CampaignSegments")
+  SMSCampaign      SMSCampaign[]      @relation("SMSCampaignSegments")
+  WhatsAppCampaign WhatsAppCampaign[] @relation("WACampaignSegments")
+}
+
 model Session {
-  id           String   @id @default(cuid())
+  id           String   @id
   sessionToken String   @unique
   userId       String
   expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id               String             @id
+  name             String?
+  email            String             @unique
+  emailVerified    DateTime?
+  password         String?
+  image            String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime
+  lastLogin        DateTime?
+  isActive         Boolean            @default(true)
+  role             UserRole           @default(USER)
+  Account          Account[]
+  Contact          Contact[]
+  EmailCampaign    EmailCampaign[]
+  EmailTemplate    EmailTemplate[]
+  List             List[]
+  SMSCampaign      SMSCampaign[]
+  SMSTemplate      SMSTemplate[]
+  Segment          Segment[]
+  Session          Session[]
+  WhatsAppCampaign WhatsAppCampaign[]
+  WhatsAppTemplate WhatsAppTemplate[]
+  Workflow         Workflow[]
 }
 
 model VerificationToken {
@@ -82,341 +262,84 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// Core application models
-model Contact {
-  id              String    @id @default(cuid())
-  email           String?
-  phone           String?
-  firstName       String?
-  lastName        String?
-  company         String?
-  jobTitle        String?
-  address         String?
-  city            String?
-  state           String?
-  country         String?
-  postalCode      String?
-  notes           String?
-  tagsString      String?   // Stored as JSON string
-  source          String?
-  status          ContactStatus @default(ACTIVE)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  createdById     String
-
-  // Relations
-  createdBy       User      @relation("CreatedBy", fields: [createdById], references: [id])
-  listMembers     ListMember[]
-  emailActivities EmailActivity[]
-  smsActivities   SMSActivity[]
-  waActivities    WhatsAppActivity[]
-}
-
-model List {
-  id              String    @id @default(cuid())
-  name            String
-  description     String?
-  type            ListType  @default(STATIC)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  createdById     String
-
-  // Relations
-  createdBy       User      @relation("ListCreator", fields: [createdById], references: [id])
-  members         ListMember[]
-  emailCampaigns  EmailCampaign[] @relation("CampaignLists")
-  smsCampaigns    SMSCampaign[]   @relation("SMSCampaignLists")
-  waCampaigns     WhatsAppCampaign[] @relation("WACampaignLists")
-}
-
-model ListMember {
-  id              String    @id @default(cuid())
-  listId          String
-  contactId       String
-  addedAt         DateTime  @default(now())
-
-  // Relations
-  list            List      @relation(fields: [listId], references: [id], onDelete: Cascade)
-  contact         Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
-
-  @@unique([listId, contactId])
-}
-
-model Segment {
-  id              String    @id @default(cuid())
-  name            String
-  description     String?
-  rules           String    // JSON string
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  createdById     String
-
-  // Relations
-  createdBy       User      @relation("SegmentCreator", fields: [createdById], references: [id])
-  emailCampaigns  EmailCampaign[] @relation("CampaignSegments")
-  smsCampaigns    SMSCampaign[]   @relation("SMSCampaignSegments")
-  waCampaigns     WhatsAppCampaign[] @relation("WACampaignSegments")
-}
-
-// Email marketing models
-model EmailTemplate {
-  id              String    @id @default(cuid())
-  name            String
-  description     String?
-  subject         String
-  content         String
-  design          String?   // JSON string
-  previewText     String?
-  category        String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  createdById     String
-
-  // Relations
-  createdBy       User      @relation("TemplateCreator", fields: [createdById], references: [id])
-  campaigns       EmailCampaign[]
-}
-
-model EmailCampaign {
-  id              String    @id @default(cuid())
-  name            String
-  description     String?
-  subject         String
-  from            String
-  replyTo         String?
-  templateId      String?
-  content         String?
-  design          String?   // JSON string
-  status          CampaignStatus @default(DRAFT)
-  scheduledFor    DateTime?
-  sentAt          DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  createdById     String
-
-  // Relations
-  createdBy       User      @relation("CampaignCreator", fields: [createdById], references: [id])
-  template        EmailTemplate? @relation(fields: [templateId], references: [id])
-  lists           List[]    @relation("CampaignLists")
-  segments        Segment[] @relation("CampaignSegments")
-  activities      EmailActivity[]
-}
-
-model EmailActivity {
-  id              String    @id @default(cuid())
-  campaignId      String
-  contactId       String
-  type            ActivityType
-  timestamp       DateTime  @default(now())
-  metadata        String?   // JSON string
-
-  // Relations
-  campaign        EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  contact         Contact    @relation(fields: [contactId], references: [id], onDelete: Cascade)
-}
-
-// SMS marketing models
-model SMSTemplate {
-  id              String    @id @default(cuid())
-  name            String
-  content         String
-  variables       String    // JSON string for array
-  category        String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  createdById     String
-
-  // Relations
-  createdBy       User      @relation("SMSTemplateCreator", fields: [createdById], references: [id])
-  campaigns       SMSCampaign[]
-}
-
-model SMSCampaign {
-  id              String    @id @default(cuid())
-  name            String
-  description     String?
-  from            String
-  templateId      String?
-  content         String?
-  status          CampaignStatus @default(DRAFT)
-  scheduledFor    DateTime?
-  sentAt          DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  createdById     String
-
-  // Relations
-  createdBy       User      @relation("SMSCampaignCreator", fields: [createdById], references: [id])
-  template        SMSTemplate? @relation(fields: [templateId], references: [id])
-  lists           List[]    @relation("SMSCampaignLists")
-  segments        Segment[] @relation("SMSCampaignSegments")
-  activities      SMSActivity[]
-}
-
-model SMSActivity {
-  id              String    @id @default(cuid())
-  campaignId      String
-  contactId       String
-  type            ActivityType
-  timestamp       DateTime  @default(now())
-  metadata        String?   // JSON string
-
-  // Relations
-  campaign        SMSCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  contact         Contact    @relation(fields: [contactId], references: [id], onDelete: Cascade)
-}
-
-// WhatsApp marketing models
-model WhatsAppTemplate {
-  id              String    @id @default(cuid())
-  name            String
-  content         String
-  variables       String    // JSON string for array
-  category        String?
-  status          WATemplateStatus @default(PENDING)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  createdById     String
-
-  // Relations
-  createdBy       User      @relation("WATemplateCreator", fields: [createdById], references: [id])
-  campaigns       WhatsAppCampaign[]
+model WhatsAppActivity {
+  id               String           @id
+  campaignId       String
+  contactId        String
+  type             ActivityType
+  timestamp        DateTime         @default(now())
+  metadata         String?
+  WhatsAppCampaign WhatsAppCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  Contact          Contact          @relation(fields: [contactId], references: [id], onDelete: Cascade)
 }
 
 model WhatsAppCampaign {
-  id              String    @id @default(cuid())
-  name            String
-  description     String?
-  from            String
-  templateId      String?
-  content         String?
-  status          CampaignStatus @default(DRAFT)
-  scheduledFor    DateTime?
-  sentAt          DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  createdById     String
-
-  // Relations
-  createdBy       User      @relation("WACampaignCreator", fields: [createdById], references: [id])
-  template        WhatsAppTemplate? @relation(fields: [templateId], references: [id])
-  lists           List[]    @relation("WACampaignLists")
-  segments        Segment[] @relation("WACampaignSegments")
-  activities      WhatsAppActivity[]
+  id               String             @id
+  name             String
+  description      String?
+  from             String
+  templateId       String?
+  content          String?
+  status           CampaignStatus     @default(DRAFT)
+  scheduledFor     DateTime?
+  sentAt           DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime
+  createdById      String
+  WhatsAppActivity WhatsAppActivity[]
+  User             User               @relation(fields: [createdById], references: [id])
+  WhatsAppTemplate WhatsAppTemplate?  @relation(fields: [templateId], references: [id])
+  List             List[]             @relation("WACampaignLists")
+  Segment          Segment[]          @relation("WACampaignSegments")
 }
 
-model WhatsAppActivity {
-  id              String    @id @default(cuid())
-  campaignId      String
-  contactId       String
-  type            ActivityType
-  timestamp       DateTime  @default(now())
-  metadata        String?   // JSON string
-
-  // Relations
-  campaign        WhatsAppCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  contact         Contact    @relation(fields: [contactId], references: [id], onDelete: Cascade)
+model WhatsAppTemplate {
+  id               String             @id
+  name             String
+  content          String
+  variables        String
+  category         String?
+  status           WATemplateStatus   @default(PENDING)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime
+  createdById      String
+  WhatsAppCampaign WhatsAppCampaign[]
+  User             User               @relation(fields: [createdById], references: [id])
 }
 
-// Workflow automation models
 model Workflow {
-  id              String    @id @default(cuid())
+  id              String            @id
   name            String
   description     String?
-  status          WorkflowStatus @default(INACTIVE)
-  definition      String    // JSON string
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  status          WorkflowStatus    @default(INACTIVE)
+  definition      String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime
   createdById     String
-
-  // Relations
-  createdBy       User      @relation("WorkflowCreator", fields: [createdById], references: [id])
-  nodes           WorkflowNode[]
-  triggers        WorkflowTrigger[]
+  User            User              @relation(fields: [createdById], references: [id])
+  WorkflowNode    WorkflowNode[]
+  WorkflowTrigger WorkflowTrigger[]
 }
 
 model WorkflowNode {
-  id              String    @id @default(cuid())
-  workflowId      String
-  type            WorkflowNodeType
-  name            String?
-  config          String    // JSON string
-  positionX       Float?
-  positionY       Float?
-
-  // Relations
-  workflow        Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  outgoing        Connection[] @relation("SourceNode")
-  incoming        Connection[] @relation("TargetNode")
-}
-
-model Connection {
-  id              String    @id @default(cuid())
-  sourceId        String
-  targetId        String
-  condition       String?   // JSON string
-
-  // Relations
-  source          WorkflowNode @relation("SourceNode", fields: [sourceId], references: [id], onDelete: Cascade)
-  target          WorkflowNode @relation("TargetNode", fields: [targetId], references: [id], onDelete: Cascade)
-
-  @@unique([sourceId, targetId])
+  id                                           String           @id
+  workflowId                                   String
+  type                                         WorkflowNodeType
+  name                                         String?
+  config                                       String
+  positionX                                    Float?
+  positionY                                    Float?
+  Connection_Connection_sourceIdToWorkflowNode Connection[]     @relation("Connection_sourceIdToWorkflowNode")
+  Connection_Connection_targetIdToWorkflowNode Connection[]     @relation("Connection_targetIdToWorkflowNode")
+  Workflow                                     Workflow         @relation(fields: [workflowId], references: [id], onDelete: Cascade)
 }
 
 model WorkflowTrigger {
-  id              String    @id @default(cuid())
-  workflowId      String
-  type            TriggerType
-  config          String    // JSON string
-
-  // Relations
-  workflow        Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-}
-
-// Analytics models
-model Analytics {
-  id              String    @id @default(cuid())
-  entityType      EntityType
-  entityId        String
-  period          AnalyticsPeriod
-  metrics         String    // JSON string
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  @@unique([entityType, entityId, period])
-}
-
-// Integration models
-model IntegrationConnection {
-  id              String    @id @default(cuid())
-  name            String
-  type            IntegrationType
-  config          String    // JSON string
-  status          ConnectionStatus @default(INACTIVE)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-}
-
-// Enums
-enum ContactStatus {
-  ACTIVE
-  UNSUBSCRIBED
-  BOUNCED
-  SPAM
-}
-
-enum ListType {
-  STATIC
-  DYNAMIC
-}
-
-enum CampaignStatus {
-  DRAFT
-  SCHEDULED
-  SENDING
-  SENT
-  PAUSED
-  CANCELLED
+  id         String      @id
+  workflowId String
+  type       TriggerType
+  config     String
+  Workflow   Workflow    @relation(fields: [workflowId], references: [id], onDelete: Cascade)
 }
 
 enum ActivityType {
@@ -430,17 +353,81 @@ enum ActivityType {
   FAILED
 }
 
+enum AnalyticsPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  PAUSED
+  CANCELLED
+}
+
+enum ConnectionStatus {
+  ACTIVE
+  INACTIVE
+  ERROR
+}
+
+enum ContactStatus {
+  ACTIVE
+  UNSUBSCRIBED
+  BOUNCED
+  SPAM
+}
+
+enum EntityType {
+  EMAIL_CAMPAIGN
+  SMS_CAMPAIGN
+  WHATSAPP_CAMPAIGN
+  WORKFLOW
+  LIST
+  SEGMENT
+}
+
+enum IntegrationType {
+  ECOMMERCE_WOOCOMMERCE
+  ECOMMERCE_SHOPIFY
+  CRM_SALESFORCE
+  CRM_HUBSPOT
+  PAYMENT_STRIPE
+  PAYMENT_PAYPAL
+  WEBHOOK
+  API
+}
+
+enum ListType {
+  STATIC
+  DYNAMIC
+}
+
+enum TriggerType {
+  CONTACT_CREATED
+  CONTACT_UPDATED
+  EMAIL_OPENED
+  EMAIL_CLICKED
+  FORM_SUBMITTED
+  WEBHOOK
+  SCHEDULED
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  IT_ADMIN
+  SUPER_ADMIN
+}
+
 enum WATemplateStatus {
   PENDING
   APPROVED
   REJECTED
-}
-
-enum WorkflowStatus {
-  ACTIVE
-  INACTIVE
-  PAUSED
-  ARCHIVED
 }
 
 enum WorkflowNodeType {
@@ -455,45 +442,9 @@ enum WorkflowNodeType {
   WEBHOOK
 }
 
-enum TriggerType {
-  CONTACT_CREATED
-  CONTACT_UPDATED
-  EMAIL_OPENED
-  EMAIL_CLICKED
-  FORM_SUBMITTED
-  WEBHOOK
-  SCHEDULED
-}
-
-enum EntityType {
-  EMAIL_CAMPAIGN
-  SMS_CAMPAIGN
-  WHATSAPP_CAMPAIGN
-  WORKFLOW
-  LIST
-  SEGMENT
-}
-
-enum AnalyticsPeriod {
-  DAILY
-  WEEKLY
-  MONTHLY
-  YEARLY
-}
-
-enum IntegrationType {
-  ECOMMERCE_WOOCOMMERCE
-  ECOMMERCE_SHOPIFY
-  CRM_SALESFORCE
-  CRM_HUBSPOT
-  PAYMENT_STRIPE
-  PAYMENT_PAYPAL
-  WEBHOOK
-  API
-}
-
-enum ConnectionStatus {
+enum WorkflowStatus {
   ACTIVE
   INACTIVE
-  ERROR
+  PAUSED
+  ARCHIVED
 }

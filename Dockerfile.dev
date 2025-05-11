@@ -4,19 +4,27 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Install dependencies
-RUN apk add --no-cache libc6-compat python3 make g++
+RUN apk add --no-cache libc6-compat python3 make g++ openssl
 
 # Copy package files
 COPY package.json package-lock.json* ./
+# Copy next.config.js to ensure transpilePackages is included
+COPY next.config.js ./
 
 # Install dependencies
 RUN npm ci
 
-# Copy remaining files
-COPY . .
+# Copy prisma schema first for optimized layer caching
+COPY prisma ./prisma/
 
 # Generate Prisma client
 RUN npx prisma generate
+
+# Copy remaining files
+COPY . .
+
+# Re-generate Prisma client with all files available
+RUN npm run db:generate
 
 # Expose port
 EXPOSE 3000
