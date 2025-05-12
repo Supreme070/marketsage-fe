@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
+import { randomUUID } from "crypto";
 
 const prisma = new PrismaClient();
 
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
       },
       include: {
         _count: {
-          select: { members: true },
+          select: { ListMember: true },
         },
       },
     });
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
       name: list.name,
       description: list.description,
       type: list.type,
-      memberCount: list._count.members,
+      memberCount: list._count.ListMember,
       createdAt: list.createdAt,
       updatedAt: list.updatedAt,
       createdById: list.createdById,
@@ -85,14 +86,18 @@ export async function POST(request: NextRequest) {
     }
 
     const listData = validation.data;
+    const now = new Date();
     
     // Create the list
     const newList = await prisma.list.create({
       data: {
+        id: randomUUID(),
         name: listData.name,
         description: listData.description,
         type: listData.type || "STATIC",
         createdById: session.user.id,
+        createdAt: now,
+        updatedAt: now
       },
     });
 

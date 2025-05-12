@@ -1,11 +1,30 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import { GitBranch, Code } from "lucide-react";
+import { GitBranch, Code, HelpCircle } from "lucide-react";
 
 export const ConditionNode = memo(
   ({ data, selected, id }: NodeProps) => {
+    const [showDetails, setShowDetails] = useState(false);
+    
+    // Helper function to render the condition details based on properties
+    const getConditionDescription = () => {
+      const props = data.properties || {};
+      
+      if (props.conditionType === 'contact') {
+        return `IF contact.${props.contactProperty || 'property'} ${props.operator || '='} "${props.value || ''}"`;
+      } else if (props.conditionType === 'tag') {
+        return `IF contact has tag "${props.tagName || props.tagId || 'any'}"`;
+      } else if (props.conditionType === 'email') {
+        return `IF email ${props.property || 'was'} ${props.value ? 'true' : 'false'}`;
+      } else if (props.customCondition) {
+        return props.customCondition;
+      }
+      
+      return "Condition logic";
+    };
+
     // Icon mapping
     const getIcon = (iconName: string) => {
       switch (iconName) {
@@ -25,8 +44,10 @@ export const ConditionNode = memo(
       <div
         className={`rounded-md border-2 ${
           selected ? "border-orange-500/70 shadow-md" : "border-orange-500/40"
-        } bg-background p-0 transition-colors`}
+        } bg-background p-0 transition-colors relative`}
         style={{ width: 200 }}
+        onMouseEnter={() => setShowDetails(true)}
+        onMouseLeave={() => setShowDetails(false)}
       >
         {/* Node header */}
         <div className="flex items-center rounded-t-sm bg-orange-500/10 p-2">
@@ -37,12 +58,24 @@ export const ConditionNode = memo(
             <div className="text-sm font-semibold">{data.label}</div>
             <div className="text-xs text-muted-foreground">Condition</div>
           </div>
+          
+          <HelpCircle className="h-4 w-4 ml-auto text-muted-foreground/70" />
         </div>
 
         {/* Node body with data */}
         <div className="p-2 text-xs text-muted-foreground">
           {data.description}
         </div>
+        
+        {/* Details tooltip */}
+        {showDetails && (
+          <div className="absolute z-10 bg-popover border rounded-md shadow-md p-2 -top-14 left-0 text-xs w-full">
+            <p className="font-semibold mb-1">Condition Logic:</p>
+            <code className="text-xs bg-muted p-1 rounded block">
+              {getConditionDescription()}
+            </code>
+          </div>
+        )}
 
         {/* Target handle on the left side */}
         <Handle

@@ -1,5 +1,6 @@
 import { PrismaClient, CampaignStatus } from "@prisma/client";
 import * as dotenv from "dotenv";
+import { randomUUID } from "crypto";
 
 // Load environment variables
 dotenv.config();
@@ -8,7 +9,7 @@ dotenv.config();
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: "postgresql://marketsage:marketsage_password@localhost:5432/marketsage?schema=public"
+      url: "postgresql://marketsage:marketsage_password@db:5432/marketsage?schema=public"
     }
   }
 });
@@ -96,8 +97,10 @@ async function seedEmailMarketing() {
   const createdTemplates = [];
   for (const templateData of sampleTemplates) {
     try {
+      const now = new Date();
       const template = await prisma.emailTemplate.create({
         data: {
+          id: randomUUID(),
           name: templateData.name,
           description: templateData.description,
           subject: templateData.subject,
@@ -105,6 +108,8 @@ async function seedEmailMarketing() {
           previewText: templateData.previewText,
           category: templateData.category,
           createdById: adminUser.id,
+          createdAt: now,
+          updatedAt: now
         },
       });
       createdTemplates.push(template);
@@ -149,8 +154,10 @@ async function seedEmailMarketing() {
       const listsToUse = lists.filter((_, index) => index % (i + 1) === 0);
       
       // Create the campaign
+      const now = new Date();
       const campaign = await prisma.emailCampaign.create({
         data: {
+          id: randomUUID(),
           name: campaignData.name,
           description: campaignData.description,
           subject: campaignData.subject,
@@ -160,14 +167,16 @@ async function seedEmailMarketing() {
           scheduledFor: campaignData.scheduledFor,
           sentAt: campaignData.sentAt,
           createdById: adminUser.id,
+          createdAt: now,
+          updatedAt: now,
           ...(templateToUse ? { templateId: templateToUse.id } : {}),
           ...(listsToUse.length > 0 ? {
-            lists: {
+            List: {
               connect: listsToUse.map(list => ({ id: list.id })),
             },
           } : {}),
           ...(segments.length > 0 && i === 2 ? { // Only connect segments to the third campaign
-            segments: {
+            Segment: {
               connect: segments.map(segment => ({ id: segment.id })),
             },
           } : {}),
@@ -193,6 +202,7 @@ async function seedEmailMarketing() {
             
             await prisma.emailActivity.create({
               data: {
+                id: randomUUID(),
                 campaignId: campaign.id,
                 contactId: contact.id,
                 type: activityType,

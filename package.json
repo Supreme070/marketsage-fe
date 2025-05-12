@@ -23,7 +23,16 @@
     "dev:with-db": "npm run db:start && npm run dev",
     "seed-contacts": "npx tsx src/scripts/seedContacts.ts",
     "assign-contacts": "npx tsx src/scripts/assignContactsToCurrentUser.ts",
-    "seed-lists": "npx tsx src/scripts/seedLists.ts"
+    "assign-contacts-docker": "npx tsx src/scripts/assignContactsDocker.ts",
+    "seed-lists": "npx tsx src/scripts/seedLists.ts",
+    "seed-segments": "node src/scripts/seedSegments.js",
+    "seed-email-campaigns": "npx tsx src/scripts/seedEmailCampaigns.ts",
+    "seed-sms-templates": "npx tsx src/scripts/seedSMSTemplates.ts",
+    "seed-sms-campaigns": "npx tsx src/scripts/seedSMSCampaigns.ts",
+    "seed-whatsapp-templates": "npx tsx src/scripts/seedWhatsAppTemplates.ts",
+    "seed-whatsapp-campaigns": "npx tsx src/scripts/seedWhatsAppCampaigns.ts",
+    "seed-workflows": "npx tsx src/scripts/seedWorkflows.ts",
+    "seed-all": "./seedAll.sh"
   },
   "prisma": {
     "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts"
@@ -53,6 +62,7 @@
     "@radix-ui/react-tabs": "^1.1.9",
     "@radix-ui/react-toast": "^1.2.11",
     "@radix-ui/react-toggle": "^1.1.6",
+    "@radix-ui/react-tooltip": "^1.2.6",
     "@tanstack/react-table": "^8.21.3",
     "@types/bcrypt": "^5.0.2",
     "axios": "^1.9.0",

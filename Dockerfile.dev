@@ -14,6 +14,9 @@ COPY next.config.js ./
 # Install dependencies
 RUN npm ci
 
+# Rebuild bcrypt for the current architecture
+RUN npm rebuild bcrypt --build-from-source
+
 # Copy prisma schema first for optimized layer caching
 COPY prisma ./prisma/
 

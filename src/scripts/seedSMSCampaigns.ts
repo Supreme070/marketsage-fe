@@ -1,5 +1,6 @@
 import { PrismaClient, CampaignStatus } from "@prisma/client";
 import * as dotenv from "dotenv";
+import { randomUUID } from "crypto";
 
 // Load environment variables
 dotenv.config();
@@ -8,7 +9,7 @@ dotenv.config();
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: "postgresql://marketsage:marketsage_password@localhost:5432/marketsage?schema=public"
+      url: "postgresql://marketsage:marketsage_password@db:5432/marketsage?schema=public"
     }
   }
 });
@@ -88,22 +89,26 @@ async function seedSMSCampaigns() {
   const createdCampaigns = [];
   for (const campaignData of sampleCampaigns) {
     try {
+      const now = new Date();
       const campaign = await prisma.sMSCampaign.create({
         data: {
+          id: randomUUID(),
           name: campaignData.name,
           description: campaignData.description,
           from: campaignData.from,
           content: campaignData.content,
           status: campaignData.status,
           scheduledFor: campaignData.scheduledFor,
-          createdBy: {
-            connect: { id: adminUser.id }
-          },
-          lists: {
-            connect: [{ id: lists[0].id }] // Connect at least one list
-          },
+          createdAt: now,
+          updatedAt: now,
+          createdById: adminUser.id,
+          ...(lists.length > 0 && {
+            List: {
+              connect: [{ id: lists[0].id }]
+            }
+          }),
           ...(segments.length > 0 && {
-            segments: {
+            Segment: {
               connect: [{ id: segments[0].id }]
             }
           }),
@@ -143,8 +148,9 @@ async function seedSMSCampaigns() {
           try {
             await prisma.sMSActivity.create({
               data: {
-                campaign: { connect: { id: campaign.id } },
-                contact: { connect: { id: contact.id } },
+                id: randomUUID(),
+                campaignId: campaign.id,
+                contactId: contact.id,
                 type: type as any,
                 timestamp: new Date(new Date().setDate(new Date().getDate() - Math.floor(Math.random() * 5))),
               }

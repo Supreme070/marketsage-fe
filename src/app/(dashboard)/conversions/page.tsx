@@ -27,6 +27,8 @@ import {
   CustomCardContent,
   CustomCardFooter,
 } from "@/components/ui/custom-card";
+import { ConversionMetrics } from "@/components/dashboard/ConversionMetrics";
+import { EntityType } from "@prisma/client";
 
 export default function ConversionsPage() {
   return (
@@ -58,6 +60,12 @@ export default function ConversionsPage() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
+          <ConversionMetrics 
+            title="Overall Conversion Performance"
+            description="Summary of conversions across all channels"
+            period="MONTHLY"
+          />
+
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <CustomCard>
               <CustomCardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -255,7 +263,7 @@ export default function ConversionsPage() {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <Users className="h-4 w-4 text-primary mr-2" />
+                      <div className="h-4 w-4 rounded-full bg-primary mr-2"></div>
                       <span className="text-sm">Lagos Metropolitan</span>
                     </div>
                     <div className="text-sm font-medium">12.4%</div>
@@ -263,7 +271,7 @@ export default function ConversionsPage() {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <Users className="h-4 w-4 text-primary mr-2" />
+                      <div className="h-4 w-4 rounded-full bg-primary mr-2"></div>
                       <span className="text-sm">Abuja & FCT</span>
                     </div>
                     <div className="text-sm font-medium">10.8%</div>
@@ -271,7 +279,7 @@ export default function ConversionsPage() {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <Users className="h-4 w-4 text-primary mr-2" />
+                      <div className="h-4 w-4 rounded-full bg-primary mr-2"></div>
                       <span className="text-sm">Port Harcourt</span>
                     </div>
                     <div className="text-sm font-medium">9.1%</div>
@@ -279,7 +287,7 @@ export default function ConversionsPage() {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <Users className="h-4 w-4 text-primary mr-2" />
+                      <div className="h-4 w-4 rounded-full bg-primary mr-2"></div>
                       <span className="text-sm">Ibadan & SW Cities</span>
                     </div>
                     <div className="text-sm font-medium">8.2%</div>
@@ -287,7 +295,7 @@ export default function ConversionsPage() {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <Users className="h-4 w-4 text-primary mr-2" />
+                      <div className="h-4 w-4 rounded-full bg-primary mr-2"></div>
                       <span className="text-sm">Kano & Northern Markets</span>
                     </div>
                     <div className="text-sm font-medium">6.5%</div>
@@ -295,7 +303,7 @@ export default function ConversionsPage() {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <Users className="h-4 w-4 text-primary mr-2" />
+                      <div className="h-4 w-4 rounded-full bg-primary mr-2"></div>
                       <span className="text-sm">Eastern Markets</span>
                     </div>
                     <div className="text-sm font-medium">7.3%</div>
@@ -320,7 +328,7 @@ export default function ConversionsPage() {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <ShoppingCart className="h-4 w-4 text-primary mr-2" />
+                      <div className="h-4 w-4 rounded-full bg-primary mr-2"></div>
                       <span className="text-sm">Premium Banking Solutions</span>
                     </div>
                     <div className="text-sm font-medium">87</div>
@@ -328,7 +336,7 @@ export default function ConversionsPage() {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <ShoppingCart className="h-4 w-4 text-primary mr-2" />
+                      <div className="h-4 w-4 rounded-full bg-primary mr-2"></div>
                       <span className="text-sm">Telecom Service Bundles</span>
                     </div>
                     <div className="text-sm font-medium">65</div>
@@ -336,7 +344,7 @@ export default function ConversionsPage() {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <ShoppingCart className="h-4 w-4 text-primary mr-2" />
+                      <div className="h-4 w-4 rounded-full bg-primary mr-2"></div>
                       <span className="text-sm">E-commerce Solutions</span>
                     </div>
                     <div className="text-sm font-medium">52</div>
@@ -344,7 +352,7 @@ export default function ConversionsPage() {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <ShoppingCart className="h-4 w-4 text-primary mr-2" />
+                      <div className="h-4 w-4 rounded-full bg-primary mr-2"></div>
                       <span className="text-sm">Educational Course Package</span>
                     </div>
                     <div className="text-sm font-medium">48</div>
@@ -352,7 +360,7 @@ export default function ConversionsPage() {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <ShoppingCart className="h-4 w-4 text-primary mr-2" />
+                      <div className="h-4 w-4 rounded-full bg-primary mr-2"></div>
                       <span className="text-sm">Real Estate Consultation</span>
                     </div>
                     <div className="text-sm font-medium">42</div>
@@ -360,7 +368,7 @@ export default function ConversionsPage() {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <ShoppingCart className="h-4 w-4 text-primary mr-2" />
+                      <div className="h-4 w-4 rounded-full bg-primary mr-2"></div>
                       <span className="text-sm">Healthcare Services</span>
                     </div>
                     <div className="text-sm font-medium">39</div>
@@ -372,54 +380,70 @@ export default function ConversionsPage() {
         </TabsContent>
 
         <TabsContent value="channels" className="space-y-4">
-          <CustomCard>
-            <CustomCardHeader>
-              <CustomCardTitle>Channel Comparison</CustomCardTitle>
-              <CustomCardDescription>
-                Compare performance across marketing channels
-              </CustomCardDescription>
-            </CustomCardHeader>
-            <CustomCardContent>
-              <div className="h-96 flex items-center justify-center bg-secondary/5 dark:bg-secondary/10 rounded-md">
-                <BarChart3 className="h-16 w-16 text-secondary/40" />
-                <span className="ml-4 text-muted-foreground">Channel comparison charts will be displayed here</span>
-              </div>
-            </CustomCardContent>
-          </CustomCard>
+          <div className="grid gap-4 md:grid-cols-2">
+            <ConversionMetrics 
+              entityType={EntityType.EMAIL_CAMPAIGN}
+              title="Email Campaign Conversions"
+              description="Track email campaign conversion performance"
+              period="WEEKLY"
+            />
+            
+            <ConversionMetrics 
+              entityType={EntityType.SMS_CAMPAIGN}
+              title="SMS Campaign Conversions"
+              description="Track SMS campaign conversion performance"
+              period="WEEKLY"
+            />
+            
+            <ConversionMetrics 
+              entityType={EntityType.WHATSAPP_CAMPAIGN}
+              title="WhatsApp Campaign Conversions"
+              description="Track WhatsApp campaign conversion performance"
+              period="WEEKLY"
+            />
+            
+            <ConversionMetrics 
+              entityType={EntityType.WORKFLOW}
+              title="Workflow Conversions"
+              description="Track workflow automation conversion performance"
+              period="WEEKLY"
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="campaigns" className="space-y-4">
-          <CustomCard>
-            <CustomCardHeader>
-              <CustomCardTitle>Campaign Attribution</CustomCardTitle>
-              <CustomCardDescription>
-                Track which campaigns generate conversions
-              </CustomCardDescription>
-            </CustomCardHeader>
-            <CustomCardContent>
-              <div className="h-96 flex items-center justify-center bg-secondary/5 dark:bg-secondary/10 rounded-md">
-                <PieChart className="h-16 w-16 text-secondary/40" />
-                <span className="ml-4 text-muted-foreground">Campaign attribution charts will be displayed here</span>
-              </div>
-            </CustomCardContent>
-          </CustomCard>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <ConversionMetrics 
+              entityType={EntityType.EMAIL_CAMPAIGN}
+              title="Email Campaigns"
+              description="Email campaign conversion attribution"
+              period="MONTHLY"
+            />
+            
+            <ConversionMetrics 
+              entityType={EntityType.SMS_CAMPAIGN}
+              title="SMS Campaigns"
+              description="SMS campaign conversion attribution"
+              period="MONTHLY"
+            />
+            
+            <ConversionMetrics 
+              entityType={EntityType.WHATSAPP_CAMPAIGN}
+              title="WhatsApp Campaigns"
+              description="WhatsApp campaign conversion attribution"
+              period="MONTHLY"
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="goals" className="space-y-4">
-          <CustomCard>
-            <CustomCardHeader>
-              <CustomCardTitle>Conversion Goals</CustomCardTitle>
-              <CustomCardDescription>
-                Track progress against defined conversion goals
-              </CustomCardDescription>
-            </CustomCardHeader>
-            <CustomCardContent>
-              <div className="h-96 flex items-center justify-center bg-secondary/5 dark:bg-secondary/10 rounded-md">
-                <LineChart className="h-16 w-16 text-secondary/40" />
-                <span className="ml-4 text-muted-foreground">Goal tracking charts will be displayed here</span>
-              </div>
-            </CustomCardContent>
-          </CustomCard>
+          <div className="grid gap-4 md:grid-cols-1">
+            <ConversionMetrics 
+              title="Conversion Goals"
+              description="Track progress against your conversion goals"
+              period="YEARLY"
+            />
+          </div>
         </TabsContent>
       </Tabs>
     </div>

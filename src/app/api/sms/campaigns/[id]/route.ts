@@ -45,13 +45,13 @@ export async function GET(
     const campaign = await prisma.sMSCampaign.findUnique({
       where: { id: campaignId },
       include: {
-        template: true,
-        lists: true,
-        segments: true,
-        activities: {
+        SMSTemplate: true,
+        List: true,
+        Segment: true,
+        SMSActivity: {
           take: 5,
           include: {
-            contact: {
+            Contact: {
               select: {
                 id: true,
                 firstName: true,
@@ -67,7 +67,7 @@ export async function GET(
         },
         _count: {
           select: { 
-            activities: true 
+            SMSActivity: true 
           }
         }
       }
@@ -86,8 +86,12 @@ export async function GET(
     // Transform the response
     const formattedCampaign = {
       ...campaign,
+      template: campaign.SMSTemplate,
+      lists: campaign.List,
+      segments: campaign.Segment,
+      activities: campaign.SMSActivity,
       statistics: {
-        totalRecipients: campaign._count.activities,
+        totalRecipients: campaign._count.SMSActivity,
         // Add more stats here if needed
       }
     };
@@ -121,8 +125,8 @@ export async function PATCH(
     const existingCampaign = await prisma.sMSCampaign.findUnique({
       where: { id: campaignId },
       include: {
-        lists: true,
-        segments: true,
+        List: true,
+        Segment: true,
       }
     });
 
@@ -204,15 +208,15 @@ export async function PATCH(
 
     // Handle list and segment relationships separately
     if (listIds) {
-      updateObject.lists = {
-        disconnect: existingCampaign.lists.map(list => ({ id: list.id })),
+      updateObject.List = {
+        disconnect: existingCampaign.List.map(list => ({ id: list.id })),
         connect: listIds.map(id => ({ id })),
       };
     }
 
     if (segmentIds) {
-      updateObject.segments = {
-        disconnect: existingCampaign.segments.map(segment => ({ id: segment.id })),
+      updateObject.Segment = {
+        disconnect: existingCampaign.Segment.map(segment => ({ id: segment.id })),
         connect: segmentIds.map(id => ({ id })),
       };
     }
@@ -224,16 +228,24 @@ export async function PATCH(
         where: { id: campaignId },
         data: updateObject,
         include: {
-          template: true,
-          lists: true,
-          segments: true,
+          SMSTemplate: true,
+          List: true,
+          Segment: true,
         },
       });
       
       return campaign;
     });
 
-    return NextResponse.json(updatedCampaign);
+    // Transform the response to maintain backward compatibility
+    const formattedCampaign = {
+      ...updatedCampaign,
+      template: updatedCampaign.SMSTemplate,
+      lists: updatedCampaign.List,
+      segments: updatedCampaign.Segment,
+    };
+
+    return NextResponse.json(formattedCampaign);
   } catch (error: any) {
     console.error("Error updating SMS campaign:", error);
     

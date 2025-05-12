@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
+import { randomUUID } from "crypto";
 
 const prisma = new PrismaClient();
 
@@ -84,6 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     const templateData = validation.data;
+    const now = new Date();
     
     // If design is provided, validate that it's a valid JSON string
     if (templateData.design) {
@@ -100,6 +102,7 @@ export async function POST(request: NextRequest) {
     // Create the email template
     const newTemplate = await prisma.emailTemplate.create({
       data: {
+        id: randomUUID(),
         name: templateData.name,
         description: templateData.description,
         subject: templateData.subject,
@@ -108,6 +111,8 @@ export async function POST(request: NextRequest) {
         previewText: templateData.previewText,
         category: templateData.category,
         createdById: session.user.id,
+        createdAt: now,
+        updatedAt: now,
       },
     });
 

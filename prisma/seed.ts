@@ -1,6 +1,7 @@
 import { PrismaClient, UserRole } from '@prisma/client';
 import { hash } from 'bcrypt';
 import { sampleContacts } from '../src/data/sampleContacts';
+import { randomUUID } from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -56,13 +57,18 @@ async function createUser(name: string, email: string, password: string, role: U
   }
 
   const hashedPassword = await hash(password, 10);
+  const now = new Date();
+  
   const user = await prisma.user.create({
     data: {
+      id: randomUUID(),
       name,
       email,
       password: hashedPassword,
       role,
-      emailVerified: new Date(),
+      emailVerified: now,
+      createdAt: now,
+      updatedAt: now
     },
   });
 
@@ -74,6 +80,7 @@ async function createContacts(createdById: string) {
   console.log('Creating sample contacts...');
 
   let createdCount = 0;
+  const now = new Date();
 
   for (const contact of sampleContacts) {
     // Skip if no email or phone (need at least one)
@@ -82,6 +89,7 @@ async function createContacts(createdById: string) {
     try {
       await prisma.contact.create({
         data: {
+          id: randomUUID(),
           email: contact.email,
           phone: contact.phone,
           firstName: contact.firstName,
@@ -97,7 +105,9 @@ async function createContacts(createdById: string) {
           tagsString: contact.tags ? JSON.stringify(contact.tags) : null,
           source: contact.source,
           createdById,
-          status: 'ACTIVE'
+          status: 'ACTIVE',
+          createdAt: now,
+          updatedAt: now
         }
       });
       createdCount++;

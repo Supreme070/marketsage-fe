@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -32,59 +32,78 @@ import {
   Copy,
   Eye,
   FileText,
-  Calendar
+  Calendar,
+  Loader2
 } from "lucide-react";
 import Link from "next/link";
+import { formatDistanceToNow } from "date-fns";
+import { toast } from "sonner";
 
-// Sample WhatsApp templates data
-const whatsappTemplates = [
-  {
-    id: "1",
-    name: "Order Confirmation",
-    category: "Transactional",
-    type: "WHATSAPP",
-    lastUpdated: "2024-04-30T11:20:00Z",
-    createdBy: "John Doe",
-    status: "ACTIVE",
-    usageCount: 2870,
-    tags: ["order", "confirmation"]
-  },
-  {
-    id: "2",
-    name: "Shipping Update",
-    category: "Transactional",
-    type: "WHATSAPP",
-    lastUpdated: "2024-05-02T13:45:00Z",
-    createdBy: "System",
-    status: "ACTIVE",
-    usageCount: 3450,
-    tags: ["shipping", "tracking"]
-  },
-  {
-    id: "3",
-    name: "Service Appointment",
-    category: "Reminder",
-    type: "WHATSAPP",
-    lastUpdated: "2024-05-04T09:30:00Z",
-    createdBy: "Jane Smith",
-    status: "ACTIVE",
-    usageCount: 1890,
-    tags: ["appointment", "service"]
-  },
-  {
-    id: "4",
-    name: "Welcome Message",
-    category: "Onboarding",
-    type: "WHATSAPP",
-    lastUpdated: "2024-04-27T16:15:00Z",
-    createdBy: "John Doe",
-    status: "DRAFT",
-    usageCount: 0,
-    tags: ["welcome", "onboarding"]
-  }
-];
+// Template type definition
+interface WhatsAppTemplate {
+  id: string;
+  name: string;
+  content: string;
+  variables: string;
+  category?: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: {
+    id: string;
+    name: string;
+  };
+}
 
 export default function WhatsAppTemplatesPage() {
+  const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const response = await fetch("/api/whatsapp/templates");
+        if (!response.ok) {
+          throw new Error("Failed to fetch WhatsApp templates");
+        }
+        const data = await response.json();
+        setTemplates(data);
+      } catch (error) {
+        console.error("Error fetching templates:", error);
+        toast.error("Failed to load WhatsApp templates");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTemplates();
+  }, []);
+
+  // Filter templates based on search query
+  const filteredTemplates = searchQuery
+    ? templates.filter(
+        template =>
+          template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          template.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          template.status.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : templates;
+
+  // Badge color based on status
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "APPROVED":
+        return <Badge className="bg-green-500">Approved</Badge>;
+      case "PENDING":
+        return <Badge className="bg-yellow-500">Pending</Badge>;
+      case "REJECTED":
+        return <Badge className="bg-red-500">Rejected</Badge>;
+      default:
+        return <Badge>{status}</Badge>;
+    }
+  };
+
   return (
     <div className="flex flex-col space-y-6">
       <div className="flex justify-between items-center">
@@ -103,21 +122,96 @@ export default function WhatsAppTemplatesPage() {
           <CardDescription>
             Create and manage your WhatsApp message templates
           </CardDescription>
+          <div className="flex items-center mt-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search templates..."
+                className="pl-8"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center py-10 text-center">
-            <MessageCircle className="h-16 w-16 text-gray-400 mb-4" />
-            <h3 className="text-xl font-medium mb-2">No templates yet</h3>
-            <p className="text-muted-foreground max-w-md mb-6">
-              Templates allow you to send pre-approved messages to your contacts via WhatsApp Business API.
-            </p>
-            <Button asChild>
-              <Link href="/whatsapp/templates/new">
-                <Plus className="mr-2 h-4 w-4" />
-                Create Your First Template
-              </Link>
-            </Button>
-          </div>
+          {loading ? (
+            <div className="flex justify-center items-center py-10">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : templates.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <MessageCircle className="h-16 w-16 text-gray-400 mb-4" />
+              <h3 className="text-xl font-medium mb-2">No templates yet</h3>
+              <p className="text-muted-foreground max-w-md mb-6">
+                Templates allow you to send pre-approved messages to your contacts via WhatsApp Business API.
+              </p>
+              <Button asChild>
+                <Link href="/whatsapp/templates/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Your First Template
+                </Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Last Updated</TableHead>
+                    <TableHead>Created By</TableHead>
+                    <TableHead className="w-[80px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredTemplates.map((template) => (
+                    <TableRow key={template.id}>
+                      <TableCell className="font-medium">{template.name}</TableCell>
+                      <TableCell>{template.category || "General"}</TableCell>
+                      <TableCell>{getStatusBadge(template.status)}</TableCell>
+                      <TableCell>{formatDistanceToNow(new Date(template.updatedAt), { addSuffix: true })}</TableCell>
+                      <TableCell>{template.createdBy?.name || "System"}</TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/whatsapp/templates/${template.id}`}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/whatsapp/templates/${template.id}/edit`}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/whatsapp/campaigns/new?templateId=${template.id}`}>
+                                <Calendar className="mr-2 h-4 w-4" />
+                                Use in Campaign
+                              </Link>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

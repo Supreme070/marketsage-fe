@@ -1,5 +1,6 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, ContactStatus } from "@prisma/client";
 import * as dotenv from "dotenv";
+import { randomUUID } from "crypto";
 
 // Load environment variables
 dotenv.config();
@@ -8,7 +9,7 @@ dotenv.config();
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: "postgresql://marketsage:marketsage_password@localhost:5432/marketsage?schema=public"
+      url: "postgresql://marketsage:marketsage_password@db:5432/marketsage?schema=public"
     }
   }
 });
@@ -71,7 +72,7 @@ const possibleTags = [
 ];
 
 // Random status values
-const statuses = ["ACTIVE", "UNSUBSCRIBED", "BOUNCED"];
+const statuses: ContactStatus[] = ["ACTIVE", "UNSUBSCRIBED", "BOUNCED"];
 
 // Helper function to get random element from array
 function getRandomElement<T>(array: T[]): T {
@@ -259,8 +260,10 @@ async function seedContacts() {
     // Create contacts in database
     const createdContacts = [];
     for (const contact of allContacts) {
+      const now = new Date();
       const result = await prisma.contact.create({
         data: {
+          id: randomUUID(),
           email: contact.email,
           phone: contact.phone,
           firstName: contact.firstName,
@@ -277,6 +280,8 @@ async function seedContacts() {
           source: contact.source,
           status: contact.status,
           createdById: adminUser.id,
+          createdAt: now,
+          updatedAt: now
         },
       });
       createdContacts.push(result);

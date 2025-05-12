@@ -3,6 +3,7 @@ import { PrismaClient, WATemplateStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
+import { randomUUID } from "crypto";
 
 const prisma = new PrismaClient();
 
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
         updatedAt: "desc",
       },
       include: {
-        createdBy: {
+        User: {
           select: {
             id: true,
             name: true,
@@ -73,7 +74,13 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    return NextResponse.json(templates);
+    // Transform the response to maintain backward compatibility
+    const formattedTemplates = templates.map(template => ({
+      ...template,
+      createdBy: template.User,
+    }));
+
+    return NextResponse.json(formattedTemplates);
   } catch (error) {
     console.error("Error fetching WhatsApp templates:", error);
     return NextResponse.json(
@@ -106,6 +113,7 @@ export async function POST(request: NextRequest) {
     }
 
     const templateData = validation.data;
+    const now = new Date();
     
     // Validate variables is a valid JSON array
     try {
@@ -123,12 +131,15 @@ export async function POST(request: NextRequest) {
     // Create the template
     const newTemplate = await prisma.whatsAppTemplate.create({
       data: {
+        id: randomUUID(),
         name: templateData.name,
         content: templateData.content,
         variables: templateData.variables,
         category: templateData.category,
         status: templateData.status || WATemplateStatus.PENDING, // Default to pending
         createdById: session.user.id,
+        createdAt: now,
+        updatedAt: now,
       },
     });
 

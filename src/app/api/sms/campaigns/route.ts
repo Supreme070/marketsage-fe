@@ -3,6 +3,7 @@ import { PrismaClient, CampaignStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
+import { randomUUID } from "crypto";
 
 const prisma = new PrismaClient();
 
@@ -63,19 +64,19 @@ export async function GET(request: NextRequest) {
         updatedAt: "desc",
       },
       include: {
-        template: {
+        SMSTemplate: {
           select: {
             id: true,
             name: true,
           }
         },
-        lists: {
+        List: {
           select: {
             id: true,
             name: true,
           }
         },
-        segments: {
+        Segment: {
           select: {
             id: true,
             name: true,
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest) {
         },
         _count: {
           select: { 
-            activities: true 
+            SMSActivity: true 
           }
         }
       },
@@ -100,11 +101,11 @@ export async function GET(request: NextRequest) {
       sentAt: campaign.sentAt,
       createdAt: campaign.createdAt,
       updatedAt: campaign.updatedAt,
-      template: campaign.template,
-      lists: campaign.lists,
-      segments: campaign.segments,
+      template: campaign.SMSTemplate,
+      lists: campaign.List,
+      segments: campaign.Segment,
       statistics: {
-        totalRecipients: campaign._count.activities,
+        totalRecipients: campaign._count.SMSActivity,
       }
     }));
 
@@ -176,26 +177,29 @@ export async function POST(request: NextRequest) {
       // Create the SMS campaign
       const campaign = await tx.sMSCampaign.create({
         data: {
+          id: randomUUID(),
           ...mainData,
           createdById: session.user.id,
           status: CampaignStatus.DRAFT,
+          createdAt: new Date(),
+          updatedAt: new Date(),
           // Connect lists if provided
           ...(listIds && listIds.length > 0 ? {
-            lists: {
+            List: {
               connect: listIds.map(id => ({ id })),
             },
           } : {}),
           // Connect segments if provided
           ...(segmentIds && segmentIds.length > 0 ? {
-            segments: {
+            Segment: {
               connect: segmentIds.map(id => ({ id })),
             },
           } : {}),
         },
         include: {
-          template: true,
-          lists: true,
-          segments: true,
+          SMSTemplate: true,
+          List: true,
+          Segment: true,
         },
       });
       

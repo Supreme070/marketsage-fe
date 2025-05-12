@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
+import { randomUUID } from "crypto";
 
 const prisma = new PrismaClient();
 
@@ -92,10 +93,12 @@ export async function POST(request: NextRequest) {
     }
 
     const contactData = validation.data;
+    const now = new Date();
     
     // Create the contact
     const newContact = await prisma.contact.create({
       data: {
+        id: randomUUID(),
         email: contactData.email,
         phone: contactData.phone,
         firstName: contactData.firstName,
@@ -110,7 +113,10 @@ export async function POST(request: NextRequest) {
         notes: contactData.notes,
         tagsString: tagsToString(contactData.tags),
         source: contactData.source,
+        status: "ACTIVE", // Set default status
         createdById: session.user.id,
+        createdAt: now,
+        updatedAt: now
       },
     });
 

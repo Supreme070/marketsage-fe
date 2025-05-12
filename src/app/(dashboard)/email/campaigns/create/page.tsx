@@ -160,8 +160,52 @@ export default function CreateCampaignPage() {
 
   // Form submission handler
   const onSubmit = async (data: CampaignFormValues) => {
+    console.log("Form data being submitted:", data);
     setIsLoading(true);
     try {
+      // Ensure all required fields are present
+      if (!data.name) {
+        toast({
+          title: "Error",
+          description: "Campaign name is required",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      if (!data.subject) {
+        toast({
+          title: "Error",
+          description: "Subject line is required",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Ensure the content is properly set if templateId is not provided
+      if (!data.templateId && !data.content) {
+        toast({
+          title: "Error",
+          description: "Either a template or custom content is required",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Ensure at least one list is selected
+      if (!data.listIds || data.listIds.length === 0) {
+        toast({
+          title: "Error",
+          description: "At least one list must be selected",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
       const response = await fetch("/api/email/campaigns", {
         method: "POST",
         headers: {
@@ -171,7 +215,9 @@ export default function CreateCampaignPage() {
       });
 
       if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
+        const errorData = await response.json();
+        console.error("API Error Response:", errorData);
+        throw new Error(errorData.error || `Error: ${response.status}`);
       }
 
       const campaign = await response.json();
@@ -187,7 +233,7 @@ export default function CreateCampaignPage() {
       console.error("Error creating campaign:", error);
       toast({
         title: "Error",
-        description: "Failed to create campaign. Please try again.",
+        description: typeof error === "string" ? error : "Failed to create campaign. Please try again.",
         variant: "destructive",
       });
     } finally {

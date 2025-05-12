@@ -1,26 +1,80 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
-export default function NewSMSTemplatePage() {
+interface SMSTemplate {
+  id: string;
+  name: string;
+  content: string;
+  variables: string;
+  category?: string;
+}
+
+export default function EditSMSTemplatePage() {
+  const params = useParams();
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     content: "",
     variables: "",
-    category: "marketing"
+    category: ""
   });
+
+  const templateId = params.id as string;
+
+  useEffect(() => {
+    const fetchTemplate = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/sms/templates/${templateId}`);
+        
+        if (!response.ok) {
+          throw new Error("Failed to fetch template details");
+        }
+        
+        const data = await response.json();
+        
+        // Parse variables JSON array to comma-separated string
+        let variablesString = "";
+        try {
+          const parsedVariables = JSON.parse(data.variables);
+          if (Array.isArray(parsedVariables)) {
+            variablesString = parsedVariables.join(", ");
+          }
+        } catch (error) {
+          console.error("Error parsing variables:", error);
+        }
+        
+        setFormData({
+          name: data.name,
+          content: data.content,
+          variables: variablesString,
+          category: data.category || ""
+        });
+      } catch (error) {
+        console.error("Error fetching template:", error);
+        toast.error("Could not load template details");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (templateId) {
+      fetchTemplate();
+    }
+  }, [templateId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -33,7 +87,7 @@ export default function NewSMSTemplatePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
 
     try {
       // Format variables as a JSON array
@@ -47,8 +101,8 @@ export default function NewSMSTemplatePage() {
         )
       };
 
-      const response = await fetch("/api/sms/templates", {
-        method: "POST",
+      const response = await fetch(`/api/sms/templates/${templateId}`, {
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
@@ -57,44 +111,62 @@ export default function NewSMSTemplatePage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create SMS template");
+        throw new Error(errorData.error || "Failed to update template");
       }
 
-      toast.success("SMS template created successfully!");
-      router.push("/sms/templates");
-      router.refresh();
+      toast.success("SMS template updated successfully!");
+      router.push(`/sms/templates/${templateId}`);
     } catch (error) {
-      console.error("Error creating template:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to create template");
+      console.error("Error updating template:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to update template");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col space-y-6">
+        <div className="flex items-center space-x-2">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href={`/sms/templates/${templateId}`}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to template
+            </Link>
+          </Button>
+        </div>
+        <div className="flex justify-center items-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2">Loading template data...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col space-y-6">
       <div className="flex items-center space-x-2">
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/sms/templates">
+          <Link href={`/sms/templates/${templateId}`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to templates
+            Back to template
           </Link>
         </Button>
       </div>
       
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Create SMS Template</h2>
+        <h2 className="text-3xl font-bold tracking-tight">Edit SMS Template</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Create a new SMS message template for your business communications.
+          Update your SMS message template details
         </p>
       </div>
 
       <Card>
         <form onSubmit={handleSubmit}>
           <CardHeader>
-            <CardTitle>New SMS Template</CardTitle>
+            <CardTitle>Edit Template</CardTitle>
             <CardDescription>
-              Fill in the details to create a new SMS template
+              Make changes to your SMS template
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -160,11 +232,16 @@ export default function NewSMSTemplatePage() {
             </div>
           </CardContent>
           <CardFooter className="flex justify-end space-x-2">
-            <Button variant="outline" type="button" onClick={() => router.push("/sms/templates")}>
+            <Button 
+              variant="outline" 
+              type="button" 
+              onClick={() => router.push(`/sms/templates/${templateId}`)}
+              disabled={saving}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Creating..." : "Create Template"}
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving..." : "Save Changes"}
             </Button>
           </CardFooter>
         </form>

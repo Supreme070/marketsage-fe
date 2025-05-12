@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const dotenv = require('dotenv');
+const { randomUUID } = require('crypto');
 
 // Load environment variables
 dotenv.config();
@@ -66,12 +67,16 @@ async function seedSegments() {
   const createdSegments = [];
   for (const segmentData of sampleSegments) {
     try {
+      const now = new Date();
       const segment = await prisma.segment.create({
         data: {
+          id: randomUUID(),
           name: segmentData.name,
           description: segmentData.description,
           rules: segmentData.rules,
           createdById: adminUser.id,
+          createdAt: now,
+          updatedAt: now
         },
       });
       createdSegments.push(segment);

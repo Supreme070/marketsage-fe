@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
+import { randomUUID } from "crypto";
 
 const prisma = new PrismaClient();
 
@@ -103,13 +104,17 @@ export async function POST(request: NextRequest) {
     }
     
     // Create the SMS template
+    const now = new Date();
     const newTemplate = await prisma.sMSTemplate.create({
       data: {
+        id: randomUUID(),
         name: templateData.name,
         content: templateData.content,
         variables: templateData.variables,
         category: templateData.category,
         createdById: session.user.id,
+        createdAt: now,
+        updatedAt: now,
       },
     });
 

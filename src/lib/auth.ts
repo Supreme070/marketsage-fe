@@ -5,6 +5,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 // Temporarily comment out bcrypt
 // import { compare } from "bcrypt";
+import { randomUUID } from "crypto";
 
 // Define UserRole enum to match Prisma schema
 export enum UserRole {
@@ -94,12 +95,16 @@ export const authOptions: NextAuthOptions = {
             
             // If not found in DB, create the user
             if (!dbUser) {
+              const now = new Date();
               dbUser = await prisma.user.create({
                 data: {
+                  id: randomUUID(),
                   email: devUser.email,
                   name: devUser.name,
                   role: devUser.role,
                   password: devUser.password, // Store the actual password
+                  createdAt: now,
+                  updatedAt: now
                 },
               });
             }

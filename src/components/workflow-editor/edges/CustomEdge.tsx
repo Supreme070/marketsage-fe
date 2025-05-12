@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { getBezierPath, type EdgeProps } from "reactflow";
+import { getBezierPath, EdgeProps, getSmoothStepPath } from "reactflow";
 
 export const CustomEdge = memo(
   ({
@@ -14,48 +14,72 @@ export const CustomEdge = memo(
     targetPosition,
     style = {},
     markerEnd,
-    sourceHandleId,
     data,
+    label,
   }: EdgeProps) => {
-    // Edge path calculation
-    const [edgePath] = getBezierPath({
+    // Use a step path instead of a bezier for better visual alignment
+    const [edgePath, labelX, labelY] = getSmoothStepPath({
       sourceX,
       sourceY,
       sourcePosition,
       targetX,
       targetY,
       targetPosition,
+      borderRadius: 16,
     });
 
-    // Set color based on source handle for If/Else conditions
-    let strokeColor = "#94a3b8"; // Default color
+    // Determine if this edge represents a conditional path
+    const isConditionalEdge = id.includes("condition") || 
+      (data && data.isConditional) || 
+      (sourceX !== targetX && Math.abs(sourceY - targetY) > 50);
 
-    if (sourceHandleId === "true") {
-      strokeColor = "#22c55e"; // Green for true path
-    } else if (sourceHandleId === "false") {
-      strokeColor = "#ef4444"; // Red for false path
-    }
+    // Check if this is a positive/negative condition path based on label or source handle
+    const isPositivePath = label === "Yes" || label === "True" || id.includes("true");
+    const isNegativePath = label === "No" || label === "False" || id.includes("false");
+
+    // Set edge color based on edge type
+    const edgeColor = isConditionalEdge 
+      ? (isPositivePath ? "#10b981" : isNegativePath ? "#ef4444" : "#f97316")
+      : "#3b82f6";
 
     return (
-      <g>
+      <>
         <path
           id={id}
+          style={{
+            ...style,
+            strokeWidth: 2,
+            stroke: edgeColor,
+          }}
           className="react-flow__edge-path"
           d={edgePath}
-          strokeWidth={2}
-          stroke={strokeColor}
-          strokeDasharray={data?.dashed ? "5,5" : "none"}
           markerEnd={markerEnd}
         />
-        <path
-          d={edgePath}
-          strokeWidth={12}
-          stroke="transparent"
-          fill="none"
-          strokeLinecap="round"
-          strokeOpacity={0}
-        />
-      </g>
+        {/* Edge label with improved styling */}
+        {label && (
+          <g transform={`translate(${labelX - 20}, ${labelY - 10})`}>
+            <rect
+              width="40"
+              height="20"
+              rx="4"
+              fill={isPositivePath ? "rgb(16 185 129 / 0.2)" : isNegativePath ? "rgb(239 68 68 / 0.2)" : "rgb(249 115 22 / 0.2)"}
+              stroke={edgeColor}
+              strokeWidth="1"
+            />
+            <text
+              x="20"
+              y="14"
+              textAnchor="middle"
+              alignmentBaseline="central"
+              fontSize="10"
+              fill="currentColor"
+              className="text-foreground"
+            >
+              {label}
+            </text>
+          </g>
+        )}
+      </>
     );
   }
 );

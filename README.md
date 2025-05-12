@@ -116,6 +116,56 @@ After running the seed script, the following users are created:
 | IT Admin | kola@marketsage.africa | MS_ITAdmin2025! | Kola Techleads |
 | Regular User | user@marketsage.africa | MS_User2025! | Regular User |
 
+## Docker Setup
+
+This project includes multiple Docker configuration files for different environments and purposes:
+
+### Docker Files
+
+| File | Purpose | Description |
+|------|---------|-------------|
+| `Dockerfile` | Production | Multi-stage build optimized for production deployment. Creates a standalone Node.js application with all necessary dependencies. |
+| `Dockerfile.dev` | Development | Simplified build for development environment with hot-reloading and debugging capabilities. |
+
+### Docker Compose Files
+
+| File | Purpose | Services |
+|------|---------|----------|
+| `docker-compose.yml` | Full Stack | Complete development environment with web application, PostgreSQL database, and database seeder. |
+| `docker-compose.db-only.yml` | Database Only | Runs only the PostgreSQL database with optimized settings for local development. |
+
+### Running with Docker
+
+#### Full Stack Development
+
+```bash
+# Build and start all services
+docker compose build
+docker compose up -d
+
+# Access the application at http://localhost:3030
+```
+
+#### Database Only Mode
+
+```bash
+# Start only the database with optimized settings
+docker compose -f docker-compose.db-only.yml up -d
+
+# Run the application locally
+npm run dev
+```
+
+#### Stopping Containers
+
+```bash
+# Stop all containers
+docker compose down
+
+# Stop only the database
+docker compose -f docker-compose.db-only.yml down
+```
+
 ## Project Structure
 
 ```
@@ -189,9 +239,17 @@ npm run start
 
 ### Docker Deployment
 
+For production deployment with Docker:
+
 ```bash
-# Build and start containers
-docker-compose -f docker-compose.prod.yml up -d
+# Build production images
+docker compose build
+
+# Start services in detached mode
+docker compose up -d
+
+# To view logs
+docker compose logs -f
 ```
 
 ## License

@@ -1,5 +1,6 @@
 import { PrismaClient, ListType } from "@prisma/client";
 import * as dotenv from "dotenv";
+import { randomUUID } from "crypto";
 
 // Load environment variables
 dotenv.config();
@@ -8,7 +9,7 @@ dotenv.config();
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: "postgresql://marketsage:marketsage_password@localhost:5432/marketsage?schema=public"
+      url: "postgresql://marketsage:marketsage_password@db:5432/marketsage?schema=public"
     }
   }
 });
@@ -67,12 +68,16 @@ async function seedLists() {
   const createdLists = [];
   for (const listData of sampleLists) {
     try {
+      const now = new Date();
       const list = await prisma.list.create({
         data: {
+          id: randomUUID(),
           name: listData.name,
           description: listData.description,
           type: listData.type,
           createdById: adminUser.id,
+          createdAt: now,
+          updatedAt: now
         },
       });
       createdLists.push(list);
@@ -117,6 +122,7 @@ async function seedLists() {
       try {
         const member = await prisma.listMember.create({
           data: {
+            id: randomUUID(),
             listId: nigerianBusinesses.id,
             contactId: contact.id,
           },
@@ -141,6 +147,7 @@ async function seedLists() {
       try {
         const member = await prisma.listMember.create({
           data: {
+            id: randomUUID(),
             listId: individualCustomers.id,
             contactId: contact.id,
           },
@@ -164,6 +171,7 @@ async function seedLists() {
       try {
         const member = await prisma.listMember.create({
           data: {
+            id: randomUUID(),
             listId: marketingLeads.id,
             contactId: contact.id,
           },
@@ -187,6 +195,7 @@ async function seedLists() {
       try {
         const member = await prisma.listMember.create({
           data: {
+            id: randomUUID(),
             listId: vipContacts.id,
             contactId: contact.id,
           },
@@ -210,6 +219,7 @@ async function seedLists() {
       try {
         const member = await prisma.listMember.create({
           data: {
+            id: randomUUID(),
             listId: eventAttendees.id,
             contactId: contact.id,
           },
