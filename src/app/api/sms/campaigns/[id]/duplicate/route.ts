@@ -17,7 +17,8 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const campaignId = params.id;
+  // Access params safely in Next.js 15
+  const { id: campaignId } = await params;
 
   try {
     // First check if campaign exists and user has access

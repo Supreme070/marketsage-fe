@@ -21,7 +21,8 @@ export default function WhatsAppCampaignDetailPage({ params }: { params: { id: s
   const [isLoading, setIsLoading] = useState(true);
   
   // Store the ID in a variable to avoid multiple accesses to params.id
-  const campaignId = params.id;
+  // Access the id parameter safely for Next.js compatibility
+  const campaignId = params?.id as string;
 
   useEffect(() => {
     const fetchCampaign = async () => {

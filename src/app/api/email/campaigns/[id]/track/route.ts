@@ -12,7 +12,8 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const campaignId = params.id;
+    // Access params safely in Next.js 15
+    const { id: campaignId } = await params;
     const searchParams = request.nextUrl.searchParams;
     const contactId = searchParams.get("cid");
     const actionType = searchParams.get("type") || "open"; // open or click

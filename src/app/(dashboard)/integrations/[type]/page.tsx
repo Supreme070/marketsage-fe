@@ -40,7 +40,8 @@ interface FormState {
 export default function IntegrationConnectionPage({ params }: IntegrationPageProps) {
   const { toast } = useToast();
   const router = useRouter();
-  const integrationType = params.type;
+  // Access the type parameter safely for Next.js compatibility
+  const integrationType = params?.type as string;
   
   const [formState, setFormState] = useState<FormState>({});
   const [loading, setLoading] = useState(false);

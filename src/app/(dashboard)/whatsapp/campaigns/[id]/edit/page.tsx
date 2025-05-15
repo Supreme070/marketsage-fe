@@ -70,7 +70,8 @@ export default function EditWhatsAppCampaign({ params }: { params: { id: string 
   const [campaign, setCampaign] = useState<any>(null);
   
   // Store the ID in a variable to avoid multiple accesses to params.id
-  const campaignId = params.id;
+  // Access the id parameter safely for Next.js compatibility
+  const campaignId = params?.id as string;
 
   // Initialize form
   const form = useForm<z.infer<typeof formSchema>>({
