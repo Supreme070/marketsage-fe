@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,7 +20,11 @@ import {
   BarChart3,
   Users,
   LayoutGrid,
-  MessageSquare
+  MessageSquare,
+  Send,
+  User,
+  X,
+  Loader2
 } from "lucide-react";
 
 import {
@@ -26,6 +33,7 @@ import {
   CustomCardTitle,
   CustomCardDescription,
   CustomCardContent,
+  CustomCardFooter,
 } from "@/components/ui/custom-card";
 
 import {
@@ -35,7 +43,152 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+import { useToast } from "@/components/ui/use-toast";
+
 export default function HelpPage() {
+  // State for chat functionality
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatMessage, setChatMessage] = useState("");
+  const [chatMessages, setChatMessages] = useState<Array<{
+    id: string;
+    sender: "user" | "agent";
+    message: string;
+    timestamp: Date;
+  }>>([
+    {
+      id: "1",
+      sender: "agent",
+      message: "Hello! Welcome to MarketSage support. How can I help you today?",
+      timestamp: new Date(),
+    },
+  ]);
+  const [isSendingChat, setIsSendingChat] = useState(false);
+
+  // State for ticket submission
+  const [ticketData, setTicketData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    subject: "",
+    message: "",
+  });
+  const [isSubmittingTicket, setIsSubmittingTicket] = useState(false);
+  const [activeTab, setActiveTab] = useState("faq");
+
+  const { toast } = useToast();
+
+  // Handle chat message submission
+  const handleSendChatMessage = () => {
+    if (!chatMessage.trim()) return;
+
+    // Add user message
+    const userMessage = {
+      id: Date.now().toString(),
+      sender: "user" as const,
+      message: chatMessage,
+      timestamp: new Date(),
+    };
+    setChatMessages([...chatMessages, userMessage]);
+    setChatMessage("");
+    
+    // Simulate agent typing
+    setIsSendingChat(true);
+    
+    // Simulate agent response after delay
+    setTimeout(() => {
+      const agentMessage = {
+        id: (Date.now() + 1).toString(),
+        sender: "agent" as const,
+        message: getAgentResponse(chatMessage),
+        timestamp: new Date(),
+      };
+      setChatMessages(prev => [...prev, agentMessage]);
+      setIsSendingChat(false);
+    }, 1500);
+  };
+
+  // Get contextual agent responses based on user message
+  const getAgentResponse = (message: string) => {
+    const lowerMessage = message.toLowerCase();
+    
+    if (lowerMessage.includes("whatsapp") || lowerMessage.includes("template")) {
+      return "For WhatsApp template approvals, ensure your content complies with WhatsApp Business guidelines. You can find more details in our WhatsApp setup guide, or I can help troubleshoot specific template issues.";
+    } else if (lowerMessage.includes("email") || lowerMessage.includes("campaign")) {
+      return "To improve your email campaigns, consider optimizing your subject lines, segmenting your audience, and testing different send times. Our Email Marketing Essentials guide covers these topics in detail.";
+    } else if (lowerMessage.includes("bill") || lowerMessage.includes("payment") || lowerMessage.includes("invoice")) {
+      return "For billing inquiries, please check your account dashboard under Settings > Billing. If you need further assistance, I can connect you with our billing department.";
+    } else if (lowerMessage.includes("sms") || lowerMessage.includes("text")) {
+      return "Our SMS delivery rates in Nigeria typically exceed 98%. For best practices on SMS campaigns, check our SMS guide or let me know if you're experiencing specific delivery issues.";
+    } else {
+      return "Thank you for your message. I can help with that. Could you provide more details so I can better assist you?";
+    }
+  };
+
+  // Handle ticket form input changes
+  const handleTicketInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setTicketData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle ticket submission
+  const handleSubmitTicket = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Form validation
+    if (!ticketData.firstName || !ticketData.lastName || !ticketData.email || !ticketData.subject || !ticketData.message) {
+      toast({
+        title: "Missing information",
+        description: "Please fill out all fields in the form.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Submit ticket logic
+    setIsSubmittingTicket(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      setIsSubmittingTicket(false);
+      
+      // Reset form
+      setTicketData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        subject: "",
+        message: "",
+      });
+      
+      // Show success message
+      toast({
+        title: "Ticket submitted successfully",
+        description: "We've received your support request and will respond shortly.",
+      });
+    }, 1500);
+  };
+
   return (
     <div className="flex flex-col space-y-6">
       <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
@@ -75,16 +228,20 @@ export default function HelpPage() {
               <span>Quick Start Guides</span>
             </a>
           </Button>
-          <Button className="h-auto py-3 px-4 flex flex-col items-center" asChild>
-            <a href="#contact">
-              <MessageCircle className="h-6 w-6 mb-2" />
-              <span>Contact Support</span>
-            </a>
+          <Button 
+            className="h-auto py-3 px-4 flex flex-col items-center" 
+            onClick={() => {
+              setActiveTab("contact");
+              window.location.hash = "contact";
+            }}
+          >
+            <MessageCircle className="h-6 w-6 mb-2" />
+            <span>Contact Support</span>
           </Button>
         </div>
       </div>
 
-      <Tabs defaultValue="faq" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="bg-secondary/5 dark:bg-secondary/20 w-full justify-start p-0 h-auto">
           <TabsTrigger
             value="faq"
@@ -222,8 +379,13 @@ export default function HelpPage() {
               <h3 className="text-lg font-semibold mb-1">Can't find what you're looking for?</h3>
               <p className="text-muted-foreground">Our support team is ready to help with any questions you have.</p>
             </div>
-            <Button asChild>
-              <a href="#contact">Contact Support</a>
+            <Button 
+              onClick={() => {
+                setActiveTab("contact");
+                window.location.hash = "contact";
+              }}
+            >
+              Contact Support
             </Button>
           </div>
         </TabsContent>
@@ -457,7 +619,11 @@ export default function HelpPage() {
                         Available 24/7 for premium users
                       </p>
                     </div>
-                    <Button className="ml-auto" size="sm">
+                    <Button 
+                      className="ml-auto" 
+                      size="sm"
+                      onClick={() => setIsChatOpen(true)}
+                    >
                       Start Chat
                     </Button>
                   </div>
@@ -473,33 +639,70 @@ export default function HelpPage() {
                 </CustomCardDescription>
               </CustomCardHeader>
               <CustomCardContent>
-                <form className="space-y-4">
+                <form className="space-y-4" onSubmit={handleSubmitTicket}>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">First Name</label>
-                      <Input placeholder="Enter your first name" />
+                      <Input 
+                        name="firstName"
+                        value={ticketData.firstName}
+                        onChange={handleTicketInputChange}
+                        placeholder="Enter your first name" 
+                      />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Last Name</label>
-                      <Input placeholder="Enter your last name" />
+                      <Input 
+                        name="lastName"
+                        value={ticketData.lastName}
+                        onChange={handleTicketInputChange}
+                        placeholder="Enter your last name" 
+                      />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Email</label>
-                    <Input placeholder="Enter your email" type="email" />
+                    <Input 
+                      name="email"
+                      value={ticketData.email}
+                      onChange={handleTicketInputChange}
+                      placeholder="Enter your email" 
+                      type="email" 
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Subject</label>
-                    <Input placeholder="What is your inquiry about?" />
+                    <Input 
+                      name="subject"
+                      value={ticketData.subject}
+                      onChange={handleTicketInputChange}
+                      placeholder="What is your inquiry about?" 
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Message</label>
                     <textarea
+                      name="message"
+                      value={ticketData.message}
+                      onChange={handleTicketInputChange}
                       className="min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       placeholder="Describe your issue or question"
                     />
                   </div>
-                  <Button className="w-full">Submit Ticket</Button>
+                  <Button 
+                    type="submit" 
+                    className="w-full"
+                    disabled={isSubmittingTicket}
+                  >
+                    {isSubmittingTicket ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
+                        Submitting...
+                      </>
+                    ) : (
+                      "Submit Ticket"
+                    )}
+                  </Button>
                 </form>
               </CustomCardContent>
             </CustomCard>
@@ -519,6 +722,103 @@ export default function HelpPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Chat Dialog */}
+      <Dialog open={isChatOpen} onOpenChange={setIsChatOpen}>
+        <DialogContent className="sm:max-w-[425px] p-0 h-[500px] flex flex-col">
+          <DialogHeader className="p-4 border-b">
+            <div className="flex items-center">
+              <span className="h-2 w-2 bg-green-500 rounded-full mr-2"></span>
+              <DialogTitle>Live Support</DialogTitle>
+            </div>
+            <DialogDescription>
+              Chat with our support team
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {chatMessages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex ${
+                  msg.sender === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
+                <div
+                  className={`max-w-[80%] rounded-lg p-3 ${
+                    msg.sender === "user"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary/10"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    {msg.sender === "agent" && (
+                      <>
+                        <div className="flex items-center justify-center h-6 w-6 rounded-full bg-secondary/20">
+                          <User className="h-4 w-4" />
+                        </div>
+                        <span className="text-xs font-medium">Support Agent</span>
+                      </>
+                    )}
+                    {msg.sender === "user" && (
+                      <span className="text-xs ml-auto">You</span>
+                    )}
+                  </div>
+                  <p className="text-sm">{msg.message}</p>
+                  <p className="text-xs opacity-70 mt-1 text-right">
+                    {msg.timestamp.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+              </div>
+            ))}
+            
+            {isSendingChat && (
+              <div className="flex justify-start">
+                <div className="max-w-[80%] rounded-lg p-3 bg-secondary/10">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center justify-center h-6 w-6 rounded-full bg-secondary/20">
+                      <User className="h-4 w-4" />
+                    </div>
+                    <span className="text-xs font-medium">Support Agent</span>
+                  </div>
+                  <div className="flex space-x-1 items-center h-6">
+                    <div className="w-2 h-2 rounded-full bg-secondary/50 animate-bounce" style={{ animationDelay: "0ms" }}></div>
+                    <div className="w-2 h-2 rounded-full bg-secondary/50 animate-bounce" style={{ animationDelay: "150ms" }}></div>
+                    <div className="w-2 h-2 rounded-full bg-secondary/50 animate-bounce" style={{ animationDelay: "300ms" }}></div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <div className="border-t p-4">
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSendChatMessage();
+              }}
+              className="flex items-center space-x-2"
+            >
+              <Input
+                value={chatMessage}
+                onChange={(e) => setChatMessage(e.target.value)}
+                placeholder="Type your message..."
+                className="flex-1"
+              />
+              <Button 
+                type="submit" 
+                size="icon"
+                disabled={!chatMessage.trim() || isSendingChat}
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </form>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

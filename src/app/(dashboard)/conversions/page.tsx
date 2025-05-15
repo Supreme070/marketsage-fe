@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -16,7 +19,11 @@ import {
   DollarSign,
   Users,
   CheckCircle2,
-  Settings
+  Settings,
+  X,
+  Calendar,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 
 import {
@@ -29,29 +36,597 @@ import {
 } from "@/components/ui/custom-card";
 import { ConversionMetrics } from "@/components/dashboard/ConversionMetrics";
 import { EntityType } from "@prisma/client";
+import { 
+  Popover, 
+  PopoverContent, 
+  PopoverTrigger 
+} from "@/components/ui/popover";
+import { 
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger,
+  DialogFooter,
+  DialogClose
+} from "@/components/ui/dialog";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
+import { 
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 export default function ConversionsPage() {
+  // Date range state
+  const [dateRange, setDateRange] = useState<string>("30d");
+  const [customDateRange, setCustomDateRange] = useState<{
+    startDate: string;
+    endDate: string;
+  }>({
+    startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0]
+  });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  
+  // Filter state
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    channels: {
+      email: true,
+      sms: true,
+      whatsapp: true,
+      automation: true
+    },
+    conversionTypes: {
+      lead: true,
+      purchase: true,
+      signup: true,
+      form: true
+    },
+    markets: {
+      lagos: true,
+      abuja: true,
+      portHarcourt: true,
+      ibadan: true,
+      kano: true,
+      eastern: true
+    }
+  });
+  
+  // Settings state
+  const [showSettings, setShowSettings] = useState(false);
+  const [settings, setSettings] = useState({
+    trackingEnabled: true,
+    autoAttributionEnabled: true,
+    goalTracking: true,
+    notificationsEnabled: true,
+    apiMode: "production",
+    dataRetention: "365"
+  });
+  
+  // Tab state
+  const [activeTab, setActiveTab] = useState("overview");
+  
+  // Helper functions for date ranges
+  const getDateRangeLabel = () => {
+    switch (dateRange) {
+      case "7d":
+        return "Last 7 days";
+      case "30d":
+        return "Last 30 days";
+      case "90d":
+        return "Last 90 days";
+      case "ytd":
+        return "Year to date";
+      case "custom":
+        return `${formatDate(customDateRange.startDate)} - ${formatDate(customDateRange.endDate)}`;
+      default:
+        return "Last 30 days";
+    }
+  };
+  
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+  
+  const calculateDateRange = (range: string) => {
+    const today = new Date();
+    let startDate = new Date();
+    
+    switch (range) {
+      case "7d":
+        startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case "30d":
+        startDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case "90d":
+        startDate = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
+        break;
+      case "ytd":
+        startDate = new Date(today.getFullYear(), 0, 1);
+        break;
+      default:
+        startDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+    }
+    
+    return {
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: today.toISOString().split('T')[0]
+    };
+  };
+  
+  // Event handlers
+  const handleDateRangeChange = (range: string) => {
+    setDateRange(range);
+    if (range !== "custom") {
+      setCustomDateRange(calculateDateRange(range));
+    }
+    setShowDatePicker(false);
+    toast.success(`Date range changed to ${getDateRangeLabel()}`);
+  };
+  
+  const handleCustomDateChange = () => {
+    if (new Date(customDateRange.startDate) > new Date(customDateRange.endDate)) {
+      toast.error("Start date cannot be after end date");
+      return;
+    }
+    
+    setDateRange("custom");
+    setShowDatePicker(false);
+    toast.success(`Custom date range applied: ${formatDate(customDateRange.startDate)} - ${formatDate(customDateRange.endDate)}`);
+  };
+  
+  const handleFilterChange = (category: string, filter: string, value: boolean) => {
+    setFilters(prev => ({
+      ...prev,
+      [category]: {
+        ...prev[category as keyof typeof prev],
+        [filter]: value
+      }
+    }));
+  };
+  
+  const applyFilters = () => {
+    setShowFilters(false);
+    toast.success("Filters applied successfully");
+  };
+  
+  const resetFilters = () => {
+    setFilters({
+      channels: {
+        email: true,
+        sms: true,
+        whatsapp: true,
+        automation: true
+      },
+      conversionTypes: {
+        lead: true,
+        purchase: true,
+        signup: true,
+        form: true
+      },
+      markets: {
+        lagos: true,
+        abuja: true,
+        portHarcourt: true,
+        ibadan: true,
+        kano: true,
+        eastern: true
+      }
+    });
+    toast.success("Filters reset to default");
+  };
+  
+  const saveSettings = () => {
+    setShowSettings(false);
+    toast.success("Conversion tracking settings saved");
+  };
+
   return (
     <div className="flex flex-col space-y-6">
       <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
         <h1 className="text-3xl font-bold tracking-tight text-secondary dark:text-white">Conversion Tracking</h1>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm">
-            <CalendarDays className="mr-2 h-4 w-4 text-secondary" />
-            Last 30 days
-          </Button>
-          <Button variant="outline" size="sm">
-            <Filter className="mr-2 h-4 w-4" />
-            Filter
-          </Button>
-          <Button variant="outline" size="sm">
-            <Settings className="mr-2 h-4 w-4" />
-            Settings
-          </Button>
+          {/* Date Range Picker */}
+          <Popover open={showDatePicker} onOpenChange={setShowDatePicker}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm">
+                <CalendarDays className="mr-2 h-4 w-4 text-secondary" />
+                {getDateRangeLabel()}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80" align="end">
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <h4 className="font-medium leading-none">Date Range</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Select a predefined range or specify custom dates
+                  </p>
+                </div>
+                <div className="grid gap-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button 
+                      variant={dateRange === "7d" ? "default" : "outline"} 
+                      size="sm"
+                      onClick={() => handleDateRangeChange("7d")}
+                    >
+                      Last 7 days
+                    </Button>
+                    <Button 
+                      variant={dateRange === "30d" ? "default" : "outline"} 
+                      size="sm"
+                      onClick={() => handleDateRangeChange("30d")}
+                    >
+                      Last 30 days
+                    </Button>
+                    <Button 
+                      variant={dateRange === "90d" ? "default" : "outline"} 
+                      size="sm"
+                      onClick={() => handleDateRangeChange("90d")}
+                    >
+                      Last 90 days
+                    </Button>
+                    <Button 
+                      variant={dateRange === "ytd" ? "default" : "outline"} 
+                      size="sm"
+                      onClick={() => handleDateRangeChange("ytd")}
+                    >
+                      Year to date
+                    </Button>
+                  </div>
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs">
+                      <span className="bg-background px-2 text-muted-foreground">
+                        Or select custom range
+                      </span>
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="grid gap-1">
+                        <Label htmlFor="from" className="text-xs">From</Label>
+                        <Input
+                          id="from"
+                          type="date"
+                          className="h-8"
+                          value={customDateRange.startDate}
+                          onChange={(e) => setCustomDateRange({ ...customDateRange, startDate: e.target.value })}
+                        />
+                      </div>
+                      <div className="grid gap-1">
+                        <Label htmlFor="to" className="text-xs">To</Label>
+                        <Input
+                          id="to"
+                          type="date"
+                          className="h-8"
+                          value={customDateRange.endDate}
+                          onChange={(e) => setCustomDateRange({ ...customDateRange, endDate: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      onClick={handleCustomDateChange}
+                    >
+                      Apply Custom Range
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          
+          {/* Filters Dialog */}
+          <Dialog open={showFilters} onOpenChange={setShowFilters}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Filter className="mr-2 h-4 w-4" />
+                Filter
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Filter Conversion Data</DialogTitle>
+                <DialogDescription>
+                  Select the filters to apply to your conversion data.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <Accordion type="single" collapsible defaultValue="channels" className="w-full">
+                  <AccordionItem value="channels">
+                    <AccordionTrigger>Channels</AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="channel-email" 
+                            checked={filters.channels.email}
+                            onCheckedChange={(checked) => handleFilterChange('channels', 'email', checked as boolean)}
+                          />
+                          <Label htmlFor="channel-email">Email</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="channel-sms" 
+                            checked={filters.channels.sms}
+                            onCheckedChange={(checked) => handleFilterChange('channels', 'sms', checked as boolean)}
+                          />
+                          <Label htmlFor="channel-sms">SMS</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="channel-whatsapp" 
+                            checked={filters.channels.whatsapp}
+                            onCheckedChange={(checked) => handleFilterChange('channels', 'whatsapp', checked as boolean)}
+                          />
+                          <Label htmlFor="channel-whatsapp">WhatsApp</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="channel-automation" 
+                            checked={filters.channels.automation}
+                            onCheckedChange={(checked) => handleFilterChange('channels', 'automation', checked as boolean)}
+                          />
+                          <Label htmlFor="channel-automation">Automation Workflows</Label>
+                        </div>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                  
+                  <AccordionItem value="conversionTypes">
+                    <AccordionTrigger>Conversion Types</AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="type-lead" 
+                            checked={filters.conversionTypes.lead}
+                            onCheckedChange={(checked) => handleFilterChange('conversionTypes', 'lead', checked as boolean)}
+                          />
+                          <Label htmlFor="type-lead">Lead Generation</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="type-purchase" 
+                            checked={filters.conversionTypes.purchase}
+                            onCheckedChange={(checked) => handleFilterChange('conversionTypes', 'purchase', checked as boolean)}
+                          />
+                          <Label htmlFor="type-purchase">Purchases</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="type-signup" 
+                            checked={filters.conversionTypes.signup}
+                            onCheckedChange={(checked) => handleFilterChange('conversionTypes', 'signup', checked as boolean)}
+                          />
+                          <Label htmlFor="type-signup">Sign-ups</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="type-form" 
+                            checked={filters.conversionTypes.form}
+                            onCheckedChange={(checked) => handleFilterChange('conversionTypes', 'form', checked as boolean)}
+                          />
+                          <Label htmlFor="type-form">Form Submissions</Label>
+                        </div>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                  
+                  <AccordionItem value="markets">
+                    <AccordionTrigger>Nigerian Markets</AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="market-lagos" 
+                            checked={filters.markets.lagos}
+                            onCheckedChange={(checked) => handleFilterChange('markets', 'lagos', checked as boolean)}
+                          />
+                          <Label htmlFor="market-lagos">Lagos Metropolitan</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="market-abuja" 
+                            checked={filters.markets.abuja}
+                            onCheckedChange={(checked) => handleFilterChange('markets', 'abuja', checked as boolean)}
+                          />
+                          <Label htmlFor="market-abuja">Abuja & FCT</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="market-portHarcourt" 
+                            checked={filters.markets.portHarcourt}
+                            onCheckedChange={(checked) => handleFilterChange('markets', 'portHarcourt', checked as boolean)}
+                          />
+                          <Label htmlFor="market-portHarcourt">Port Harcourt</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="market-ibadan" 
+                            checked={filters.markets.ibadan}
+                            onCheckedChange={(checked) => handleFilterChange('markets', 'ibadan', checked as boolean)}
+                          />
+                          <Label htmlFor="market-ibadan">Ibadan & SW Cities</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="market-kano" 
+                            checked={filters.markets.kano}
+                            onCheckedChange={(checked) => handleFilterChange('markets', 'kano', checked as boolean)}
+                          />
+                          <Label htmlFor="market-kano">Kano & Northern Markets</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="market-eastern" 
+                            checked={filters.markets.eastern}
+                            onCheckedChange={(checked) => handleFilterChange('markets', 'eastern', checked as boolean)}
+                          />
+                          <Label htmlFor="market-eastern">Eastern Markets</Label>
+                        </div>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={resetFilters}>Reset</Button>
+                <Button onClick={applyFilters}>Apply Filters</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          
+          {/* Settings Dialog */}
+          <Dialog open={showSettings} onOpenChange={setShowSettings}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Conversion Tracking Settings</DialogTitle>
+                <DialogDescription>
+                  Configure how conversion tracking works in your MarketSage account.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4 space-y-4">
+                <div className="flex items-center justify-between space-y-0.5">
+                  <div>
+                    <Label htmlFor="tracking-enabled" className="text-sm font-medium">
+                      Enable Conversion Tracking
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Turn on/off tracking for all conversion events
+                    </p>
+                  </div>
+                  <Switch 
+                    id="tracking-enabled" 
+                    checked={settings.trackingEnabled}
+                    onCheckedChange={(checked) => setSettings({...settings, trackingEnabled: checked})}
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between space-y-0.5">
+                  <div>
+                    <Label htmlFor="auto-attribution" className="text-sm font-medium">
+                      Automatic Attribution
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Automatically attribute conversions to campaigns
+                    </p>
+                  </div>
+                  <Switch 
+                    id="auto-attribution" 
+                    checked={settings.autoAttributionEnabled}
+                    onCheckedChange={(checked) => setSettings({...settings, autoAttributionEnabled: checked})}
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between space-y-0.5">
+                  <div>
+                    <Label htmlFor="goal-tracking" className="text-sm font-medium">
+                      Goal Tracking
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Track progress against conversion goals
+                    </p>
+                  </div>
+                  <Switch 
+                    id="goal-tracking" 
+                    checked={settings.goalTracking}
+                    onCheckedChange={(checked) => setSettings({...settings, goalTracking: checked})}
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between space-y-0.5">
+                  <div>
+                    <Label htmlFor="notifications" className="text-sm font-medium">
+                      Conversion Notifications
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Get notified for significant conversion events
+                    </p>
+                  </div>
+                  <Switch 
+                    id="notifications" 
+                    checked={settings.notificationsEnabled}
+                    onCheckedChange={(checked) => setSettings({...settings, notificationsEnabled: checked})}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="api-mode">API Tracking Mode</Label>
+                  <Select 
+                    value={settings.apiMode}
+                    onValueChange={(value) => setSettings({...settings, apiMode: value})}
+                  >
+                    <SelectTrigger id="api-mode">
+                      <SelectValue placeholder="Select mode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="development">Development</SelectItem>
+                      <SelectItem value="staging">Staging</SelectItem>
+                      <SelectItem value="production">Production</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="data-retention">Data Retention (days)</Label>
+                  <Input 
+                    id="data-retention" 
+                    type="number" 
+                    min="30" 
+                    max="3650"
+                    value={settings.dataRetention}
+                    onChange={(e) => setSettings({...settings, dataRetention: e.target.value})}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    How long to keep conversion data (30 days minimum)
+                  </p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={saveSettings}>Save Settings</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="bg-secondary/5 dark:bg-secondary/20">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="channels">Channels</TabsTrigger>
@@ -64,6 +639,8 @@ export default function ConversionsPage() {
             title="Overall Conversion Performance"
             description="Summary of conversions across all channels"
             period="MONTHLY"
+            startDate={customDateRange.startDate}
+            endDate={customDateRange.endDate}
           />
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -386,6 +963,8 @@ export default function ConversionsPage() {
               title="Email Campaign Conversions"
               description="Track email campaign conversion performance"
               period="WEEKLY"
+              startDate={customDateRange.startDate}
+              endDate={customDateRange.endDate}
             />
             
             <ConversionMetrics 
@@ -393,6 +972,8 @@ export default function ConversionsPage() {
               title="SMS Campaign Conversions"
               description="Track SMS campaign conversion performance"
               period="WEEKLY"
+              startDate={customDateRange.startDate}
+              endDate={customDateRange.endDate}
             />
             
             <ConversionMetrics 
@@ -400,6 +981,8 @@ export default function ConversionsPage() {
               title="WhatsApp Campaign Conversions"
               description="Track WhatsApp campaign conversion performance"
               period="WEEKLY"
+              startDate={customDateRange.startDate}
+              endDate={customDateRange.endDate}
             />
             
             <ConversionMetrics 
@@ -407,6 +990,8 @@ export default function ConversionsPage() {
               title="Workflow Conversions"
               description="Track workflow automation conversion performance"
               period="WEEKLY"
+              startDate={customDateRange.startDate}
+              endDate={customDateRange.endDate}
             />
           </div>
         </TabsContent>
@@ -418,6 +1003,8 @@ export default function ConversionsPage() {
               title="Email Campaigns"
               description="Email campaign conversion attribution"
               period="MONTHLY"
+              startDate={customDateRange.startDate}
+              endDate={customDateRange.endDate}
             />
             
             <ConversionMetrics 
@@ -425,6 +1012,8 @@ export default function ConversionsPage() {
               title="SMS Campaigns"
               description="SMS campaign conversion attribution"
               period="MONTHLY"
+              startDate={customDateRange.startDate}
+              endDate={customDateRange.endDate}
             />
             
             <ConversionMetrics 
@@ -432,6 +1021,8 @@ export default function ConversionsPage() {
               title="WhatsApp Campaigns"
               description="WhatsApp campaign conversion attribution"
               period="MONTHLY"
+              startDate={customDateRange.startDate}
+              endDate={customDateRange.endDate}
             />
           </div>
         </TabsContent>
@@ -442,6 +1033,8 @@ export default function ConversionsPage() {
               title="Conversion Goals"
               description="Track progress against your conversion goals"
               period="YEARLY"
+              startDate={customDateRange.startDate}
+              endDate={customDateRange.endDate}
             />
           </div>
         </TabsContent>

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,89 +7,105 @@
 @layer base {
   :root {
     /* Base colors */
-    --background: 210 40% 98%; /* Off-white: #F9FAFB as requested */
-    --foreground: 222 47% 11%; /* Charcoal for text in light mode */
+    --background: 0 0% 100%;
+    --foreground: 215 25% 27%;
 
     /* Card and elements */
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 215 25% 27%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 215 25% 27%;
 
-    /* Primary: Teal */
-    --primary: 169 71% 50%; /* Teal: #2DD4BF */
-    --primary-foreground: 222 47% 11%; /* Dark text on primary */
+    /* Primary: Teal - Increased saturation for light theme */
+    --primary: 172 75% 43%; /* Slightly darker, more saturated #23C5B2 */
+    --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Navy */
-    --secondary: 222 65% 33%; /* Navy: #1E3A8A */
-    --secondary-foreground: 210 40% 98%; /* Light text on secondary */
+    /* Secondary colors - Navy */
+    --secondary: 217 33% 17%; /* #1E293B */
+    --secondary-foreground: 0 0% 100%;
 
-    /* Accent: Amber */
-    --accent: 38 96% 56%; /* Amber: #FBBF24 */
-    --accent-foreground: 222 47% 11%; /* Dark text on accent */
+    /* Accent: Now using Amber from the new design - Increased saturation for light theme */
+    --accent: 38 95% 54%; /* More saturated #F5BA16 */
+    --accent-foreground: 215 25% 27%;
 
     /* Other UI colors */
     --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 169 71% 50%; /* Teal */
-
-    /* Destructive actions */
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    --muted-foreground: 215 25% 40%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 214.3 32% 89%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 172 75% 43%;
 
     /* Border radius */
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
-    /* Chart colors */
-    --chart-1: 169 71% 50%;  /* Teal: #2DD4BF */
-    --chart-2: 38 96% 56%;   /* Amber: #FBBF24 */
-    --chart-3: 222 65% 33%;  /* Navy: #1E3A8A */
-    --chart-4: 142 72% 29%;  /* Green */
-    --chart-5: 217 91% 60%;  /* Blue */
+    /* Sidebar specific colors */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 215 25% 27%;
+    --sidebar-primary: 172 75% 43%; /* Teal */
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 38 95% 54%; /* Amber */
+    --sidebar-accent-foreground: 215 25% 27%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 172 75% 43%;
+
+    /* Chart colors - Increased saturation for light theme */
+    --chart-1: 172 75% 43%;  /* Teal */
+    --chart-2: 38 95% 54%;   /* Amber */
+    --chart-3: 199 90% 46%;  /* Blue */
+    --chart-4: 142 75% 32%;  /* Green */
+    --chart-5: 217 33% 17%;  /* Navy */
   }
 
   .dark {
     /* Base colors */
-    --background: 222 47% 11%; /* Charcoal: #111827 as requested */
-    --foreground: 210 40% 98%; /* Off-white text */
+    --background: 217 33% 17%; /* #1E293B */
+    --foreground: 210 40% 98%;
 
     /* Card and elements */
-    --card: 217 38% 15%; /* Slightly lighter than background for contrast */
+    --card: 222 47% 11%; /* #0F172A */
     --card-foreground: 210 40% 98%;
-    --popover: 217 38% 15%;
+    --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
 
     /* Primary: Teal */
-    --primary: 169 71% 50%; /* Teal: #2DD4BF */
-    --primary-foreground: 222 47% 11%; /* Dark text on primary */
+    --primary: 172 72% 47%; /* #2DD4BF */
+    --primary-foreground: 210 40% 98%;
 
-    /* Secondary: Navy */
-    --secondary: 222 65% 33%; /* Navy: #1E3A8A */
-    --secondary-foreground: 210 40% 98%; /* Light text on secondary */
+    /* Secondary colors */
+    --secondary: 217 33% 17%; /* #1E293B */
+    --secondary-foreground: 210 40% 98%;
 
     /* Accent: Amber */
-    --accent: 38 96% 56%; /* Amber: #FBBF24 */
-    --accent-foreground: 222 47% 11%; /* Dark text on accent */
+    --accent: 31 92% 45%; /* #F59E0B */
+    --accent-foreground: 210 40% 98%;
 
     /* Other UI colors */
     --muted: 217 33% 17%;
     --muted-foreground: 215 20% 65%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
     --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 169 71% 50%;
+    --ring: 172 72% 47%;
 
-    /* Destructive actions */
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 210 40% 98%;
+    /* Sidebar specific colors */
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 172 72% 47%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 31 92% 45%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 17%;
+    --sidebar-ring: 172 72% 47%;
 
-    /* Chart colors */
-    --chart-1: 169 71% 55%;  /* Teal: #2DD4BF */
-    --chart-2: 38 96% 65%;   /* Amber: #FBBF24 */
-    --chart-3: 222 65% 40%;  /* Navy: #1E3A8A */
+    /* Chart colors - slightly brighter for dark mode */
+    --chart-1: 172 72% 47%;  /* Teal */
+    --chart-2: 31 92% 45%;   /* Amber */
+    --chart-3: 199 89% 48%;  /* Blue */
     --chart-4: 142 72% 35%;  /* Green */
-    --chart-5: 217 91% 65%;  /* Blue */
+    --chart-5: 210 40% 98%;  /* Light */
   }
 }
 
@@ -96,24 +114,33 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
-    font-family: 'Inter', sans-serif;
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
   h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold tracking-tight;
-    font-family: 'Inter', sans-serif;
+    @apply font-heading font-semibold tracking-tight;
   }
   h1 {
-    @apply text-3xl lg:text-4xl;
-    line-height: 1.2;
+    @apply text-3xl lg:text-5xl;
+    line-height: 1.1;
   }
   h2 {
-    @apply text-2xl lg:text-3xl;
-    line-height: 1.3;
+    @apply text-2xl lg:text-4xl;
+    line-height: 1.2;
   }
   h3 {
-    @apply text-xl lg:text-2xl;
-    line-height: 1.4;
+    @apply text-xl lg:text-3xl;
+    line-height: 1.3;
+  }
+  
+  /* Base font size update */
+  html {
+    font-size: 16px;
+  }
+  
+  /* Modern focus states */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary/50 ring-offset-2 ring-offset-background;
   }
 }
 
@@ -122,55 +149,190 @@
     @apply container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
 
+  /* Modern button styles */
   .btn-primary {
-    @apply bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background h-10 py-2 px-4;
+    @apply bg-gradient-primary text-white inline-flex items-center justify-center rounded-xl text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background h-11 py-2.5 px-5 shadow-md shadow-primary/10 hover:shadow-lg hover:shadow-primary/20 active:scale-[0.98];
   }
 
   .btn-secondary {
-    @apply bg-secondary text-secondary-foreground hover:bg-secondary/90 inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background h-10 py-2 px-4;
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/90 inline-flex items-center justify-center rounded-xl text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background h-11 py-2.5 px-5 shadow-md hover:shadow-lg active:scale-[0.98];
   }
 
   .btn-accent {
-    @apply bg-accent text-accent-foreground hover:bg-accent/90 inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background h-10 py-2 px-4;
+    @apply bg-accent text-accent-foreground hover:bg-accent/90 inline-flex items-center justify-center rounded-xl text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background h-11 py-2.5 px-5 shadow-md shadow-accent/10 hover:shadow-lg hover:shadow-accent/20 active:scale-[0.98];
+  }
+  
+  .btn-cta {
+    @apply bg-gradient-to-r from-accent to-accent-500 text-white font-medium py-3 px-6 rounded-xl shadow-md shadow-accent/20 hover:shadow-lg hover:shadow-accent/30 transition-all duration-200 active:scale-[0.98];
+  }
+  
+  .btn-ghost {
+    @apply bg-transparent border border-border text-foreground hover:bg-muted/50 inline-flex items-center justify-center rounded-xl text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/10 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background h-11 py-2.5 px-5 hover:border-primary/30 active:scale-[0.98];
   }
 
+  /* Card styles */
   .card-feature {
-    @apply bg-card rounded-lg border border-border p-6 transition-all hover:shadow-md hover:border-primary/20;
+    @apply bg-card rounded-xl border border-border p-6 transition-all duration-300 hover:shadow-card hover:border-primary/20;
   }
 
   .icon-container {
-    @apply w-12 h-12 rounded-lg flex items-center justify-center bg-primary/10 text-primary mb-4;
+    @apply w-12 h-12 rounded-xl flex items-center justify-center bg-primary/10 text-primary mb-4;
+  }
+  
+  /* Glass UI elements */
+  .glass {
+    @apply bg-white/15 backdrop-blur-md border border-white/20 rounded-xl shadow-subtle;
+  }
+  
+  .glass-card {
+    @apply bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-subtle p-6;
+  }
+  
+  /* Custom glass navigation effect for dark theme */
+  .glass-nav {
+    background-color: rgba(15, 23, 42, 0.7); /* matches the dark background color with opacity */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  
+  .glass-button {
+    @apply bg-white/20 backdrop-blur-md border border-white/30 rounded-xl shadow-subtle px-5 py-2.5 text-white font-medium transition-all duration-200 hover:bg-white/30 active:scale-[0.98];
+  }
+  
+  .dark .glass {
+    @apply bg-black/30 border-white/10;
+  }
+  
+  .dark .glass-card {
+    @apply bg-black/20 border-white/10;
+  }
+  
+  .dark .glass-nav {
+    @apply bg-black/60 border-white/10;
+  }
+  
+  .dark .glass-button {
+    @apply bg-white/10 border-white/20 hover:bg-white/15;
+  }
+  
+  /* Feature showcase card */
+  .feature-card {
+    @apply rounded-xl bg-card shadow-subtle border border-border p-6 hover:shadow-card transition-all duration-300 hover:border-primary/20;
+  }
+  
+  /* Results card (before/after) */
+  .results-card {
+    @apply rounded-xl bg-secondary p-6 text-secondary-foreground;
+  }
+  
+  .results-card-header {
+    @apply flex items-center space-x-3 mb-4;
+  }
+  
+  .results-section {
+    @apply mb-4;
+  }
+  
+  .results-metrics {
+    @apply mt-6 text-center py-3 px-4 rounded-lg bg-accent/10 text-accent-600 font-semibold text-lg;
+  }
+  
+  /* Animated elements */
+  .animated-gradient {
+    background: linear-gradient(
+      -45deg, 
+      #2DD4BF, 
+      #14B8A6, 
+      #FBBF24, 
+      #F59E0B
+    );
+    background-size: 400% 400%;
+    animation: gradient 15s ease infinite;
+  }
+
+  @keyframes gradient {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+  
+  /* Improved text wrapping */
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  /* Modern layout components */
+  .grid-feature {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8;
+  }
+  
+  .section-padding {
+    @apply py-16 lg:py-24;
+  }
+  
+  .section-heading {
+    @apply text-center mb-12;
+  }
+  
+  .section-heading h2 {
+    @apply text-3xl lg:text-4xl font-bold mb-4;
+  }
+  
+  .section-heading p {
+    @apply text-muted-foreground max-w-2xl mx-auto text-balance;
   }
 }
 
-/* Import Inter font */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-/* Brand logo styling */
+/* Brand text styling */
 .brand-text {
   letter-spacing: -0.5px;
+  font-weight: 700;
 }
 
 .brand-text .market {
-  color: hsl(169, 71%, 50%);
-  font-weight: 700;
+  color: var(--ms-teal);
 }
 
 .brand-text .sage {
-  color: hsl(38, 96%, 56%);
-  font-weight: 700;
+  color: var(--ms-amber);
 }
 
-/* MarketSage specific brand colors */
+/* Modern brand text */
+.brand-text-new {
+  font-family: var(--font-outfit);
+  letter-spacing: -0.03em;
+}
+
+.brand-text-new .market {
+  font-weight: 600;
+  color: hsl(var(--primary));
+  text-shadow: 0 0 8px rgba(45, 212, 191, 0.4);
+}
+
+.brand-text-new .sage {
+  font-weight: 500;
+  color: hsl(var(--accent));
+  text-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+}
+
 :root {
-  /* Primary brand color - Teal */
-  --ms-teal: #2DD4BF;
+  /* Primary brand color - Teal - More saturated for light mode */
+  --ms-teal: #23C5B2;
+  --ms-teal-dark: #14B8A6;
   
   /* Secondary brand color - Navy */
-  --ms-navy: #1E3A8A;
+  --ms-navy: #1E293B;
+  --ms-navy-dark: #0F172A;
   
-  /* Accent brand color - Amber */
-  --ms-amber: #FBBF24;
+  /* Accent brand color - Amber - More saturated for light mode */
+  --ms-amber: #F5BA16;
+  --ms-amber-dark: #F59E0B;
   
   /* Background colors */
   --ms-charcoal: #111827;
@@ -183,7 +345,13 @@
   --ms-info: #2563EB;
 }
 
-/* Utility classes for the brand colors */
+.dark {
+  /* Restore original colors for dark mode */
+  --ms-teal: #2DD4BF;
+  --ms-amber: #FBBF24;
+}
+  
+/* Text colors */
 .text-ms-teal {
   color: var(--ms-teal);
 }
@@ -193,24 +361,6 @@
 }
 
 .text-ms-amber {
-  color: var(--ms-amber);
-}
-
-/* Brand text styling for MarketSage name */
-.brand-text {
-  font-weight: 700;
-}
-
-.brand-text .market {
-  color: var(--ms-teal);
-}
-
-.brand-text .sage {
-  color: var(--ms-amber);
-}
-
-/* Dark theme specific overrides */
-.dark .brand-text .sage {
   color: var(--ms-amber);
 }
 
@@ -227,25 +377,92 @@
   color: var(--ms-navy);
 }
 
-/* MarketSage Brand Typography */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* Modern highlight effects */
+.highlight-text {
+  @apply relative inline-block;
+}
 
+.highlight-text::after {
+  content: '';
+  @apply absolute left-0 bottom-0 w-full h-3 bg-primary/20 -z-10 rounded-sm;
+}
+
+.highlight-container {
+  @apply relative z-0 inline-block;
+}
+
+.highlight-container::before {
+  content: '';
+  @apply absolute inset-0 bg-primary/10 -z-10 rounded-md -left-2 -right-2 -top-1 -bottom-1;
+}
+
+/* Animations for scrolling elements */
+.reveal-on-scroll {
+  @apply opacity-0 translate-y-8 transition-all duration-700;
+}
+
+.reveal-on-scroll.active {
+  @apply opacity-100 translate-y-0;
+}
+
+.stagger-item {
+  @apply opacity-0 translate-y-8 transition-all duration-500;
+}
+
+.stagger-delay-1 {
+  transition-delay: 100ms;
+}
+
+.stagger-delay-2 {
+  transition-delay: 200ms;
+}
+
+.stagger-delay-3 {
+  transition-delay: 300ms;
+}
+
+.stagger-item.active {
+  @apply opacity-100 translate-y-0;
+}
+
+/* Enhanced shadows for light theme */
 :root {
-  /* Brand Colors */
-  --brand-teal: #2DD4BF;
-  --brand-navy: #1E3A8A;
-  --brand-amber: #FBBF24;
-  --brand-charcoal: #111827;
-  --brand-offwhite: #F9FAFB;
+  --shadow-color: 215 25% 27%;
+  --shadow-strength: 2%;
 }
 
-/* Logo styling */
-.brand-text .market {
-  color: var(--brand-teal);
-  font-weight: 500;
+.shadow-card {
+  box-shadow: 
+    0 1px 2px -1px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 5%)),
+    0 3px 6px -3px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 7%)),
+    0 8px 24px -6px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 6%));
 }
 
-.brand-text .sage {
-  color: var(--brand-amber);
-  font-weight: 500;
+.shadow-subtle {
+  box-shadow: 
+    0 1px 1px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 1%)),
+    0 2px 4px -2px hsl(var(--shadow-color) / calc(var(--shadow-strength) + 3%));
+}
+
+/* Enhanced color effects for light theme */
+.without-text {
+  color: var(--ms-teal) !important;
+  text-shadow: 0 0 12px rgba(35, 197, 178, 0.4) !important;
+  font-weight: 600 !important;
+}
+
+.code-text {
+  color: var(--ms-amber) !important;
+  text-shadow: 0 0 12px rgba(245, 186, 22, 0.4) !important;
+  font-weight: 600 !important;
+}
+
+.dark .without-text {
+  color: #2DD4BF !important;
+  text-shadow: 0 0 8px rgba(45, 212, 191, 0.3) !important;
+}
+
+.dark .code-text {
+  color: #FBBF24 !important;
+  text-shadow: 0 0 8px rgba(251, 191, 36, 0.3) !important;
 }

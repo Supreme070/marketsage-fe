@@ -17,6 +17,22 @@ enum UserRole {
   SUPER_ADMIN
 }
 
+// Organization model
+model Organization {
+  id             String    @id @default(cuid())
+  name           String
+  plan           String    @default("FREE")
+  logoUrl        String?
+  websiteUrl     String?
+  address        String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  users          User[]
+  integrations   Integration[]
+}
+
 // User model for authentication and platform access
 model User {
   id             String    @id @default(cuid())
@@ -30,8 +46,10 @@ model User {
   lastLogin      DateTime?
   isActive       Boolean   @default(true)
   role           UserRole  @default(USER)
+  organizationId String?
 
   // Relations
+  organization     Organization? @relation(fields: [organizationId], references: [id])
   accounts         Account[]
   sessions         Session[]
   contacts         Contact[]          @relation("CreatedBy")
@@ -44,6 +62,7 @@ model User {
   workflows        Workflow[]         @relation("WorkflowCreator")
   lists            List[]             @relation("ListCreator")
   segments         Segment[]          @relation("SegmentCreator")
+  createdIntegrations Integration[]   @relation("IntegrationCreator")
 }
 
 // NextAuth.js required models
@@ -80,6 +99,40 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// Integration model
+model Integration {
+  id              String    @id @default(cuid())
+  type            String
+  name            String
+  description     String?
+  credentials     String    // Encrypted JSON string
+  status          IntegrationStatus @default(PENDING)
+  lastSyncedAt    DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  organizationId  String
+  createdBy       String
+
+  // Relations
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  creator         User         @relation("IntegrationCreator", fields: [createdBy], references: [id])
+  syncHistory     IntegrationSyncHistory[]
+}
+
+// Integration sync history
+model IntegrationSyncHistory {
+  id              String    @id @default(cuid())
+  integrationId   String
+  status          SyncStatus
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+  recordsProcessed Int?
+  error           String?
+
+  // Relations
+  integration     Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
 }
 
 // Core application models
@@ -386,17 +439,6 @@ model Analytics {
   @@unique([entityType, entityId, period])
 }
 
-// Integration models
-model IntegrationConnection {
-  id              String    @id @default(cuid())
-  name            String
-  type            IntegrationType
-  config          String    // JSON string
-  status          ConnectionStatus @default(INACTIVE)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-}
-
 // Enums
 enum ContactStatus {
   ACTIVE
@@ -481,19 +523,15 @@ enum AnalyticsPeriod {
   YEARLY
 }
 
-enum IntegrationType {
-  ECOMMERCE_WOOCOMMERCE
-  ECOMMERCE_SHOPIFY
-  CRM_SALESFORCE
-  CRM_HUBSPOT
-  PAYMENT_STRIPE
-  PAYMENT_PAYPAL
-  WEBHOOK
-  API
+enum IntegrationStatus {
+  PENDING
+  ACTIVE
+  ERROR
+  INACTIVE
 }
 
-enum ConnectionStatus {
-  ACTIVE
-  INACTIVE
-  ERROR
+enum SyncStatus {
+  RUNNING
+  COMPLETED
+  FAILED
 }

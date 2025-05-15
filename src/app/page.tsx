@@ -1,37 +1,39 @@
-import Link from "next/link";
-import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import { 
-  MailIcon, 
-  MessageSquare, 
-  BarChart, 
-  Users, 
-  Zap, 
-  CheckCircle, 
-  ArrowRight 
-} from "lucide-react";
-import { HeroSection } from "@/components/landing/hero-section";
-import { FeatureSection } from "@/components/landing/feature-section";
-import { TestimonialsSection } from "@/components/landing/testimonials-section";
-import { CtaSection } from "@/components/landing/cta-section";
-import { IntegrationsSection } from "@/components/landing/integrations-section";
-import { PricingSection } from "@/components/landing/pricing-section";
 import { LandingHeader } from "@/components/landing/landing-header";
-import { LandingFooter } from "@/components/landing/landing-footer";
+import { HeroSection } from "@/components/landing/hero-section";
+import { FeaturesSection } from "@/components/landing/features-section";
+import { CtaSection } from "@/components/landing/cta-section";
+import { BrandLogo } from "@/components/landing/landing-footer-brand";
+import { Metadata } from "next";
 
-export default function Home() {
+export const metadata: Metadata = {
+  title: "MarketSage - Intelligent Marketing Automation for Nigerian Businesses",
+  description: "MarketSage helps Nigerian businesses automate their marketing with multi-channel campaigns, AI-powered insights, and easy-to-use workflows.",
+};
+
+export default function LandingPage() {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="min-h-screen flex flex-col">
       <LandingHeader />
       <main className="flex-1">
         <HeroSection />
-        <FeatureSection />
-        <IntegrationsSection />
-        <TestimonialsSection />
-        <PricingSection />
+        <FeaturesSection />
         <CtaSection />
       </main>
-      <LandingFooter />
+      <footer className="border-t border-border/40 bg-background py-6">
+        <div className="container px-4 mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="flex items-center mb-4 md:mb-0">
+              <BrandLogo />
+              <span className="text-muted-foreground text-sm ml-2">© {new Date().getFullYear()} All rights reserved</span>
+            </div>
+            <div className="flex gap-6">
+              <a href="#" className="text-muted-foreground hover:text-foreground text-sm">Privacy</a>
+              <a href="#" className="text-muted-foreground hover:text-foreground text-sm">Terms</a>
+              <a href="#" className="text-muted-foreground hover:text-foreground text-sm">Contact</a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

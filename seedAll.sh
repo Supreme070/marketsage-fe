@@ -36,6 +36,9 @@ ts-node src/scripts/seedWhatsAppCampaigns.ts
 echo "Seeding workflows..."
 ts-node src/scripts/seedWorkflows.ts
 
+echo "Seeding user preferences..."
+ts-node src/scripts/seedUserPreferences.ts
+
 echo "Assigning contacts to lists..."
 ts-node src/scripts/assignContactsToLists.ts
 

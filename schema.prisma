@@ -1,5 +1,6 @@
 generator client {
   provider      = "prisma-client-js"
+  output        = "./node_modules/.prisma/client"
   binaryTargets = ["native", "linux-musl", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x", "darwin", "darwin-arm64"]
 }
 
@@ -69,7 +70,7 @@ model Contact {
   createdAt        DateTime           @default(now())
   updatedAt        DateTime
   createdById      String
-  User             User               @relation(fields: [createdById], references: [id])
+  createdBy        User               @relation("UserToContact", fields: [createdById], references: [id])
   EmailActivity    EmailActivity[]
   ListMember       ListMember[]
   SMSActivity      SMSActivity[]
@@ -104,7 +105,7 @@ model EmailCampaign {
   updatedAt     DateTime
   createdById   String
   EmailActivity EmailActivity[]
-  User          User            @relation(fields: [createdById], references: [id])
+  createdBy     User            @relation("UserToEmailCampaign", fields: [createdById], references: [id])
   EmailTemplate EmailTemplate?  @relation(fields: [templateId], references: [id])
   List          List[]          @relation("CampaignLists")
   Segment       Segment[]       @relation("CampaignSegments")
@@ -123,7 +124,7 @@ model EmailTemplate {
   updatedAt     DateTime
   createdById   String
   EmailCampaign EmailCampaign[]
-  User          User            @relation(fields: [createdById], references: [id])
+  createdBy     User            @relation("UserToEmailTemplate", fields: [createdById], references: [id])
 }
 
 model IntegrationConnection {
@@ -144,7 +145,7 @@ model List {
   createdAt        DateTime           @default(now())
   updatedAt        DateTime
   createdById      String
-  User             User               @relation(fields: [createdById], references: [id])
+  createdBy        User               @relation("UserToList", fields: [createdById], references: [id])
   ListMember       ListMember[]
   EmailCampaign    EmailCampaign[]    @relation("CampaignLists")
   SMSCampaign      SMSCampaign[]      @relation("SMSCampaignLists")
@@ -187,7 +188,7 @@ model SMSCampaign {
   updatedAt    DateTime
   createdById  String
   SMSActivity  SMSActivity[]
-  User         User           @relation(fields: [createdById], references: [id])
+  createdBy    User           @relation("UserToSMSCampaign", fields: [createdById], references: [id])
   SMSTemplate  SMSTemplate?   @relation(fields: [templateId], references: [id])
   List         List[]         @relation("SMSCampaignLists")
   Segment      Segment[]      @relation("SMSCampaignSegments")
@@ -203,7 +204,7 @@ model SMSTemplate {
   updatedAt   DateTime
   createdById String
   SMSCampaign SMSCampaign[]
-  User        User          @relation(fields: [createdById], references: [id])
+  createdBy   User          @relation("UserToSMSTemplate", fields: [createdById], references: [id])
 }
 
 model Segment {
@@ -214,7 +215,7 @@ model Segment {
   createdAt        DateTime           @default(now())
   updatedAt        DateTime
   createdById      String
-  User             User               @relation(fields: [createdById], references: [id])
+  createdBy        User               @relation("UserToSegment", fields: [createdById], references: [id])
   EmailCampaign    EmailCampaign[]    @relation("CampaignSegments")
   SMSCampaign      SMSCampaign[]      @relation("SMSCampaignSegments")
   WhatsAppCampaign WhatsAppCampaign[] @relation("WACampaignSegments")
@@ -229,29 +230,31 @@ model Session {
 }
 
 model User {
-  id               String             @id
+  id               String             @id @default(cuid())
   name             String?
   email            String             @unique
   emailVerified    DateTime?
   password         String?
   image            String?
   createdAt        DateTime           @default(now())
-  updatedAt        DateTime
+  updatedAt        DateTime           @updatedAt
   lastLogin        DateTime?
   isActive         Boolean            @default(true)
   role             UserRole           @default(USER)
+  company          String?
   Account          Account[]
-  Contact          Contact[]
-  EmailCampaign    EmailCampaign[]
-  EmailTemplate    EmailTemplate[]
-  List             List[]
-  SMSCampaign      SMSCampaign[]
-  SMSTemplate      SMSTemplate[]
-  Segment          Segment[]
+  Contact          Contact[]          @relation("UserToContact")
+  EmailCampaign    EmailCampaign[]    @relation("UserToEmailCampaign")
+  EmailTemplate    EmailTemplate[]    @relation("UserToEmailTemplate")
+  List             List[]             @relation("UserToList")
+  SMSCampaign      SMSCampaign[]      @relation("UserToSMSCampaign")
+  SMSTemplate      SMSTemplate[]      @relation("UserToSMSTemplate")
+  Segment          Segment[]          @relation("UserToSegment")
   Session          Session[]
-  WhatsAppCampaign WhatsAppCampaign[]
-  WhatsAppTemplate WhatsAppTemplate[]
-  Workflow         Workflow[]
+  preference       UserPreference?    @relation("UserToPreference")
+  WhatsAppCampaign WhatsAppCampaign[] @relation("UserToWhatsAppCampaign")
+  WhatsAppTemplate WhatsAppTemplate[] @relation("UserToWhatsAppTemplate")
+  Workflow         Workflow[]         @relation("UserToWorkflow")
 }
 
 model VerificationToken {
@@ -287,7 +290,7 @@ model WhatsAppCampaign {
   updatedAt        DateTime
   createdById      String
   WhatsAppActivity WhatsAppActivity[]
-  User             User               @relation(fields: [createdById], references: [id])
+  createdBy        User               @relation("UserToWhatsAppCampaign", fields: [createdById], references: [id])
   WhatsAppTemplate WhatsAppTemplate?  @relation(fields: [templateId], references: [id])
   List             List[]             @relation("WACampaignLists")
   Segment          Segment[]          @relation("WACampaignSegments")
@@ -304,7 +307,7 @@ model WhatsAppTemplate {
   updatedAt        DateTime
   createdById      String
   WhatsAppCampaign WhatsAppCampaign[]
-  User             User               @relation(fields: [createdById], references: [id])
+  createdBy        User               @relation("UserToWhatsAppTemplate", fields: [createdById], references: [id])
 }
 
 model Workflow {
@@ -316,7 +319,7 @@ model Workflow {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime
   createdById     String
-  User            User              @relation(fields: [createdById], references: [id])
+  createdBy       User              @relation("UserToWorkflow", fields: [createdById], references: [id])
   WorkflowNode    WorkflowNode[]
   WorkflowTrigger WorkflowTrigger[]
 }
@@ -340,6 +343,15 @@ model WorkflowTrigger {
   type       TriggerType
   config     String
   Workflow   Workflow    @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+}
+
+model UserPreference {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  preferences String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation("UserToPreference", fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum ActivityType {

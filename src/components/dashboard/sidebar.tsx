@@ -25,6 +25,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { useTheme } from "next-themes";
+import { useState, useEffect } from "react";
 
 interface NavItem {
   title: string;
@@ -138,13 +140,35 @@ interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export function Sidebar({ className }: SidebarProps) {
   const pathname = usePathname();
+  const { theme } = useTheme();
+  const [currentTheme, setCurrentTheme] = useState<string>("dark");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      setCurrentTheme(theme || "dark");
+    }
+  }, [theme, mounted]);
+
+  const isLight = currentTheme === "light";
 
   return (
-    <div className={cn("w-[250px] flex-shrink-0 h-screen bg-[#0F172A] text-white", className)}>
+    <div className={cn(
+      "w-[250px] flex-shrink-0 h-screen border-r transition-colors",
+      isLight ? "bg-white border-gray-200" : "bg-background border-gray-800/60",
+      className
+    )}>
       <div className="h-full flex flex-col">
-        <div className="px-4 py-4 flex items-center h-16 border-b border-gray-800">
+        <div className={cn(
+          "px-4 py-4 flex items-center h-16 border-b",
+          isLight ? "border-gray-200" : "border-gray-800/60"
+        )}>
           <Link href="/dashboard" className="flex items-center">
-            <span className="text-2xl font-bold brand-text">
+            <span className="text-2xl font-bold brand-text-new">
               <span className="market">Market</span><span className="sage">Sage</span>
             </span>
           </Link>
@@ -158,10 +182,12 @@ export function Sidebar({ className }: SidebarProps) {
                   variant="ghost"
                   size="sm"
                   className={cn(
-                    "w-full justify-start font-medium text-sm rounded hover:bg-white/5",
+                    "w-full justify-start font-medium text-sm rounded",
                     pathname === item.href || pathname.startsWith(item.href + "/")
                       ? "bg-primary/10 text-primary"
-                      : "text-gray-400 hover:text-white"
+                      : isLight 
+                        ? "text-gray-700 hover:text-gray-900 hover:bg-gray-100" 
+                        : "text-gray-400 hover:text-foreground hover:bg-muted/70"
                   )}
                   asChild
                 >
@@ -173,7 +199,10 @@ export function Sidebar({ className }: SidebarProps) {
 
                 {item.submenu && (pathname === item.href || pathname.startsWith(item.href + "/") ||
                   item.submenu.some(subItem => pathname.startsWith(subItem.href))) && (
-                  <div className="ml-6 mt-1 space-y-1 border-l border-gray-800 pl-2">
+                  <div className={cn(
+                    "ml-6 mt-1 space-y-1 border-l pl-2",
+                    isLight ? "border-gray-200" : "border-gray-800"
+                  )}>
                     {item.submenu.map((subItem) => (
                       <Button
                         key={subItem.href}
@@ -182,8 +211,10 @@ export function Sidebar({ className }: SidebarProps) {
                         className={cn(
                           "w-full justify-start font-normal text-xs py-1.5 h-auto",
                           pathname === subItem.href || pathname.startsWith(subItem.href + "/")
-                            ? "text-primary bg-transparent hover:bg-white/5"
-                            : "text-gray-500 hover:text-white hover:bg-white/5"
+                            ? "text-primary bg-transparent hover:bg-muted/50"
+                            : isLight
+                              ? "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                              : "text-gray-500 hover:text-foreground hover:bg-muted/50"
                         )}
                         asChild
                       >
@@ -200,8 +231,19 @@ export function Sidebar({ className }: SidebarProps) {
           </div>
         </ScrollArea>
 
-        <div className="p-4 border-t border-gray-800">
-          <Button variant="ghost" size="sm" className="w-full justify-start text-gray-400 hover:text-white hover:bg-white/5" asChild>
+        <div className={cn(
+          "p-4 border-t",
+          isLight ? "border-gray-200" : "border-gray-800/60"
+        )}>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className={cn(
+              "w-full justify-start",
+              isLight ? "text-gray-700 hover:text-gray-900 hover:bg-gray-100" : "text-gray-400 hover:text-foreground hover:bg-muted/70"
+            )} 
+            asChild
+          >
             <Link href="/profile">
               <User className="mr-2 h-4 w-4" />
               Profile

@@ -1,5 +1,5 @@
 import "./globals.css";
-import { Inter } from "next/font/google";
+import { Inter, Plus_Jakarta_Sans, Outfit } from "next/font/google";
 import type { Metadata } from "next";
 import Providers from "@/providers";
 
@@ -10,9 +10,33 @@ const inter = Inter({
   weight: ["400", "500", "600", "700"],
 });
 
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-plus-jakarta",
+  weight: ["400", "500", "600", "700"],
+});
+
+const outfit = Outfit({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-outfit",
+  weight: ["400", "500", "600", "700"],
+});
+
 export const metadata: Metadata = {
-  title: "MarketSage | Intelligent Multi-Channel Marketing Made Simple",
-  description: "All-in-one email and SMS marketing & automation platform with AI-driven personalization for growing businesses.",
+  title: "MarketSage | Multi-Channel Marketing Automation for African Businesses",
+  description: "Connect with your audience through Email, SMS, and WhatsApp marketing automation designed specifically for Nigerian and African businesses.",
+  keywords: "marketing automation, email marketing, SMS marketing, WhatsApp marketing, Nigerian business, African business",
+  authors: [{ name: "MarketSage Team" }],
+  openGraph: {
+    title: "MarketSage | Multi-Channel Marketing Automation for African Businesses",
+    description: "Connect with your audience through Email, SMS, and WhatsApp marketing automation designed specifically for Nigerian and African businesses.",
+    url: "https://marketsage.africa",
+    siteName: "MarketSage",
+    locale: "en_NG",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -21,8 +45,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable}`} suppressHydrationWarning>
-      <body className="min-h-screen bg-background text-foreground antialiased">
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.variable} ${plusJakarta.variable} ${outfit.variable}`}>
         <Providers>{children}</Providers>
       </body>
     </html>

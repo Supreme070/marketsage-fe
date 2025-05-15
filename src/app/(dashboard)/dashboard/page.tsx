@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react";
 import RoleGate from "@/components/auth/role-gate";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CustomCard } from "@/components/ui/custom-card";
+import { CustomCardMetric } from "@/components/ui/custom-card";
 import { BarChart4, Users, Mail, MessageSquare, Zap, Activity, Server, Database, Shield, Settings } from "lucide-react";
 
 export default function DashboardPage() {
@@ -23,32 +23,32 @@ export default function DashboardPage() {
       {/* Super Admin Dashboard */}
       <RoleGate allowedRoles={["SUPER_ADMIN"]}>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <CustomCard
-            icon={<Users className="h-5 w-5" />}
+          <CustomCardMetric
+            icon={<Users className="h-5 w-5 text-primary" />}
             title="Total Users"
             value="124"
             trend="+5.4%"
             trendType="up"
             description="Total registered users"
           />
-          <CustomCard
-            icon={<Mail className="h-5 w-5" />}
+          <CustomCardMetric
+            icon={<Mail className="h-5 w-5 text-primary" />}
             title="Email Campaigns"
             value="48"
             trend="+12.2%"
             trendType="up"
             description="Active email campaigns"
           />
-          <CustomCard
-            icon={<Activity className="h-5 w-5" />}
+          <CustomCardMetric
+            icon={<Activity className="h-5 w-5 text-primary" />}
             title="System Health"
             value="98.5%"
             trend="+0.5%"
             trendType="up"
             description="Overall system uptime"
           />
-          <CustomCard
-            icon={<BarChart4 className="h-5 w-5" />}
+          <CustomCardMetric
+            icon={<BarChart4 className="h-5 w-5 text-primary" />}
             title="Monthly Revenue"
             value="$28,450"
             trend="+8.2%"
@@ -140,32 +140,32 @@ export default function DashboardPage() {
       {/* Admin Dashboard */}
       <RoleGate allowedRoles={["ADMIN"]}>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <CustomCard
-            icon={<Users className="h-5 w-5" />}
+          <CustomCardMetric
+            icon={<Users className="h-5 w-5 text-primary" />}
             title="Active Users"
             value="98"
             trend="+3.1%"
             trendType="up"
             description="Active users this month"
           />
-          <CustomCard
-            icon={<Mail className="h-5 w-5" />}
+          <CustomCardMetric
+            icon={<Mail className="h-5 w-5 text-primary" />}
             title="Email Campaigns"
             value="32"
             trend="+5.4%"
             trendType="up"
             description="Active email campaigns"
           />
-          <CustomCard
-            icon={<MessageSquare className="h-5 w-5" />}
+          <CustomCardMetric
+            icon={<MessageSquare className="h-5 w-5 text-primary" />}
             title="SMS Campaigns"
             value="14"
             trend="+2.0%"
             trendType="up"
             description="Active SMS campaigns"
           />
-          <CustomCard
-            icon={<Zap className="h-5 w-5" />}
+          <CustomCardMetric
+            icon={<Zap className="h-5 w-5 text-primary" />}
             title="Automations"
             value="12"
             trend="+8.2%"
@@ -250,32 +250,32 @@ export default function DashboardPage() {
       {/* IT Admin Dashboard */}
       <RoleGate allowedRoles={["IT_ADMIN"]}>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <CustomCard
-            icon={<Server className="h-5 w-5" />}
+          <CustomCardMetric
+            icon={<Server className="h-5 w-5 text-primary" />}
             title="Server Uptime"
             value="99.98%"
             trend="+0.2%"
             trendType="up"
             description="30-day average"
           />
-          <CustomCard
-            icon={<Database className="h-5 w-5" />}
+          <CustomCardMetric
+            icon={<Database className="h-5 w-5 text-primary" />}
             title="DB Performance"
             value="28ms"
             trend="-3.5%"
             trendType="down"
             description="Average query time"
           />
-          <CustomCard
-            icon={<Shield className="h-5 w-5" />}
+          <CustomCardMetric
+            icon={<Shield className="h-5 w-5 text-primary" />}
             title="Security Status"
             value="Secure"
             trend="0%"
             trendType="neutral"
             description="No issues detected"
           />
-          <CustomCard
-            icon={<Activity className="h-5 w-5" />}
+          <CustomCardMetric
+            icon={<Activity className="h-5 w-5 text-primary" />}
             title="API Requests"
             value="2.4M"
             trend="+12.4%"
@@ -367,32 +367,32 @@ export default function DashboardPage() {
       {/* Regular User Dashboard */}
       <RoleGate allowedRoles={["USER"]}>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <CustomCard
-            icon={<Mail className="h-5 w-5" />}
+          <CustomCardMetric
+            icon={<Mail className="h-5 w-5 text-primary" />}
             title="My Campaigns"
             value="8"
             trend="+2"
             trendType="up"
             description="Active campaigns"
           />
-          <CustomCard
-            icon={<Users className="h-5 w-5" />}
+          <CustomCardMetric
+            icon={<Users className="h-5 w-5 text-primary" />}
             title="My Contacts"
             value="342"
             trend="+12"
             trendType="up"
             description="Total contacts"
           />
-          <CustomCard
-            icon={<Zap className="h-5 w-5" />}
+          <CustomCardMetric
+            icon={<Zap className="h-5 w-5 text-primary" />}
             title="My Automations"
             value="5"
             trend="+1"
             trendType="up"
             description="Active workflows"
           />
-          <CustomCard
-            icon={<Activity className="h-5 w-5" />}
+          <CustomCardMetric
+            icon={<Activity className="h-5 w-5 text-primary" />}
             title="Performance"
             value="22.4%"
             trend="+1.2%"

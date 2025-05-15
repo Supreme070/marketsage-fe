@@ -1,4 +1,6 @@
-import { Metadata } from "next";
+"use client";
+
+import { useState } from "react";
 import { 
   Card, 
   CardContent, 
@@ -13,6 +15,25 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { 
   CreditCard, 
   CalendarDays, 
@@ -24,19 +45,44 @@ import {
   Plus,
   MoreHorizontal,
   Wallet,
-  CreditCardIcon
+  CreditCardIcon,
+  Loader2,
+  Trash2
 } from "lucide-react";
 
-export const metadata: Metadata = {
-  title: "Billing Settings | MarketSage",
-  description: "Manage your subscription and payment details",
-};
-
 export default function BillingSettingsPage() {
-  const subscriptionPlan = {
+  // State management
+  const [loading, setLoading] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showChangePlanDialog, setShowChangePlanDialog] = useState(false);
+  const [showDeletePaymentDialog, setShowDeletePaymentDialog] = useState(false);
+  const [showAddPaymentDialog, setShowAddPaymentDialog] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState("premium");
+  const [billingCycle, setBillingCycle] = useState("monthly");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
+  const [billingAddress, setBillingAddress] = useState({
+    companyName: "Acme Inc.",
+    taxId: "NG1234567890",
+    addressLine1: "123 Business Avenue",
+    addressLine2: "Suite 456",
+    city: "Lagos",
+    state: "Lagos State",
+    zip: "100001",
+    country: "NG",
+  });
+  const [newCard, setNewCard] = useState({
+    cardNumber: "",
+    cardholderName: "",
+    expiryMonth: "",
+    expiryYear: "",
+    cvv: "",
+  });
+  
+  // Subscription Plan Data
+  const [subscriptionPlan, setSubscriptionPlan] = useState({
     name: "Premium Plan",
     status: "active",
-    interval: "monthly",
+    interval: "monthly", // monthly or yearly
     price: "₦25,000",
     nextBillingDate: "June 5, 2025",
     features: [
@@ -47,9 +93,45 @@ export default function BillingSettingsPage() {
       "API access",
       "Priority support",
     ],
+  });
+
+  const plans = {
+    standard: {
+      name: "Standard Plan",
+      monthlyPrice: "₦15,000",
+      yearlyPrice: "₦162,000", // 10% discount for yearly
+      features: [
+        "Up to 10,000 contacts",
+        "Email campaigns",
+        "Basic analytics",
+      ],
+    },
+    premium: {
+      name: "Premium Plan",
+      monthlyPrice: "₦25,000",
+      yearlyPrice: "₦270,000", // 10% discount for yearly
+      features: [
+        "Unlimited contacts",
+        "Email, SMS, and WhatsApp",
+        "Advanced analytics",
+        "Priority support",
+      ],
+    },
+    enterprise: {
+      name: "Enterprise Plan",
+      monthlyPrice: "Custom",
+      yearlyPrice: "Custom",
+      features: [
+        "Everything in Premium",
+        "Dedicated account manager",
+        "Custom integrations",
+        "SLA guarantees",
+      ],
+    }
   };
 
-  const paymentMethods = [
+  // Payment methods
+  const [paymentMethods, setPaymentMethods] = useState([
     {
       id: "card_1",
       type: "card",
@@ -68,7 +150,7 @@ export default function BillingSettingsPage() {
       expiryYear: "25",
       isDefault: false,
     },
-  ];
+  ]);
 
   const invoiceHistory = [
     {
@@ -93,6 +175,196 @@ export default function BillingSettingsPage() {
       status: "paid",
     },
   ];
+
+  // Subscription plan handlers
+  const handleChangePlan = (plan: string) => {
+    if (plan === "enterprise") {
+      // For enterprise, we'd typically open a contact form or redirect
+      window.open("mailto:sales@marketsage.com?subject=Enterprise Plan Inquiry", "_blank");
+    } else {
+      setSelectedPlan(plan);
+      setShowChangePlanDialog(true);
+    }
+  };
+
+  const confirmPlanChange = () => {
+    setLoading(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      const newPlan = plans[selectedPlan as keyof typeof plans];
+      setSubscriptionPlan({
+        ...subscriptionPlan,
+        name: newPlan.name,
+        price: billingCycle === "monthly" ? newPlan.monthlyPrice : newPlan.yearlyPrice,
+        interval: billingCycle,
+        features: newPlan.features,
+      });
+      
+      setLoading(false);
+      setShowChangePlanDialog(false);
+      toast.success(`Successfully changed to ${newPlan.name}`);
+    }, 1500);
+  };
+
+  const handleCancelSubscription = () => {
+    setShowCancelDialog(true);
+  };
+
+  const confirmCancelSubscription = () => {
+    setLoading(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      setSubscriptionPlan({
+        ...subscriptionPlan,
+        status: "cancelled",
+      });
+      
+      setLoading(false);
+      setShowCancelDialog(false);
+      toast.success("Subscription cancelled successfully. Your plan will remain active until the end of the billing period.");
+    }, 1500);
+  };
+
+  const handleUpdateBillingCycle = () => {
+    const newCycle = subscriptionPlan.interval === "monthly" ? "yearly" : "monthly";
+    const currentPlan = Object.entries(plans).find(([_, plan]) => plan.name === subscriptionPlan.name)?.[0] as keyof typeof plans;
+    
+    if (!currentPlan) return;
+    
+    setLoading(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      setSubscriptionPlan({
+        ...subscriptionPlan,
+        interval: newCycle,
+        price: newCycle === "monthly" ? plans[currentPlan].monthlyPrice : plans[currentPlan].yearlyPrice,
+      });
+      
+      setLoading(false);
+      toast.success(`Successfully changed to ${newCycle} billing cycle`);
+    }, 1500);
+  };
+
+  // Payment method handlers
+  const handleSetDefaultPaymentMethod = (id: string) => {
+    setLoading(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      const updatedMethods = paymentMethods.map(method => ({
+        ...method,
+        isDefault: method.id === id,
+      }));
+      
+      setPaymentMethods(updatedMethods);
+      setLoading(false);
+      toast.success("Default payment method updated");
+    }, 1000);
+  };
+
+  const handleDeletePaymentMethod = (id: string) => {
+    setSelectedPaymentMethod(id);
+    setShowDeletePaymentDialog(true);
+  };
+
+  const confirmDeletePaymentMethod = () => {
+    setLoading(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      const method = paymentMethods.find(m => m.id === selectedPaymentMethod);
+      const wasDefault = method?.isDefault || false;
+      let updatedMethods = paymentMethods.filter(m => m.id !== selectedPaymentMethod);
+      
+      // If we removed the default, make another one default
+      if (wasDefault && updatedMethods.length > 0) {
+        updatedMethods = updatedMethods.map((method, index) => ({
+          ...method,
+          isDefault: index === 0, // Make the first one default
+        }));
+      }
+      
+      setPaymentMethods(updatedMethods);
+      setLoading(false);
+      setShowDeletePaymentDialog(false);
+      toast.success("Payment method removed");
+    }, 1000);
+  };
+
+  const handleAddPaymentMethod = () => {
+    setShowAddPaymentDialog(true);
+  };
+
+  const handleSubmitNewCard = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    // Validate card info (basic validation)
+    if (!newCard.cardNumber || !newCard.cardholderName || !newCard.expiryMonth || !newCard.expiryYear || !newCard.cvv) {
+      toast.error("Please fill in all card details");
+      setLoading(false);
+      return;
+    }
+    
+    // Simulate API call
+    setTimeout(() => {
+      // Create new card with random brand based on first digit
+      const firstDigit = newCard.cardNumber.charAt(0);
+      const brand = firstDigit === "4" ? "Visa" : "Mastercard";
+      const last4 = newCard.cardNumber.slice(-4);
+      
+      const newPaymentMethod = {
+        id: `card_${Date.now()}`,
+        type: "card",
+        brand,
+        last4,
+        expiryMonth: newCard.expiryMonth,
+        expiryYear: newCard.expiryYear,
+        isDefault: paymentMethods.length === 0, // Make default if it's the first card
+      };
+      
+      setPaymentMethods([...paymentMethods, newPaymentMethod]);
+      setNewCard({
+        cardNumber: "",
+        cardholderName: "",
+        expiryMonth: "",
+        expiryYear: "",
+        cvv: "",
+      });
+      
+      setLoading(false);
+      setShowAddPaymentDialog(false);
+      toast.success("New payment method added");
+    }, 1500);
+  };
+
+  const handleSaveBillingAddress = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      setLoading(false);
+      toast.success("Billing address updated");
+    }, 1000);
+  };
+
+  // Invoices handlers
+  const handleDownloadInvoice = (invoiceId: string) => {
+    const invoice = invoiceHistory.find(inv => inv.id === invoiceId);
+    if (!invoice) return;
+    
+    // In a real app, this would call an API endpoint to get the PDF
+    toast.success(`Downloading invoice ${invoice.number}...`);
+    
+    // Simulate download
+    setTimeout(() => {
+      toast.success(`Invoice ${invoice.number} downloaded`);
+    }, 1500);
+  };
 
   return (
     <div className="space-y-6">
@@ -125,7 +397,9 @@ export default function BillingSettingsPage() {
                 <div>
                   <h3 className="text-lg font-semibold">{subscriptionPlan.name}</h3>
                   <div className="flex items-center mt-1">
-                    <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                    <Badge className={subscriptionPlan.status === "active" ? 
+                      "bg-green-100 text-green-800 hover:bg-green-100" : 
+                      "bg-red-100 text-red-800 hover:bg-red-100"}>
                       <CheckCircle2 className="h-3 w-3 mr-1" />
                       {subscriptionPlan.status}
                     </Badge>
@@ -134,7 +408,17 @@ export default function BillingSettingsPage() {
                     </span>
                   </div>
                 </div>
-                <Button>Change Plan</Button>
+                <Button 
+                  onClick={() => handleChangePlan(subscriptionPlan.name.toLowerCase().includes("premium") ? "standard" : "premium")}
+                  disabled={subscriptionPlan.status === "cancelled" || loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : "Change Plan"}
+                </Button>
               </div>
               
               <div className="bg-secondary/10 p-4 rounded-lg flex items-center space-x-4">
@@ -142,7 +426,9 @@ export default function BillingSettingsPage() {
                 <div>
                   <h4 className="font-medium">Next billing date</h4>
                   <p className="text-sm text-muted-foreground">
-                    {subscriptionPlan.nextBillingDate}
+                    {subscriptionPlan.status === "cancelled" 
+                      ? "Your subscription will end on " + subscriptionPlan.nextBillingDate 
+                      : subscriptionPlan.nextBillingDate}
                   </p>
                 </div>
               </div>
@@ -160,8 +446,20 @@ export default function BillingSettingsPage() {
               </div>
             </CardContent>
             <CardFooter className="flex justify-between border-t pt-6">
-              <Button variant="outline">Cancel Subscription</Button>
-              <Button variant="outline">Update Billing Cycle</Button>
+              <Button 
+                variant="outline" 
+                onClick={handleCancelSubscription}
+                disabled={subscriptionPlan.status === "cancelled" || loading}
+              >
+                {subscriptionPlan.status === "cancelled" ? "Cancelled" : "Cancel Subscription"}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleUpdateBillingCycle}
+                disabled={subscriptionPlan.status === "cancelled" || loading}
+              >
+                Switch to {subscriptionPlan.interval === "monthly" ? "Yearly" : "Monthly"} Billing
+              </Button>
             </CardFooter>
           </Card>
           
@@ -169,61 +467,60 @@ export default function BillingSettingsPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Standard Plan</CardTitle>
-                <span className="text-2xl font-bold">₦15,000</span>
+                <span className="text-2xl font-bold">{plans.standard.monthlyPrice}</span>
                 <span className="text-sm text-muted-foreground">/month</span>
               </CardHeader>
               <CardContent className="space-y-2">
                 <ul className="space-y-2 text-sm">
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5" />
-                    <span>Up to 10,000 contacts</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5" />
-                    <span>Email campaigns</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5" />
-                    <span>Basic analytics</span>
-                  </li>
+                  {plans.standard.features.map((feature, index) => (
+                    <li key={index} className="flex items-start">
+                      <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
                 </ul>
               </CardContent>
               <CardFooter>
-                <Button variant="outline" className="w-full">Choose Plan</Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => handleChangePlan("standard")}
+                  disabled={subscriptionPlan.name === plans.standard.name || loading}
+                >
+                  {subscriptionPlan.name === plans.standard.name ? "Current Plan" : "Choose Plan"}
+                </Button>
               </CardFooter>
             </Card>
             
-            <Card className="border-primary">
-              <div className="bg-primary text-primary-foreground text-center py-1 text-sm font-medium">
-                Current Plan
-              </div>
+            <Card className={subscriptionPlan.name === plans.premium.name ? "border-primary" : ""}>
+              {subscriptionPlan.name === plans.premium.name && (
+                <div className="bg-primary text-primary-foreground text-center py-1 text-sm font-medium">
+                  Current Plan
+                </div>
+              )}
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Premium Plan</CardTitle>
-                <span className="text-2xl font-bold">₦25,000</span>
+                <span className="text-2xl font-bold">{plans.premium.monthlyPrice}</span>
                 <span className="text-sm text-muted-foreground">/month</span>
               </CardHeader>
               <CardContent className="space-y-2">
                 <ul className="space-y-2 text-sm">
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5" />
-                    <span>Unlimited contacts</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5" />
-                    <span>Email, SMS, and WhatsApp</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5" />
-                    <span>Advanced analytics</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5" />
-                    <span>Priority support</span>
-                  </li>
+                  {plans.premium.features.map((feature, index) => (
+                    <li key={index} className="flex items-start">
+                      <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
                 </ul>
               </CardContent>
               <CardFooter>
-                <Button className="w-full" disabled>Current Plan</Button>
+                <Button 
+                  className="w-full" 
+                  disabled={subscriptionPlan.name === plans.premium.name || loading}
+                  onClick={() => handleChangePlan("premium")}
+                >
+                  {subscriptionPlan.name === plans.premium.name ? "Current Plan" : "Choose Plan"}
+                </Button>
               </CardFooter>
             </Card>
             
@@ -235,26 +532,22 @@ export default function BillingSettingsPage() {
               </CardHeader>
               <CardContent className="space-y-2">
                 <ul className="space-y-2 text-sm">
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5" />
-                    <span>Everything in Premium</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5" />
-                    <span>Dedicated account manager</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5" />
-                    <span>Custom integrations</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5" />
-                    <span>SLA guarantees</span>
-                  </li>
+                  {plans.enterprise.features.map((feature, index) => (
+                    <li key={index} className="flex items-start">
+                      <CheckCircle2 className="h-4 w-4 mr-2 text-primary mt-0.5" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
                 </ul>
               </CardContent>
               <CardFooter>
-                <Button variant="outline" className="w-full">Contact Sales</Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => handleChangePlan("enterprise")}
+                >
+                  Contact Sales
+                </Button>
               </CardFooter>
             </Card>
           </div>
@@ -270,7 +563,7 @@ export default function BillingSettingsPage() {
                     Manage your payment methods and billing details
                   </CardDescription>
                 </div>
-                <Button size="sm">
+                <Button size="sm" onClick={handleAddPaymentMethod}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Payment Method
                 </Button>
@@ -278,42 +571,62 @@ export default function BillingSettingsPage() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="border-t">
-                {paymentMethods.map((method) => (
-                  <div key={method.id} className="flex items-center justify-between p-4 border-b">
-                    <div className="flex items-center space-x-4">
-                      <div className="bg-secondary/20 p-2 rounded-full">
-                        {method.brand === "Visa" ? (
-                          <CreditCard className="h-5 w-5 text-blue-600" />
-                        ) : (
-                          <CreditCard className="h-5 w-5 text-red-600" />
-                        )}
-                      </div>
-                      <div>
-                        <h4 className="font-medium">
-                          {method.brand} ending in {method.last4}
-                          {method.isDefault && (
-                            <Badge variant="outline" className="ml-2">
-                              Default
-                            </Badge>
-                          )}
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          Expires {method.expiryMonth}/{method.expiryYear}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {!method.isDefault && (
-                        <Button variant="ghost" size="sm">
-                          Set as Default
-                        </Button>
-                      )}
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </div>
+                {paymentMethods.length === 0 ? (
+                  <div className="p-6 text-center">
+                    <p className="text-muted-foreground mb-4">No payment methods added yet</p>
+                    <Button onClick={handleAddPaymentMethod}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Payment Method
+                    </Button>
                   </div>
-                ))}
+                ) : (
+                  paymentMethods.map((method) => (
+                    <div key={method.id} className="flex items-center justify-between p-4 border-b">
+                      <div className="flex items-center space-x-4">
+                        <div className="bg-secondary/20 p-2 rounded-full">
+                          {method.brand === "Visa" ? (
+                            <CreditCard className="h-5 w-5 text-blue-600" />
+                          ) : (
+                            <CreditCard className="h-5 w-5 text-red-600" />
+                          )}
+                        </div>
+                        <div>
+                          <h4 className="font-medium">
+                            {method.brand} ending in {method.last4}
+                            {method.isDefault && (
+                              <Badge variant="outline" className="ml-2">
+                                Default
+                              </Badge>
+                            )}
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            Expires {method.expiryMonth}/{method.expiryYear}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {!method.isDefault && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleSetDefaultPaymentMethod(method.id)}
+                            disabled={loading}
+                          >
+                            Set as Default
+                          </Button>
+                        )}
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleDeletePaymentMethod(method.id)}
+                          disabled={loading || (method.isDefault && paymentMethods.length > 1)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
@@ -326,55 +639,98 @@ export default function BillingSettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="company-name">Company Name</Label>
-                  <Input id="company-name" defaultValue="Acme Inc." />
+              <form onSubmit={handleSaveBillingAddress}>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="company-name">Company Name</Label>
+                    <Input 
+                      id="company-name" 
+                      value={billingAddress.companyName}
+                      onChange={(e) => setBillingAddress({...billingAddress, companyName: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tax-id">Tax ID</Label>
+                    <Input 
+                      id="tax-id" 
+                      value={billingAddress.taxId}
+                      onChange={(e) => setBillingAddress({...billingAddress, taxId: e.target.value})}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tax-id">Tax ID</Label>
-                  <Input id="tax-id" defaultValue="NG1234567890" />
+                
+                <div className="space-y-2 mt-4">
+                  <Label htmlFor="address-line1">Address Line 1</Label>
+                  <Input 
+                    id="address-line1" 
+                    value={billingAddress.addressLine1}
+                    onChange={(e) => setBillingAddress({...billingAddress, addressLine1: e.target.value})}
+                  />
                 </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="address-line1">Address Line 1</Label>
-                <Input id="address-line1" defaultValue="123 Business Avenue" />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="address-line2">Address Line 2 (Optional)</Label>
-                <Input id="address-line2" defaultValue="Suite 456" />
-              </div>
-              
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <div className="space-y-2">
-                  <Label htmlFor="city">City</Label>
-                  <Input id="city" defaultValue="Lagos" />
+                
+                <div className="space-y-2 mt-4">
+                  <Label htmlFor="address-line2">Address Line 2 (Optional)</Label>
+                  <Input 
+                    id="address-line2" 
+                    value={billingAddress.addressLine2}
+                    onChange={(e) => setBillingAddress({...billingAddress, addressLine2: e.target.value})}
+                  />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="state">State/Province</Label>
-                  <Input id="state" defaultValue="Lagos State" />
+                
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="city">City</Label>
+                    <Input 
+                      id="city" 
+                      value={billingAddress.city}
+                      onChange={(e) => setBillingAddress({...billingAddress, city: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="state">State/Province</Label>
+                    <Input 
+                      id="state" 
+                      value={billingAddress.state}
+                      onChange={(e) => setBillingAddress({...billingAddress, state: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="zip">Postal/Zip Code</Label>
+                    <Input 
+                      id="zip" 
+                      value={billingAddress.zip}
+                      onChange={(e) => setBillingAddress({...billingAddress, zip: e.target.value})}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="zip">Postal/Zip Code</Label>
-                  <Input id="zip" defaultValue="100001" />
+                
+                <div className="space-y-2 mt-4">
+                  <Label htmlFor="country">Country</Label>
+                  <select 
+                    id="country" 
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    value={billingAddress.country}
+                    onChange={(e) => setBillingAddress({...billingAddress, country: e.target.value})}
+                  >
+                    <option value="NG">Nigeria</option>
+                    <option value="GH">Ghana</option>
+                    <option value="KE">Kenya</option>
+                    <option value="ZA">South Africa</option>
+                  </select>
                 </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="country">Country</Label>
-                <select id="country" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                  <option value="NG">Nigeria</option>
-                  <option value="GH">Ghana</option>
-                  <option value="KE">Kenya</option>
-                  <option value="ZA">South Africa</option>
-                </select>
-              </div>
+                
+                <div className="mt-6">
+                  <Button type="submit" disabled={loading}>
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : "Save Billing Address"}
+                  </Button>
+                </div>
+              </form>
             </CardContent>
-            <CardFooter>
-              <Button>Save Billing Address</Button>
-            </CardFooter>
           </Card>
         </TabsContent>
         
@@ -410,7 +766,12 @@ export default function BillingSettingsPage() {
                           </Badge>
                         </td>
                         <td className="p-4 text-right">
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleDownloadInvoice(invoice.id)}
+                            disabled={loading}
+                          >
                             <Download className="h-4 w-4 mr-2" />
                             Download
                           </Button>
@@ -485,13 +846,232 @@ export default function BillingSettingsPage() {
               
               <div className="pt-4 border-t">
                 <p className="text-sm text-muted-foreground">
-                  Need more resources? <a href="#" className="text-primary underline">Upgrade your plan</a> or <a href="#" className="text-primary underline">purchase additional credits</a>.
+                  Need more resources? <Button variant="link" className="p-0 h-auto" onClick={() => handleChangePlan("premium")}>Upgrade your plan</Button> or <Button variant="link" className="p-0 h-auto">purchase additional credits</Button>.
                 </p>
               </div>
             </CardContent>
+            <CardFooter className="border-t pt-4">
+              <Button variant="outline" className="ml-auto">
+                <Download className="h-4 w-4 mr-2" />
+                Export Usage Report
+              </Button>
+            </CardFooter>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Cancel Subscription Confirmation Dialog */}
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel your subscription?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your subscription will remain active until the end of the current billing period 
+              ({subscriptionPlan.nextBillingDate}). After that, you'll lose access to premium features.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={loading}>Nevermind</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmCancelSubscription} disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : "Yes, Cancel Subscription"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Change Plan Confirmation Dialog */}
+      <AlertDialog open={showChangePlanDialog} onOpenChange={setShowChangePlanDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change your plan to {plans[selectedPlan as keyof typeof plans].name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedPlan === "standard" 
+                ? "You'll be downgraded immediately and charged the new rate on your next billing date." 
+                : "You'll be upgraded immediately and charged a prorated amount for the remainder of your billing period."}
+            </AlertDialogDescription>
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span>Billing cycle:</span>
+                <div className="flex items-center space-x-2">
+                  <Button 
+                    variant={billingCycle === "monthly" ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => setBillingCycle("monthly")}
+                  >
+                    Monthly
+                  </Button>
+                  <Button 
+                    variant={billingCycle === "yearly" ? "default" : "outline"}
+                    size="sm" 
+                    onClick={() => setBillingCycle("yearly")}
+                  >
+                    Yearly (10% off)
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <p className="font-semibold">
+                  New price: {billingCycle === "monthly" 
+                    ? plans[selectedPlan as keyof typeof plans].monthlyPrice + "/month" 
+                    : plans[selectedPlan as keyof typeof plans].yearlyPrice + "/year"}
+                </p>
+              </div>
+            </div>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmPlanChange} disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : "Confirm Change"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Payment Method Dialog */}
+      <AlertDialog open={showDeletePaymentDialog} onOpenChange={setShowDeletePaymentDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Payment Method</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove this payment method? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeletePaymentMethod} 
+              disabled={loading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : "Remove"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Add Payment Method Dialog */}
+      <Dialog open={showAddPaymentDialog} onOpenChange={setShowAddPaymentDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Payment Method</DialogTitle>
+            <DialogDescription>
+              Enter your card details to add a new payment method
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={handleSubmitNewCard}>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="cardNumber">Card Number</Label>
+                <Input 
+                  id="cardNumber" 
+                  placeholder="1234 5678 9012 3456"
+                  value={newCard.cardNumber}
+                  onChange={(e) => setNewCard({...newCard, cardNumber: e.target.value})}
+                  maxLength={16}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="cardholderName">Cardholder Name</Label>
+                <Input 
+                  id="cardholderName" 
+                  placeholder="John Doe"
+                  value={newCard.cardholderName}
+                  onChange={(e) => setNewCard({...newCard, cardholderName: e.target.value})}
+                  required
+                />
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="expiryMonth">Month</Label>
+                  <select 
+                    id="expiryMonth"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    value={newCard.expiryMonth}
+                    onChange={(e) => setNewCard({...newCard, expiryMonth: e.target.value})}
+                    required
+                  >
+                    <option value="">MM</option>
+                    {Array.from({ length: 12 }, (_, i) => {
+                      const month = (i + 1).toString().padStart(2, '0');
+                      return (
+                        <option key={month} value={month}>
+                          {month}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="expiryYear">Year</Label>
+                  <select 
+                    id="expiryYear"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    value={newCard.expiryYear}
+                    onChange={(e) => setNewCard({...newCard, expiryYear: e.target.value})}
+                    required
+                  >
+                    <option value="">YY</option>
+                    {Array.from({ length: 10 }, (_, i) => {
+                      const year = (new Date().getFullYear() + i).toString().slice(-2);
+                      return (
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="cvv">CVV</Label>
+                  <Input 
+                    id="cvv" 
+                    placeholder="123"
+                    maxLength={4}
+                    value={newCard.cvv}
+                    onChange={(e) => setNewCard({...newCard, cvv: e.target.value})}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <DialogFooter className="mt-4">
+              <Button type="button" variant="outline" onClick={() => setShowAddPaymentDialog(false)} disabled={loading}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : "Add Card"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

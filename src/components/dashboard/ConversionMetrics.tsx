@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,6 +14,8 @@ interface ConversionMetricsProps {
   title?: string;
   description?: string;
   period?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+  startDate?: string;
+  endDate?: string;
 }
 
 export function ConversionMetrics({
@@ -19,7 +23,9 @@ export function ConversionMetrics({
   entityId,
   title = "Conversion Metrics",
   description = "Track your conversion performance",
-  period = 'DAILY'
+  period = 'DAILY',
+  startDate,
+  endDate
 }: ConversionMetricsProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +39,9 @@ export function ConversionMetrics({
         const result = await fetchConversionData({
           entityType,
           entityId,
-          period: selectedPeriod
+          period: selectedPeriod,
+          startDate,
+          endDate
         });
         
         setData(result);
@@ -47,7 +55,7 @@ export function ConversionMetrics({
     }
     
     loadData();
-  }, [entityType, entityId, selectedPeriod]);
+  }, [entityType, entityId, selectedPeriod, startDate, endDate]);
   
   const formatValue = (value: number) => {
     if (value >= 1000000) {
@@ -227,7 +235,10 @@ export function ConversionMetrics({
       </CardContent>
       <CardFooter className="border-t pt-4">
         <p className="text-xs text-muted-foreground">
-          Data updated: {new Date().toLocaleString()}
+          {startDate && endDate ? 
+            `Data for period: ${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}` : 
+            `Data updated: ${new Date().toLocaleString()}`
+          }
         </p>
       </CardFooter>
     </Card>
