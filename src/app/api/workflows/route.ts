@@ -4,10 +4,16 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
 import { randomUUID } from "crypto";
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
-const prisma = new PrismaClient();
-
-// Schema for workflow validation
+//  Schema for workflow validation
 const workflowSchema = z.object({
   name: z.string().min(1, "Workflow name is required"),
   description: z.string().optional(),
@@ -21,7 +27,7 @@ export async function GET(request: NextRequest) {
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   try {
@@ -78,11 +84,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(formattedWorkflows);
   } catch (error) {
-    console.error("Error fetching workflows:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch workflows" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/workflows/route.ts");
   }
 }
 
@@ -92,7 +94,7 @@ export async function POST(request: NextRequest) {
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   try {
@@ -152,10 +154,6 @@ export async function POST(request: NextRequest) {
       definition: parsedDefinition
     }, { status: 201 });
   } catch (error) {
-    console.error("Error creating workflow:", error);
-    return NextResponse.json(
-      { error: "Failed to create workflow" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/workflows/route.ts");
   }
 } 

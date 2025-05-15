@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
 import { randomUUID } from "crypto";
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
-const prisma = new PrismaClient();
-
-// Schema for email template validation
+//  Schema for email template validation
 const templateSchema = z.object({
   name: z.string().min(1, "Template name is required"),
   description: z.string().optional(),
@@ -24,7 +29,7 @@ export async function GET(request: NextRequest) {
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   try {
@@ -54,11 +59,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(templates);
   } catch (error) {
-    console.error("Error fetching email templates:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch email templates" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/email/templates/route.ts");
   }
 }
 
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   try {
@@ -118,10 +119,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newTemplate, { status: 201 });
   } catch (error) {
-    console.error("Error creating email template:", error);
-    return NextResponse.json(
-      { error: "Failed to create email template" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/email/templates/route.ts");
   }
 } 

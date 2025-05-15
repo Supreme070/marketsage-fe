@@ -1,11 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { hash } from "bcrypt";
-import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
-const prisma = new PrismaClient();
-
-// Registration schema validation
+//  Registration schema validation
 const registrationSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   email: z.string().email({ message: "Please enter a valid email address" }),

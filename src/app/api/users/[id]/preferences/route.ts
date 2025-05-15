@@ -1,11 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
-const prisma = new PrismaClient();
-
-// Default preferences to use when a user doesn't have preferences yet
+//  Default preferences to use when a user doesn't have preferences yet
 const defaultPreferences = {
   theme: "system",
   compactMode: false,
@@ -27,14 +32,15 @@ export async function GET(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
-  const userId = params.id;
+  // Access params safely in Next.js 15
+  const { id: userId } = await params;
 
   // Users can only access their own preferences
   if (session.user.id !== userId) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return forbidden("You can only access your own preferences");
   }
 
   try {
@@ -53,11 +59,7 @@ export async function GET(
     
     return NextResponse.json(preferences);
   } catch (error) {
-    console.error("Error fetching user preferences:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch user preferences" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/users/[id]/preferences/route.ts");
   }
 }
 
@@ -70,14 +72,15 @@ export async function PUT(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
-  const userId = params.id;
+  // Access params safely in Next.js 15
+  const { id: userId } = await params;
 
   // Users can only update their own preferences
   if (session.user.id !== userId) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return forbidden("You can only update your own preferences");
   }
 
   try {
@@ -119,10 +122,6 @@ export async function PUT(
     
     return NextResponse.json(preferences);
   } catch (error) {
-    console.error("Error updating user preferences:", error);
-    return NextResponse.json(
-      { error: "Failed to update user preferences" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/users/[id]/preferences/route.ts");
   }
 } 

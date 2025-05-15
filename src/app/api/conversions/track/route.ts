@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { PrismaClient } from "@prisma/client";
 import { EntityType, AnalyticsPeriod } from "@prisma/client";
 import { randomUUID } from "crypto";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
 // Initialize Prisma client directly in this file to avoid import errors
-const prisma = new PrismaClient();
-
-interface ConversionMetrics {
+import prisma from "@/lib/db/prisma";
+const interface ConversionMetrics {
   conversions: {
     [key: string]: {
       count: number;
@@ -32,10 +37,7 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
     
     if (!session || !session.user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return unauthorized();
     }
     
     const payload = await request.json();
@@ -189,10 +191,6 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error("Error tracking conversion:", error);
-    return NextResponse.json(
-      { error: "Failed to track conversion" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/conversions/track/route.ts");
   }
 } 

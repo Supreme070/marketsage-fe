@@ -3,10 +3,16 @@ import { PrismaClient, CampaignStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
-const prisma = new PrismaClient();
-
-// Schema for campaign update validation
+//  Schema for campaign update validation
 const campaignUpdateSchema = z.object({
   name: z.string().min(1, "Campaign name is required").optional(),
   description: z.string().optional(),
@@ -36,7 +42,7 @@ export async function GET(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   // Access params safely in Next.js 15
@@ -75,7 +81,7 @@ export async function GET(
     });
 
     if (!campaign) {
-      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+      return notFound("Campaign not found");
     }
 
     // Check if user has access to this campaign
@@ -99,11 +105,7 @@ export async function GET(
 
     return NextResponse.json(formattedCampaign);
   } catch (error) {
-    console.error("Error fetching SMS campaign:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch SMS campaign" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/sms/campaigns/[id]/route.ts");
   }
 }
 
@@ -116,7 +118,7 @@ export async function PATCH(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   // Access params safely in Next.js 15
@@ -133,7 +135,7 @@ export async function PATCH(
     });
 
     if (!existingCampaign) {
-      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+      return notFound("Campaign not found");
     }
 
     // Check if user has access to update this campaign
@@ -275,7 +277,7 @@ export async function DELETE(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   // Access params safely in Next.js 15
@@ -288,7 +290,7 @@ export async function DELETE(
     });
 
     if (!existingCampaign) {
-      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+      return notFound("Campaign not found");
     }
 
     // Check if user has access to delete this campaign
@@ -320,10 +322,6 @@ export async function DELETE(
 
     return NextResponse.json({ message: "SMS campaign deleted successfully" });
   } catch (error) {
-    console.error("Error deleting SMS campaign:", error);
-    return NextResponse.json(
-      { error: "Failed to delete SMS campaign" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/sms/campaigns/[id]/route.ts");
   }
 } 

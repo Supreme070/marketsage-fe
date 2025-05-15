@@ -31,7 +31,9 @@ export function ThemeToggle() {
     
     if (theme === 'light') return "Light mode";
     if (theme === 'dark') return "Dark mode";
-    if (theme === 'system') return "System mode";
+    if (theme === 'system') {
+      return `System mode (${resolvedTheme === 'dark' ? 'dark' : 'light'})`;
+    }
     
     return "Toggle theme";
   };
@@ -43,12 +45,36 @@ export function ThemeToggle() {
         size="icon"
         className="h-9 w-9 text-gray-400 hover:text-foreground"
       >
-        <div className="relative h-[1.2rem] w-[1.2rem]">
-          <Sun className="absolute h-[1.2rem] w-[1.2rem]" />
-        </div>
+        <Sun className="h-[1.2rem] w-[1.2rem]" />
         <span className="sr-only">Toggle theme</span>
       </Button>
     );
+  }
+
+  // Render a single icon based on the theme
+  let icon;
+  if (theme === 'light') {
+    icon = <Sun className="h-[1.2rem] w-[1.2rem]" />;
+  } else if (theme === 'dark') {
+    icon = <Moon className="h-[1.2rem] w-[1.2rem]" />;
+  } else if (theme === 'system') {
+    if (resolvedTheme === 'dark') {
+      // System theme in dark mode
+      icon = (
+        <div className="relative">
+          <Moon className="h-[1.2rem] w-[1.2rem]" />
+          <Computer className="absolute h-[0.6rem] w-[0.6rem] right-[-3px] bottom-[-3px] text-primary-500" />
+        </div>
+      );
+    } else {
+      // System theme in light mode
+      icon = (
+        <div className="relative">
+          <Sun className="h-[1.2rem] w-[1.2rem]" />
+          <Computer className="absolute h-[0.6rem] w-[0.6rem] right-[-3px] bottom-[-3px] text-primary-500" />
+        </div>
+      );
+    }
   }
 
   return (
@@ -59,34 +85,7 @@ export function ThemeToggle() {
       className="h-9 w-9 text-gray-400 hover:text-foreground relative"
       title={getTooltipText()}
     >
-      <div className="relative h-[1.2rem] w-[1.2rem]">
-        {/* Sun icon - visible when theme is light */}
-        <Sun 
-          className={`absolute h-[1.2rem] w-[1.2rem] transition-all duration-300 ${
-            theme === 'light'
-              ? 'scale-100 rotate-0 opacity-100'
-              : 'scale-0 rotate-90 opacity-0'
-          }`} 
-        />
-        
-        {/* Moon icon - visible when theme is dark */}
-        <Moon 
-          className={`absolute h-[1.2rem] w-[1.2rem] transition-all duration-300 ${
-            theme === 'dark' 
-              ? 'scale-100 rotate-0 opacity-100'
-              : 'scale-0 -rotate-90 opacity-0'
-          }`} 
-        />
-        
-        {/* Computer icon - visible when theme is system */}
-        <Computer 
-          className={`absolute h-[1.2rem] w-[1.2rem] transition-all duration-300 ${
-            theme === 'system'
-              ? 'scale-100 rotate-0 opacity-100'
-              : 'scale-0 rotate-45 opacity-0'
-          }`} 
-        />
-      </div>
+      {icon}
       <span className="sr-only">{getTooltipText()}</span>
     </Button>
   );

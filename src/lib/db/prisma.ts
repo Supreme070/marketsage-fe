@@ -1,24 +1,46 @@
 import { PrismaClient } from "@prisma/client";
 
+// Add custom methods to PrismaClient
+interface CustomPrismaClient extends PrismaClient {
+  $healthCheck: () => Promise<boolean>;
+}
+
 // Prevent multiple instances of Prisma Client in development
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
+  prisma: CustomPrismaClient | undefined;
 };
 
-// Connection retry logic to handle temporary database disconnects
+// Configuration
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 500;
 
-const createPrismaClient = () => {
-  const prisma = new PrismaClient({
-    log: ['query', 'error', 'warn'],
+// Create a new PrismaClient instance
+const createPrismaClient = (): CustomPrismaClient => {
+  const client = new PrismaClient({
+    log: [
+      'error',
+      'warn',
+    ],
     errorFormat: 'pretty',
-  });
-  return prisma;
+  }) as CustomPrismaClient;
+
+  // Add health check method
+  client.$healthCheck = async (): Promise<boolean> => {
+    try {
+      // Simple query to check if connection is alive
+      await client.$queryRaw`SELECT 1`;
+      return true;
+    } catch (error) {
+      console.error('Database health check failed:', error);
+      return false;
+    }
+  };
+
+  return client;
 };
 
-// Initialize Prisma client with automatic retries
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+// Initialize Prisma client 
+const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
 // Add middleware for query timeout and retry
 prisma.$use(async (params, next) => {
@@ -27,13 +49,24 @@ prisma.$use(async (params, next) => {
   async function runWithRetry() {
     try {
       attempts++;
-      return await next(params);
+      const startTime = Date.now();
+      const result = await next(params);
+      const duration = Date.now() - startTime;
+      
+      // Log slow queries (only in development)
+      if (process.env.NODE_ENV !== 'production' && duration > 500) {
+        console.warn(`Slow database operation: ${params.model}.${params.action} (${duration}ms)`);
+      }
+      
+      return result;
     } catch (error) {
       const isConnectionError =
         error instanceof Error &&
         (error.message.includes('Connection refused') ||
          error.message.includes('connection timeout') ||
-         error.message.includes('Connection terminated unexpectedly'));
+         error.message.includes('Connection terminated unexpectedly') ||
+         error.message.includes('pool is draining') ||
+         error.message.includes('pool overflow'));
 
       // Retry logic for connection issues
       if (isConnectionError && attempts < MAX_RETRIES) {
@@ -47,6 +80,18 @@ prisma.$use(async (params, next) => {
 
   return runWithRetry();
 });
+
+// Setup proper shutdown for production
+if (process.env.NODE_ENV === 'production') {
+  const gracefulShutdown = async () => {
+    console.log('Closing Prisma client connection...');
+    await prisma.$disconnect();
+    console.log('Prisma client disconnected');
+  };
+
+  process.on('SIGTERM', gracefulShutdown);
+  process.on('SIGINT', gracefulShutdown);
+}
 
 // In development, we reuse the same client across requests
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;

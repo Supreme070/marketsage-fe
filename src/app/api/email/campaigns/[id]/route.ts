@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient, CampaignStatus } from "@prisma/client";
+import { CampaignStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
 // Schema for campaign update validation
 const campaignUpdateSchema = z.object({
@@ -29,7 +35,7 @@ export async function GET(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   // Access params safely in Next.js 15
@@ -51,7 +57,7 @@ export async function GET(
     });
 
     if (!campaign) {
-      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+      return notFound("Campaign not found");
     }
 
     // Check if user has access to this campaign
@@ -70,11 +76,7 @@ export async function GET(
 
     return NextResponse.json(formattedCampaign);
   } catch (error) {
-    console.error("Error fetching email campaign:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch email campaign" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/email/campaigns/[id]/route.ts");
   }
 }
 
@@ -87,7 +89,7 @@ export async function PATCH(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   // Access params safely in Next.js 15
@@ -104,7 +106,7 @@ export async function PATCH(
     });
 
     if (!existingCampaign) {
-      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+      return notFound("Campaign not found");
     }
 
     // Check if user has access to update this campaign
@@ -264,7 +266,7 @@ export async function DELETE(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   // Access params safely in Next.js 15
@@ -277,7 +279,7 @@ export async function DELETE(
     });
 
     if (!existingCampaign) {
-      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+      return notFound("Campaign not found");
     }
 
     // Check if user has access to delete this campaign
@@ -316,10 +318,6 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Email campaign deleted successfully" });
   } catch (error) {
-    console.error("Error deleting email campaign:", error);
-    return NextResponse.json(
-      { error: "Failed to delete email campaign" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/email/campaigns/[id]/route.ts");
   }
 } 

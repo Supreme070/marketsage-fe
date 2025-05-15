@@ -1,9 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
 // Get integration by ID
 export async function GET(
@@ -14,7 +19,7 @@ export async function GET(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const integrationId = params.id;
@@ -34,16 +39,12 @@ export async function GET(
     });
 
     if (!integration) {
-      return NextResponse.json({ error: "Integration not found" }, { status: 404 });
+      return notFound("Integration not found");
     }
 
     return NextResponse.json(integration);
   } catch (error) {
-    console.error("Error fetching integration:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch integration" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/integrations/[id]/route.ts");
   }
 }
 
@@ -56,7 +57,7 @@ export async function PATCH(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   // Only admins can update integrations
@@ -76,7 +77,7 @@ export async function PATCH(
     });
 
     if (!integration) {
-      return NextResponse.json({ error: "Integration not found" }, { status: 404 });
+      return notFound("Integration not found");
     }
 
     const body = await request.json();
@@ -121,11 +122,7 @@ export async function PATCH(
 
     return NextResponse.json(updatedIntegration);
   } catch (error) {
-    console.error("Error updating integration:", error);
-    return NextResponse.json(
-      { error: "Failed to update integration" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/integrations/[id]/route.ts");
   }
 }
 
@@ -138,7 +135,7 @@ export async function DELETE(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   // Only admins can delete integrations
@@ -156,7 +153,7 @@ export async function DELETE(
     });
 
     if (!integration) {
-      return NextResponse.json({ error: "Integration not found" }, { status: 404 });
+      return notFound("Integration not found");
     }
 
     // Delete the integration
@@ -166,11 +163,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Integration successfully deleted" });
   } catch (error) {
-    console.error("Error deleting integration:", error);
-    return NextResponse.json(
-      { error: "Failed to delete integration" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/integrations/[id]/route.ts");
   }
 }
 

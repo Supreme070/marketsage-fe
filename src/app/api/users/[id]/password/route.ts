@@ -1,10 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { compare, hash } from "bcrypt";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
 // POST endpoint to change a user's password
 export async function POST(
@@ -15,7 +20,7 @@ export async function POST(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const userId = params.id;
@@ -47,7 +52,7 @@ export async function POST(
     });
 
     if (!user || !user.password) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return notFound("User not found");
     }
 
     // Check if current password is correct using bcrypt
@@ -78,10 +83,6 @@ export async function POST(
 
     return NextResponse.json({ message: "Password updated successfully" });
   } catch (error) {
-    console.error("Error changing password:", error);
-    return NextResponse.json(
-      { error: "Failed to change password" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/users/[id]/password/route.ts");
   }
 } 

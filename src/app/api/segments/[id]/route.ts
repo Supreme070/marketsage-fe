@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
-const prisma = new PrismaClient();
-
-// Schema for segment update validation
+//  Schema for segment update validation
 const segmentUpdateSchema = z.object({
   name: z.string().min(1, "Segment name is required").optional(),
   description: z.string().optional(),
@@ -22,7 +27,7 @@ export async function GET(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const segmentId = params.id;
@@ -33,7 +38,7 @@ export async function GET(
     });
 
     if (!segment) {
-      return NextResponse.json({ error: "Segment not found" }, { status: 404 });
+      return notFound("Segment not found");
     }
 
     // Check if user has access to this segment
@@ -44,11 +49,7 @@ export async function GET(
 
     return NextResponse.json(segment);
   } catch (error) {
-    console.error("Error fetching segment:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch segment" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/segments/[id]/route.ts");
   }
 }
 
@@ -61,7 +62,7 @@ export async function PATCH(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const segmentId = params.id;
@@ -73,7 +74,7 @@ export async function PATCH(
     });
 
     if (!existingSegment) {
-      return NextResponse.json({ error: "Segment not found" }, { status: 404 });
+      return notFound("Segment not found");
     }
 
     // Check if user has access to update this segment
@@ -119,11 +120,7 @@ export async function PATCH(
 
     return NextResponse.json(updatedSegment);
   } catch (error) {
-    console.error("Error updating segment:", error);
-    return NextResponse.json(
-      { error: "Failed to update segment" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/segments/[id]/route.ts");
   }
 }
 
@@ -136,7 +133,7 @@ export async function DELETE(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const segmentId = params.id;
@@ -148,7 +145,7 @@ export async function DELETE(
     });
 
     if (!existingSegment) {
-      return NextResponse.json({ error: "Segment not found" }, { status: 404 });
+      return notFound("Segment not found");
     }
 
     // Check if user has access to delete this segment
@@ -164,10 +161,6 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Segment deleted successfully" });
   } catch (error) {
-    console.error("Error deleting segment:", error);
-    return NextResponse.json(
-      { error: "Failed to delete segment" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/segments/[id]/route.ts");
   }
 } 

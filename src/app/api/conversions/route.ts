@@ -1,21 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
+import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { PrismaClient } from "@prisma/client";
 import { EntityType, AnalyticsPeriod } from "@prisma/client";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
 // Initialize Prisma client directly in this file to avoid import errors
-const prisma = new PrismaClient();
+import prisma from "@/lib/db/prisma";
+
+// Define interfaces for the metrics structure
+interface ConversionMetric {
+  count: number;
+  value: number;
+}
+
+interface ConversionsData {
+  totalConversions?: ConversionMetric;
+  conversions?: Record<string, ConversionMetric>;
+  [key: string]: any;
+}
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
     if (!session || !session.user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return unauthorized();
     }
     
     // Get query parameters
@@ -63,7 +78,23 @@ export async function GET(request: NextRequest) {
     
     // Process and format the data
     const formattedData = analyticsData.map(record => {
-      const parsedMetrics = JSON.parse(record.metrics);
+      let parsedMetrics: ConversionsData = {};
+      
+      try {
+        // Only attempt to parse if metrics is a non-empty string
+        if (record.metrics && typeof record.metrics === 'string' && record.metrics.trim() !== '') {
+          const parsed = JSON.parse(record.metrics);
+          
+          // Ensure the result is an object
+          if (typeof parsed === 'object' && parsed !== null) {
+            parsedMetrics = parsed as ConversionsData;
+          } else {
+            console.error(`Invalid metrics format for record ${record.id}: not an object`);
+          }
+        }
+      } catch (error) {
+        console.error(`Error parsing metrics for record ${record.id}:`, error);
+      }
       
       return {
         id: record.id,
@@ -77,7 +108,10 @@ export async function GET(request: NextRequest) {
     });
     
     // Aggregate conversion data if no specific entity is requested
-    let aggregatedStats = null;
+    let aggregatedStats: {
+      totalConversions?: ConversionMetric;
+      conversionsByType?: Record<string, ConversionMetric>;
+    } | null = null;
     
     if (!entityId) {
       aggregatedStats = formattedData.reduce((stats: any, record) => {
@@ -93,7 +127,7 @@ export async function GET(request: NextRequest) {
         }
         
         // Sum up conversions by type
-        if (metrics.conversions) {
+        if (metrics.conversions && typeof metrics.conversions === 'object') {
           if (!stats.conversionsByType) {
             stats.conversionsByType = {};
           }
@@ -102,8 +136,11 @@ export async function GET(request: NextRequest) {
             if (!stats.conversionsByType[type]) {
               stats.conversionsByType[type] = { count: 0, value: 0 };
             }
-            stats.conversionsByType[type].count += metrics.conversions[type].count || 0;
-            stats.conversionsByType[type].value += metrics.conversions[type].value || 0;
+            const conversion = metrics.conversions?.[type];
+            if (conversion) {
+              stats.conversionsByType[type].count += conversion.count || 0;
+              stats.conversionsByType[type].value += conversion.value || 0;
+            }
           });
         }
         
@@ -118,10 +155,6 @@ export async function GET(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error("Error fetching conversion data:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch conversion data" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/conversions/route.ts");
   }
 } 

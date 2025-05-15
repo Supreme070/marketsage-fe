@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
 import { randomUUID } from "crypto";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  validationError 
+} from "@/lib/errors";
 
 // Schema for contact validation
 const contactSchema = z.object({
@@ -33,14 +36,14 @@ function tagsToString(tags: string[] | undefined): string | null {
 
 // GET contacts endpoint
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-
-  // Check if user is authenticated
-  if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
+    const session = await getServerSession(authOptions);
+
+    // Check if user is authenticated
+    if (!session || !session.user) {
+      return unauthorized();
+    }
+
     // Different filters based on user role
     // Super admins and admins can see all contacts, other users only see their own
     const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN";
@@ -55,40 +58,56 @@ export async function GET(request: NextRequest) {
     });
 
     // Process tags for each contact
-    const processedContacts = contacts.map((contact: any) => ({
-      ...contact,
-      tags: contact.tagsString ? JSON.parse(contact.tagsString) : [],
-    }));
+    const processedContacts = contacts.map((contact: any) => {
+      let parsedTags = [];
+      
+      // Safely parse tags
+      if (contact.tagsString) {
+        try {
+          parsedTags = JSON.parse(contact.tagsString);
+          // Ensure the result is an array
+          if (!Array.isArray(parsedTags)) {
+            parsedTags = [];
+          }
+        } catch (e) {
+          console.error(`Error parsing tags for contact ${contact.id}:`, e);
+          // Return empty array if parsing fails
+          parsedTags = [];
+        }
+      }
+      
+      return {
+        ...contact,
+        tags: parsedTags,
+      };
+    });
 
     return NextResponse.json(processedContacts);
   } catch (error) {
-    console.error("Error fetching contacts:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch contacts" },
-      { status: 500 }
-    );
+    // Use the global error handler
+    return handleApiError(error, "/api/contacts");
   }
 }
 
 // POST endpoint to create a new contact
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-
-  // Check if user is authenticated
-  if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
+    const session = await getServerSession(authOptions);
+
+    // Check if user is authenticated
+    if (!session || !session.user) {
+      return unauthorized();
+    }
+
     const body = await request.json();
     
     // Validate input
     const validation = contactSchema.safeParse(body);
     
     if (!validation.success) {
-      return NextResponse.json(
-        { error: "Invalid contact data", details: validation.error.format() },
-        { status: 400 }
+      return validationError(
+        "Invalid contact data", 
+        validation.error.format()
       );
     }
 
@@ -126,10 +145,6 @@ export async function POST(request: NextRequest) {
       tags: contactData.tags || [],
     }, { status: 201 });
   } catch (error) {
-    console.error("Error creating contact:", error);
-    return NextResponse.json(
-      { error: "Failed to create contact" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/contacts");
   }
 } 

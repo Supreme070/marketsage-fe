@@ -12,6 +12,7 @@ export default function AudienceSegmentationPage() {
   const primaryColor = "#F59E0B"; // Amber
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const solutionType = "audience-segmentation";
 
   // Define features for this solution
   const features = [
@@ -50,17 +51,19 @@ export default function AudienceSegmentationPage() {
   return (
     <>
       <SolutionHero
-        title="Smart Audience Segmentation"
-        description="Target the right audience with AI-powered segmentation based on behavior, demographics, and engagement levels."
+        title="Audience Segmentation"
+        description="Target your ideal customers with powerful segmentation tools based on behavior, demographics, and engagement metrics."
         icon={<Users className="h-8 w-8" />}
         color={primaryColor}
+        solutionType={solutionType}
       />
       
       <SolutionFeatures
-        title="Send the Right Message to the Right People"
-        description="Create highly targeted audience segments to deliver personalized marketing campaigns that drive better results."
+        title="Target the Right Audience"
+        description="Create highly targeted audience segments based on behavior, demographics, and engagement metrics."
         features={features}
         color={primaryColor}
+        solutionType={solutionType}
       />
       
       {/* Segmentation process section */}

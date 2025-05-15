@@ -15,8 +15,10 @@ export default function Providers({ children }: ProvidersProps) {
       <ThemeProvider
         attribute="class"
         defaultTheme="system"
-        enableSystem
+        enableSystem={true}
         disableTransitionOnChange
+        forcedTheme={undefined}
+        storageKey="marketsage-theme"
       >
         <Toaster position="top-right" closeButton richColors />
         {children}

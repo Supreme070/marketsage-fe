@@ -1,9 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
 // Get user details by ID
 export async function GET(
@@ -14,7 +19,7 @@ export async function GET(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const userId = params.id;
@@ -44,7 +49,7 @@ export async function GET(
     });
 
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return notFound("User not found");
     }
 
     return NextResponse.json({
@@ -57,10 +62,6 @@ export async function GET(
       image: user.image,
     });
   } catch (error) {
-    console.error("Error fetching user details:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch user details" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/users/[id]/details/route.ts");
   }
 } 

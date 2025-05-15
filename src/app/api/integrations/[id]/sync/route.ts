@@ -1,9 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
 // Trigger a manual sync for an integration
 export async function POST(
@@ -14,7 +19,7 @@ export async function POST(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const integrationId = params.id;
@@ -26,7 +31,7 @@ export async function POST(
     });
 
     if (!integration) {
-      return NextResponse.json({ error: "Integration not found" }, { status: 404 });
+      return notFound("Integration not found");
     }
 
     // Simulate a synchronization process
@@ -59,11 +64,7 @@ export async function POST(
       startedAt: syncTask.startedAt,
     });
   } catch (error) {
-    console.error("Error triggering sync:", error);
-    return NextResponse.json(
-      { error: "Failed to trigger synchronization" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/integrations/[id]/sync/route.ts");
   }
 }
 
@@ -76,7 +77,7 @@ export async function GET(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const integrationId = params.id;
@@ -91,7 +92,7 @@ export async function GET(
     });
 
     if (!integration) {
-      return NextResponse.json({ error: "Integration not found" }, { status: 404 });
+      return notFound("Integration not found");
     }
     
     // For demo purpose, generate a random status
@@ -112,11 +113,7 @@ export async function GET(
 
     return NextResponse.json(syncInfo);
   } catch (error) {
-    console.error("Error fetching sync status:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch synchronization status" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/integrations/[id]/sync/route.ts");
   }
 }
 

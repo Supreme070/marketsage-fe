@@ -535,3 +535,86 @@ enum SyncStatus {
   COMPLETED
   FAILED
 }
+
+// AI Features Models
+
+// Engagement time tracking for send time optimization
+model EngagementTime {
+  id              String    @id @default(cuid())
+  contactId       String
+  entityType      EntityType
+  entityId        String
+  engagementType  ActivityType
+  dayOfWeek       Int       // 0-6 (Sunday-Saturday)
+  hourOfDay       Int       // 0-23
+  timestamp       DateTime  @default(now())
+
+  @@index([contactId, entityType, engagementType])
+  @@index([dayOfWeek, hourOfDay])
+}
+
+// Smart segment suggestions
+model SmartSegment {
+  id              String    @id @default(cuid())
+  name            String
+  description     String
+  rules           String    // JSON string with segment criteria
+  score           Float     // Relevance score (0-1)
+  status          SmartSegmentStatus @default(PENDING)
+  createdAt       DateTime  @default(now())
+  lastUpdated     DateTime  @updatedAt
+}
+
+// Content templates for AI-assisted content generation
+model ContentTemplate {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  industry        String?
+  category        String
+  type            ContentTemplateType
+  template        String    // Template with placeholders
+  keywords        String?   // JSON string of relevant keywords
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// Content template usage tracking
+model ContentGeneration {
+  id              String    @id @default(cuid())
+  templateId      String?
+  entityType      EntityType
+  entityId        String
+  prompt          String?   // User input for generation
+  result          String    // Generated content
+  createdById     String
+  createdAt       DateTime  @default(now())
+}
+
+// Send time optimization model
+model SendTimeOptimization {
+  id              String    @id @default(cuid())
+  contactId       String
+  dayOfWeek       Int       // 0-6 (Sunday-Saturday)
+  hourOfDay       Int       // 0-23
+  engagementScore Float     // 0-1 score for this time period
+  confidenceLevel Float     // 0-1 based on amount of data
+  lastUpdated     DateTime  @updatedAt
+
+  @@unique([contactId, dayOfWeek, hourOfDay])
+}
+
+// New enums for AI features
+enum SmartSegmentStatus {
+  PENDING
+  ACTIVE
+  ARCHIVED
+}
+
+enum ContentTemplateType {
+  EMAIL_SUBJECT
+  EMAIL_BODY
+  SMS_MESSAGE
+  WHATSAPP_MESSAGE
+  PUSH_NOTIFICATION
+}

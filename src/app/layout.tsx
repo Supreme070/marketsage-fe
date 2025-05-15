@@ -2,6 +2,7 @@ import "./globals.css";
 import { Inter, Plus_Jakarta_Sans, Outfit } from "next/font/google";
 import type { Metadata } from "next";
 import Providers from "@/providers";
+import ChatBotWrapper from "@/components/ChatBotWrapper";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -48,6 +49,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${plusJakarta.variable} ${outfit.variable}`}>
         <Providers>{children}</Providers>
+        <ChatBotWrapper />
       </body>
     </html>
   );

@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
 import { randomUUID } from "crypto";
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
-const prisma = new PrismaClient();
-
-// Schema for SMS template validation
+//  Schema for SMS template validation
 const templateSchema = z.object({
   name: z.string().min(1, "Template name is required"),
   content: z.string().min(1, "Content is required"),
@@ -21,7 +26,7 @@ export async function GET(request: NextRequest) {
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   try {
@@ -50,11 +55,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(templates);
   } catch (error) {
-    console.error("Error fetching SMS templates:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch SMS templates" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/sms/templates/route.ts");
   }
 }
 
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   try {
@@ -120,10 +121,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newTemplate, { status: 201 });
   } catch (error) {
-    console.error("Error creating SMS template:", error);
-    return NextResponse.json(
-      { error: "Failed to create SMS template" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/sms/templates/route.ts");
   }
 } 

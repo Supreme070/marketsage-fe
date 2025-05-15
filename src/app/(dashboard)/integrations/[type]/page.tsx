@@ -124,10 +124,28 @@ export default function IntegrationConnectionPage({ params }: IntegrationPagePro
           // If we have stored credentials, populate the form
           // In a real app, you'd need to decrypt these
           try {
-            const credentials = JSON.parse(matchingIntegration.credentials || "{}");
-            setFormState(credentials);
+            // Make sure we have valid JSON before parsing
+            if (matchingIntegration.credentials && 
+                typeof matchingIntegration.credentials === 'string' && 
+                matchingIntegration.credentials.trim() !== '') {
+              const credentials = JSON.parse(matchingIntegration.credentials);
+              // Verify the parsed result is an object before setting state
+              if (credentials && typeof credentials === 'object') {
+                setFormState(credentials);
+              }
+            }
           } catch (e) {
             console.error("Failed to parse credentials", e);
+            // Handle the error by setting an empty object for credentials
+            setFormState({});
+            // Show toast notification for developers
+            if (process.env.NODE_ENV !== 'production') {
+              toast({
+                title: "Error parsing credentials",
+                description: "There was an error reading the saved credentials.",
+                variant: "destructive"
+              });
+            }
           }
         }
       }

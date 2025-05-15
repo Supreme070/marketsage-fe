@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { ActivityType, EntityType } from "@prisma/client";
 import { trackConversion, ConversionTypes } from "@/lib/conversions";
 import { randomUUID } from "crypto";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
 // Initialize Prisma client directly in this file to avoid import errors
-const prisma = new PrismaClient();
-
+import prisma from "@/lib/db/prisma";
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }

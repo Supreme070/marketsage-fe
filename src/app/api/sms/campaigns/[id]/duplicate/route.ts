@@ -2,8 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient, CampaignStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
 // POST endpoint to duplicate an SMS campaign
 export async function POST(
@@ -14,7 +20,7 @@ export async function POST(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   // Access params safely in Next.js 15
@@ -31,7 +37,7 @@ export async function POST(
     });
 
     if (!existingCampaign) {
-      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+      return notFound("Campaign not found");
     }
 
     // Check if user has access to duplicate this campaign
@@ -73,10 +79,6 @@ export async function POST(
 
     return NextResponse.json(newCampaign, { status: 201 });
   } catch (error) {
-    console.error("Error duplicating SMS campaign:", error);
-    return NextResponse.json(
-      { error: "Failed to duplicate SMS campaign" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/sms/campaigns/[id]/duplicate/route.ts");
   }
 } 

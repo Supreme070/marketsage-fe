@@ -4,6 +4,7 @@ import { useTheme } from "next-themes";
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import { CheckCircle2 } from "lucide-react";
+import { SolutionIllustration } from "./solution-illustration";
 
 interface FeatureItem {
   title: string;
@@ -17,9 +18,17 @@ interface SolutionFeaturesProps {
   features: FeatureItem[];
   color: string;
   image?: string;
+  solutionType?: string;
 }
 
-export function SolutionFeatures({ title, description, features, color, image }: SolutionFeaturesProps) {
+export function SolutionFeatures({ 
+  title, 
+  description, 
+  features, 
+  color, 
+  image,
+  solutionType = "default"
+}: SolutionFeaturesProps) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   
@@ -63,6 +72,7 @@ export function SolutionFeatures({ title, description, features, color, image }:
               icon={feature.icon}
               index={index}
               color={color}
+              solutionType={solutionType}
             />
           ))}
         </div>
@@ -88,13 +98,15 @@ function FeatureCard({
   description, 
   icon, 
   index,
-  color
+  color,
+  solutionType
 }: { 
   title: string;
   description: string;
   icon?: React.ReactNode;
   index: number;
   color: string;
+  solutionType?: string;
 }) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -116,29 +128,41 @@ function FeatureCard({
           : 'bg-white border border-slate-200 shadow-sm'
       }`}
     >
-      {icon ? (
-        <div 
-          className="w-12 h-12 rounded-lg flex items-center justify-center mb-4"
-          style={{ backgroundColor: `${color}20`, color }}
-        >
-          {icon}
+      <div className="flex gap-4">
+        {/* Left Side - Content */}
+        <div className="flex-grow">
+          {icon ? (
+            <div 
+              className="w-12 h-12 rounded-lg flex items-center justify-center mb-4"
+              style={{ backgroundColor: `${color}20`, color }}
+            >
+              {icon}
+            </div>
+          ) : (
+            <div 
+              className="w-12 h-12 rounded-lg flex items-center justify-center mb-4"
+              style={{ backgroundColor: `${color}20`, color }}
+            >
+              <CheckCircle2 className="h-6 w-6" />
+            </div>
+          )}
+          
+          <h3 className={`text-xl font-semibold mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            {title}
+          </h3>
+          
+          <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            {description}
+          </p>
         </div>
-      ) : (
-        <div 
-          className="w-12 h-12 rounded-lg flex items-center justify-center mb-4"
-          style={{ backgroundColor: `${color}20`, color }}
-        >
-          <CheckCircle2 className="h-6 w-6" />
+        
+        {/* Right Side - Illustration */}
+        <div className="hidden md:block w-24 h-24 relative">
+          <div className="absolute inset-0 overflow-hidden rounded-lg">
+            <SolutionIllustration type={solutionType || "default"} className="w-full h-full" />
+          </div>
         </div>
-      )}
-      
-      <h3 className={`text-xl font-semibold mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-        {title}
-      </h3>
-      
-      <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-        {description}
-      </p>
+      </div>
     </motion.div>
   );
 } 

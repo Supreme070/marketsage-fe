@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
-const prisma = new PrismaClient();
-
-// Schema for list update validation
+//  Schema for list update validation
 const listUpdateSchema = z.object({
   name: z.string().min(1, "List name is required").optional(),
   description: z.string().optional(),
@@ -22,7 +27,7 @@ export async function GET(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const listId = params.id;
@@ -38,7 +43,7 @@ export async function GET(
     });
 
     if (!list) {
-      return NextResponse.json({ error: "List not found" }, { status: 404 });
+      return notFound("List not found");
     }
 
     // Check if user has access to this list
@@ -61,11 +66,7 @@ export async function GET(
 
     return NextResponse.json(formattedList);
   } catch (error) {
-    console.error("Error fetching list:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch list" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/lists/[id]/route.ts");
   }
 }
 
@@ -78,7 +79,7 @@ export async function PATCH(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const listId = params.id;
@@ -90,7 +91,7 @@ export async function PATCH(
     });
 
     if (!existingList) {
-      return NextResponse.json({ error: "List not found" }, { status: 404 });
+      return notFound("List not found");
     }
 
     // Check if user has access to update this list
@@ -141,11 +142,7 @@ export async function PATCH(
 
     return NextResponse.json(formattedList);
   } catch (error) {
-    console.error("Error updating list:", error);
-    return NextResponse.json(
-      { error: "Failed to update list" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/lists/[id]/route.ts");
   }
 }
 
@@ -158,7 +155,7 @@ export async function DELETE(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const listId = params.id;
@@ -170,7 +167,7 @@ export async function DELETE(
     });
 
     if (!existingList) {
-      return NextResponse.json({ error: "List not found" }, { status: 404 });
+      return notFound("List not found");
     }
 
     // Check if user has access to delete this list
@@ -191,10 +188,6 @@ export async function DELETE(
 
     return NextResponse.json({ message: "List deleted successfully" });
   } catch (error) {
-    console.error("Error deleting list:", error);
-    return NextResponse.json(
-      { error: "Failed to delete list" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/lists/[id]/route.ts");
   }
 } 

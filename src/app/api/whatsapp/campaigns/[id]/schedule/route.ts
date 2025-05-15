@@ -3,10 +3,16 @@ import { PrismaClient, CampaignStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
-const prisma = new PrismaClient();
-
-// Schema for schedule validation
+//  Schema for schedule validation
 const scheduleSchema = z.object({
   scheduledFor: z.string().refine(
     (dateStr) => {
@@ -26,7 +32,7 @@ export async function POST(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   // Access params safely in Next.js 15
@@ -39,7 +45,7 @@ export async function POST(
     });
 
     if (!campaign) {
-      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+      return notFound("Campaign not found");
     }
 
     // Check if user has access to schedule this campaign
@@ -91,11 +97,7 @@ export async function POST(
       scheduledFor: updatedCampaign.scheduledFor
     });
   } catch (error) {
-    console.error("Error scheduling WhatsApp campaign:", error);
-    return NextResponse.json(
-      { error: "Failed to schedule WhatsApp campaign" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/whatsapp/campaigns/[id]/schedule/route.ts");
   }
 }
 
@@ -108,7 +110,7 @@ export async function DELETE(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   // Access params safely in Next.js 15
@@ -121,7 +123,7 @@ export async function DELETE(
     });
 
     if (!campaign) {
-      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+      return notFound("Campaign not found");
     }
 
     // Check if user has access to this campaign
@@ -152,10 +154,6 @@ export async function DELETE(
       status: updatedCampaign.status
     });
   } catch (error) {
-    console.error("Error canceling WhatsApp campaign scheduling:", error);
-    return NextResponse.json(
-      { error: "Failed to cancel campaign scheduling" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/whatsapp/campaigns/[id]/schedule/route.ts");
   }
 } 

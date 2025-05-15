@@ -12,6 +12,7 @@ export default function AnalyticsReportingPage() {
   const primaryColor = "#8B5CF6"; // Purple
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const solutionType = "analytics-reporting";
 
   // Define features for this solution
   const features = [
@@ -51,16 +52,18 @@ export default function AnalyticsReportingPage() {
     <>
       <SolutionHero
         title="Analytics & Reporting"
-        description="Make data-driven decisions with comprehensive analytics that track campaign performance across all channels in real-time."
-        icon={<BarChart3 className="h-8 w-8" />}
+        description="Track campaign performance and gain actionable insights with our comprehensive analytics dashboard."
+        icon={<LineChart className="h-8 w-8" />}
         color={primaryColor}
+        solutionType={solutionType}
       />
       
       <SolutionFeatures
-        title="Gain Actionable Insights from Your Data"
-        description="Transform raw data into meaningful insights that help you optimize campaigns and drive better results."
+        title="Comprehensive Marketing Analytics"
+        description="Understand your marketing performance with detailed analytics and customizable reporting."
         features={features}
         color={primaryColor}
+        solutionType={solutionType}
       />
       
       {/* Key metrics section */}

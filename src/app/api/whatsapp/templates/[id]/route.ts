@@ -3,17 +3,23 @@ import { PrismaClient, WATemplateStatus, CampaignStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
 // Create a single instance of PrismaClient to avoid multiple connections
 let prisma: PrismaClient;
 
 if (process.env.NODE_ENV === 'production') {
-  prisma = new PrismaClient();
-} else {
+  } else {
   // Prevent multiple instances during development
   if (!(global as any).prisma) {
-    (global as any).prisma = new PrismaClient();
-  }
+    (}
   prisma = (global as any).prisma;
 }
 
@@ -40,7 +46,7 @@ export async function GET(
 
     // Check if user is authenticated
     if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return unauthorized();
     }
 
     // Access params safely in Next.js 15
@@ -62,7 +68,7 @@ export async function GET(
       });
 
       if (!template) {
-        return NextResponse.json({ error: "Template not found" }, { status: 404 });
+        return notFound("Template not found");
       }
 
       // Check if user has access to this template
@@ -97,11 +103,7 @@ export async function GET(
       );
     }
   } catch (error) {
-    console.error("Error fetching WhatsApp template:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch WhatsApp template" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/whatsapp/templates/[id]/route.ts");
   }
 }
 
@@ -115,7 +117,7 @@ export async function PATCH(
 
     // Check if user is authenticated
     if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return unauthorized();
     }
 
     // Access params safely in Next.js 15
@@ -140,7 +142,7 @@ export async function PATCH(
       });
 
       if (!existingTemplate) {
-        return NextResponse.json({ error: "Template not found" }, { status: 404 });
+        return notFound("Template not found");
       }
 
       // Check if user has access to update this template
@@ -232,11 +234,7 @@ export async function PATCH(
       );
     }
   } catch (error) {
-    console.error("Error updating WhatsApp template:", error);
-    return NextResponse.json(
-      { error: "Failed to update WhatsApp template" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/whatsapp/templates/[id]/route.ts");
   }
 }
 
@@ -250,7 +248,7 @@ export async function DELETE(
 
     // Check if user is authenticated
     if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return unauthorized();
     }
 
     // Access params safely in Next.js 15
@@ -268,7 +266,7 @@ export async function DELETE(
       });
 
       if (!existingTemplate) {
-        return NextResponse.json({ error: "Template not found" }, { status: 404 });
+        return notFound("Template not found");
       }
 
       // Check if user has access to delete this template
@@ -307,10 +305,6 @@ export async function DELETE(
       );
     }
   } catch (error) {
-    console.error("Error deleting WhatsApp template:", error);
-    return NextResponse.json(
-      { error: "Failed to delete WhatsApp template" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/whatsapp/templates/[id]/route.ts");
   }
 } 

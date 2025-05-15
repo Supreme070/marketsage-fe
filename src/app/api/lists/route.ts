@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
 import { randomUUID } from "crypto";
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
-const prisma = new PrismaClient();
-
-// Schema for list validation
+//  Schema for list validation
 const listSchema = z.object({
   name: z.string().min(1, "List name is required"),
   description: z.string().optional(),
@@ -20,7 +25,7 @@ export async function GET(request: NextRequest) {
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   try {
@@ -55,11 +60,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(formattedLists);
   } catch (error) {
-    console.error("Error fetching lists:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch lists" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/lists/route.ts");
   }
 }
 
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   try {
@@ -103,10 +104,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newList, { status: 201 });
   } catch (error) {
-    console.error("Error creating list:", error);
-    return NextResponse.json(
-      { error: "Failed to create list" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/lists/route.ts");
   }
 } 

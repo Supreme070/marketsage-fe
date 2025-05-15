@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
-const prisma = new PrismaClient();
-
-// Schema for contact update validation
+//  Schema for contact update validation
 const contactUpdateSchema = z.object({
   email: z.string().email().optional(),
   phone: z.string().optional(),
@@ -50,7 +55,7 @@ export async function GET(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const contactId = params.id;
@@ -61,12 +66,12 @@ export async function GET(
     });
 
     if (!contact) {
-      return NextResponse.json({ error: "Contact not found" }, { status: 404 });
+      return notFound("Contact not found");
     }
 
     // Check if user has access to this contact
     if (contact.createdById !== session.user.id && session.user.role !== "SUPER_ADMIN" && session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return forbidden("You do not have permission to access this contact");
     }
 
     // Return contact with processed tags
@@ -75,11 +80,7 @@ export async function GET(
       tags: tagsFromString(contact.tagsString),
     });
   } catch (error) {
-    console.error("Error fetching contact:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch contact" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/contacts/[id]/route.ts");
   }
 }
 
@@ -92,7 +93,7 @@ export async function PATCH(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const contactId = params.id;
@@ -104,12 +105,12 @@ export async function PATCH(
     });
 
     if (!existingContact) {
-      return NextResponse.json({ error: "Contact not found" }, { status: 404 });
+      return notFound("Contact not found");
     }
 
     // Check if user has access to update this contact
     if (existingContact.createdById !== session.user.id && session.user.role !== "SUPER_ADMIN" && session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return forbidden("You do not have permission to update this contact");
     }
 
     // Parse and validate the request body
@@ -117,10 +118,7 @@ export async function PATCH(
     const validation = contactUpdateSchema.safeParse(body);
     
     if (!validation.success) {
-      return NextResponse.json(
-        { error: "Invalid contact data", details: validation.error.format() },
-        { status: 400 }
-      );
+      return validationError("Invalid contact data", validation.error.format());
     }
 
     const updateData = validation.data;
@@ -153,11 +151,7 @@ export async function PATCH(
       tags: updateData.tags || tagsFromString(updatedContact.tagsString),
     });
   } catch (error) {
-    console.error("Error updating contact:", error);
-    return NextResponse.json(
-      { error: "Failed to update contact" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/contacts/[id]/route.ts");
   }
 }
 
@@ -170,7 +164,7 @@ export async function DELETE(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const contactId = params.id;
@@ -182,12 +176,12 @@ export async function DELETE(
     });
 
     if (!existingContact) {
-      return NextResponse.json({ error: "Contact not found" }, { status: 404 });
+      return notFound("Contact not found");
     }
 
     // Check if user has access to delete this contact
     if (existingContact.createdById !== session.user.id && session.user.role !== "SUPER_ADMIN" && session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return forbidden("You do not have permission to delete this contact");
     }
 
     // Delete the contact
@@ -197,10 +191,6 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Contact deleted successfully" });
   } catch (error) {
-    console.error("Error deleting contact:", error);
-    return NextResponse.json(
-      { error: "Failed to delete contact" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/contacts/[id]/route.ts");
   }
 } 

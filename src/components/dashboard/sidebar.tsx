@@ -18,6 +18,8 @@ import {
   Tag,
   HelpCircle,
   FileText,
+  AlertCircle,
+  MailQuestion,
   type LucideIcon
 } from "lucide-react";
 
@@ -123,9 +125,26 @@ const sidebarNavItems: NavItem[] = [
     icon: Store,
   },
   {
-    title: "Help & Support",
-    href: "/help",
+    title: "Support",
+    href: "/support",
     icon: HelpCircle,
+    submenu: [
+      {
+        title: "Help Center",
+        href: "/support",
+        icon: HelpCircle,
+      },
+      {
+        title: "Error Codes",
+        href: "/support/error-codes",
+        icon: AlertCircle,
+      },
+      {
+        title: "Contact Support",
+        href: "/support/contact",
+        icon: MailQuestion,
+      },
+    ],
   },
   {
     title: "Settings",

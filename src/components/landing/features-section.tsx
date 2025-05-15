@@ -548,10 +548,33 @@ function FeatureCard({
   diagram?: (isDark: boolean) => React.ReactNode;
   index: number;
 }) {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const [mounted, setMounted] = useState(false);
+  const { theme, resolvedTheme } = useTheme();
+  const isDark = theme === 'dark' || resolvedTheme === 'dark';
   const cardRef = useRef<HTMLDivElement>(null);
   const inView = useInView(cardRef, { once: true, margin: "-50px 0px" });
+  
+  // Mount state to avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
+  // Use consistent classes during initial render to avoid hydration mismatch
+  const cardClasses = !mounted 
+    ? "relative p-6 rounded-xl bg-white/90 dark:bg-slate-900/50 backdrop-blur-sm border border-slate-200 dark:border-slate-800/60 shadow-md shadow-slate-200/50 dark:shadow-none overflow-hidden group"
+    : `relative p-6 rounded-xl ${
+        isDark 
+          ? 'bg-slate-900/50 backdrop-blur-sm border border-slate-800/60' 
+          : 'bg-white/90 backdrop-blur-sm border border-slate-200 shadow-md shadow-slate-200/50'
+      } overflow-hidden group`;
+      
+  const titleClasses = !mounted
+    ? "text-lg font-medium mb-2 text-slate-900 dark:text-white"
+    : `text-lg font-medium mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`;
+    
+  const descriptionClasses = !mounted
+    ? "text-slate-600 dark:text-slate-400"
+    : `${isDark ? 'text-slate-400' : 'text-slate-600'}`;
   
   return (
     <motion.div
@@ -563,11 +586,7 @@ function FeatureCard({
         delay: index * 0.1,
         ease: [0.22, 1, 0.36, 1]
       }}
-      className={`relative p-6 rounded-xl ${
-        isDark 
-          ? 'bg-slate-900/50 backdrop-blur-sm border border-slate-800/60' 
-          : 'bg-white/90 backdrop-blur-sm border border-slate-200 shadow-md shadow-slate-200/50'
-      } overflow-hidden group`}
+      className={cardClasses}
     >
       {/* Background glow */}
       <motion.div 
@@ -580,20 +599,23 @@ function FeatureCard({
       <div className={`relative flex justify-center mb-2 ${
         diagram ? '' : 'w-12 h-12 rounded-full flex items-center justify-center mb-4'
       } ${
-        !diagram && isDark ? `${color} bg-opacity-20` : ''
+        !diagram && !mounted ? `${color} bg-opacity-10 dark:bg-opacity-20` : ''
       } ${
-        !diagram && !isDark ? `${color} bg-opacity-10` : ''
+        !diagram && mounted && !isDark ? `${color} bg-opacity-10` : ''
+      } ${
+        !diagram && mounted && isDark ? `${color} bg-opacity-20` : ''
       } ${
         !diagram ? 'bg-current' : ''
       }`}>
-        {diagram ? diagram(isDark) : <span className={color}>{icon}</span>}
+        {diagram && mounted ? diagram(isDark) : 
+         diagram && !mounted ? <div className="h-16 w-full mb-6"></div> : <span className={color}>{icon}</span>}
       </div>
       
-      <h3 className={`text-lg font-medium mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+      <h3 className={titleClasses}>
         {title}
       </h3>
       
-      <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+      <p className={descriptionClasses}>
         {description}
       </p>
       
@@ -621,10 +643,37 @@ function FeatureGroupCard({
   features: { text: string; icon: React.ReactNode }[];
   index: number;
 }) {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const [mounted, setMounted] = useState(false);
+  const { theme, resolvedTheme } = useTheme();
+  const isDark = theme === 'dark' || resolvedTheme === 'dark';
   const cardRef = useRef<HTMLDivElement>(null);
   const inView = useInView(cardRef, { once: true, margin: "-50px 0px" });
+  
+  // Mount effect to avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
+  // Use consistent classes during initial render
+  const cardClasses = !mounted
+    ? "relative overflow-hidden p-6 rounded-xl bg-white/90 dark:bg-slate-900/50 backdrop-blur-sm border border-slate-200 dark:border-slate-800/60 shadow-lg shadow-slate-200/50 dark:shadow-none"
+    : `relative overflow-hidden p-6 rounded-xl ${
+        isDark 
+          ? 'bg-slate-900/50 backdrop-blur-sm border border-slate-800/60' 
+          : 'bg-white/90 backdrop-blur-sm border border-slate-200 shadow-lg shadow-slate-200/50'
+      }`;
+    
+  const titleClasses = !mounted
+    ? "text-xl font-bold mb-3 text-slate-900 dark:text-white"
+    : `text-xl font-bold mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`;
+    
+  const descriptionClasses = !mounted
+    ? "mb-6 text-slate-600 dark:text-slate-400"
+    : `mb-6 ${isDark ? 'text-slate-400' : 'text-slate-600'}`;
+    
+  const featureItemClasses = !mounted
+    ? "flex items-center gap-2 text-slate-700 dark:text-slate-300"
+    : `flex items-center gap-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`;
   
   return (
     <motion.div
@@ -636,37 +685,36 @@ function FeatureGroupCard({
         delay: index * 0.2,
         ease: [0.22, 1, 0.36, 1]
       }}
-      className={`relative overflow-hidden p-6 rounded-xl ${
-        isDark 
-          ? 'bg-slate-900/50 backdrop-blur-sm border border-slate-800/60' 
-          : 'bg-white/90 backdrop-blur-sm border border-slate-200 shadow-lg shadow-slate-200/50'
-      }`}
+      className={cardClasses}
     >
       {/* Background gradient effect */}
       <div className={`absolute -top-24 -right-24 w-48 h-48 rounded-full opacity-10 blur-3xl ${bgColor}`}></div>
       
       {/* Icon with vibrant background */}
       <div className={`relative w-16 h-16 rounded-2xl flex items-center justify-center mb-6 ${
+        !mounted ? `${bgColor} bg-opacity-10 dark:bg-opacity-20` :
         isDark ? `${bgColor} bg-opacity-20` : `${bgColor} bg-opacity-10`
       }`}>
         <span className={color}>{icon}</span>
-        <motion.div 
-          className={`absolute inset-0 rounded-2xl ${bgColor} opacity-0`}
-          animate={{ opacity: [0, 0.15, 0] }}
-          transition={{ 
-            duration: 3, 
-            repeat: Infinity, 
-            repeatType: "reverse", 
-            ease: "easeInOut" 
-          }}
-        />
+        {mounted && (
+          <motion.div 
+            className={`absolute inset-0 rounded-2xl ${bgColor} opacity-0`}
+            animate={{ opacity: [0, 0.15, 0] }}
+            transition={{ 
+              duration: 3, 
+              repeat: Infinity, 
+              repeatType: "reverse", 
+              ease: "easeInOut" 
+            }}
+          />
+        )}
       </div>
       
-      <h3 className={`text-xl font-bold mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+      <h3 className={titleClasses}>
         {title}
       </h3>
       
-      <p className={`mb-6 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+      <p className={descriptionClasses}>
         {description}
       </p>
       
@@ -678,7 +726,7 @@ function FeatureGroupCard({
             initial={{ opacity: 0, x: -10 }}
             animate={inView ? { opacity: 1, x: 0 } : { opacity: 0, x: -10 }}
             transition={{ duration: 0.4, delay: index * 0.2 + 0.3 + (i * 0.1) }}
-            className={`flex items-center gap-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}
+            className={featureItemClasses}
           >
             <span className={color}>{feature.icon}</span>
             <span>{feature.text}</span>
@@ -690,9 +738,15 @@ function FeatureGroupCard({
 }
 
 export function FeaturesSection() {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const [mounted, setMounted] = useState(false);
+  const { theme, resolvedTheme } = useTheme();
+  const isDark = theme === 'dark' || resolvedTheme === 'dark';
   const settings = getOptimizedSettings();
+  
+  // Mounting check to prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   // Refs for animation targets
   const sectionRef = useRef<HTMLElement>(null);
@@ -715,13 +769,15 @@ export function FeaturesSection() {
   const subheadingInView = useInView(subheadingRef, { once: true, margin: "-100px" });
   const statsInView = useInView(statsRef, { once: true, margin: "-100px" });
   
+  // Use a base class to avoid hydration issues
+  const baseClasses = "relative py-20 overflow-hidden";
+  
   return (
     <section
       ref={sectionRef}
-      className={`relative py-20 overflow-hidden ${
-        isDark 
-          ? 'bg-background border-y border-slate-800/60' 
-          : 'bg-slate-50 border-y border-slate-200/60'
+      className={`${baseClasses} ${
+        !mounted ? "bg-background border-y border-slate-200/60 dark:border-slate-800/60" : 
+        isDark ? 'bg-background border-y border-slate-800/60' : 'bg-slate-50 border-y border-slate-200/60'
       }`}
       id="features"
     >
@@ -731,7 +787,7 @@ export function FeaturesSection() {
           <motion.h2 
             ref={headingRef}
             className={`text-3xl md:text-4xl lg:text-5xl font-bold mb-6 ${
-              isDark ? 'text-white' : 'text-slate-900'
+              !mounted ? "text-foreground" : (isDark ? 'text-white' : 'text-slate-900')
             }`}
             initial={{ opacity: 0, y: 20 }}
             animate={headingInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
@@ -742,7 +798,7 @@ export function FeaturesSection() {
           
           <motion.p 
             ref={subheadingRef}
-            className={`text-lg ${isDark ? 'text-slate-400' : 'text-slate-600'}`}
+            className={`text-lg ${!mounted ? "text-muted-foreground" : (isDark ? 'text-slate-400' : 'text-slate-600')}`}
             initial={{ opacity: 0, y: 20 }}
             animate={subheadingInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
             transition={{ duration: 0.6, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
@@ -763,7 +819,7 @@ export function FeaturesSection() {
                 <div className={`text-2xl md:text-3xl font-bold mb-1 ${stat.color}`}>
                   <Counter value={stat.value} suffix={stat.suffix} />
                 </div>
-                <div className={`text-sm ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>
+                <div className={`text-sm ${!mounted ? "text-muted-foreground" : (isDark ? 'text-slate-500' : 'text-slate-600')}`}>
                   {stat.label}
                 </div>
               </div>
@@ -789,25 +845,37 @@ export function FeaturesSection() {
 
         {/* Individual Feature Grid */}
         <div className="relative mb-16">
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            transition={{ duration: 1 }}
-            className={`absolute -top-20 -right-20 w-72 h-72 rounded-full opacity-20 blur-3xl ${
-              isDark ? 'bg-primary/30' : 'bg-primary/10'
-            }`}
-          />
+          {mounted ? (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                transition={{ duration: 1 }}
+                className={`absolute -top-20 -right-20 w-72 h-72 rounded-full opacity-20 blur-3xl ${
+                  isDark ? 'bg-primary/30' : 'bg-primary/10'
+                }`}
+              />
+              
+              <motion.div
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                transition={{ duration: 1 }}
+                className={`absolute -bottom-16 -left-16 w-60 h-60 rounded-full opacity-20 blur-3xl ${
+                  isDark ? 'bg-blue-500/20' : 'bg-blue-500/10'
+                }`}
+              />
+            </>
+          ) : (
+            <>
+              {/* Static placeholders during SSR */}
+              <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full opacity-0 blur-3xl bg-primary/10 dark:bg-primary/30" />
+              <div className="absolute -bottom-16 -left-16 w-60 h-60 rounded-full opacity-0 blur-3xl bg-blue-500/10 dark:bg-blue-500/20" />
+            </>
+          )}
           
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            transition={{ duration: 1 }}
-            className={`absolute -bottom-16 -left-16 w-60 h-60 rounded-full opacity-20 blur-3xl ${
-              isDark ? 'bg-blue-500/20' : 'bg-blue-500/10'
-            }`}
-          />
-          
-          <h3 className={`text-2xl font-bold text-center mb-10 ${isDark ? 'text-white' : 'text-slate-800'}`}>
+          <h3 className={`text-2xl font-bold text-center mb-10 ${
+            !mounted ? 'text-slate-800 dark:text-white' : (isDark ? 'text-white' : 'text-slate-800')
+          }`}>
             All the Features You Need
           </h3>
           
@@ -825,10 +893,14 @@ export function FeaturesSection() {
           style={{ opacity, scale }}
         >
           <div className="text-center mb-10">
-            <h3 className={`text-2xl font-bold mb-4 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <h3 className={`text-2xl font-bold mb-4 ${
+              !mounted ? 'text-slate-900 dark:text-white' : (isDark ? 'text-white' : 'text-slate-900')
+            }`}>
               Try Our Workflow Builder
             </h3>
-            <p className={`max-w-2xl mx-auto ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            <p className={`max-w-2xl mx-auto ${
+              !mounted ? 'text-slate-600 dark:text-slate-400' : (isDark ? 'text-slate-400' : 'text-slate-600')
+            }`}>
               Drag, drop, and connect nodes to create sophisticated marketing automations without writing code.
             </p>
           </div>
@@ -836,7 +908,7 @@ export function FeaturesSection() {
           <WorkflowDemo />
           
           <div className={`mt-10 text-center ${
-            isDark ? 'text-primary-400' : 'text-primary-600'
+            !mounted ? 'text-primary-600 dark:text-primary-400' : (isDark ? 'text-primary-400' : 'text-primary-600')
           } font-medium flex items-center justify-center gap-1`}>
             <Users className="h-4 w-4" />
             <span>17,342 workflows created by Nigerian businesses</span>

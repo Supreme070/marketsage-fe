@@ -1,8 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { hash } from "bcrypt";
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
 // Define UserRole enum to match Prisma schema
 enum UserRole {
@@ -12,9 +19,7 @@ enum UserRole {
   SUPER_ADMIN = "SUPER_ADMIN"
 }
 
-const prisma = new PrismaClient();
-
-// Helper function to get tags from string
+const // Helper function to get tags from string
 function getTagsFromString(tagsString: string | null): string[] {
   if (!tagsString) return [];
   try {
@@ -38,7 +43,7 @@ export async function GET(request: NextRequest) {
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   // Check if user is admin or super admin
@@ -74,11 +79,7 @@ export async function GET(request: NextRequest) {
     const filteredUsers = users.filter((user) => user.role !== "SUPER_ADMIN");
     return NextResponse.json(filteredUsers);
   } catch (error) {
-    console.error("Error fetching users:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch users" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/users/route.ts");
   }
 }
 
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
 
   // Check if user is authenticated and has permission
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   // Only admins and super admins can create users
@@ -157,10 +158,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newUser, { status: 201 });
   } catch (error) {
-    console.error("Error creating user:", error);
-    return NextResponse.json(
-      { error: "Failed to create user" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/users/route.ts");
   }
 }

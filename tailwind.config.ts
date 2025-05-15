@@ -175,6 +175,17 @@ const config = {
             opacity: '0.8'
           }
         },
+        'pulse-subtle': {
+          '0%': {
+            boxShadow: '0 0 0 0 rgba(45, 212, 191, 0.4)'
+          },
+          '70%': {
+            boxShadow: '0 0 0 10px rgba(45, 212, 191, 0)'
+          },
+          '100%': {
+            boxShadow: '0 0 0 0 rgba(45, 212, 191, 0)'
+          }
+        },
         'scale-up': {
           '0%': {
             transform: 'scale(0.95)',
@@ -204,6 +215,7 @@ const config = {
         'fade-out': 'fade-out 0.5s ease-out forwards',
         'float': 'float 3s ease-in-out infinite',
         'pulse-slow': 'pulse-slow 3s ease-in-out infinite',
+        'pulse-subtle': 'pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'scale-up': 'scale-up 0.3s ease-out forwards',
         'slide-up': 'slide-up 0.5s ease-out forwards',
         'slide-up-delayed': 'slide-up 0.5s 0.2s ease-out forwards',

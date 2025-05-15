@@ -2,8 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient, CampaignStatus, ActivityType } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
 // POST endpoint to initiate sending of a WhatsApp campaign
 export async function POST(
@@ -14,7 +20,7 @@ export async function POST(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   // Access params safely in Next.js 15
@@ -39,7 +45,7 @@ export async function POST(
     });
 
     if (!campaign) {
-      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+      return notFound("Campaign not found");
     }
 
     // Check if user has access to send this campaign

@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
-const prisma = new PrismaClient();
-
-// Schema for template update validation
+//  Schema for template update validation
 const templateUpdateSchema = z.object({
   name: z.string().min(1, "Template name is required").optional(),
   description: z.string().optional(),
@@ -26,7 +31,7 @@ export async function GET(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const templateId = params.id;
@@ -37,7 +42,7 @@ export async function GET(
     });
 
     if (!template) {
-      return NextResponse.json({ error: "Template not found" }, { status: 404 });
+      return notFound("Template not found");
     }
 
     // Check if user has access to this template
@@ -48,11 +53,7 @@ export async function GET(
 
     return NextResponse.json(template);
   } catch (error) {
-    console.error("Error fetching email template:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch email template" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/email/templates/[id]/route.ts");
   }
 }
 
@@ -65,7 +66,7 @@ export async function PATCH(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const templateId = params.id;
@@ -77,7 +78,7 @@ export async function PATCH(
     });
 
     if (!existingTemplate) {
-      return NextResponse.json({ error: "Template not found" }, { status: 404 });
+      return notFound("Template not found");
     }
 
     // Check if user has access to update this template
@@ -127,11 +128,7 @@ export async function PATCH(
 
     return NextResponse.json(updatedTemplate);
   } catch (error) {
-    console.error("Error updating email template:", error);
-    return NextResponse.json(
-      { error: "Failed to update email template" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/email/templates/[id]/route.ts");
   }
 }
 
@@ -144,7 +141,7 @@ export async function DELETE(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const templateId = params.id;
@@ -156,7 +153,7 @@ export async function DELETE(
     });
 
     if (!existingTemplate) {
-      return NextResponse.json({ error: "Template not found" }, { status: 404 });
+      return notFound("Template not found");
     }
 
     // Check if user has access to delete this template
@@ -184,10 +181,6 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Email template deleted successfully" });
   } catch (error) {
-    console.error("Error deleting email template:", error);
-    return NextResponse.json(
-      { error: "Failed to delete email template" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/email/templates/[id]/route.ts");
   }
 } 

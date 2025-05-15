@@ -4,6 +4,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
 import { randomUUID } from "crypto";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
 // Create a single instance of PrismaClient to avoid multiple connections
 let prisma: PrismaClient;
@@ -39,7 +46,7 @@ export async function GET(request: NextRequest) {
 
     // Check if user is authenticated
     if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return unauthorized();
     }
 
     // Different filters based on user role
@@ -126,11 +133,7 @@ export async function GET(request: NextRequest) {
       );
     }
   } catch (error) {
-    console.error("Unhandled error in WhatsApp templates GET endpoint:", error);
-    return NextResponse.json(
-      { error: "An unexpected error occurred" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/whatsapp/templates/route.ts");
   }
 }
 
@@ -142,7 +145,7 @@ export async function POST(request: NextRequest) {
 
     // Check if user is authenticated
     if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return unauthorized();
     }
 
     try {
@@ -220,10 +223,6 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error) {
-    console.error("Unhandled error in WhatsApp templates POST endpoint:", error);
-    return NextResponse.json(
-      { error: "An unexpected error occurred" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/whatsapp/templates/route.ts");
   }
 } 

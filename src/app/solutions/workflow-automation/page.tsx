@@ -7,6 +7,7 @@ import { WorkflowDemo } from "@/components/landing/workflow-demo";
 export default function WorkflowAutomationPage() {
   // Define primary color for this solution
   const primaryColor = "#8B5CF6"; // Purple
+  const solutionType = "workflow-automation";
 
   // Define features for this solution
   const features = [
@@ -49,6 +50,7 @@ export default function WorkflowAutomationPage() {
         description="Create sophisticated marketing journeys with our intuitive drag-and-drop interface. No coding required."
         icon={<Workflow className="h-8 w-8" />}
         color={primaryColor}
+        solutionType={solutionType}
       />
       
       <SolutionFeatures
@@ -56,6 +58,7 @@ export default function WorkflowAutomationPage() {
         description="Design complex, multi-step marketing journeys that respond to customer behavior in real-time."
         features={features}
         color={primaryColor}
+        solutionType={solutionType}
       />
       
       <section className="py-16 bg-background">

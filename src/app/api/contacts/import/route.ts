@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
-const prisma = new PrismaClient();
-
-// Schema for contact validation
+//  Schema for contact validation
 const contactSchema = z.object({
   email: z.string().email().optional(),
   phone: z.string().optional(),
@@ -117,7 +121,7 @@ export async function POST(request: NextRequest) {
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   try {
@@ -233,6 +237,7 @@ export async function POST(request: NextRequest) {
     console.error("Error importing contacts:", error);
     return NextResponse.json(
       { error: "Failed to import contacts" },
+import prisma from "@/lib/db/prisma";
       { status: 500 }
     );
   }

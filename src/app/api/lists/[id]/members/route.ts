@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
-const prisma = new PrismaClient();
-
-// Schema for adding contacts to a list
+//  Schema for adding contacts to a list
 const addMembersSchema = z.object({
   contactIds: z.array(z.string()).min(1, "At least one contact must be provided"),
 });
@@ -25,7 +30,7 @@ export async function GET(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const listId = params.id;
@@ -37,7 +42,7 @@ export async function GET(
     });
 
     if (!list) {
-      return NextResponse.json({ error: "List not found" }, { status: 404 });
+      return notFound("List not found");
     }
 
     // Check if user has access to this list
@@ -98,11 +103,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Error fetching list members:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch list members" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/lists/[id]/members/route.ts");
   }
 }
 
@@ -115,7 +116,7 @@ export async function POST(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const listId = params.id;
@@ -127,7 +128,7 @@ export async function POST(
     });
 
     if (!list) {
-      return NextResponse.json({ error: "List not found" }, { status: 404 });
+      return notFound("List not found");
     }
 
     // Check if user has access to this list
@@ -214,11 +215,7 @@ export async function POST(
       alreadyInList: contacts.length - contactsToAdd.length,
     });
   } catch (error) {
-    console.error("Error adding members to list:", error);
-    return NextResponse.json(
-      { error: "Failed to add members to list" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/lists/[id]/members/route.ts");
   }
 }
 
@@ -231,7 +228,7 @@ export async function DELETE(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const listId = params.id;
@@ -243,7 +240,7 @@ export async function DELETE(
     });
 
     if (!list) {
-      return NextResponse.json({ error: "List not found" }, { status: 404 });
+      return notFound("List not found");
     }
 
     // Check if user has access to this list
@@ -287,10 +284,6 @@ export async function DELETE(
       removed: result.count,
     });
   } catch (error) {
-    console.error("Error removing members from list:", error);
-    return NextResponse.json(
-      { error: "Failed to remove members from list" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/lists/[id]/members/route.ts");
   }
 } 

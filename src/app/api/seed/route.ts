@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
 // POST endpoint to seed WhatsApp data
 export async function POST(request: NextRequest) {
@@ -11,7 +16,7 @@ export async function POST(request: NextRequest) {
 
   // Check if user is authenticated with admin role
   if (!session || !session.user || !(session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN")) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   try {
@@ -23,7 +28,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!adminUser) {
-      return NextResponse.json({ error: "Admin user not found" }, { status: 404 });
+      return notFound("Admin user not found");
     }
 
     // Create WhatsApp templates

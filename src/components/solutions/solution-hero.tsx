@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { SolutionIllustration } from "./solution-illustration";
+import { SolutionVisual } from "./solution-visual";
 
 interface SolutionHeroProps {
   title: string;
@@ -12,9 +14,17 @@ interface SolutionHeroProps {
   icon: React.ReactNode;
   color: string;
   image?: string;
+  solutionType?: string;
 }
 
-export function SolutionHero({ title, description, icon, color, image }: SolutionHeroProps) {
+export function SolutionHero({ 
+  title, 
+  description, 
+  icon, 
+  color, 
+  image,
+  solutionType
+}: SolutionHeroProps) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
@@ -86,14 +96,11 @@ export function SolutionHero({ title, description, icon, color, image }: Solutio
                   className="w-full h-auto"
                 />
               ) : (
-                <div className={`aspect-video w-full bg-gradient-to-br ${
-                  isDark ? 'from-slate-900 to-slate-800' : 'from-white to-slate-100'
-                } flex items-center justify-center`}>
-                  <div className={`w-24 h-24 rounded-full flex items-center justify-center`} 
-                    style={{ backgroundColor: `${color}20`, color }}
-                  >
-                    {icon}
-                  </div>
+                <div className={`aspect-video w-full overflow-hidden`}>
+                  <SolutionVisual 
+                    type={solutionType || getTypeFromTitle(title)} 
+                    color={color}
+                  />
                 </div>
               )}
             </motion.div>
@@ -102,4 +109,27 @@ export function SolutionHero({ title, description, icon, color, image }: Solutio
       </div>
     </section>
   );
+}
+
+// Helper function to determine solution type from title if not explicitly provided
+function getTypeFromTitle(title: string): string {
+  const titleLower = title.toLowerCase();
+  
+  if (titleLower.includes('workflow') || titleLower.includes('automation')) {
+    return 'workflow-automation';
+  } else if (titleLower.includes('analytic') || titleLower.includes('report')) {
+    return 'analytics-reporting';
+  } else if (titleLower.includes('audience') || titleLower.includes('segment')) {
+    return 'audience-segmentation';
+  } else if (titleLower.includes('channel') || titleLower.includes('message') || titleLower.includes('sms') || titleLower.includes('email')) {
+    return 'omnichannel-messaging';
+  } else if (titleLower.includes('email')) {
+    return 'email-marketing';
+  } else if (titleLower.includes('whatsapp')) {
+    return 'whatsapp-marketing';
+  } else if (titleLower.includes('crm') || titleLower.includes('integration')) {
+    return 'crm-integration';
+  }
+  
+  return 'default';
 } 

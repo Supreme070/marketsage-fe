@@ -2,8 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient, ActivityType } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
 // GET SMS campaign statistics
 export async function GET(
@@ -14,7 +20,7 @@ export async function GET(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   // Access params safely in Next.js 15
@@ -27,7 +33,7 @@ export async function GET(
     });
 
     if (!campaign) {
-      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+      return notFound("Campaign not found");
     }
 
     // Check if user has access to this campaign
@@ -72,10 +78,6 @@ export async function GET(
 
     return NextResponse.json(stats);
   } catch (error) {
-    console.error("Error fetching SMS campaign statistics:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch SMS campaign statistics" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/sms/campaigns/[id]/stats/route.ts");
   }
 } 

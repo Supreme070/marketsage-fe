@@ -3,10 +3,16 @@ import { PrismaClient, WorkflowStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
-const prisma = new PrismaClient();
-
-// Schema for workflow update validation
+//  Schema for workflow update validation
 const workflowUpdateSchema = z.object({
   name: z.string().min(1, "Workflow name is required").optional(),
   description: z.string().optional(),
@@ -23,7 +29,7 @@ export async function GET(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const workflowId = params.id;
@@ -34,7 +40,7 @@ export async function GET(
     });
 
     if (!workflow) {
-      return NextResponse.json({ error: "Workflow not found" }, { status: 404 });
+      return notFound("Workflow not found");
     }
 
     // Check if user has access to this workflow
@@ -59,11 +65,7 @@ export async function GET(
 
     return NextResponse.json(parsedWorkflow);
   } catch (error) {
-    console.error("Error fetching workflow:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch workflow" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/workflows/[id]/route.ts");
   }
 }
 
@@ -76,7 +78,7 @@ export async function PATCH(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const workflowId = params.id;
@@ -88,7 +90,7 @@ export async function PATCH(
     });
 
     if (!existingWorkflow) {
-      return NextResponse.json({ error: "Workflow not found" }, { status: 404 });
+      return notFound("Workflow not found");
     }
 
     // Check if user has access to this workflow
@@ -162,11 +164,7 @@ export async function PATCH(
 
     return NextResponse.json(parsedWorkflow);
   } catch (error) {
-    console.error("Error updating workflow:", error);
-    return NextResponse.json(
-      { error: "Failed to update workflow" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/workflows/[id]/route.ts");
   }
 }
 
@@ -179,7 +177,7 @@ export async function DELETE(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const workflowId = params.id;
@@ -191,7 +189,7 @@ export async function DELETE(
     });
 
     if (!existingWorkflow) {
-      return NextResponse.json({ error: "Workflow not found" }, { status: 404 });
+      return notFound("Workflow not found");
     }
 
     // Check if user has access to this workflow
@@ -207,10 +205,6 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Workflow deleted successfully" });
   } catch (error) {
-    console.error("Error deleting workflow:", error);
-    return NextResponse.json(
-      { error: "Failed to delete workflow" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/workflows/[id]/route.ts");
   }
 } 

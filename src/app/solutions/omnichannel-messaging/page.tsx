@@ -12,6 +12,7 @@ export default function OmnichannelMessagingPage() {
   const primaryColor = "#3B82F6"; // Blue
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const solutionType = "omnichannel-messaging";
 
   // Define features for this solution
   const features = [
@@ -51,16 +52,18 @@ export default function OmnichannelMessagingPage() {
     <>
       <SolutionHero
         title="Omnichannel Messaging"
-        description="Seamlessly manage Email, SMS, and WhatsApp campaigns from a single platform with unified analytics and personalization."
+        description="Deliver consistent messaging across email, SMS, WhatsApp, and web to create seamless customer experiences."
         icon={<MessageSquare className="h-8 w-8" />}
         color={primaryColor}
+        solutionType={solutionType}
       />
       
       <SolutionFeatures
-        title="Reach Customers on Their Preferred Channel"
-        description="Deliver consistent, personalized messaging across multiple channels to engage your audience wherever they are."
+        title="Reach Customers on Every Channel"
+        description="Deliver consistent messages across email, SMS, WhatsApp, and other channels for truly integrated marketing campaigns."
         features={features}
         color={primaryColor}
+        solutionType={solutionType}
       />
       
       {/* Channel comparison section */}

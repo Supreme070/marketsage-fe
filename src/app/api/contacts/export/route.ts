@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
-const prisma = new PrismaClient();
-
-// Function to parse tags from string
+const // Function to parse tags from string
 function tagsFromString(tagsString: string | null): string[] {
   if (!tagsString) return [];
   try {
@@ -80,7 +85,7 @@ export async function GET(request: NextRequest) {
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   try {
@@ -136,10 +141,6 @@ export async function GET(request: NextRequest) {
     
     return response;
   } catch (error) {
-    console.error("Error exporting contacts:", error);
-    return NextResponse.json(
-      { error: "Failed to export contacts" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/contacts/export/route.ts");
   }
 } 

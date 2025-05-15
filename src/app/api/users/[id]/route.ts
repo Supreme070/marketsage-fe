@@ -1,8 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { hash } from "bcrypt";
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
 // Define UserRole enum to match Prisma schema
 enum UserRole {
@@ -11,8 +18,6 @@ enum UserRole {
   IT_ADMIN = "IT_ADMIN",
   SUPER_ADMIN = "SUPER_ADMIN"
 }
-
-const prisma = new PrismaClient();
 
 // Get user by ID
 export async function GET(
@@ -23,7 +28,7 @@ export async function GET(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const userId = params.id;
@@ -56,7 +61,7 @@ export async function GET(
     });
 
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return notFound("User not found");
     }
 
     // If user is an admin but not super admin, they can't view super admin details
@@ -69,11 +74,7 @@ export async function GET(
 
     return NextResponse.json(user);
   } catch (error) {
-    console.error("Error fetching user:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch user" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/users/[id]/route.ts");
   }
 }
 
@@ -86,7 +87,7 @@ export async function PATCH(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const userId = params.id;
@@ -116,7 +117,7 @@ export async function PATCH(
     });
 
     if (!existingUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return notFound("User not found");
     }
 
     // Only super admins can update the role of a user
@@ -193,11 +194,7 @@ export async function PATCH(
 
     return NextResponse.json(updatedUser);
   } catch (error) {
-    console.error("Error updating user:", error);
-    return NextResponse.json(
-      { error: "Failed to update user" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/users/[id]/route.ts");
   }
 }
 
@@ -210,7 +207,7 @@ export async function DELETE(
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   // Only super admins and regular admins can delete users
@@ -228,7 +225,7 @@ export async function DELETE(
     });
 
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return notFound("User not found");
     }
 
     // Regular admins cannot delete super admins or other admins
@@ -248,10 +245,6 @@ export async function DELETE(
 
     return NextResponse.json({ message: "User successfully deactivated" });
   } catch (error) {
-    console.error("Error deleting user:", error);
-    return NextResponse.json(
-      { error: "Failed to delete user" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/users/[id]/route.ts");
   }
 }

@@ -4,10 +4,16 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
 import { randomUUID } from "crypto";
+import prisma from "@/lib/db/prisma";
+import { 
+  handleApiError, 
+  unauthorized, 
+  forbidden,
+  notFound,
+  validationError 
+} from "@/lib/errors";
 
-const prisma = new PrismaClient();
-
-// Schema for email campaign validation
+//  Schema for email campaign validation
 const campaignSchema = z.object({
   name: z.string().min(1, "Campaign name is required"),
   description: z.string().optional(),
@@ -27,7 +33,7 @@ export async function GET(request: NextRequest) {
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   try {
@@ -117,11 +123,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(formattedCampaigns);
   } catch (error) {
-    console.error("Error fetching email campaigns:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch email campaigns" },
-      { status: 500 }
-    );
+    return handleApiError(error, "/api/email/campaigns/route.ts");
   }
 }
 
@@ -131,7 +133,7 @@ export async function POST(request: NextRequest) {
 
   // Check if user is authenticated
   if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   try {

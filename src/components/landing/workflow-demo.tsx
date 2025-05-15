@@ -28,8 +28,28 @@ import 'reactflow/dist/style.css';
 // Define custom node components inline instead of importing them
 // TriggerNode component
 const TriggerNode = ({ data, isConnectable }: NodeProps) => {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const [mounted, setMounted] = useState(false);
+  const { theme, resolvedTheme } = useTheme();
+  const isDark = theme === 'dark' || resolvedTheme === 'dark';
+  
+  // Avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
+  // During SSR and initial hydration, use a simpler version
+  if (!mounted) {
+    return (
+      <div className="rounded-lg border shadow-sm px-3 py-2 min-w-[120px] bg-green-50 dark:bg-green-950/60 border-green-200 dark:border-green-800/50 text-green-700 dark:text-green-400">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-md bg-green-100 dark:bg-green-900/60">
+            {data.icon}
+          </div>
+          <div className="font-medium">{data.label}</div>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <motion.div
@@ -77,8 +97,28 @@ const TriggerNode = ({ data, isConnectable }: NodeProps) => {
 
 // ActionNode component
 const ActionNode = ({ data, isConnectable }: NodeProps) => {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const [mounted, setMounted] = useState(false);
+  const { theme, resolvedTheme } = useTheme();
+  const isDark = theme === 'dark' || resolvedTheme === 'dark';
+  
+  // Avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
+  // During SSR and initial hydration, use a simpler version
+  if (!mounted) {
+    return (
+      <div className="rounded-lg border shadow-sm px-3 py-2 min-w-[120px] bg-primary-50 dark:bg-primary-950/60 border-primary-200 dark:border-primary-800/50 text-primary-700 dark:text-primary-400">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-md bg-primary-100 dark:bg-primary-900/60">
+            {data.icon}
+          </div>
+          <div className="font-medium">{data.label}</div>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <motion.div
@@ -141,8 +181,40 @@ const ActionNode = ({ data, isConnectable }: NodeProps) => {
 
 // ConditionNode component
 const ConditionNode = ({ data, isConnectable }: NodeProps) => {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const [mounted, setMounted] = useState(false);
+  const { theme, resolvedTheme } = useTheme();
+  const isDark = theme === 'dark' || resolvedTheme === 'dark';
+  
+  // Avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
+  // During SSR and initial hydration, use a simpler version
+  if (!mounted) {
+    return (
+      <div className="rounded-lg border shadow-sm px-3 py-2 min-w-[120px] bg-blue-50 dark:bg-blue-950/60 border-blue-200 dark:border-blue-800/50 text-blue-700 dark:text-blue-400">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-md bg-blue-100 dark:bg-blue-900/60">
+            {data.icon}
+          </div>
+          <div className="font-medium">{data.label}</div>
+        </div>
+        
+        {/* Path options */}
+        <div className="mt-2 flex justify-between text-xs">
+          <div className="flex items-center">
+            <CheckCircle size={12} className="mr-1 text-green-500" />
+            <span>Yes</span>
+          </div>
+          <div className="flex items-center">
+            <XCircle size={12} className="mr-1 text-amber-500" />
+            <span>No</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <motion.div
@@ -230,12 +302,20 @@ const ConditionNode = ({ data, isConnectable }: NodeProps) => {
 
 // DelayNode component
 const DelayNode = ({ data, isConnectable }: NodeProps) => {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const [mounted, setMounted] = useState(false);
+  const { theme, resolvedTheme } = useTheme();
+  const isDark = theme === 'dark' || resolvedTheme === 'dark';
   const [progress, setProgress] = useState(0);
+  
+  // Avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   // Animated progress simulation
   useEffect(() => {
+    if (!mounted) return;
+    
     const timer = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) {
@@ -245,7 +325,26 @@ const DelayNode = ({ data, isConnectable }: NodeProps) => {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [mounted]);
+  
+  // During SSR and initial hydration, use a simpler version
+  if (!mounted) {
+    return (
+      <div className="rounded-lg border shadow-sm px-3 py-2 min-w-[120px] bg-purple-50 dark:bg-purple-950/60 border-purple-200 dark:border-purple-800/50 text-purple-700 dark:text-purple-400">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-md bg-purple-100 dark:bg-purple-900/60">
+            {data.icon}
+          </div>
+          <div className="font-medium">{data.label}</div>
+        </div>
+        
+        {/* Static timer visualization */}
+        <div className="mt-2 w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div className="h-full bg-purple-500 w-0" />
+        </div>
+      </div>
+    );
+  }
   
   return (
     <motion.div
@@ -319,8 +418,28 @@ const DelayNode = ({ data, isConnectable }: NodeProps) => {
 
 // EndNode component
 const EndNode = ({ data, isConnectable }: NodeProps) => {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const [mounted, setMounted] = useState(false);
+  const { theme, resolvedTheme } = useTheme();
+  const isDark = theme === 'dark' || resolvedTheme === 'dark';
+  
+  // Avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
+  // During SSR and initial hydration, use a simpler version
+  if (!mounted) {
+    return (
+      <div className="rounded-lg border shadow-sm px-3 py-2 min-w-[100px] bg-slate-100 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800/70 text-slate-700 dark:text-slate-300">
+        <div className="flex items-center justify-center gap-2">
+          <div className="p-1.5 rounded-full bg-slate-200 dark:bg-slate-800/90">
+            {data.icon}
+          </div>
+          <div className="font-medium">{data.label}</div>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <motion.div
@@ -510,7 +629,9 @@ const nodeOptions = [
 
 // Internal Flow component
 function Flow() {
-  const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  const { theme, resolvedTheme } = useTheme();
+  const isDarkTheme = theme === 'dark' || resolvedTheme === 'dark';
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const connectingNodeId = useRef<string | null>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -519,6 +640,11 @@ function Flow() {
   const [activePath, setActivePath] = useState<string[]>([]);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const { screenToFlowPosition, project } = useReactFlow();
+
+  // Avoid hydration mismatch by mounting after client-side hydration
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Handle node dragging
   const onConnect = (params: Connection) => {
@@ -665,10 +791,19 @@ function Flow() {
     setIsDemoMode(false);
   };
 
+  // Simple non-interactive version during SSR
+  if (!mounted) {
+    return (
+      <div className="w-full h-[500px] relative rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800">
+        {/* Static placeholder */}
+      </div>
+    );
+  }
+
   return (
     <div 
       className={`w-full h-[500px] relative rounded-lg overflow-hidden ${
-        theme === 'dark' ? 'border border-slate-800' : 'border border-slate-200'
+        isDarkTheme ? 'border border-slate-800' : 'border border-slate-200'
       }`}
       ref={reactFlowWrapper}
     >
@@ -692,7 +827,7 @@ function Flow() {
         <Controls />
         
         <Background 
-          color={theme === 'dark' ? '#334155' : '#e2e8f0'} 
+          color={isDarkTheme ? '#334155' : '#e2e8f0'} 
           gap={16}
           size={1}
         />
@@ -725,12 +860,12 @@ function Flow() {
         {/* Node palette - draggable nodes for users to add */}
         <Panel position="top-left" className="flex flex-col gap-2 max-w-[200px]">
           <div className={`rounded-md p-2 ${
-            theme === 'dark' 
+            isDarkTheme 
               ? 'bg-slate-800/80 backdrop-blur-sm border border-slate-700' 
               : 'bg-white/80 backdrop-blur-sm border border-slate-200 shadow-sm'
           }`}>
             <h3 className={`text-xs font-medium mb-2 ${
-              theme === 'dark' ? 'text-slate-300' : 'text-slate-700'
+              isDarkTheme ? 'text-slate-300' : 'text-slate-700'
             }`}>
               Drag to add
             </h3>
@@ -739,7 +874,7 @@ function Flow() {
                 <div
                   key={option.type}
                   className={`cursor-grab rounded px-2 py-1 text-xs flex items-center gap-1 ${
-                    theme === 'dark'
+                    isDarkTheme
                       ? 'bg-slate-700 hover:bg-slate-600 text-slate-200'
                       : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                   }`}
@@ -781,18 +916,18 @@ function Flow() {
       <div className={`absolute bottom-4 left-4 rounded-md p-3 z-20 transition-opacity ${
         isDemoMode ? 'opacity-0' : 'opacity-100'
       } ${
-        theme === 'dark' 
+        isDarkTheme 
           ? 'bg-slate-800/90 backdrop-blur-sm border border-slate-700' 
           : 'bg-white/90 backdrop-blur-sm border border-slate-200 shadow-sm'
       }`}>
         <h4 className={`text-xs font-medium flex items-center gap-1 ${
-          theme === 'dark' ? 'text-slate-300' : 'text-slate-700'
+          isDarkTheme ? 'text-slate-300' : 'text-slate-700'
         }`}>
           <ChevronRight size={12} />
           Pro Tip
         </h4>
         <p className={`text-xs mt-1 ${
-          theme === 'dark' ? 'text-slate-400' : 'text-slate-600'
+          isDarkTheme ? 'text-slate-400' : 'text-slate-600'
         }`}>
           Drag nodes to rearrange them or add new ones from the panel
         </p>
@@ -803,8 +938,47 @@ function Flow() {
 
 // Main exported component
 export function WorkflowDemo() {
+  const [mounted, setMounted] = useState(false);
+  const { theme, resolvedTheme } = useTheme();
+  const isDark = theme === 'dark' || resolvedTheme === 'dark';
+  
+  // Avoid hydration mismatch by mounting after client-side hydration
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Initial non-animated state to prevent hydration mismatch
+  if (!mounted) {
+    return (
+      <div className="w-full max-w-5xl mx-auto">
+        <div className="w-full h-[500px] relative rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800">
+          {/* Static placeholder content */}
+        </div>
+        <div className="mt-4 text-center">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            This is a simplified version of our drag-and-drop workflow builder.
+            Create your own automated marketing sequences with our full version.
+          </p>
+        </div>
+      </div>
+    );
+  }
+  
   return (
-    <div className="w-full max-w-5xl mx-auto">
+    <motion.div 
+      className={`w-full max-w-5xl mx-auto ${
+        !isDark ? 'shadow-xl border border-slate-200/60 rounded-lg overflow-hidden' : ''
+      }`}
+      animate={{ 
+        y: [0, -8, 0],
+      }}
+      transition={{ 
+        duration: 4,
+        repeat: Infinity,
+        repeatType: "reverse",
+        ease: "easeInOut"
+      }}
+    >
       <ReactFlowProvider>
         <Flow />
       </ReactFlowProvider>
@@ -816,6 +990,6 @@ export function WorkflowDemo() {
           Create your own automated marketing sequences with our full version.
         </p>
       </div>
-    </div>
+    </motion.div>
   );
 } 
