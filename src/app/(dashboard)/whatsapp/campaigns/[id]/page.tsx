@@ -19,12 +19,15 @@ export default function WhatsAppCampaignDetailPage({ params }: { params: { id: s
   const router = useRouter();
   const [campaign, setCampaign] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Store the ID in a variable to avoid multiple accesses to params.id
+  const campaignId = params.id;
 
   useEffect(() => {
     const fetchCampaign = async () => {
       try {
         setIsLoading(true);
-        const data = await getWhatsAppCampaignById(params.id);
+        const data = await getWhatsAppCampaignById(campaignId);
         
         if (!data) {
           toast.error("Campaign not found");
@@ -42,11 +45,11 @@ export default function WhatsAppCampaignDetailPage({ params }: { params: { id: s
     };
 
     fetchCampaign();
-  }, [params.id, router]);
+  }, [campaignId, router]);
 
   const handleDuplicate = async () => {
     try {
-      const response = await fetch(`/api/whatsapp/campaigns/${params.id}/duplicate`, {
+      const response = await fetch(`/api/whatsapp/campaigns/${campaignId}/duplicate`, {
         method: 'POST',
       });
       
@@ -65,7 +68,7 @@ export default function WhatsAppCampaignDetailPage({ params }: { params: { id: s
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete this campaign?")) {
       try {
-        const response = await fetch(`/api/whatsapp/campaigns/${params.id}`, {
+        const response = await fetch(`/api/whatsapp/campaigns/${campaignId}`, {
           method: 'DELETE',
         });
         
@@ -95,7 +98,7 @@ export default function WhatsAppCampaignDetailPage({ params }: { params: { id: s
           <ChevronRight className="h-4 w-4" />
         </BreadcrumbItem>
         <BreadcrumbItem>
-          <BreadcrumbLink href={`/whatsapp/campaigns/${params.id}`}>
+          <BreadcrumbLink href={`/whatsapp/campaigns/${campaignId}`}>
             {isLoading ? "Loading..." : campaign?.name || "Campaign Details"}
           </BreadcrumbLink>
         </BreadcrumbItem>
@@ -121,7 +124,7 @@ export default function WhatsAppCampaignDetailPage({ params }: { params: { id: s
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => router.push(`/whatsapp/campaigns/${params.id}/edit`)}
+                onClick={() => router.push(`/whatsapp/campaigns/${campaignId}/edit`)}
               >
                 <Edit className="h-4 w-4 mr-2" />
                 Edit

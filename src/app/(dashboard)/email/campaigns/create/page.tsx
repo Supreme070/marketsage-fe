@@ -371,7 +371,7 @@ export default function CreateCampaignPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">Custom Content</SelectItem>
+                              <SelectItem value="custom">Custom Content</SelectItem>
                               {templates.map(template => (
                                 <SelectItem key={template.id} value={template.id}>
                                   {template.name}

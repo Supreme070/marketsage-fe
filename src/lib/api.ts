@@ -164,11 +164,24 @@ export const getContactById = async (id: string) => {
 
 // WhatsApp Templates
 export const getWhatsAppTemplates = async () => {
-  const response = await fetch('/api/whatsapp/templates');
-  if (!response.ok) {
-    throw new Error('Failed to fetch WhatsApp templates');
+  try {
+    const response = await fetch('/api/whatsapp/templates');
+    
+    if (response.status === 404) {
+      console.warn('WhatsApp templates endpoint not found, returning empty array');
+      return []; // Return empty array if endpoint not found
+    }
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch WhatsApp templates: ${response.status} ${response.statusText}`);
+    }
+    
+    return response.json();
+  } catch (error) {
+    console.error("Error fetching WhatsApp templates:", error);
+    // Return empty array instead of throwing to prevent UI failures
+    return [];
   }
-  return response.json();
 };
 
 export const getWhatsAppTemplateById = async (id: string) => {

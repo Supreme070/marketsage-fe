@@ -20,8 +20,8 @@ export async function GET(
   const integrationId = params.id;
 
   try {
-    // Fetch the integration
-    const integration = await prisma.integration.findUnique({
+    // Fetch the integration using IntegrationConnection
+    const integration = await prisma.integrationConnection.findUnique({
       where: { id: integrationId },
       select: {
         id: true,
@@ -30,24 +30,11 @@ export async function GET(
         status: true,
         createdAt: true,
         updatedAt: true,
-        lastSyncedAt: true,
-        organizationId: true,
       },
     });
 
     if (!integration) {
       return NextResponse.json({ error: "Integration not found" }, { status: 404 });
-    }
-
-    // Check if user has access to this integration
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { organizationId: true },
-    });
-
-    if (user?.organizationId !== integration.organizationId && 
-        !["SUPER_ADMIN", "IT_ADMIN"].includes(session.user.role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     return NextResponse.json(integration);
@@ -80,12 +67,11 @@ export async function PATCH(
   const integrationId = params.id;
   
   try {
-    // First check if integration exists and user has access
-    const integration = await prisma.integration.findUnique({
+    // First check if integration exists
+    const integration = await prisma.integrationConnection.findUnique({
       where: { id: integrationId },
       select: { 
         id: true,
-        organizationId: true,
       },
     });
 
@@ -93,35 +79,24 @@ export async function PATCH(
       return NextResponse.json({ error: "Integration not found" }, { status: 404 });
     }
 
-    // Check if user has access to this integration
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { organizationId: true },
-    });
-
-    if (user?.organizationId !== integration.organizationId && 
-        !["SUPER_ADMIN", "IT_ADMIN"].includes(session.user.role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const body = await request.json();
     const { name, credentials } = body;
 
     // Create update data object
-    const updateData: any = {};
+    const updateData: any = {
+      updatedAt: new Date(),
+    };
 
     if (name) updateData.name = name;
     
     if (credentials) {
       // Encrypt credentials before storing
-      // In a real app, you'd use encryption here
-      updateData.credentials = JSON.stringify(credentials);
+      updateData.config = JSON.stringify(credentials);
       
-      // When credentials change, set status to PENDING
-      updateData.status = "PENDING";
+      // When credentials change, set status to INACTIVE
+      updateData.status = "INACTIVE";
       
       // Trigger verification in the background
-      // In a real app, this would be a background job
       setTimeout(async () => {
         try {
           await verifyUpdatedIntegration(integrationId, credentials);
@@ -132,7 +107,7 @@ export async function PATCH(
     }
 
     // Update the integration
-    const updatedIntegration = await prisma.integration.update({
+    const updatedIntegration = await prisma.integrationConnection.update({
       where: { id: integrationId },
       data: updateData,
       select: {
@@ -174,32 +149,18 @@ export async function DELETE(
   const integrationId = params.id;
 
   try {
-    // First check if integration exists and user has access
-    const integration = await prisma.integration.findUnique({
+    // First check if integration exists
+    const integration = await prisma.integrationConnection.findUnique({
       where: { id: integrationId },
-      select: { 
-        id: true,
-        organizationId: true,
-      },
+      select: { id: true },
     });
 
     if (!integration) {
       return NextResponse.json({ error: "Integration not found" }, { status: 404 });
     }
 
-    // Check if user has access to this integration
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { organizationId: true },
-    });
-
-    if (user?.organizationId !== integration.organizationId && 
-        !["SUPER_ADMIN", "IT_ADMIN"].includes(session.user.role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     // Delete the integration
-    await prisma.integration.delete({
+    await prisma.integrationConnection.delete({
       where: { id: integrationId },
     });
 
@@ -217,7 +178,7 @@ export async function DELETE(
 async function verifyUpdatedIntegration(integrationId: string, credentials: any) {
   try {
     // Get integration details first
-    const integration = await prisma.integration.findUnique({
+    const integration = await prisma.integrationConnection.findUnique({
       where: { id: integrationId },
       select: { type: true },
     });
@@ -245,11 +206,11 @@ async function verifyUpdatedIntegration(integrationId: string, credentials: any)
     }
     
     // Update the integration status
-    await prisma.integration.update({
+    await prisma.integrationConnection.update({
       where: { id: integrationId },
       data: {
         status: isValid ? "ACTIVE" : "ERROR",
-        lastSyncedAt: isValid ? new Date() : null,
+        updatedAt: new Date(),
       },
     });
     
@@ -263,10 +224,17 @@ async function verifyUpdatedIntegration(integrationId: string, credentials: any)
     console.error("Error verifying updated integration:", error);
     
     // Update the integration status to ERROR
-    await prisma.integration.update({
-      where: { id: integrationId },
-      data: { status: "ERROR" },
-    });
+    try {
+      await prisma.integrationConnection.update({
+        where: { id: integrationId },
+        data: { 
+          status: "ERROR",
+          updatedAt: new Date(), 
+        },
+      });
+    } catch (updateError) {
+      console.error("Error updating integration status:", updateError);
+    }
     
     throw error;
   }

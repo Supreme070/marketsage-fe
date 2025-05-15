@@ -85,19 +85,38 @@ export default function CreateWhatsAppCampaign() {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const [templatesData, listsData, segmentsData] = await Promise.all([
-          getWhatsAppTemplates(),
-          getListsWithContactCount(),
-          getSegmentsWithContactCount(),
-        ]);
-
-        setTemplates(templatesData || []);
-        setLists(listsData || []);
-        setSegments(segmentsData || []);
-        setIsLoading(false);
+        
+        // Fetch each resource individually to handle errors separately
+        try {
+          const templatesData = await getWhatsAppTemplates();
+          setTemplates(templatesData || []);
+        } catch (error) {
+          console.error("Error fetching WhatsApp templates:", error);
+          toast.error("Failed to load WhatsApp templates, but you can continue creating your campaign");
+          setTemplates([]);
+        }
+        
+        try {
+          const listsData = await getListsWithContactCount();
+          setLists(listsData || []);
+        } catch (error) {
+          console.error("Error fetching lists:", error);
+          toast.error("Failed to load contact lists");
+          setLists([]);
+        }
+        
+        try {
+          const segmentsData = await getSegmentsWithContactCount();
+          setSegments(segmentsData || []);
+        } catch (error) {
+          console.error("Error fetching segments:", error);
+          toast.error("Failed to load segments");
+          setSegments([]);
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
-        toast.error("Failed to load resources");
+        toast.error("Failed to load some resources");
+      } finally {
         setIsLoading(false);
       }
     };
@@ -274,14 +293,25 @@ export default function CreateWhatsAppCampaign() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">No template</SelectItem>
-                              {templates.map((template) => (
-                                <SelectItem key={template.id} value={template.id}>
-                                  {template.name}
+                              <SelectItem value="none">No template</SelectItem>
+                              {templates.length > 0 ? (
+                                templates.map((template) => (
+                                  <SelectItem key={template.id} value={template.id}>
+                                    {template.name}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="no-templates" disabled>
+                                  No templates available
                                 </SelectItem>
-                              ))}
+                              )}
                             </SelectContent>
                           </Select>
+                          {templates.length === 0 && (
+                            <p className="text-xs text-amber-600 mt-1">
+                              No templates available. You can still proceed by entering your content directly.
+                            </p>
+                          )}
                           <FormMessage />
                         </FormItem>
                       )}

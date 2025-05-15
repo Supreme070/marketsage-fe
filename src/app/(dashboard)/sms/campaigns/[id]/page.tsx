@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
@@ -37,12 +37,15 @@ export default function SMSCampaignDetailPage({ params }: { params: { id: string
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  
+  // Store the ID in a variable to avoid multiple accesses to params.id
+  const campaignId = params.id;
 
   useEffect(() => {
     const fetchCampaign = async () => {
       try {
         setIsLoading(true);
-        const data = await getSMSCampaignById(params.id);
+        const data = await getSMSCampaignById(campaignId);
         setCampaign(data);
       } catch (error) {
         console.error("Failed to fetch SMS campaign:", error);
@@ -53,7 +56,7 @@ export default function SMSCampaignDetailPage({ params }: { params: { id: string
     };
 
     fetchCampaign();
-  }, [params.id]);
+  }, [campaignId]);
 
   if (isLoading) {
     return (
@@ -116,7 +119,7 @@ export default function SMSCampaignDetailPage({ params }: { params: { id: string
   // Handle campaign duplication
   const handleDuplicateCampaign = async () => {
     try {
-      const response = await fetch(`/api/sms/campaigns/${params.id}/duplicate`, {
+      const response = await fetch(`/api/sms/campaigns/${campaignId}/duplicate`, {
         method: 'POST'
       });
       
@@ -137,7 +140,7 @@ export default function SMSCampaignDetailPage({ params }: { params: { id: string
   const handleDeleteCampaign = async () => {
     if (confirm("Are you sure you want to delete this campaign?")) {
       try {
-        const response = await fetch(`/api/sms/campaigns/${params.id}`, {
+        const response = await fetch(`/api/sms/campaigns/${campaignId}`, {
           method: 'DELETE'
         });
         
@@ -182,7 +185,7 @@ export default function SMSCampaignDetailPage({ params }: { params: { id: string
             <Copy className="mr-2 h-4 w-4" />
             Duplicate
           </Button>
-          <Button variant="outline" onClick={() => router.push(`/sms/campaigns/${params.id}/edit`)}>
+          <Button variant="outline" onClick={() => router.push(`/sms/campaigns/${campaignId}/edit`)}>
             <Edit className="mr-2 h-4 w-4" />
             Edit
           </Button>

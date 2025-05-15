@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink } from "@/components/ui/breadcrumb";
-import { ChevronRight, ListChecks, ListFilter, Save } from "lucide-react";
+import { ChevronRight, ListChecks, ListFilter, Save, AlertCircle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import MultiSelect from "@/components/ui/multi-select";
 import { 
   getSMSCampaignById, 
@@ -54,6 +55,10 @@ interface SMSTemplate {
 }
 
 export default function EditSMSCampaign({ params }: { params: { id: string } }) {
+  // Use React.use for params when needed in future versions
+  // For now, store in a local variable to avoid multiple direct accesses
+  const campaignId = params.id;
+  
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -62,6 +67,7 @@ export default function EditSMSCampaign({ params }: { params: { id: string } }) 
   const [lists, setLists] = useState<any[]>([]);
   const [segments, setSegments] = useState<any[]>([]);
   const [campaign, setCampaign] = useState<any>(null);
+  const [isSentCampaign, setIsSentCampaign] = useState(false);
 
   // Initialize form
   const form = useForm({
@@ -83,7 +89,7 @@ export default function EditSMSCampaign({ params }: { params: { id: string } }) 
       try {
         setIsLoading(true);
         const [campaignData, templatesData, listsData, segmentsData] = await Promise.all([
-          getSMSCampaignById(params.id),
+          getSMSCampaignById(campaignId),
           getSMSTemplates(),
           getListsWithContactCount(),
           getSegmentsWithContactCount(),
@@ -96,6 +102,13 @@ export default function EditSMSCampaign({ params }: { params: { id: string } }) 
         }
 
         setCampaign(campaignData);
+        
+        // Check if campaign has been sent
+        if (campaignData.status === "SENT") {
+          setIsSentCampaign(true);
+          toast.error("Cannot edit a campaign that has been sent");
+        }
+        
         setTemplates(templatesData || []);
         setLists(listsData || []);
         setSegments(segmentsData || []);
@@ -107,8 +120,8 @@ export default function EditSMSCampaign({ params }: { params: { id: string } }) 
           from: campaignData.from,
           content: campaignData.content || "",
           templateId: campaignData.templateId || "",
-          listIds: campaignData.lists.map((list: any) => list.id),
-          segmentIds: campaignData.segments.map((segment: any) => segment.id),
+          listIds: campaignData.lists?.map((list: any) => list.id) || [],
+          segmentIds: campaignData.segments?.map((segment: any) => segment.id) || [],
         });
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -119,10 +132,19 @@ export default function EditSMSCampaign({ params }: { params: { id: string } }) 
     };
 
     fetchData();
-  }, [params.id, form]);
+  }, [campaignId, form]);
 
   // Handle template selection
   const handleTemplateChange = (templateId: string) => {
+    if (templateId === "none") {
+      form.setValue("templateId", "");
+      // Only reset content if it was previously set from a template
+      if (form.getValues("templateId")) {
+        form.setValue("content", "");
+      }
+      return;
+    }
+
     const selectedTemplate = templates.find((t: any) => t.id === templateId);
     if (selectedTemplate) {
       form.setValue("templateId", templateId);
@@ -138,6 +160,12 @@ export default function EditSMSCampaign({ params }: { params: { id: string } }) 
 
   // Handle form submission
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    // Don't allow updates to sent campaigns
+    if (isSentCampaign) {
+      toast.error("Cannot update a campaign that has been sent");
+      return;
+    }
+    
     setIsSaving(true);
     
     try {
@@ -156,7 +184,7 @@ export default function EditSMSCampaign({ params }: { params: { id: string } }) 
         return;
       }
 
-      const response = await fetch(`/api/sms/campaigns/${params.id}`, {
+      const response = await fetch(`/api/sms/campaigns/${campaignId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -175,7 +203,7 @@ export default function EditSMSCampaign({ params }: { params: { id: string } }) 
       router.push("/sms/campaigns");
     } catch (error: any) {
       console.error("Error updating SMS campaign:", error);
-      toast.error(error.message || "Failed to update campaign");
+      toast.error(error.message || "Failed to update SMS campaign");
     } finally {
       setIsSaving(false);
     }
@@ -224,7 +252,7 @@ export default function EditSMSCampaign({ params }: { params: { id: string } }) 
         </BreadcrumbItem>
         <BreadcrumbItem>
           <ChevronRight className="h-4 w-4" />
-          <BreadcrumbLink href={`/sms/campaigns/${params.id}`}>{campaign.name}</BreadcrumbLink>
+          <BreadcrumbLink href={`/sms/campaigns/${campaignId}`}>{campaign.name}</BreadcrumbLink>
         </BreadcrumbItem>
         <BreadcrumbItem>
           <ChevronRight className="h-4 w-4" />
@@ -235,6 +263,16 @@ export default function EditSMSCampaign({ params }: { params: { id: string } }) 
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Edit SMS Campaign</h1>
       </div>
+      
+      {isSentCampaign && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Read Only</AlertTitle>
+          <AlertDescription>
+            This campaign has already been sent and cannot be edited. You can view the details but cannot make changes.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -250,7 +288,7 @@ export default function EditSMSCampaign({ params }: { params: { id: string } }) 
                   <FormItem>
                     <FormLabel>Campaign Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter campaign name" {...field} />
+                      <Input placeholder="Enter campaign name" {...field} disabled={isSentCampaign} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -268,6 +306,7 @@ export default function EditSMSCampaign({ params }: { params: { id: string } }) 
                         placeholder="Enter campaign description"
                         {...field}
                         rows={3}
+                        disabled={isSentCampaign}
                       />
                     </FormControl>
                     <FormMessage />
@@ -282,7 +321,7 @@ export default function EditSMSCampaign({ params }: { params: { id: string } }) 
                   <FormItem>
                     <FormLabel>From Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter sender phone number" {...field} />
+                      <Input placeholder="Enter sender phone number" {...field} disabled={isSentCampaign} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -311,14 +350,15 @@ export default function EditSMSCampaign({ params }: { params: { id: string } }) 
                         <FormLabel>Template (Optional)</FormLabel>
                         <FormControl>
                           <Select
-                            value={field.value}
+                            value={field.value || "none"}
                             onValueChange={(value) => handleTemplateChange(value)}
+                            disabled={isSentCampaign}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Select a template" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">None</SelectItem>
+                              <SelectItem value="none">None</SelectItem>
                               {templates.map((template: any) => (
                                 <SelectItem key={template.id} value={template.id}>
                                   {template.name}
@@ -343,6 +383,7 @@ export default function EditSMSCampaign({ params }: { params: { id: string } }) 
                             placeholder="Enter SMS content"
                             {...field}
                             rows={6}
+                            disabled={isSentCampaign}
                           />
                         </FormControl>
                         <FormMessage />
@@ -378,6 +419,7 @@ export default function EditSMSCampaign({ params }: { params: { id: string } }) 
                               field.onChange(selectedItems);
                             }}
                             placeholder="Select lists"
+                            disabled={isSentCampaign}
                           />
                         </FormControl>
                         <FormMessage />
@@ -411,6 +453,7 @@ export default function EditSMSCampaign({ params }: { params: { id: string } }) 
                               field.onChange(selectedItems);
                             }}
                             placeholder="Select segments"
+                            disabled={isSentCampaign}
                           />
                         </FormControl>
                         <FormMessage />
@@ -426,15 +469,17 @@ export default function EditSMSCampaign({ params }: { params: { id: string } }) 
             <CardFooter className="flex justify-between pt-6">
               <Button
                 variant="outline"
-                onClick={() => router.push(`/sms/campaigns/${params.id}`)}
+                onClick={() => router.push(`/sms/campaigns/${campaignId}`)}
                 disabled={isSaving}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSaving}>
-                <Save className="mr-2 h-4 w-4" />
-                {isSaving ? "Saving..." : "Save Changes"}
-              </Button>
+              {!isSentCampaign && (
+                <Button type="submit" disabled={isSaving}>
+                  <Save className="mr-2 h-4 w-4" />
+                  {isSaving ? "Saving..." : "Save Changes"}
+                </Button>
+              )}
             </CardFooter>
           </Card>
         </form>

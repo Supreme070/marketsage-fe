@@ -2,10 +2,11 @@ import { type NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { randomUUID } from "crypto";
 
 const prisma = new PrismaClient();
 
-// Get all integrations for the current user's organization
+// Get all integrations
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
 
@@ -15,19 +16,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Get the user's organization ID (assuming users belong to organizations)
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { organizationId: true },
-    });
-
-    if (!user?.organizationId) {
-      return NextResponse.json({ error: "Organization not found" }, { status: 404 });
-    }
-
-    // Get all integrations for this organization
-    const integrations = await prisma.integration.findMany({
-      where: { organizationId: user.organizationId },
+    // Use IntegrationConnection model instead of Integration
+    const integrations = await prisma.integrationConnection.findMany({
       select: {
         id: true,
         type: true,
@@ -35,7 +25,6 @@ export async function GET(request: NextRequest) {
         status: true,
         createdAt: true,
         updatedAt: true,
-        lastSyncedAt: true,
       },
     });
 
@@ -74,36 +63,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the user's organization ID
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { organizationId: true },
-    });
-
-    if (!user?.organizationId) {
-      return NextResponse.json({ error: "Organization not found" }, { status: 404 });
-    }
-
     // Encrypt credentials before storing
     // In a real app, you'd use encryption here
-    const encryptedCredentials = JSON.stringify(credentials);
+    const configData = JSON.stringify(credentials);
+    
+    // Generate a random UUID for the ID
+    const id = randomUUID();
 
-    // Create the integration
-    const integration = await prisma.integration.create({
+    // Create the integration using IntegrationConnection
+    const integration = await prisma.integrationConnection.create({
       data: {
-        type,
+        id,
         name,
-        status: "PENDING",
-        credentials: encryptedCredentials,
-        organization: {
-          connect: { id: user.organizationId },
-        },
-        createdBy: session.user.id,
+        type,
+        config: configData,
+        status: "INACTIVE", // Start as inactive until verified
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
     });
 
     // Trigger the verification process
-    // This should be a background job in a real application
     const verificationResult = await verifyIntegrationConnection(
       integration.id,
       type,
@@ -127,7 +107,6 @@ export async function POST(request: NextRequest) {
 }
 
 // Helper function to verify integration connection
-// In a real app, this would call the actual API of the integration
 async function verifyIntegrationConnection(
   integrationId: string,
   type: string,
@@ -138,7 +117,6 @@ async function verifyIntegrationConnection(
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     // For demo purposes, we'll use a simple validation
-    // In a real app, you'd make actual API calls to the integration services
     let isValid = true;
     
     // Basic validation based on integration type
@@ -154,12 +132,12 @@ async function verifyIntegrationConnection(
         isValid = Object.values(credentials).every(val => !!val);
     }
     
-    // Update the integration status
-    await prisma.integration.update({
+    // Update the integration status using IntegrationConnection
+    await prisma.integrationConnection.update({
       where: { id: integrationId },
       data: {
         status: isValid ? "ACTIVE" : "ERROR",
-        lastSyncedAt: isValid ? new Date() : null,
+        updatedAt: new Date(),
       },
     });
     
@@ -173,10 +151,17 @@ async function verifyIntegrationConnection(
     console.error("Error verifying integration:", error);
     
     // Update the integration status to ERROR
-    await prisma.integration.update({
-      where: { id: integrationId },
-      data: { status: "ERROR" },
-    });
+    try {
+      await prisma.integrationConnection.update({
+        where: { id: integrationId },
+        data: {
+          status: "ERROR",
+          updatedAt: new Date(),
+        },
+      });
+    } catch (updateError) {
+      console.error("Error updating integration status:", updateError);
+    }
     
     return {
       status: "ERROR",

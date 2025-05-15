@@ -68,6 +68,9 @@ export default function EditWhatsAppCampaign({ params }: { params: { id: string 
   const [lists, setLists] = useState<any[]>([]);
   const [segments, setSegments] = useState<any[]>([]);
   const [campaign, setCampaign] = useState<any>(null);
+  
+  // Store the ID in a variable to avoid multiple accesses to params.id
+  const campaignId = params.id;
 
   // Initialize form
   const form = useForm<z.infer<typeof formSchema>>({
@@ -88,22 +91,45 @@ export default function EditWhatsAppCampaign({ params }: { params: { id: string 
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const [campaignData, templatesData, listsData, segmentsData] = await Promise.all([
-          getWhatsAppCampaignById(params.id),
-          getWhatsAppTemplates(),
-          getListsWithContactCount(),
-          getSegmentsWithContactCount(),
-        ]);
-
+        
+        // First fetch the campaign data since it's critical
+        const campaignData = await getWhatsAppCampaignById(campaignId);
+        
         if (!campaignData) {
           // Campaign not found or user doesn't have permission
-          setIsLoading(false);
           toast.error("Campaign not found");
           router.push("/whatsapp/campaigns");
           return;
         }
-
+        
         setCampaign(campaignData);
+        
+        // Then fetch other resources with individual error handling
+        let templatesData = [];
+        let listsData = [];
+        let segmentsData = [];
+        
+        try {
+          templatesData = await getWhatsAppTemplates();
+        } catch (error) {
+          console.error("Error fetching WhatsApp templates:", error);
+          toast.error("Failed to load templates, but you can continue editing your campaign");
+        }
+        
+        try {
+          listsData = await getListsWithContactCount();
+        } catch (error) {
+          console.error("Error fetching lists:", error);
+          toast.error("Failed to load contact lists");
+        }
+        
+        try {
+          segmentsData = await getSegmentsWithContactCount();
+        } catch (error) {
+          console.error("Error fetching segments:", error);
+          toast.error("Failed to load segments");
+        }
+        
         setTemplates(templatesData || []);
         setLists(listsData || []);
         setSegments(segmentsData || []);
@@ -118,17 +144,16 @@ export default function EditWhatsAppCampaign({ params }: { params: { id: string 
           listIds: campaignData.lists?.map((list: any) => list.id) || [],
           segmentIds: campaignData.segments?.map((segment: any) => segment.id) || [],
         });
-
-        setIsLoading(false);
       } catch (error) {
         console.error("Error fetching data:", error);
         toast.error("Failed to load campaign data");
+      } finally {
         setIsLoading(false);
       }
     };
 
     fetchData();
-  }, [params.id, router, form]);
+  }, [campaignId, router, form]);
 
   // Handle form submission
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
@@ -150,7 +175,7 @@ export default function EditWhatsAppCampaign({ params }: { params: { id: string 
         return;
       }
 
-      const response = await fetch(`/api/whatsapp/campaigns/${params.id}`, {
+      const response = await fetch(`/api/whatsapp/campaigns/${campaignId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -198,7 +223,7 @@ export default function EditWhatsAppCampaign({ params }: { params: { id: string 
           <ChevronRight className="h-4 w-4" />
         </BreadcrumbItem>
         <BreadcrumbItem>
-          <BreadcrumbLink href={`/whatsapp/campaigns/${params.id}`}>
+          <BreadcrumbLink href={`/whatsapp/campaigns/${campaignId}`}>
             {campaign?.name || "Campaign"}
           </BreadcrumbLink>
         </BreadcrumbItem>
@@ -206,7 +231,7 @@ export default function EditWhatsAppCampaign({ params }: { params: { id: string 
           <ChevronRight className="h-4 w-4" />
         </BreadcrumbItem>
         <BreadcrumbItem>
-          <BreadcrumbLink href={`/whatsapp/campaigns/${params.id}/edit`}>
+          <BreadcrumbLink href={`/whatsapp/campaigns/${campaignId}/edit`}>
             Edit
           </BreadcrumbLink>
         </BreadcrumbItem>
@@ -307,14 +332,25 @@ export default function EditWhatsAppCampaign({ params }: { params: { id: string 
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">No template</SelectItem>
-                              {templates.map((template) => (
-                                <SelectItem key={template.id} value={template.id}>
-                                  {template.name}
+                              <SelectItem value="none">No template</SelectItem>
+                              {templates.length > 0 ? (
+                                templates.map((template) => (
+                                  <SelectItem key={template.id} value={template.id}>
+                                    {template.name}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="no-templates" disabled>
+                                  No templates available
                                 </SelectItem>
-                              ))}
+                              )}
                             </SelectContent>
                           </Select>
+                          {templates.length === 0 && (
+                            <p className="text-xs text-amber-600 mt-1">
+                              No templates available. You can still proceed by entering your content directly.
+                            </p>
+                          )}
                           <FormMessage />
                         </FormItem>
                       )}

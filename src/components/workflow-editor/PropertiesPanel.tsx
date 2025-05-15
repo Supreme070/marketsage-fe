@@ -93,6 +93,7 @@ export default function PropertiesPanel({
                   <SelectValue placeholder="Select a list..." />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">Select a list</SelectItem>
                   {contactLists.map((list) => (
                     <SelectItem key={list.id} value={list.id}>
                       {list.name}
@@ -130,6 +131,7 @@ export default function PropertiesPanel({
                   <SelectValue placeholder="Select a tag..." />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">Select a tag</SelectItem>
                   {tags.map((tag) => (
                     <SelectItem key={tag.id} value={tag.id}>
                       {tag.name}
@@ -167,6 +169,7 @@ export default function PropertiesPanel({
                       <SelectValue placeholder="Select a template..." />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">Select a template</SelectItem>
                       {emailTemplates.map((template) => (
                         <SelectItem key={template.id} value={template.id}>
                           {template.name}
@@ -284,6 +287,7 @@ export default function PropertiesPanel({
                     <SelectValue placeholder="Select property..." />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none">Select a property</SelectItem>
                     <SelectItem value="email">Email</SelectItem>
                     <SelectItem value="firstName">First Name</SelectItem>
                     <SelectItem value="lastName">Last Name</SelectItem>
@@ -296,12 +300,12 @@ export default function PropertiesPanel({
                   <Select
                     value={properties.operator || ""}
                     onValueChange={(value) => handleChange("operator", value)}
-                    className="w-1/3"
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-1/3">
                       <SelectValue placeholder="Operator" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">Select operator</SelectItem>
                       <SelectItem value="contains">Contains</SelectItem>
                       <SelectItem value="equals">Equals</SelectItem>
                       <SelectItem value="startsWith">Starts with</SelectItem>
@@ -330,6 +334,7 @@ export default function PropertiesPanel({
                     <SelectValue placeholder="Select tag..." />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none">Select a tag</SelectItem>
                     {tags.map((tag) => (
                       <SelectItem key={tag.id} value={tag.id}>
                         {tag.name}
