@@ -47,6 +47,7 @@ model User {
   isActive       Boolean   @default(true)
   role           UserRole  @default(USER)
   organizationId String?
+  company        String?
 
   // Relations
   organization     Organization? @relation(fields: [organizationId], references: [id])
@@ -63,6 +64,13 @@ model User {
   lists            List[]             @relation("ListCreator")
   segments         Segment[]          @relation("SegmentCreator")
   createdIntegrations Integration[]   @relation("IntegrationCreator")
+  abTests          ABTest[]           @relation("ABTestCreator")
+  conversionEvents ConversionEvent[]  @relation("ConversionEventCreator")
+  conversionFunnels ConversionFunnel[] @relation("FunnelCreator")
+  contentAnalyses  ContentAnalysis[]  @relation("ContentAnalysisCreator")
+  contentRecommendations ContentRecommendation[] @relation("ContentRecommendationUser")
+  subjectLineTests SubjectLineTest[]  @relation("SubjectLineTestCreator")
+  journeys         Journey[]          @relation("JourneyCreator")
 }
 
 // NextAuth.js required models
@@ -163,6 +171,8 @@ model Contact {
   emailActivities EmailActivity[]
   smsActivities   SMSActivity[]
   waActivities    WhatsAppActivity[]
+  conversions     ConversionTracking[]
+  contactJourneys ContactJourney[]
 }
 
 model List {
@@ -282,6 +292,85 @@ model SMSTemplate {
   // Relations
   createdBy       User      @relation("SMSTemplateCreator", fields: [createdById], references: [id])
   campaigns       SMSCampaign[]
+}
+
+// A/B Testing models
+model ABTest {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  entityType      EntityType
+  entityId        String
+  status          ABTestStatus @default(DRAFT)
+  testType        ABTestType
+  testElements    String    // JSON array of element keys being tested
+  winnerMetric    ABTestMetric
+  winnerThreshold Float?    // Minimum confidence level to declare winner (0-1)
+  distributionPercent Float  // Percent of audience for testing (0-1)
+  winnerVariantId String?   // ID of winning variant (if concluded)
+  startedAt       DateTime?
+  endedAt         DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String
+
+  // Relations
+  createdBy       User      @relation("ABTestCreator", fields: [createdById], references: [id])
+  variants        ABTestVariant[]
+  results         ABTestResult[]
+}
+
+model ABTestVariant {
+  id              String    @id @default(cuid())
+  testId          String
+  name            String
+  description     String?
+  content         String    // JSON object with values for each test element
+  trafficPercent  Float     // Percent of test traffic (0-1)
+  createdAt       DateTime  @default(now())
+  
+  // Relations
+  test            ABTest    @relation(fields: [testId], references: [id], onDelete: Cascade)
+  results         ABTestResult[]
+}
+
+model ABTestResult {
+  id              String    @id @default(cuid())
+  testId          String
+  variantId       String
+  metric          ABTestMetric
+  value           Float
+  sampleSize      Int
+  recordedAt      DateTime  @default(now())
+  
+  // Relations
+  test            ABTest    @relation(fields: [testId], references: [id], onDelete: Cascade)
+  variant         ABTestVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  
+  @@unique([testId, variantId, metric])
+}
+
+// A/B Testing enums
+enum ABTestStatus {
+  DRAFT
+  RUNNING
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum ABTestType {
+  SIMPLE_AB      // Simple A/B (2 variants)
+  MULTIVARIATE   // Multiple variants (A/B/C/D)
+  ELEMENT        // Testing specific elements only
+}
+
+enum ABTestMetric {
+  OPEN_RATE
+  CLICK_RATE
+  CONVERSION_RATE
+  REVENUE
+  CUSTOM
 }
 
 model SMSCampaign {
@@ -617,4 +706,490 @@ enum ContentTemplateType {
   SMS_MESSAGE
   WHATSAPP_MESSAGE
   PUSH_NOTIFICATION
+}
+
+// Enhanced Conversion Tracking & Attribution Models
+model ConversionEvent {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  eventType       String    // Custom event type key
+  category        ConversionCategory
+  valueType       ConversionValueType @default(COUNT)
+  isSystem        Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String
+  
+  // Relations
+  createdBy       User      @relation("ConversionEventCreator", fields: [createdById], references: [id])
+  trackings       ConversionTracking[]
+}
+
+model ConversionTracking {
+  id              String    @id @default(cuid())
+  eventId         String
+  entityType      EntityType
+  entityId        String
+  contactId       String?
+  value           Float?    // Monetary or numeric value of conversion
+  occurredAt      DateTime  @default(now())
+  metadata        String?   // JSON string with additional data
+  attributionModel AttributionModel @default(LAST_TOUCH)
+  touchPoints     String?   // JSON array of touch points in the journey
+  
+  // Relations
+  event           ConversionEvent @relation(fields: [eventId], references: [id])
+  contact         Contact?   @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  
+  @@index([entityType, entityId])
+  @@index([contactId])
+  @@index([eventId])
+}
+
+model ConversionFunnel {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  stages          String    // JSON array of conversion event IDs in order
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String
+  
+  // Relations
+  createdBy       User      @relation("FunnelCreator", fields: [createdById], references: [id])
+  reports         ConversionFunnelReport[]
+}
+
+model ConversionFunnelReport {
+  id              String    @id @default(cuid())
+  funnelId        String
+  startDate       DateTime
+  endDate         DateTime
+  data            String    // JSON with stage data and drop-off rates
+  createdAt       DateTime  @default(now())
+  
+  // Relations
+  funnel          ConversionFunnel @relation(fields: [funnelId], references: [id], onDelete: Cascade)
+}
+
+model AttributionSettings {
+  id              String    @id @default(cuid())
+  defaultModel    AttributionModel @default(LAST_TOUCH)
+  customWeights   String?   // JSON string with custom weights for U-shaped/custom models
+  lookbackWindow  Int       @default(30) // Days to look back for attribution
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+enum ConversionCategory {
+  AWARENESS      // Top of funnel
+  CONSIDERATION  // Middle of funnel
+  CONVERSION     // Bottom of funnel
+  RETENTION      // Post-purchase
+  CUSTOM         // User-defined
+}
+
+enum ConversionValueType {
+  COUNT          // Just count occurrences
+  REVENUE        // Track monetary value
+  SCORE          // Track a custom score/value
+}
+
+enum AttributionModel {
+  FIRST_TOUCH    // All credit to first touch point
+  LAST_TOUCH     // All credit to last touch point
+  LINEAR         // Equal credit across all touch points
+  TIME_DECAY     // More credit to recent touch points
+  POSITION_BASED // More credit to first and last touch points (U-shaped)
+  CUSTOM         // Custom-weighted model
+}
+
+// AI-Powered Content Intelligence Models
+model ContentAnalysis {
+  id              String    @id @default(cuid())
+  type            String    // SENTIMENT, SUBJECT_LINE, CONTENT_SCORE
+  contentType     String    // EMAIL_SUBJECT, EMAIL_BODY, SMS, WHATSAPP, etc.
+  originalContent String    @db.Text
+  result          String    @db.Text // JSON string with analysis results
+  createdAt       DateTime  @default(now())
+  userId          String?
+
+  // Relations
+  user            User?     @relation("ContentAnalysisCreator", fields: [userId], references: [id])
+}
+
+model ContentRecommendation {
+  id              String    @id @default(cuid())
+  type            String    // CLARITY, ENGAGEMENT, LENGTH, TONE, CALL_TO_ACTION, PERSONALIZATION
+  entityType      String    // EMAIL_CAMPAIGN, SMS_CAMPAIGN, etc.
+  entityId        String
+  originalContent String    @db.Text
+  suggestedContent String   @db.Text
+  reason          String
+  impactScore     Float     // 0 to 1
+  isApplied       Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  appliedAt       DateTime?
+  userId          String?
+
+  // Relations
+  user            User?     @relation("ContentRecommendationUser", fields: [userId], references: [id])
+}
+
+model SubjectLineTest {
+  id              String    @id @default(cuid())
+  campaignId      String
+  originalSubject String
+  variants        String    @db.Text  // JSON string with variant subject lines
+  status          String    // DRAFT, RUNNING, COMPLETED
+  winnerVariantId String?
+  createdAt       DateTime  @default(now())
+  startedAt       DateTime?
+  endedAt         DateTime?
+  createdById     String
+
+  // Relations
+  createdBy       User      @relation("SubjectLineTestCreator", fields: [createdById], references: [id])
+  results         SubjectLineTestResult[]
+
+  @@index([campaignId])
+}
+
+model SubjectLineTestResult {
+  id              String    @id @default(cuid())
+  testId          String
+  variantId       String
+  opens           Int       @default(0)
+  clicks          Int       @default(0)
+  sent            Int       @default(0)
+  openRate        Float     @default(0)
+  clickRate       Float     @default(0)
+  
+  // Relations
+  test            SubjectLineTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@unique([testId, variantId])
+}
+
+model SentimentAnalysis {
+  id              String    @id @default(cuid())
+  entityType      String    // EMAIL_CAMPAIGN, SMS_CAMPAIGN, etc.
+  entityId        String
+  content         String    @db.Text
+  score           Float     // -1 to 1
+  positive        String    // JSON string with positive aspects
+  negative        String    // JSON string with negative aspects
+  emotions        String    // JSON string with emotional scores
+  createdAt       DateTime  @default(now())
+
+  @@index([entityType, entityId])
+}
+
+model ContentPersonalization {
+  id              String    @id @default(cuid())
+  campaignId      String
+  contactId       String
+  originalContent String    @db.Text
+  personalizedContent String @db.Text
+  replacements    String    @db.Text  // JSON string with replacement details
+  createdAt       DateTime  @default(now())
+  
+  @@index([campaignId])
+  @@index([contactId])
+}
+
+// Predictive Analytics Models
+model PredictionModel {
+  id              String    @id @default(cuid())
+  name            String
+  type            PredictionModelType
+  description     String?
+  algorithm       String    // Type of algorithm used (RandomForest, NeuralNetwork, etc.)
+  features        String    // JSON array of features used in the model
+  metrics         String?   // JSON object with model performance metrics
+  version         String    // Model version identifier
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  predictions     Prediction[]
+}
+
+model Prediction {
+  id              String    @id @default(cuid())
+  modelId         String
+  entityType      String    // "contact", "campaign", etc.
+  entityId        String
+  predictionType  PredictionModelType
+  value           Float     // The predicted value (probability, score, etc.)
+  confidence      Float     // Confidence level of prediction (0-1)
+  features        String?   // JSON object with features used for this specific prediction
+  explanation     String?   // Explanation of the prediction factors
+  createdAt       DateTime  @default(now())
+  
+  // Relations
+  model           PredictionModel @relation(fields: [modelId], references: [id])
+  
+  @@index([entityType, entityId])
+  @@index([predictionType])
+}
+
+model ChurnPrediction {
+  id              String    @id @default(cuid())
+  contactId       String
+  score           Float     // Probability of churning (0-1)
+  riskLevel       ChurnRiskLevel
+  topFactors      String    // JSON array of factors contributing to churn risk
+  nextActionDate  DateTime?  // When to take action
+  createdAt       DateTime  @default(now())
+  
+  @@index([contactId])
+  @@index([riskLevel])
+}
+
+model LifetimeValuePrediction {
+  id              String    @id @default(cuid())
+  contactId       String
+  predictedValue  Float     // Monetary predicted value
+  confidenceLevel Float     // Confidence of prediction (0-1)
+  timeframe       Int       // Months in the future for prediction
+  segments        String?   // JSON array of value segments
+  createdAt       DateTime  @default(now())
+  
+  @@index([contactId])
+}
+
+model CampaignPerformancePrediction {
+  id              String    @id @default(cuid())
+  campaignId      String
+  openRate        Float?    // Predicted open rate
+  clickRate       Float?    // Predicted click rate
+  conversionRate  Float?    // Predicted conversion rate
+  revenue         Float?    // Predicted revenue
+  factors         String    // JSON object with influencing factors
+  createdAt       DateTime  @default(now())
+  
+  @@index([campaignId])
+}
+
+model OptimalSendTime {
+  id              String    @id @default(cuid())
+  contactId       String
+  channelType     String    // "email", "sms", "push", etc.
+  dayOfWeek       Int       // 0-6 (Sunday-Saturday)
+  hourOfDay       Int       // 0-23
+  probability     Float     // Engagement probability (0-1)
+  confidenceLevel Float     // Confidence level (0-1)
+  lastUpdated     DateTime  @updatedAt
+  
+  @@unique([contactId, channelType, dayOfWeek, hourOfDay])
+  @@index([contactId, channelType])
+}
+
+enum PredictionModelType {
+  CHURN
+  LTV
+  CAMPAIGN_PERFORMANCE
+  SEND_TIME
+  OPEN_RATE
+  CLICK_RATE
+  CONVERSION_RATE
+}
+
+enum ChurnRiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  VERY_HIGH
+}
+
+// Customer Journey Mapping Models
+model Journey {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String
+  
+  // Relations
+  createdBy       User      @relation("JourneyCreator", fields: [createdById], references: [id])
+  stages          JourneyStage[]
+  metrics         JourneyMetric[]
+  contactJourneys ContactJourney[]
+}
+
+model JourneyStage {
+  id              String    @id @default(cuid())
+  journeyId       String
+  name            String
+  description     String?
+  order           Int       // Position in journey sequence
+  expectedDuration Int?     // Expected time to pass through in hours
+  conversionGoal  Float?    // Target conversion % to next stage
+  isEntryPoint    Boolean   @default(false)
+  isExitPoint     Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  journey         Journey   @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  transitions     JourneyTransition[] @relation("FromStage")
+  incomingTransitions JourneyTransition[] @relation("ToStage")
+  contactStages   ContactJourneyStage[]
+  metrics         JourneyStageMetric[]
+}
+
+model JourneyTransition {
+  id              String    @id @default(cuid())
+  fromStageId     String
+  toStageId       String
+  name            String?
+  description     String?
+  conditions      String?   // JSON string with conditions for transition
+  triggerType     TransitionTriggerType
+  triggerDetails  String?   // JSON string with trigger specifics
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  fromStage       JourneyStage @relation("FromStage", fields: [fromStageId], references: [id], onDelete: Cascade)
+  toStage         JourneyStage @relation("ToStage", fields: [toStageId], references: [id], onDelete: Cascade)
+  contactTransitions ContactJourneyTransition[]
+  
+  @@unique([fromStageId, toStageId])
+}
+
+model ContactJourney {
+  id              String    @id @default(cuid())
+  journeyId       String
+  contactId       String
+  status          JourneyStatus @default(ACTIVE)
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+  currentStageId  String?
+  
+  // Relations
+  journey         Journey   @relation(fields: [journeyId], references: [id])
+  contact         Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  stages          ContactJourneyStage[]
+  transitions     ContactJourneyTransition[]
+  
+  @@index([journeyId, contactId])
+  @@index([status])
+}
+
+model ContactJourneyStage {
+  id              String    @id @default(cuid())
+  contactJourneyId String
+  stageId         String
+  enteredAt       DateTime  @default(now())
+  exitedAt        DateTime?
+  durationSeconds Int?      // Time spent in stage
+  
+  // Relations
+  contactJourney  ContactJourney @relation(fields: [contactJourneyId], references: [id], onDelete: Cascade)
+  stage           JourneyStage @relation(fields: [stageId], references: [id])
+  
+  @@index([contactJourneyId])
+  @@index([stageId, enteredAt])
+}
+
+model ContactJourneyTransition {
+  id              String    @id @default(cuid())
+  contactJourneyId String
+  transitionId    String
+  timestamp       DateTime  @default(now())
+  fromStageId     String
+  toStageId       String
+  triggerSource   String?   // Event that triggered the transition
+  
+  // Relations
+  contactJourney  ContactJourney @relation(fields: [contactJourneyId], references: [id], onDelete: Cascade)
+  transition      JourneyTransition @relation(fields: [transitionId], references: [id])
+  
+  @@index([contactJourneyId])
+  @@index([transitionId])
+}
+
+model JourneyMetric {
+  id              String    @id @default(cuid())
+  journeyId       String
+  name            String
+  description     String?
+  metricType      JourneyMetricType
+  targetValue     Float?
+  aggregationType MetricAggregationType @default(SUM)
+  formula         String?   // Custom formula to calculate the metric
+  isSuccess       Boolean   @default(false) // Is this a success metric for the journey
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  journey         Journey   @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  stageMetrics    JourneyStageMetric[]
+}
+
+model JourneyStageMetric {
+  id              String    @id @default(cuid())
+  stageId         String
+  metricId        String
+  targetValue     Float?    // Stage-specific target that overrides journey level
+  actualValue     Float?    // Current value
+  lastUpdated     DateTime  @updatedAt
+  
+  // Relations
+  stage           JourneyStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  metric          JourneyMetric @relation(fields: [metricId], references: [id], onDelete: Cascade)
+  
+  @@unique([stageId, metricId])
+}
+
+model JourneyAnalytics {
+  id              String    @id @default(cuid())
+  journeyId       String
+  date            DateTime
+  totalContacts   Int
+  activeContacts  Int
+  completedContacts Int
+  droppedContacts Int
+  conversionRate  Float
+  averageDuration Int      // Average journey duration in hours
+  stageData       String   // JSON with stage-level analytics
+  
+  @@unique([journeyId, date])
+}
+
+enum JourneyStatus {
+  ACTIVE
+  COMPLETED
+  DROPPED
+  PAUSED
+}
+
+enum TransitionTriggerType {
+  AUTOMATIC      // Time-based or system triggered
+  EVENT          // Triggered by an event (email open, click, etc.)
+  CONVERSION     // Triggered by a conversion event
+  CONDITION      // Triggered when conditions are met
+  MANUAL         // Manually triggered by an operator
+}
+
+enum JourneyMetricType {
+  CONVERSION_RATE
+  CONTACTS_COUNT
+  DURATION
+  REVENUE
+  CUSTOM
+}
+
+enum MetricAggregationType {
+  SUM
+  AVERAGE
+  COUNT
+  MIN
+  MAX
 }

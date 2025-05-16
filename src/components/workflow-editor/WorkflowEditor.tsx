@@ -23,7 +23,7 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, Save, Plus, Undo, Redo, Check, Eye, EyeOff, Map, Loader2 } from "lucide-react";
+import { Trash2, Save, Plus, Undo, Redo, Check, Eye, EyeOff, Map, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import NodeSelector from "./NodeSelector";
 import { TriggerNode } from "./nodes/TriggerNode";
@@ -31,6 +31,7 @@ import { ActionNode } from "./nodes/ActionNode";
 import { ConditionNode } from "./nodes/ConditionNode";
 import { CustomEdge } from "./edges/CustomEdge";
 import PropertiesPanel from "./PropertiesPanel";
+import WorkflowAssistantPanel from "./WorkflowAssistantPanel";
 
 // Node types configuration
 const nodeTypes: NodeTypes = {
@@ -139,6 +140,9 @@ export default function WorkflowEditor({
   const [history, setHistory] = useState<{ nodes: Node[]; edges: Edge[] }[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [previewMode, setPreviewMode] = useState(false);
+
+  // Add AI assistant state
+  const [showAssistant, setShowAssistant] = useState(false);
 
   // Load workflow from API if ID is provided
   useEffect(() => {
@@ -546,55 +550,49 @@ export default function WorkflowEditor({
                   {previewMode ? <EyeOff className="mr-1 h-4 w-4" /> : <Eye className="mr-1 h-4 w-4" />}
                   {previewMode ? "Edit" : "Preview"}
                 </Button>
-                {!previewMode && (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={toggleNodeTooltips}
-                      title={showNodeTooltips ? "Hide Node Details" : "Show Node Details"}
-                    >
-                      <Eye className={`h-4 w-4 ${!showNodeTooltips ? 'text-muted-foreground' : ''}`} />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={undo}
-                      disabled={historyIndex <= 0}
-                      title="Undo"
-                    >
-                      <Undo className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={redo}
-                      disabled={historyIndex >= history.length - 1}
-                      title="Redo"
-                    >
-                      <Redo className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={deleteSelectedNode}
-                      disabled={!selectedNode}
-                    >
-                      <Trash2 className="mr-1 h-4 w-4" /> Delete Node
-                    </Button>
-                  </>
-                )}
-                <Button variant="default" size="sm" onClick={saveWorkflow} disabled={isSaving}>
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-1 h-4 w-4 animate-spin" /> Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-1 h-4 w-4" /> Save Workflow
-                    </>
-                  )}
+                <Button
+                  variant={showAssistant ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowAssistant(!showAssistant)}
+                  title="AI Workflow Assistant"
+                  className={showAssistant ? "bg-primary text-primary-foreground" : ""}
+                >
+                  <Sparkles className="mr-1 h-4 w-4" />
+                  AI Assistant
                 </Button>
+              </div>
+            </Panel>
+
+            <Panel position="bottom-left">
+              <div className="space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={undo}
+                  disabled={historyIndex <= 0}
+                  title="Undo"
+                >
+                  <Undo className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={redo}
+                  disabled={historyIndex >= history.length - 1}
+                  title="Redo"
+                >
+                  <Redo className="h-4 w-4" />
+                </Button>
+                {selectedNode && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={deleteSelectedNode}
+                    title="Delete Selected Node"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </Panel>
 
@@ -630,6 +628,12 @@ export default function WorkflowEditor({
           />
         </Card>
       )}
+      
+      {/* AI Workflow Assistant Panel */}
+      <WorkflowAssistantPanel 
+        isOpen={showAssistant}
+        onOpenChange={setShowAssistant}
+      />
     </div>
   );
 }

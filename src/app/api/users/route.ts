@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { hash } from "bcrypt";
 import prisma from "@/lib/db/prisma";
+import { DockerSafeUserCreate } from "@/lib/types/prisma";
 import { 
   handleApiError, 
   unauthorized, 
@@ -11,15 +12,7 @@ import {
   validationError 
 } from "@/lib/errors";
 
-// Define UserRole enum to match Prisma schema
-enum UserRole {
-  USER = "USER",
-  ADMIN = "ADMIN",
-  IT_ADMIN = "IT_ADMIN",
-  SUPER_ADMIN = "SUPER_ADMIN"
-}
-
-const // Helper function to get tags from string
+// Helper function to get tags from string
 function getTagsFromString(tagsString: string | null): string[] {
   if (!tagsString) return [];
   try {
@@ -137,15 +130,19 @@ export async function POST(request: NextRequest) {
     // Hash the password
     const hashedPassword = await hash(password, 10);
 
-    // Create the user
+    // Create a Docker-safe user input
+    const userData: DockerSafeUserCreate = {
+      name,
+      email,
+      password: hashedPassword,
+      role: userRole,
+      emailVerified: new Date() // Auto-verify for now
+    };
+
+    // Create the user with our Docker-compatible data structure
     const newUser = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role: userRole as UserRole,
-        emailVerified: new Date(), // Auto-verify for now
-      },
+      // Using 'as any' to avoid type conflicts in Docker environment
+      data: userData as any,
       select: {
         id: true,
         name: true,

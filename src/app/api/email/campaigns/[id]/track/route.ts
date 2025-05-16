@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ActivityType, EntityType } from "@prisma/client";
 import { trackConversion, ConversionTypes } from "@/lib/conversions";
+import { recordSubjectTestOpen, recordSubjectTestClick } from "@/lib/email-ab-testing";
 import { randomUUID } from "crypto";
 import { 
   handleApiError, 
@@ -109,6 +110,13 @@ export async function GET(
           url: url || undefined,
         }
       });
+      
+      // Record for A/B testing if applicable
+      if (actionType === "open") {
+        await recordSubjectTestOpen(campaignId, contactId);
+      } else if (actionType === "click") {
+        await recordSubjectTestClick(campaignId, contactId);
+      }
     }
     
     // For click tracking, redirect to the target URL
@@ -116,7 +124,7 @@ export async function GET(
       return NextResponse.redirect(url);
     }
     
-    // For open tracking, return a 1x1 transparent GIF
+    // For open tracking, return a 1x1 transparent pixel
     return new NextResponse(
       Buffer.from(
         "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
@@ -134,7 +142,7 @@ export async function GET(
   } catch (error) {
     console.error("Error tracking email activity:", error);
     
-    // Return a 1x1 transparent pixel even if error
+    // Return transparent pixel even on error to avoid breaking email clients
     return new NextResponse(
       Buffer.from(
         "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",

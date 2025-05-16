@@ -86,6 +86,8 @@ services:
         npx tsx src/scripts/seedWorkflows.ts &&
         echo 'Assigning contacts...' &&
         npx tsx src/scripts/assignContactsDocker.ts &&
+        echo 'Seeding customer journeys...' &&
+        npx tsx src/scripts/seedJourneys.ts &&
         echo 'Database seeded successfully!'
       "
 

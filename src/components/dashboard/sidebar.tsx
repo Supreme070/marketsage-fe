@@ -20,6 +20,10 @@ import {
   FileText,
   AlertCircle,
   MailQuestion,
+  GitBranch,
+  BrainCircuit,
+  Beaker,
+  MapPin,
   type LucideIcon
 } from "lucide-react";
 
@@ -85,6 +89,16 @@ const sidebarNavItems: NavItem[] = [
         href: "/whatsapp/campaigns",
         icon: MessageCircle,
       },
+      {
+        title: "A/B Testing",
+        href: "/campaigns/ab-testing",
+        icon: Beaker,
+      },
+      {
+        title: "Geo-Targeting",
+        href: "/geo-targeting",
+        icon: MapPin,
+      },
     ],
   },
   {
@@ -118,6 +132,23 @@ const sidebarNavItems: NavItem[] = [
     title: "Conversions",
     href: "/conversions",
     icon: LineChart,
+    submenu: [
+      {
+        title: "Conversion Tracking",
+        href: "/conversions",
+        icon: LineChart,
+      },
+      {
+        title: "Predictive Analytics",
+        href: "/dashboard/predictive-analytics",
+        icon: BrainCircuit,
+      },
+    ],
+  },
+  {
+    title: "Customer Journeys",
+    href: "/journeys",
+    icon: GitBranch,
   },
   {
     title: "Integrations",
