@@ -1,9 +1,18 @@
-"use client";
+const fs = require('fs');
+const path = require('path');
+
+// Paths
+const dashboardPath = 'src/app/dashboard/predictive-analytics';
+const routeGroupPath = 'src/app/(dashboard)/dashboard/predictive-analytics';
+const pageFileName = 'page.tsx';
+
+// The content we want to keep
+const pageContent = `"use client";
 
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import DashboardShell from "@/components/dashboard/DashboardShell";
+import DashboardShell from "@/components/dashboard/dashboard-shell";
 import ChurnPredictionDashboard from "@/components/predictive-analytics/ChurnPredictionDashboard";
 import LTVPredictionDashboard from "@/components/predictive-analytics/LTVPredictionDashboard";
 import CampaignPredictionDashboard from "@/components/predictive-analytics/CampaignPredictionDashboard";
@@ -14,10 +23,14 @@ export default function PredictiveAnalyticsDashboard() {
   const [activeTab, setActiveTab] = useState("churn");
 
   return (
-    <DashboardShell
-      title="Predictive Analytics"
-      subtitle="Leverage AI to predict customer behavior and optimize campaigns"
-    >
+    <DashboardShell className="space-y-6">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold tracking-tight">Predictive Analytics</h1>
+        <p className="text-muted-foreground">
+          Leverage AI to predict customer behavior and optimize campaigns
+        </p>
+      </div>
+      
       <div className="grid gap-6">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           <Card>
@@ -101,4 +114,37 @@ export default function PredictiveAnalyticsDashboard() {
       </div>
     </DashboardShell>
   );
-} 
+}`;
+
+// Function to ensure a directory exists
+function ensureDirectoryExists(dirPath) {
+  if (!fs.existsSync(dirPath)) {
+    console.log(`Creating directory: ${dirPath}`);
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+}
+
+// Function to remove a directory
+function removeDirectory(dirPath) {
+  if (fs.existsSync(dirPath)) {
+    console.log(`Removing directory: ${dirPath}`);
+    fs.rmSync(dirPath, { recursive: true, force: true });
+  }
+}
+
+// Step 1: Remove both directories to ensure clean slate
+console.log('Step 1: Removing existing directories...');
+removeDirectory(dashboardPath);
+removeDirectory(routeGroupPath);
+
+// Step 2: Create the route group directory and save the file there
+console.log('Step 2: Creating route group directory and saving file...');
+ensureDirectoryExists(routeGroupPath);
+fs.writeFileSync(path.join(routeGroupPath, pageFileName), pageContent);
+
+// Verify
+console.log('\nVerification:');
+console.log(`Route group file exists: ${fs.existsSync(path.join(routeGroupPath, pageFileName))}`);
+console.log(`Dashboard path exists: ${fs.existsSync(dashboardPath)}`);
+
+console.log('\nDone! The routing conflict should be resolved.'); 

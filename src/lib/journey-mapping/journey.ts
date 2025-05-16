@@ -12,9 +12,7 @@ import {
   JourneyData, 
   JourneyStageData, 
   JourneyTransitionData,
-  TransitionTriggerType,
-  validateJourney,
-  validateJourneyStage
+  TransitionTriggerType
 } from './index';
 
 /**
@@ -31,18 +29,15 @@ export async function createJourney(
   try {
     logger.info(`Creating new customer journey: ${data.name}`);
     
-    // Create journey in database
-    const journey = await (prisma as any).journey.create({
-      data: {
-        id: randomUUID(),
-        name: data.name,
-        description: data.description,
-        isActive: true,
-        createdById: data.createdById,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
-    });
+    // Create journey in database using raw query since model access isn't working
+    const journey = await prisma.$queryRaw`
+      INSERT INTO "Journey" ("id", "name", "description", "isActive", "createdById", "createdAt", "updatedAt")
+      VALUES (gen_random_uuid(), ${data.name}, ${data.description}, true, ${data.createdById}, now(), now())
+      RETURNING *
+    `;
+    
+    // Extract journey from result (array with one element)
+    const journeyRecord = Array.isArray(journey) ? journey[0] : journey;
     
     // Create stages if provided
     let stages: JourneyStageData[] = [];
@@ -51,7 +46,7 @@ export async function createJourney(
       stages = await Promise.all(
         data.stages.map(async (stageData, index) => {
           return await createJourneyStage({
-            journeyId: journey.id,
+            journeyId: journeyRecord.id,
             ...stageData,
             order: stageData.order ?? index
           });
@@ -61,12 +56,12 @@ export async function createJourney(
     
     // Return complete journey data
     return {
-      id: journey.id,
-      name: journey.name,
-      description: journey.description,
-      isActive: journey.isActive,
-      createdAt: journey.createdAt,
-      createdById: journey.createdById,
+      id: journeyRecord.id,
+      name: journeyRecord.name,
+      description: journeyRecord.description,
+      isActive: journeyRecord.isActive,
+      createdAt: journeyRecord.createdAt,
+      createdById: journeyRecord.createdById,
       stages: stages
     };
   } catch (error: any) {
@@ -83,48 +78,50 @@ export async function getJourney(journeyId: string): Promise<JourneyData> {
     // Validate journey exists
     await validateJourney(journeyId);
     
-    // Get journey with stages and transitions
-    const journey = await (prisma as any).journey.findUnique({
-      where: { id: journeyId },
-      include: {
-        stages: {
-          orderBy: { order: 'asc' },
-          include: {
-            transitions: {
-              include: {
-                toStage: {
-                  select: {
-                    id: true,
-                    name: true
-                  }
-                }
-              }
-            },
-            incomingTransitions: {
-              include: {
-                fromStage: {
-                  select: {
-                    id: true,
-                    name: true
-                  }
-                }
-              }
-            }
-          }
-        },
-        metrics: true
+    // Get journey with stages and transitions using raw query
+    const journey = await prisma.$queryRaw`
+      SELECT j.*, 
+        (SELECT json_agg(s.*) FROM "JourneyStage" s WHERE s."journeyId" = j.id ORDER BY s."order" ASC) as stages,
+        (SELECT json_agg(m.*) FROM "JourneyMetric" m WHERE m."journeyId" = j.id) as metrics
+      FROM "Journey" j
+      WHERE j.id = ${journeyId}
+      LIMIT 1
+    `;
+    
+    const journeyRecord = Array.isArray(journey) ? journey[0] : journey;
+    
+    // Get transitions for each stage
+    if (journeyRecord.stages) {
+      for (const stage of journeyRecord.stages) {
+        const transitions = await prisma.$queryRaw`
+          SELECT t.*, 
+            json_build_object('id', ts.id, 'name', ts.name) as "toStage"
+          FROM "JourneyTransition" t
+          JOIN "JourneyStage" ts ON t."toStageId" = ts.id
+          WHERE t."fromStageId" = ${stage.id}
+        `;
+        stage.transitions = transitions;
+        
+        const incomingTransitions = await prisma.$queryRaw`
+          SELECT t.*, 
+            json_build_object('id', fs.id, 'name', fs.name) as "fromStage"
+          FROM "JourneyTransition" t
+          JOIN "JourneyStage" fs ON t."fromStageId" = fs.id
+          WHERE t."toStageId" = ${stage.id}
+        `;
+        stage.incomingTransitions = incomingTransitions;
       }
-    });
+    }
     
     // Format data for response
     return {
-      id: journey.id,
-      name: journey.name,
-      description: journey.description,
-      isActive: journey.isActive,
-      createdAt: journey.createdAt,
-      createdById: journey.createdById,
-      stages: journey.stages.map((stage: any) => ({
+      id: journeyRecord.id,
+      name: journeyRecord.name,
+      description: journeyRecord.description,
+      isActive: journeyRecord.isActive,
+      createdAt: journeyRecord.createdAt,
+      createdById: journeyRecord.createdById,
+      stages: (journeyRecord.stages || []).map((stage: any) => ({
         id: stage.id,
         name: stage.name,
         description: stage.description,
@@ -133,7 +130,7 @@ export async function getJourney(journeyId: string): Promise<JourneyData> {
         conversionGoal: stage.conversionGoal,
         isEntryPoint: stage.isEntryPoint,
         isExitPoint: stage.isExitPoint,
-        transitions: stage.transitions.map((transition: any) => ({
+        transitions: (stage.transitions || []).map((transition: any) => ({
           id: transition.id,
           name: transition.name,
           description: transition.description,
@@ -144,7 +141,7 @@ export async function getJourney(journeyId: string): Promise<JourneyData> {
           conditions: transition.conditions ? JSON.parse(transition.conditions) : null
         }))
       })),
-      metrics: journey.metrics.map((metric: any) => ({
+      metrics: (journeyRecord.metrics || []).map((metric: any) => ({
         id: metric.id,
         name: metric.name,
         description: metric.description,
@@ -170,55 +167,44 @@ export async function getJourneys(options?: {
   limit?: number;
 }): Promise<JourneyData[]> {
   try {
-    // Build where clause
-    const where: any = {};
+    // Build where clause for raw query
+    let whereClause = '';
+    const whereParams: any[] = [];
     
     if (options?.isActive !== undefined) {
-      where.isActive = options.isActive;
+      whereClause += ' AND "isActive" = $1';
+      whereParams.push(options.isActive);
     }
     
     if (options?.createdById) {
-      where.createdById = options.createdById;
+      whereClause += ` AND "createdById" = $${whereParams.length + 1}`;
+      whereParams.push(options.createdById);
     }
     
     // Get journeys
-    const journeys = await (prisma as any).journey.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      take: options?.limit || 100,
-      include: {
-        stages: {
-          select: {
-            id: true,
-            name: true,
-            order: true,
-            isEntryPoint: true,
-            isExitPoint: true,
-            _count: {
-              select: {
-                contactStages: true
-              }
-            }
-          },
-          orderBy: { order: 'asc' }
-        },
-        _count: {
-          select: {
-            contactJourneys: true
-          }
-        }
-      }
-    });
+    const query = `
+      SELECT j.*,
+        (SELECT json_agg(s.*) FROM "JourneyStage" s 
+         WHERE s."journeyId" = j.id 
+         ORDER BY s."order" ASC) as stages,
+        (SELECT COUNT(*) FROM "ContactJourney" cj WHERE cj."journeyId" = j.id) as contact_count
+      FROM "Journey" j
+      WHERE 1=1 ${whereClause}
+      ORDER BY j."createdAt" DESC
+      LIMIT ${options?.limit || 100}
+    `;
+    
+    const journeys = await prisma.$queryRawUnsafe(query, ...whereParams);
     
     // Format data for response
-    return journeys.map((journey: any) => ({
+    return (journeys as any[]).map((journey: any) => ({
       id: journey.id,
       name: journey.name,
       description: journey.description,
       isActive: journey.isActive,
       createdAt: journey.createdAt,
       createdById: journey.createdById,
-      stages: journey.stages.map((stage: any) => ({
+      stages: (journey.stages || []).map((stage: any) => ({
         id: stage.id,
         name: stage.name,
         order: stage.order,
@@ -248,19 +234,45 @@ export async function updateJourney(
     // Validate journey exists
     await validateJourney(journeyId);
     
-    // Update journey
-    const journey = await prisma.journey.update({
-      where: { id: journeyId },
-      data: {
-        ...data,
-        updatedAt: new Date()
-      },
-      include: {
-        stages: {
-          orderBy: { order: 'asc' }
-        }
-      }
-    });
+    // Build SET clause for update
+    const setClauses = [];
+    const setValues = [];
+    
+    if (data.name !== undefined) {
+      setClauses.push(`"name" = $${setValues.length + 1}`);
+      setValues.push(data.name);
+    }
+    
+    if (data.description !== undefined) {
+      setClauses.push(`"description" = $${setValues.length + 1}`);
+      setValues.push(data.description);
+    }
+    
+    if (data.isActive !== undefined) {
+      setClauses.push(`"isActive" = $${setValues.length + 1}`);
+      setValues.push(data.isActive);
+    }
+    
+    // Add updated timestamp
+    setClauses.push(`"updatedAt" = now()`);
+    
+    // Execute update query
+    const query = `
+      UPDATE "Journey" 
+      SET ${setClauses.join(', ')}
+      WHERE "id" = $${setValues.length + 1}
+      RETURNING *
+    `;
+    
+    const result = await prisma.$queryRawUnsafe(query, ...setValues, journeyId);
+    const journey = Array.isArray(result) ? result[0] : result;
+    
+    // Get stages
+    const stages = await prisma.$queryRaw`
+      SELECT * FROM "JourneyStage"
+      WHERE "journeyId" = ${journeyId}
+      ORDER BY "order" ASC
+    `;
     
     return {
       id: journey.id,
@@ -269,7 +281,7 @@ export async function updateJourney(
       isActive: journey.isActive,
       createdAt: journey.createdAt,
       createdById: journey.createdById,
-      stages: journey.stages.map(stage => ({
+      stages: Array.isArray(stages) ? stages.map((stage: any) => ({
         id: stage.id,
         name: stage.name,
         description: stage.description,
@@ -278,9 +290,9 @@ export async function updateJourney(
         conversionGoal: stage.conversionGoal,
         isEntryPoint: stage.isEntryPoint,
         isExitPoint: stage.isExitPoint
-      }))
+      })) : []
     };
-  } catch (error) {
+  } catch (error: any) {
     logger.error(`Error updating journey ${journeyId}: ${error.message}`, error);
     throw new Error(`Failed to update journey: ${error.message}`);
   }
@@ -295,21 +307,19 @@ export async function deleteJourney(journeyId: string): Promise<boolean> {
     await validateJourney(journeyId);
     
     // Delete journey - cascades to all related data
-    await prisma.journey.delete({
-      where: { id: journeyId }
-    });
+    await prisma.$queryRaw`DELETE FROM "Journey" WHERE id = ${journeyId}`;
     
     logger.info(`Journey ${journeyId} deleted successfully`);
     
     return true;
-  } catch (error) {
+  } catch (error: any) {
     logger.error(`Error deleting journey ${journeyId}: ${error.message}`, error);
     throw new Error(`Failed to delete journey: ${error.message}`);
   }
 }
 
 /**
- * Create a journey stage
+ * Create a new journey stage
  */
 export async function createJourneyStage(
   data: {
@@ -327,24 +337,21 @@ export async function createJourneyStage(
     // Validate journey exists
     await validateJourney(data.journeyId);
     
-    // Create stage in database
-    const stage = await prisma.journeyStage.create({
-      data: {
-        id: randomUUID(),
-        journeyId: data.journeyId,
-        name: data.name,
-        description: data.description,
-        order: data.order,
-        expectedDuration: data.expectedDuration,
-        conversionGoal: data.conversionGoal,
-        isEntryPoint: data.isEntryPoint || false,
-        isExitPoint: data.isExitPoint || false,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    });
+    // Create stage using raw query
+    const stageId = randomUUID();
+    const result = await prisma.$queryRaw`
+      INSERT INTO "JourneyStage" (
+        "id", "journeyId", "name", "description", "order", 
+        "expectedDuration", "conversionGoal", "isEntryPoint", "isExitPoint", 
+        "createdAt", "updatedAt"
+      ) VALUES (
+        ${stageId}, ${data.journeyId}, ${data.name}, ${data.description}, ${data.order},
+        ${data.expectedDuration}, ${data.conversionGoal}, ${data.isEntryPoint ?? false}, ${data.isExitPoint ?? false},
+        now(), now()
+      ) RETURNING *
+    `;
     
-    logger.info(`Created journey stage ${stage.name} for journey ${data.journeyId}`);
+    const stage = Array.isArray(result) ? result[0] : result;
     
     return {
       id: stage.id,
@@ -356,7 +363,7 @@ export async function createJourneyStage(
       isEntryPoint: stage.isEntryPoint,
       isExitPoint: stage.isExitPoint
     };
-  } catch (error) {
+  } catch (error: any) {
     logger.error(`Error creating journey stage: ${error.message}`, error);
     throw new Error(`Failed to create journey stage: ${error.message}`);
   }
@@ -381,16 +388,58 @@ export async function updateJourneyStage(
     // Validate stage exists
     await validateJourneyStage(stageId);
     
-    // Update stage
-    const stage = await prisma.journeyStage.update({
-      where: { id: stageId },
-      data: {
-        ...data,
-        updatedAt: new Date()
-      }
-    });
+    // Build SET clause for update
+    const setClauses = [];
+    const setValues = [];
     
-    logger.info(`Updated journey stage ${stageId}`);
+    if (data.name !== undefined) {
+      setClauses.push(`"name" = $${setValues.length + 1}`);
+      setValues.push(data.name);
+    }
+    
+    if (data.description !== undefined) {
+      setClauses.push(`"description" = $${setValues.length + 1}`);
+      setValues.push(data.description);
+    }
+    
+    if (data.order !== undefined) {
+      setClauses.push(`"order" = $${setValues.length + 1}`);
+      setValues.push(data.order);
+    }
+    
+    if (data.expectedDuration !== undefined) {
+      setClauses.push(`"expectedDuration" = $${setValues.length + 1}`);
+      setValues.push(data.expectedDuration);
+    }
+    
+    if (data.conversionGoal !== undefined) {
+      setClauses.push(`"conversionGoal" = $${setValues.length + 1}`);
+      setValues.push(data.conversionGoal);
+    }
+    
+    if (data.isEntryPoint !== undefined) {
+      setClauses.push(`"isEntryPoint" = $${setValues.length + 1}`);
+      setValues.push(data.isEntryPoint);
+    }
+    
+    if (data.isExitPoint !== undefined) {
+      setClauses.push(`"isExitPoint" = $${setValues.length + 1}`);
+      setValues.push(data.isExitPoint);
+    }
+    
+    // Add updated timestamp
+    setClauses.push(`"updatedAt" = now()`);
+    
+    // Execute update query
+    const query = `
+      UPDATE "JourneyStage" 
+      SET ${setClauses.join(', ')}
+      WHERE "id" = $${setValues.length + 1}
+      RETURNING *
+    `;
+    
+    const result = await prisma.$queryRawUnsafe(query, ...setValues, stageId);
+    const stage = Array.isArray(result) ? result[0] : result;
     
     return {
       id: stage.id,
@@ -402,89 +451,93 @@ export async function updateJourneyStage(
       isEntryPoint: stage.isEntryPoint,
       isExitPoint: stage.isExitPoint
     };
-  } catch (error) {
+  } catch (error: any) {
     logger.error(`Error updating journey stage ${stageId}: ${error.message}`, error);
     throw new Error(`Failed to update journey stage: ${error.message}`);
   }
 }
 
 /**
- * Delete a journey stage (only if no contacts are in this stage)
+ * Delete a journey stage
  */
 export async function deleteJourneyStage(stageId: string): Promise<boolean> {
   try {
     // Validate stage exists
     await validateJourneyStage(stageId);
     
-    // Check if any contacts are in this stage
-    const contactsInStage = await prisma.contactJourneyStage.count({
-      where: {
-        stageId,
-        exitedAt: null
-      }
-    });
+    // Check if there are any contacts in this stage
+    const contactsResult = await prisma.$queryRaw`
+      SELECT COUNT(*) as count 
+      FROM "ContactJourneyStage"
+      WHERE "stageId" = ${stageId}
+    `;
+    
+    // Type-cast the contactsResult and handle both array and object return types
+    const contactsInStage = Array.isArray(contactsResult) 
+      ? Number((contactsResult[0] as any).count) 
+      : Number((contactsResult as any).count);
     
     if (contactsInStage > 0) {
-      throw new Error(`Cannot delete stage ${stageId}: ${contactsInStage} contacts are still in this stage`);
+      throw new Error(`Cannot delete stage with ${contactsInStage} contacts assigned to it`);
     }
     
-    // Delete stage - cascades to transitions
-    await prisma.journeyStage.delete({
-      where: { id: stageId }
-    });
+    // Delete stage
+    await prisma.$queryRaw`DELETE FROM "JourneyStage" WHERE id = ${stageId}`;
     
     logger.info(`Journey stage ${stageId} deleted successfully`);
     
     return true;
-  } catch (error) {
+  } catch (error: any) {
     logger.error(`Error deleting journey stage ${stageId}: ${error.message}`, error);
     throw new Error(`Failed to delete journey stage: ${error.message}`);
   }
 }
 
 /**
- * Create a journey transition between stages
+ * Create a transition between journey stages
  */
 export async function createJourneyTransition(
   data: JourneyTransitionData
 ): Promise<JourneyTransitionData> {
   try {
-    // Validate stages exist
+    // Validate from and to stages exist
     await validateJourneyStage(data.fromStageId);
     await validateJourneyStage(data.toStageId);
     
-    // Check that stages are part of the same journey
-    const fromStage = await prisma.journeyStage.findUnique({
-      where: { id: data.fromStageId },
-      select: { journeyId: true }
-    });
+    // Validate stages are from the same journey
+    const fromStageResult = await prisma.$queryRaw`
+      SELECT "journeyId" FROM "JourneyStage" WHERE id = ${data.fromStageId}
+    `;
     
-    const toStage = await prisma.journeyStage.findUnique({
-      where: { id: data.toStageId },
-      select: { journeyId: true }
-    });
+    const toStageResult = await prisma.$queryRaw`
+      SELECT "journeyId" FROM "JourneyStage" WHERE id = ${data.toStageId}
+    `;
+    
+    const fromStage = Array.isArray(fromStageResult) ? fromStageResult[0] : fromStageResult;
+    const toStage = Array.isArray(toStageResult) ? toStageResult[0] : toStageResult;
     
     if (fromStage.journeyId !== toStage.journeyId) {
-      throw new Error('Cannot create transition between stages from different journeys');
+      throw new Error("Cannot create transition between stages from different journeys");
     }
     
     // Create transition
-    const transition = await prisma.journeyTransition.create({
-      data: {
-        id: randomUUID(),
-        fromStageId: data.fromStageId,
-        toStageId: data.toStageId,
-        name: data.name,
-        description: data.description,
-        triggerType: data.triggerType,
-        triggerDetails: data.triggerDetails ? JSON.stringify(data.triggerDetails) : null,
-        conditions: data.conditions ? JSON.stringify(data.conditions) : null,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    });
+    const transitionId = randomUUID();
+    const triggerDetails = data.triggerDetails ? JSON.stringify(data.triggerDetails) : null;
+    const conditions = data.conditions ? JSON.stringify(data.conditions) : null;
     
-    logger.info(`Created journey transition from stage ${data.fromStageId} to ${data.toStageId}`);
+    const result = await prisma.$queryRaw`
+      INSERT INTO "JourneyTransition" (
+        "id", "fromStageId", "toStageId", "name", "description",
+        "triggerType", "triggerDetails", "conditions", 
+        "createdAt", "updatedAt"
+      ) VALUES (
+        ${transitionId}, ${data.fromStageId}, ${data.toStageId}, ${data.name}, ${data.description},
+        ${data.triggerType}, ${triggerDetails}, ${conditions},
+        now(), now()
+      ) RETURNING *
+    `;
+    
+    const transition = Array.isArray(result) ? result[0] : result;
     
     return {
       id: transition.id,
@@ -496,14 +549,14 @@ export async function createJourneyTransition(
       triggerDetails: transition.triggerDetails ? JSON.parse(transition.triggerDetails) : null,
       conditions: transition.conditions ? JSON.parse(transition.conditions) : null
     };
-  } catch (error) {
-    logger.error(`Error creating journey transition: ${error.message}`, error);
-    throw new Error(`Failed to create journey transition: ${error.message}`);
+  } catch (error: any) {
+    logger.error(`Error creating transition: ${error.message}`, error);
+    throw new Error(`Failed to create transition: ${error.message}`);
   }
 }
 
 /**
- * Update a journey transition
+ * Update a transition between stages
  */
 export async function updateJourneyTransition(
   transitionId: string,
@@ -516,37 +569,61 @@ export async function updateJourneyTransition(
   }
 ): Promise<JourneyTransitionData> {
   try {
-    // Find transition
-    const existingTransition = await prisma.journeyTransition.findUnique({
-      where: { id: transitionId }
-    });
+    // Check if transition exists
+    const existingTransitionResult = await prisma.$queryRaw`
+      SELECT id FROM "JourneyTransition" WHERE id = ${transitionId}
+    `;
+    
+    const existingTransition = Array.isArray(existingTransitionResult) 
+      ? existingTransitionResult.length > 0 
+      : !!existingTransitionResult;
     
     if (!existingTransition) {
       throw new Error(`Transition not found: ${transitionId}`);
     }
     
-    // Update fields
-    const updateData: any = {
-      ...data,
-      updatedAt: new Date()
-    };
+    // Prepare update data
+    const setClauses = [];
+    const setValues = [];
     
-    // Convert objects to JSON strings
-    if (data.triggerDetails) {
-      updateData.triggerDetails = JSON.stringify(data.triggerDetails);
+    if (data.name !== undefined) {
+      setClauses.push(`"name" = $${setValues.length + 1}`);
+      setValues.push(data.name);
     }
     
-    if (data.conditions) {
-      updateData.conditions = JSON.stringify(data.conditions);
+    if (data.description !== undefined) {
+      setClauses.push(`"description" = $${setValues.length + 1}`);
+      setValues.push(data.description);
     }
     
-    // Update transition
-    const transition = await prisma.journeyTransition.update({
-      where: { id: transitionId },
-      data: updateData
-    });
+    if (data.triggerType !== undefined) {
+      setClauses.push(`"triggerType" = $${setValues.length + 1}`);
+      setValues.push(data.triggerType);
+    }
     
-    logger.info(`Updated journey transition ${transitionId}`);
+    if (data.triggerDetails !== undefined) {
+      setClauses.push(`"triggerDetails" = $${setValues.length + 1}`);
+      setValues.push(JSON.stringify(data.triggerDetails));
+    }
+    
+    if (data.conditions !== undefined) {
+      setClauses.push(`"conditions" = $${setValues.length + 1}`);
+      setValues.push(JSON.stringify(data.conditions));
+    }
+    
+    // Add updated timestamp
+    setClauses.push(`"updatedAt" = now()`);
+    
+    // Execute update query
+    const query = `
+      UPDATE "JourneyTransition" 
+      SET ${setClauses.join(', ')}
+      WHERE "id" = $${setValues.length + 1}
+      RETURNING *
+    `;
+    
+    const result = await prisma.$queryRawUnsafe(query, ...setValues, transitionId);
+    const transition = Array.isArray(result) ? result[0] : result;
     
     return {
       id: transition.id,
@@ -558,36 +635,62 @@ export async function updateJourneyTransition(
       triggerDetails: transition.triggerDetails ? JSON.parse(transition.triggerDetails) : null,
       conditions: transition.conditions ? JSON.parse(transition.conditions) : null
     };
-  } catch (error) {
-    logger.error(`Error updating journey transition ${transitionId}: ${error.message}`, error);
-    throw new Error(`Failed to update journey transition: ${error.message}`);
+  } catch (error: any) {
+    logger.error(`Error updating transition ${transitionId}: ${error.message}`, error);
+    throw new Error(`Failed to update transition: ${error.message}`);
   }
 }
 
 /**
- * Delete a journey transition
+ * Delete a transition
  */
 export async function deleteJourneyTransition(transitionId: string): Promise<boolean> {
   try {
     // Check if transition exists
-    const transition = await prisma.journeyTransition.findUnique({
-      where: { id: transitionId }
-    });
+    const transitionResult = await prisma.$queryRaw`
+      SELECT id FROM "JourneyTransition" WHERE id = ${transitionId}
+    `;
+    
+    const transition = Array.isArray(transitionResult) 
+      ? transitionResult.length > 0 
+      : !!transitionResult;
     
     if (!transition) {
       throw new Error(`Transition not found: ${transitionId}`);
     }
     
     // Delete transition
-    await prisma.journeyTransition.delete({
-      where: { id: transitionId }
-    });
+    await prisma.$queryRaw`DELETE FROM "JourneyTransition" WHERE id = ${transitionId}`;
     
-    logger.info(`Journey transition ${transitionId} deleted successfully`);
+    logger.info(`Transition ${transitionId} deleted successfully`);
     
     return true;
-  } catch (error) {
-    logger.error(`Error deleting journey transition ${transitionId}: ${error.message}`, error);
-    throw new Error(`Failed to delete journey transition: ${error.message}`);
+  } catch (error: any) {
+    logger.error(`Error deleting transition ${transitionId}: ${error.message}`, error);
+    throw new Error(`Failed to delete transition: ${error.message}`);
+  }
+}
+
+/**
+ * Helper function to validate if a journey exists
+ */
+async function validateJourney(journeyId: string): Promise<void> {
+  const journey = await prisma.$queryRaw`SELECT id FROM "Journey" WHERE id = ${journeyId} LIMIT 1`;
+  const journeyExists = Array.isArray(journey) ? journey.length > 0 : !!journey;
+  
+  if (!journeyExists) {
+    throw new Error(`Journey not found: ${journeyId}`);
+  }
+}
+
+/**
+ * Helper function to validate if a stage exists
+ */
+async function validateJourneyStage(stageId: string): Promise<void> {
+  const stage = await prisma.$queryRaw`SELECT id FROM "JourneyStage" WHERE id = ${stageId} LIMIT 1`;
+  const stageExists = Array.isArray(stage) ? stage.length > 0 : !!stage;
+  
+  if (!stageExists) {
+    throw new Error(`Journey stage not found: ${stageId}`);
   }
 } 
