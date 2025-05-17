@@ -32,7 +32,7 @@ export async function GET(
     return unauthorized();
   }
 
-  const workflowId = params.id;
+  const { id: workflowId } = await params;
 
   try {
     const workflow = await prisma.workflow.findUnique({
@@ -81,7 +81,7 @@ export async function PATCH(
     return unauthorized();
   }
 
-  const workflowId = params.id;
+  const { id: workflowId } = await params;
 
   try {
     // First, check if the workflow exists
@@ -180,7 +180,7 @@ export async function DELETE(
     return unauthorized();
   }
 
-  const workflowId = params.id;
+  const { id: workflowId } = await params;
 
   try {
     // First, check if the workflow exists

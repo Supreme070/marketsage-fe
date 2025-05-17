@@ -22,7 +22,7 @@ export async function POST(
     return unauthorized();
   }
 
-  const integrationId = params.id;
+  const { id: integrationId } = await params;
 
   try {
     // First check if integration exists
@@ -80,7 +80,7 @@ export async function GET(
     return unauthorized();
   }
 
-  const integrationId = params.id;
+  const { id: integrationId } = await params;
 
   try {
     // In a real app, you'd fetch the actual sync status from your database

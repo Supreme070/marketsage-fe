@@ -22,7 +22,7 @@ export async function GET(
     return unauthorized();
   }
 
-  const integrationId = params.id;
+  const { id: integrationId } = await params;
 
   try {
     // Fetch the integration using IntegrationConnection
@@ -65,7 +65,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const integrationId = params.id;
+  const { id: integrationId } = await params;
   
   try {
     // First check if integration exists
@@ -143,7 +143,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const integrationId = params.id;
+  const { id: integrationId } = await params;
 
   try {
     // First check if integration exists

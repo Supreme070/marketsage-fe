@@ -1,36 +1,55 @@
-FROM node:20-alpine
+FROM node:20-alpine AS base
 
-# Set working directory
+# Install dependencies only when needed
+FROM base AS deps
+# Add build dependencies for bcrypt
+RUN apk add --no-cache libc6-compat python3 make g++ 
 WORKDIR /app
-
-# Install dependencies
-RUN apk add --no-cache libc6-compat python3 make g++ openssl
 
 # Copy package files
 COPY package.json package-lock.json* ./
-# Copy next.config.js to ensure transpilePackages is included
-COPY next.config.js ./
-
-# Install dependencies
 RUN npm ci
 
-# Rebuild bcrypt for the current architecture
-RUN npm rebuild bcrypt --build-from-source
-
-# Copy prisma schema first for optimized layer caching
-COPY prisma ./prisma/
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
 
 # Generate Prisma client
 RUN npx prisma generate
 
-# Copy remaining files
-COPY . .
+# Build application
+RUN npm run build
 
-# Re-generate Prisma client with all files available
-RUN npm run db:generate
+# Production image, copy all the files and run next
+FROM base AS runner
+WORKDIR /app
 
-# Expose port
+ENV NODE_ENV production
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+
+# Set correct permissions
+RUN mkdir -p /app/.next/cache && \
+    mkdir -p /app/prisma && \
+    chown -R nextjs:nodejs /app/.next /app/prisma
+
+# Copy build output
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/next.config.js ./next.config.js
+COPY --from=builder /app/package.json ./package.json
+
+USER nextjs
+
 EXPOSE 3000
 
-# Start development server
-CMD ["npm", "run", "dev"] 
+ENV PORT 3000
+ENV HOSTNAME 0.0.0.0
+
+CMD ["node", "server.js"]

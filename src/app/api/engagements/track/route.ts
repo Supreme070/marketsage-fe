@@ -82,4 +82,4 @@ export async function POST(request: NextRequest) {
 
 // Allow this endpoint to be used from client-side tracking pixels
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge'; 
+export const runtime = 'nodejs'; 

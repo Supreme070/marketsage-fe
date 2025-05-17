@@ -353,7 +353,7 @@ export async function seedSampleJourneys(prisma: any, userId: string) {
     
     for (const journey of journeys) {
       // Create the journey
-      const createdJourney = await prisma.journey.create({
+      const createdJourney = await prisma.Journey.create({
         data: {
           id: journey.id,
           name: journey.name,
@@ -369,7 +369,7 @@ export async function seedSampleJourneys(prisma: any, userId: string) {
       
       // Create stages
       for (const stage of journey.stages) {
-        await prisma.journeyStage.create({
+        await prisma.JourneyStage.create({
           data: {
             id: stage.id,
             journeyId: createdJourney.id,
@@ -391,7 +391,7 @@ export async function seedSampleJourneys(prisma: any, userId: string) {
         if (!stage.transitions) continue;
         
         for (const transition of stage.transitions) {
-          await prisma.journeyTransition.create({
+          await prisma.JourneyTransition.create({
             data: {
               id: randomUUID(),
               fromStageId: transition.fromStageId,

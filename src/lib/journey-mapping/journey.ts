@@ -29,10 +29,47 @@ export async function createJourney(
   try {
     logger.info(`Creating new customer journey: ${data.name}`);
     
-    // Create journey in database using raw query since model access isn't working
+    // Check if the user exists
+    const userExists = await prisma.$queryRaw`
+      SELECT EXISTS(SELECT 1 FROM "User" WHERE id = ${data.createdById}) as exists
+    `;
+    
+    const userExistsResult = Array.isArray(userExists) ? userExists[0] : userExists;
+    
+    // If user doesn't exist, use system user or create a default one
+    let createdById = data.createdById;
+    
+    if (!userExistsResult.exists) {
+      logger.warn(`User ${data.createdById} does not exist, looking for system user`);
+      
+      // Look for system user
+      const systemUser = await prisma.$queryRaw`
+        SELECT id FROM "User" WHERE email = 'system@marketsage.io' OR email LIKE '%@example.com' LIMIT 1
+      `;
+      
+      if (Array.isArray(systemUser) && systemUser.length > 0) {
+        createdById = systemUser[0].id;
+        logger.info(`Using existing system user: ${createdById}`);
+      } else {
+        // If no system user, try to get any user
+        const anyUser = await prisma.$queryRaw`
+          SELECT id FROM "User" LIMIT 1
+        `;
+        
+        if (Array.isArray(anyUser) && anyUser.length > 0) {
+          createdById = anyUser[0].id;
+          logger.info(`Using existing user: ${createdById}`);
+        } else {
+          // If no users at all, we have a bigger problem
+          throw new Error("No users found in database. Please seed the database first.");
+        }
+      }
+    }
+    
+    // Create journey in database using raw query with the verified user ID
     const journey = await prisma.$queryRaw`
       INSERT INTO "Journey" ("id", "name", "description", "isActive", "createdById", "createdAt", "updatedAt")
-      VALUES (gen_random_uuid(), ${data.name}, ${data.description}, true, ${data.createdById}, now(), now())
+      VALUES (gen_random_uuid(), ${data.name}, ${data.description}, true, ${createdById}, now(), now())
       RETURNING *
     `;
     
@@ -184,9 +221,17 @@ export async function getJourneys(options?: {
     // Get journeys
     const query = `
       SELECT j.*,
-        (SELECT json_agg(s.*) FROM "JourneyStage" s 
-         WHERE s."journeyId" = j.id 
-         ORDER BY s."order" ASC) as stages,
+        (SELECT json_agg(
+          json_build_object(
+            'id', s.id,
+            'name', s.name,
+            'order', s.order,
+            'isEntryPoint', s."isEntryPoint",
+            'isExitPoint', s."isExitPoint",
+            'contactCount', (SELECT COUNT(*) FROM "ContactJourneyStage" cjs WHERE cjs."stageId" = s.id)
+          ) ORDER BY s.order ASC
+        ) FROM "JourneyStage" s 
+         WHERE s."journeyId" = j.id GROUP BY s."journeyId") as stages,
         (SELECT COUNT(*) FROM "ContactJourney" cj WHERE cj."journeyId" = j.id) as contact_count
       FROM "Journey" j
       WHERE 1=1 ${whereClause}
@@ -210,7 +255,7 @@ export async function getJourneys(options?: {
         order: stage.order,
         isEntryPoint: stage.isEntryPoint,
         isExitPoint: stage.isExitPoint,
-        contactCount: stage._count?.contactStages || 0
+        contactCount: stage.contactCount || 0
       }))
     }));
   } catch (error: any) {

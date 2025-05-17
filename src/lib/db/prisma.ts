@@ -3,6 +3,9 @@ import { PrismaClient } from "@prisma/client";
 // Add custom methods to PrismaClient
 interface CustomPrismaClient extends PrismaClient {
   $healthCheck: () => Promise<boolean>;
+  
+  // Add type for models (using index signature)
+  [key: string]: any;
 }
 
 // Prevent multiple instances of Prisma Client in development

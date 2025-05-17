@@ -30,7 +30,7 @@ export async function GET(
     return unauthorized();
   }
 
-  const segmentId = params.id;
+  const { id: segmentId } = await params;
 
   try {
     const segment = await prisma.segment.findUnique({
@@ -65,7 +65,7 @@ export async function PATCH(
     return unauthorized();
   }
 
-  const segmentId = params.id;
+  const { id: segmentId } = await params;
 
   try {
     // First check if segment exists and user has access
@@ -136,7 +136,7 @@ export async function DELETE(
     return unauthorized();
   }
 
-  const segmentId = params.id;
+  const { id: segmentId } = await params;
 
   try {
     // First check if segment exists and user has access

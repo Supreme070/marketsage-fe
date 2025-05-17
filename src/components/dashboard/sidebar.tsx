@@ -24,6 +24,7 @@ import {
   BrainCircuit,
   Beaker,
   MapPin,
+  Eye,
   type LucideIcon
 } from "lucide-react";
 
@@ -66,6 +67,28 @@ const sidebarNavItems: NavItem[] = [
         title: "Segments",
         href: "/segments",
         icon: Tag,
+      },
+    ],
+  },
+  {
+    title: "LeadPulse",
+    href: "/leadpulse",
+    icon: Eye,
+    submenu: [
+      {
+        title: "Dashboard",
+        href: "/leadpulse",
+        icon: BarChart4,
+      },
+      {
+        title: "Forms",
+        href: "/leadpulse/forms/new",
+        icon: FileText,
+      },
+      {
+        title: "Setup",
+        href: "/leadpulse/setup",
+        icon: Settings,
       },
     ],
   },

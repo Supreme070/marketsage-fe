@@ -33,7 +33,7 @@ export async function GET(
     return unauthorized();
   }
 
-  const listId = params.id;
+  const { id: listId } = await params;
 
   try {
     // Check if list exists
@@ -119,7 +119,7 @@ export async function POST(
     return unauthorized();
   }
 
-  const listId = params.id;
+  const { id: listId } = await params;
 
   try {
     // Check if list exists
@@ -231,7 +231,7 @@ export async function DELETE(
     return unauthorized();
   }
 
-  const listId = params.id;
+  const { id: listId } = await params;
 
   try {
     // Check if list exists

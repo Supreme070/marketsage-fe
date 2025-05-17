@@ -10,7 +10,7 @@ import {
   validationError 
 } from "@/lib/errors";
 
-const // Function to parse tags from string
+// Function to parse tags from string
 function tagsFromString(tagsString: string | null): string[] {
   if (!tagsString) return [];
   try {
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
     const contacts = await prisma.contact.findMany({
       where: {
         createdById: session.user.id,
-        ...(statusFilter && { status: statusFilter }),
+        ...(statusFilter ? { status: statusFilter as any } : {}),
       },
       orderBy: {
         createdAt: "desc",

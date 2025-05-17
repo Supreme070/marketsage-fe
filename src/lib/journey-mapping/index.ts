@@ -9,6 +9,21 @@ import { logger } from '@/lib/logger';
 import prisma from '@/lib/db/prisma';
 import { randomUUID } from 'crypto';
 
+// Debug flag - enables detailed logging
+const DEBUG = true;
+
+/**
+ * Debug logging function
+ */
+export function debugLog(message: string, data?: any): void {
+  if (DEBUG) {
+    console.log(`[JOURNEY-DEBUG] ${message}`);
+    if (data) {
+      console.log(JSON.stringify(data, null, 2));
+    }
+  }
+}
+
 // Type definitions for journey mapping
 export enum JourneyStatus {
   ACTIVE = 'ACTIVE',
@@ -173,12 +188,21 @@ export interface JourneyBottleneckData {
  * Common helper function to validate that a journey exists
  */
 export async function validateJourney(journeyId: string): Promise<void> {
-  const journey = await (prisma as any).journey.findUnique({
-    where: { id: journeyId }
-  });
-  
-  if (!journey) {
-    throw new Error(`Journey not found: ${journeyId}`);
+  try {
+    debugLog(`Validating journey: ${journeyId}`);
+    
+    const journey = await prisma.Journey.findUnique({
+      where: { id: journeyId }
+    });
+    
+    if (!journey) {
+      throw new Error(`Journey not found: ${journeyId}`);
+    }
+    
+    debugLog(`Journey validation successful: ${journeyId}`);
+  } catch (error) {
+    debugLog(`Journey validation error:`, { journeyId, error: (error as Error).message });
+    throw error;
   }
 }
 
@@ -186,12 +210,21 @@ export async function validateJourney(journeyId: string): Promise<void> {
  * Helper function to validate that a journey stage exists
  */
 export async function validateJourneyStage(stageId: string): Promise<void> {
-  const stage = await (prisma as any).journeyStage.findUnique({
-    where: { id: stageId }
-  });
-  
-  if (!stage) {
-    throw new Error(`Journey stage not found: ${stageId}`);
+  try {
+    debugLog(`Validating journey stage: ${stageId}`);
+    
+    const stage = await prisma.JourneyStage.findUnique({
+      where: { id: stageId }
+    });
+    
+    if (!stage) {
+      throw new Error(`Journey stage not found: ${stageId}`);
+    }
+    
+    debugLog(`Journey stage validation successful: ${stageId}`);
+  } catch (error) {
+    debugLog(`Journey stage validation error:`, { stageId, error: (error as Error).message });
+    throw error;
   }
 }
 
@@ -199,12 +232,21 @@ export async function validateJourneyStage(stageId: string): Promise<void> {
  * Helper function to validate that a contact exists
  */
 export async function validateContact(contactId: string): Promise<void> {
-  const contact = await (prisma as any).contact.findUnique({
-    where: { id: contactId }
-  });
-  
-  if (!contact) {
-    throw new Error(`Contact not found: ${contactId}`);
+  try {
+    debugLog(`Validating contact: ${contactId}`);
+    
+    const contact = await prisma.Contact.findUnique({
+      where: { id: contactId }
+    });
+    
+    if (!contact) {
+      throw new Error(`Contact not found: ${contactId}`);
+    }
+    
+    debugLog(`Contact validation successful: ${contactId}`);
+  } catch (error) {
+    debugLog(`Contact validation error:`, { contactId, error: (error as Error).message });
+    throw error;
   }
 }
 
@@ -213,30 +255,47 @@ export async function validateContact(contactId: string): Promise<void> {
  * Ensures that the transition is defined in the journey
  */
 export async function validateTransition(fromStageId: string, toStageId: string): Promise<string> {
-  const transition = await (prisma as any).journeyTransition.findFirst({
-    where: {
-      fromStageId,
-      toStageId
+  try {
+    debugLog(`Validating transition:`, { fromStageId, toStageId });
+    
+    const transition = await prisma.JourneyTransition.findFirst({
+      where: {
+        fromStageId,
+        toStageId
+      }
+    });
+    
+    if (!transition) {
+      throw new Error(`Invalid transition: No defined transition from stage ${fromStageId} to ${toStageId}`);
     }
-  });
-  
-  if (!transition) {
-    throw new Error(`Invalid transition: No defined transition from stage ${fromStageId} to ${toStageId}`);
+    
+    debugLog(`Transition validation successful:`, { transitionId: transition.id });
+    return transition.id;
+  } catch (error) {
+    debugLog(`Transition validation error:`, { fromStageId, toStageId, error: (error as Error).message });
+    throw error;
   }
-  
-  return transition.id;
 }
 
 /**
  * Helper function to validate metric
  */
 export async function validateJourneyMetric(metricId: string): Promise<void> {
-  const metric = await (prisma as any).journeyMetric.findUnique({
-    where: { id: metricId }
-  });
-  
-  if (!metric) {
-    throw new Error(`Journey metric not found: ${metricId}`);
+  try {
+    debugLog(`Validating journey metric: ${metricId}`);
+    
+    const metric = await prisma.JourneyMetric.findUnique({
+      where: { id: metricId }
+    });
+    
+    if (!metric) {
+      throw new Error(`Journey metric not found: ${metricId}`);
+    }
+    
+    debugLog(`Journey metric validation successful: ${metricId}`);
+  } catch (error) {
+    debugLog(`Journey metric validation error:`, { metricId, error: (error as Error).message });
+    throw error;
   }
 }
 

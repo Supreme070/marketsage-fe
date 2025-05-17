@@ -23,7 +23,7 @@ export async function POST(
     return unauthorized();
   }
 
-  const userId = params.id;
+  const { id: userId } = await params;
 
   // Users can only change their own password
   if (session.user.id !== userId) {

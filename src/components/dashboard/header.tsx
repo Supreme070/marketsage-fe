@@ -167,7 +167,7 @@ export function Header({ className }: HeaderProps) {
             <Separator />
             <div className="p-2">
               <Button variant="outline" className="w-full text-sm" size="sm" asChild>
-                <a href="/notifications">View all notifications</a>
+                <a href="/dashboard/notifications">View all notifications</a>
               </Button>
             </div>
           </PopoverContent>

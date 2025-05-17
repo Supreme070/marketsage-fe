@@ -34,7 +34,7 @@ export async function GET(
     return unauthorized();
   }
 
-  const templateId = params.id;
+  const { id: templateId } = await params;
 
   try {
     const template = await prisma.emailTemplate.findUnique({
@@ -69,7 +69,7 @@ export async function PATCH(
     return unauthorized();
   }
 
-  const templateId = params.id;
+  const { id: templateId } = await params;
 
   try {
     // First check if template exists and user has access
@@ -144,7 +144,7 @@ export async function DELETE(
     return unauthorized();
   }
 
-  const templateId = params.id;
+  const { id: templateId } = await params;
 
   try {
     // First check if template exists and user has access

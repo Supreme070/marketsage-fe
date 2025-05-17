@@ -16,7 +16,8 @@ import {
   validateJourney,
   validateJourneyStage,
   validateContact,
-  validateTransition
+  validateTransition,
+  debugLog
 } from './index';
 
 /**
@@ -27,12 +28,14 @@ export async function addContactToJourney(
   contactId: string
 ): Promise<ContactJourneyData> {
   try {
+    debugLog(`Adding contact to journey:`, { journeyId, contactId });
+    
     // Validate inputs
     await validateJourney(journeyId);
     await validateContact(contactId);
     
     // Check if contact is already in this journey
-    const existingJourney = await prisma.contactJourney.findFirst({
+    const existingJourney = await prisma.ContactJourney.findFirst({
       where: {
         journeyId,
         contactId,
@@ -44,6 +47,7 @@ export async function addContactToJourney(
     
     if (existingJourney) {
       logger.info(`Contact ${contactId} is already in journey ${journeyId}`);
+      debugLog(`Contact already in journey:`, existingJourney);
       
       // Return the existing journey
       return {
@@ -58,7 +62,7 @@ export async function addContactToJourney(
     }
     
     // Find the entry point stage
-    const entryStage = await prisma.journeyStage.findFirst({
+    const entryStage = await prisma.JourneyStage.findFirst({
       where: {
         journeyId,
         isEntryPoint: true
@@ -70,7 +74,7 @@ export async function addContactToJourney(
     }
     
     // Create contact journey record
-    const contactJourney = await prisma.contactJourney.create({
+    const contactJourney = await prisma.ContactJourney.create({
       data: {
         id: randomUUID(),
         journeyId,
@@ -82,7 +86,7 @@ export async function addContactToJourney(
     });
     
     // Add contact to the entry stage
-    await prisma.contactJourneyStage.create({
+    await prisma.ContactJourneyStage.create({
       data: {
         id: randomUUID(),
         contactJourneyId: contactJourney.id,
@@ -92,6 +96,7 @@ export async function addContactToJourney(
     });
     
     logger.info(`Added contact ${contactId} to journey ${journeyId}`);
+    debugLog(`Successfully added contact to journey:`, contactJourney);
     
     return {
       id: contactJourney.id,
@@ -103,6 +108,7 @@ export async function addContactToJourney(
     };
   } catch (error) {
     logger.error(`Error adding contact to journey: ${error.message}`, error);
+    debugLog(`Error adding contact to journey:`, { journeyId, contactId, error: (error as Error).message });
     throw new Error(`Failed to add contact to journey: ${error.message}`);
   }
 }
@@ -118,8 +124,10 @@ export async function moveContactToStage(
   }
 ): Promise<ContactJourneyStageData> {
   try {
+    debugLog(`Moving contact to stage:`, { contactJourneyId, toStageId });
+    
     // Get the contact journey record
-    const contactJourney = await prisma.contactJourney.findUnique({
+    const contactJourney = await prisma.ContactJourney.findUnique({
       where: { id: contactJourneyId },
       include: {
         stages: {
@@ -158,7 +166,7 @@ export async function moveContactToStage(
     }
     
     // Mark exit from current stage
-    await prisma.contactJourneyStage.update({
+    await prisma.ContactJourneyStage.update({
       where: { id: currentStageRecord.id },
       data: {
         exitedAt: new Date(),
@@ -169,7 +177,7 @@ export async function moveContactToStage(
     });
     
     // Create new stage record
-    const newStage = await prisma.contactJourneyStage.create({
+    const newStage = await prisma.ContactJourneyStage.create({
       data: {
         id: randomUUID(),
         contactJourneyId,
@@ -179,7 +187,7 @@ export async function moveContactToStage(
     });
     
     // Record the transition
-    await prisma.contactJourneyTransition.create({
+    await prisma.ContactJourneyTransition.create({
       data: {
         id: randomUUID(),
         contactJourneyId,
@@ -192,32 +200,31 @@ export async function moveContactToStage(
     });
     
     // Update the current stage in the contact journey
-    await prisma.contactJourney.update({
+    await prisma.ContactJourney.update({
       where: { id: contactJourneyId },
       data: {
         currentStageId: toStageId
       }
     });
     
-    // Check if this is an exit stage
-    const toStage = await prisma.journeyStage.findUnique({
+    // Check if this is an exit point stage
+    const toStage = await prisma.JourneyStage.findUnique({
       where: { id: toStageId }
     });
     
-    // If this is an exit stage, mark the journey as completed
     if (toStage.isExitPoint) {
-      await prisma.contactJourney.update({
+      // If this is an exit point, complete the journey
+      await prisma.ContactJourney.update({
         where: { id: contactJourneyId },
         data: {
           status: 'COMPLETED',
           completedAt: new Date()
         }
       });
-      
-      logger.info(`Contact journey ${contactJourneyId} completed`);
     }
     
     logger.info(`Moved contact in journey ${contactJourneyId} to stage ${toStageId}`);
+    debugLog(`Successfully moved contact to stage:`, newStage);
     
     return {
       id: newStage.id,
@@ -227,6 +234,11 @@ export async function moveContactToStage(
     };
   } catch (error) {
     logger.error(`Error moving contact to stage: ${error.message}`, error);
+    debugLog(`Error moving contact to stage:`, { 
+      contactJourneyId, 
+      toStageId, 
+      error: (error as Error).message 
+    });
     throw new Error(`Failed to move contact to stage: ${error.message}`);
   }
 }

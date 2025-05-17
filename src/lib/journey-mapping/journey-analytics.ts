@@ -24,7 +24,7 @@ export async function calculateJourneyAnalytics(journeyId: string): Promise<Jour
     await validateJourney(journeyId);
     
     // Get journey with stages
-    const journey = await prisma.journey.findUnique({
+    const journey = await prisma.Journey.findUnique({
       where: { id: journeyId },
       include: {
         stages: {
@@ -81,7 +81,7 @@ export async function calculateJourneyAnalytics(journeyId: string): Promise<Jour
     // Process each stage
     for (const stage of journey.stages) {
       // Get all contact journey stages for this stage
-      const contactStages = await prisma.contactJourneyStage.findMany({
+      const contactStages = await prisma.ContactJourneyStage.findMany({
         where: {
           stageId: stage.id,
           contactJourney: {
@@ -147,7 +147,7 @@ export async function calculateJourneyAnalytics(journeyId: string): Promise<Jour
     };
     
     // Save analytics to database
-    await prisma.journeyAnalytics.upsert({
+    await prisma.JourneyAnalytics.upsert({
       where: {
         journeyId_date: {
           journeyId,
@@ -223,7 +223,7 @@ export async function getJourneyAnalytics(
     }
     
     // Get analytics
-    const analytics = await prisma.journeyAnalytics.findMany({
+    const analytics = await prisma.JourneyAnalytics.findMany({
       where,
       orderBy: {
         date: 'asc'
@@ -257,7 +257,7 @@ export async function identifyJourneyBottlenecks(journeyId: string): Promise<Jou
     const analytics = await calculateJourneyAnalytics(journeyId);
     
     // Get journey with stages to get stage details
-    const journey = await prisma.journey.findUnique({
+    const journey = await prisma.Journey.findUnique({
       where: { id: journeyId },
       include: {
         stages: {
@@ -365,7 +365,7 @@ export async function getJourneyFlowDistribution(
     await validateJourney(journeyId);
     
     // Get journey with stages
-    const journey = await prisma.journey.findUnique({
+    const journey = await prisma.Journey.findUnique({
       where: { id: journeyId },
       include: {
         stages: {
@@ -393,7 +393,7 @@ export async function getJourneyFlowDistribution(
     
     // Get counts of contacts currently in each stage
     const stageCounts = await Promise.all(journey.stages.map(async stage => {
-      const activeCount = await prisma.contactJourneyStage.count({
+      const activeCount = await prisma.ContactJourneyStage.count({
         where: {
           stageId: stage.id,
           exitedAt: null,
@@ -438,7 +438,7 @@ export async function getJourneyCompletionTimeDistribution(
 }[]> {
   try {
     // Get completed contact journeys
-    const completedJourneys = await prisma.contactJourney.findMany({
+    const completedJourneys = await prisma.ContactJourney.findMany({
       where: {
         journeyId,
         status: 'COMPLETED',

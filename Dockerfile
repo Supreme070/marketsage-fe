@@ -2,19 +2,37 @@ FROM node:20-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-# Add build dependencies for bcrypt
-RUN apk add --no-cache libc6-compat python3 make g++ 
+# Add build dependencies for bcrypt and PostgreSQL client with retry mechanism
 WORKDIR /app
 
 # Copy package files
 COPY package.json package-lock.json* ./
-RUN npm ci
+
+# Install dependencies with improved reliability for Alpine packages
+RUN apk update && \
+    apk add --no-cache --virtual .build-deps libc6-compat python3 make g++ && \
+    apk add --no-cache postgresql-client && \
+    npm ci && \
+    apk del .build-deps
 
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# Remove the problematic bcrypt binary and rebuild for the current architecture
+RUN rm -rf node_modules/bcrypt/lib/binding/napi-v3 && \
+    apk add --no-cache --virtual .build-deps python3 make g++ && \
+    npm rebuild bcrypt --build-from-source && \
+    apk del .build-deps
+
+# Make startup script executable
+RUN chmod +x startup.sh
+RUN cat startup.sh
+
+# Ensure public directory exists
+RUN mkdir -p ./public
 
 # Generate Prisma client
 RUN npx prisma generate
@@ -31,19 +49,37 @@ ENV NODE_ENV production
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/public ./public
+# Install PostgreSQL client for database operations
+RUN apk add --no-cache postgresql-client bash
 
-# Set correct permissions
-RUN mkdir -p /app/.next/cache && \
-    mkdir -p /app/prisma && \
-    chown -R nextjs:nodejs /app/.next /app/prisma
+# Create directories with correct ownership
+RUN mkdir -p ./public ./node_modules ./.next/cache ./prisma ./scripts ./src/generated/prisma && \
+    chown -R nextjs:nodejs /app
+
+# Copy public directory
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# Copy Prisma client and related files
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/src/generated ./src/generated
+
+# Copy and verify startup script
+COPY --from=builder --chown=nextjs:nodejs /app/startup.sh ./
+RUN ls -la ./startup.sh
+RUN chmod +x ./startup.sh
+RUN cat ./startup.sh
+
+# Copy bcrypt module
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/bcrypt ./node_modules/bcrypt
 
 # Copy build output
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/next.config.js ./next.config.js
-COPY --from=builder /app/package.json ./package.json
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+COPY --from=builder --chown=nextjs:nodejs /app/next.config.js ./next.config.js
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
 USER nextjs
 
@@ -52,4 +88,5 @@ EXPOSE 3000
 ENV PORT 3000
 ENV HOSTNAME 0.0.0.0
 
-CMD ["node", "server.js"]
+# Use startup script instead of direct server start
+CMD ["./startup.sh"]

@@ -3,7 +3,6 @@ import { PrismaClient, WATemplateStatus, CampaignStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
-import prisma from "@/lib/db/prisma";
 import { 
   handleApiError, 
   unauthorized, 
@@ -11,17 +10,7 @@ import {
   notFound,
   validationError 
 } from "@/lib/errors";
-
-// Create a single instance of PrismaClient to avoid multiple connections
-let prisma: PrismaClient;
-
-if (process.env.NODE_ENV === 'production') {
-  } else {
-  // Prevent multiple instances during development
-  if (!(global as any).prisma) {
-    (}
-  prisma = (global as any).prisma;
-}
+import prisma from "@/lib/db/prisma";
 
 // Schema for template update validation
 const templateUpdateSchema = z.object({
@@ -49,8 +38,8 @@ export async function GET(
       return unauthorized();
     }
 
-    // Access params safely in Next.js 15
-    const templateId = params.id;
+    // Access params safely in Next.js
+    const { id: templateId } = await params;
 
     try {
       // First get the template
@@ -120,8 +109,8 @@ export async function PATCH(
       return unauthorized();
     }
 
-    // Access params safely in Next.js 15
-    const templateId = params.id;
+    // Access params safely in Next.js
+    const { id: templateId } = await params;
 
     try {
       // First check if template exists and user has access
@@ -251,8 +240,8 @@ export async function DELETE(
       return unauthorized();
     }
 
-    // Access params safely in Next.js 15
-    const templateId = params.id;
+    // Access params safely in Next.js
+    const { id: templateId } = await params;
 
     try {
       // First check if template exists and user has access

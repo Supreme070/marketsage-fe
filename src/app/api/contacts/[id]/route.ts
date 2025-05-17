@@ -58,7 +58,7 @@ export async function GET(
     return unauthorized();
   }
 
-  const contactId = params.id;
+  const { id: contactId } = await params;
 
   try {
     const contact = await prisma.contact.findUnique({
@@ -96,7 +96,7 @@ export async function PATCH(
     return unauthorized();
   }
 
-  const contactId = params.id;
+  const { id: contactId } = await params;
 
   try {
     // First check if contact exists and user has access
@@ -167,7 +167,7 @@ export async function DELETE(
     return unauthorized();
   }
 
-  const contactId = params.id;
+  const { id: contactId } = await params;
 
   try {
     // First check if contact exists and user has access

@@ -24,26 +24,27 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
-
-  // Check if user is authenticated
-  if (!session || !session.user) {
-    return unauthorized();
-  }
-
-  const userId = params.id;
-
-  // Users can view their own profile, admins can view anyone
-  if (
-    session.user.id !== userId &&
-    session.user.role !== "SUPER_ADMIN" &&
-    session.user.role !== "ADMIN" &&
-    session.user.role !== "IT_ADMIN"
-  ) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   try {
+    const session = await getServerSession(authOptions);
+
+    // Check if user is authenticated
+    if (!session || !session.user) {
+      return unauthorized();
+    }
+
+    // Access params safely
+    const { id: userId } = await params;
+
+    // Users can view their own profile, admins can view anyone
+    if (
+      session.user.id !== userId &&
+      session.user.role !== "SUPER_ADMIN" &&
+      session.user.role !== "ADMIN" &&
+      session.user.role !== "IT_ADMIN"
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -83,26 +84,27 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
-
-  // Check if user is authenticated
-  if (!session || !session.user) {
-    return unauthorized();
-  }
-
-  const userId = params.id;
-
-  // Users can update their own basic info, admins can update anyone except super admins
-  const canUpdateBasicInfo =
-    session.user.id === userId ||
-    session.user.role === "ADMIN" ||
-    session.user.role === "SUPER_ADMIN";
-
-  if (!canUpdateBasicInfo) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   try {
+    const session = await getServerSession(authOptions);
+
+    // Check if user is authenticated
+    if (!session || !session.user) {
+      return unauthorized();
+    }
+
+    // Access params safely
+    const { id: userId } = await params;
+
+    // Users can update their own basic info, admins can update anyone except super admins
+    const canUpdateBasicInfo =
+      session.user.id === userId ||
+      session.user.role === "ADMIN" ||
+      session.user.role === "SUPER_ADMIN";
+
+    if (!canUpdateBasicInfo) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const body = await request.json();
     const { name, email, password, role, isActive } = body;
 
@@ -203,21 +205,22 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
-
-  // Check if user is authenticated
-  if (!session || !session.user) {
-    return unauthorized();
-  }
-
-  // Only super admins and regular admins can delete users
-  if (session.user.role !== "SUPER_ADMIN" && session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const userId = params.id;
-
   try {
+    const session = await getServerSession(authOptions);
+
+    // Check if user is authenticated
+    if (!session || !session.user) {
+      return unauthorized();
+    }
+
+    // Only super admins and regular admins can delete users
+    if (session.user.role !== "SUPER_ADMIN" && session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Access params safely
+    const { id: userId } = await params;
+
     // Get the user to check their role
     const user = await prisma.user.findUnique({
       where: { id: userId },

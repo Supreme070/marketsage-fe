@@ -13,7 +13,8 @@ import {
 
 // Initialize Prisma client directly in this file to avoid import errors
 import prisma from "@/lib/db/prisma";
-const interface ConversionMetrics {
+
+interface ConversionMetrics {
   conversions: {
     [key: string]: {
       count: number;

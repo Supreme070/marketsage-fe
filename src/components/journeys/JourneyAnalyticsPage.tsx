@@ -385,4 +385,154 @@ export function JourneyAnalyticsPage({ journeyId }: JourneyAnalyticsPageProps) {
                     : bottleneck.impact === 'MEDIUM' 
                       ? 'border-l-warning' 
                       : 'border-l-muted'
-                }`
+                }`}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span>{bottleneck.stageName}</span>
+                      <span className={`text-sm px-2 py-1 rounded ${
+                        bottleneck.impact === 'HIGH' 
+                          ? 'bg-destructive/10 text-destructive' 
+                          : bottleneck.impact === 'MEDIUM' 
+                            ? 'bg-warning/10 text-warning' 
+                            : 'bg-muted/10 text-muted-foreground'
+                      }`}>
+                        {bottleneck.impact} Impact
+                      </span>
+                    </CardTitle>
+                    <CardDescription>
+                      Stage performance is below expected metrics
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div>
+                        <div className="text-sm font-medium">Conversion Rate</div>
+                        <div className="flex items-center">
+                          <span className="text-lg">{(bottleneck.conversionRate * 100).toFixed(1)}%</span>
+                          {bottleneck.targetConversionRate && (
+                            <span className="text-sm text-muted-foreground ml-2">
+                              Target: {(bottleneck.targetConversionRate * 100).toFixed(1)}%
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium">Average Duration</div>
+                        <div className="flex items-center">
+                          <span className="text-lg">{bottleneck.averageDuration} hrs</span>
+                          {bottleneck.expectedDuration && (
+                            <span className="text-sm text-muted-foreground ml-2">
+                              Expected: {bottleneck.expectedDuration} hrs
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium">Drop-off Rate</div>
+                        <div className="text-lg">
+                          {(bottleneck.dropOffRate * 100).toFixed(1)}%
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 mt-4">
+                      <h4 className="text-sm font-medium">Recommendations:</h4>
+                      <ul className="space-y-1">
+                        {bottleneck.recommendations.map((rec, index) => (
+                          <li key={index} className="flex items-start">
+                            <ArrowRightIcon className="h-4 w-4 mr-2 mt-1 text-primary" />
+                            <span className="text-sm">{rec}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+        
+        {/* Flow Distribution Tab */}
+        <TabsContent value="flow" className="mt-4">
+          {flowDistribution.length === 0 ? (
+            <div className="flex justify-center py-12">
+              <Loader2Icon className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Contact Distribution</CardTitle>
+                <CardDescription>
+                  Current distribution of contacts across journey stages
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {flowDistribution
+                    .sort((a, b) => a.order - b.order)
+                    .map((item) => (
+                      <div key={item.stageId} className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center">
+                            <UsersIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+                            <span className="font-medium">{item.stageName}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="font-medium">{item.count}</span>
+                            <span className="text-muted-foreground text-sm ml-2">
+                              ({item.percentage.toFixed(1)}%)
+                            </span>
+                          </div>
+                        </div>
+                        <Progress value={item.percentage} className="h-2" />
+                      </div>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+        
+        {/* Completion Time Tab */}
+        <TabsContent value="completion" className="mt-4">
+          {completionTime.length === 0 ? (
+            <div className="flex justify-center py-12">
+              <Loader2Icon className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Journey Completion Time</CardTitle>
+                <CardDescription>
+                  Distribution of time taken by contacts to complete the journey
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {completionTime.map((item) => (
+                    <div key={item.timeRange} className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center">
+                          <ClockIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+                          <span className="font-medium">{item.timeRange}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-medium">{item.count}</span>
+                          <span className="text-muted-foreground text-sm ml-2">
+                            ({item.percentage.toFixed(1)}%)
+                          </span>
+                        </div>
+                      </div>
+                      <Progress value={item.percentage} className="h-2" />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

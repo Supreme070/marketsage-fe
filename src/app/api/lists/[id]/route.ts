@@ -30,7 +30,7 @@ export async function GET(
     return unauthorized();
   }
 
-  const listId = params.id;
+  const { id: listId } = await params;
 
   try {
     const list = await prisma.list.findUnique({
@@ -82,7 +82,7 @@ export async function PATCH(
     return unauthorized();
   }
 
-  const listId = params.id;
+  const { id: listId } = await params;
 
   try {
     // First check if list exists and user has access
@@ -158,7 +158,7 @@ export async function DELETE(
     return unauthorized();
   }
 
-  const listId = params.id;
+  const { id: listId } = await params;
 
   try {
     // First check if list exists and user has access

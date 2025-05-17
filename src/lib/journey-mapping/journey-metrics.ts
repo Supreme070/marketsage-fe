@@ -15,7 +15,8 @@ import {
   MetricAggregationType,
   validateJourney,
   validateJourneyStage,
-  validateJourneyMetric
+  validateJourneyMetric,
+  debugLog
 } from './index';
 
 /**
@@ -26,11 +27,13 @@ export async function createJourneyMetric(
   metricData: JourneyMetricData
 ): Promise<JourneyMetricData> {
   try {
+    debugLog(`Creating journey metric:`, { journeyId, metricName: metricData.name });
+    
     // Validate journey exists
     await validateJourney(journeyId);
     
     // Create metric
-    const metric = await prisma.journeyMetric.create({
+    const metric = await prisma.JourneyMetric.create({
       data: {
         id: metricData.id || randomUUID(),
         journeyId,
@@ -51,7 +54,7 @@ export async function createJourneyMetric(
         await validateJourneyStage(stageMetric.stageId);
         
         // Create stage metric
-        await prisma.journeyStageMetric.create({
+        await prisma.JourneyStageMetric.create({
           data: {
             id: stageMetric.id || randomUUID(),
             stageId: stageMetric.stageId,
@@ -64,6 +67,7 @@ export async function createJourneyMetric(
     }
     
     logger.info(`Created journey metric ${metric.id} for journey ${journeyId}`);
+    debugLog(`Successfully created journey metric:`, metric);
     
     // Return the created metric with stage metrics
     return {
@@ -79,6 +83,7 @@ export async function createJourneyMetric(
     };
   } catch (error) {
     logger.error(`Error creating journey metric: ${error.message}`, error);
+    debugLog(`Error creating journey metric:`, { journeyId, error: (error as Error).message });
     throw new Error(`Failed to create journey metric: ${error.message}`);
   }
 }
@@ -91,11 +96,13 @@ export async function updateJourneyMetric(
   metricData: Partial<JourneyMetricData>
 ): Promise<JourneyMetricData> {
   try {
+    debugLog(`Updating journey metric:`, { metricId });
+    
     // Validate metric exists
     await validateJourneyMetric(metricId);
     
     // Update metric
-    const metric = await prisma.journeyMetric.update({
+    const metric = await prisma.JourneyMetric.update({
       where: { id: metricId },
       data: {
         name: metricData.name,
@@ -118,7 +125,7 @@ export async function updateJourneyMetric(
         await validateJourneyStage(stageMetric.stageId);
         
         // Update or create stage metric
-        await prisma.journeyStageMetric.upsert({
+        await prisma.JourneyStageMetric.upsert({
           where: {
             stageId_metricId: {
               stageId: stageMetric.stageId,
@@ -141,6 +148,7 @@ export async function updateJourneyMetric(
     }
     
     logger.info(`Updated journey metric ${metricId}`);
+    debugLog(`Successfully updated journey metric:`, metric);
     
     // Format stage metrics
     const stageMetrics = metric.stageMetrics.map(sm => ({
@@ -165,6 +173,7 @@ export async function updateJourneyMetric(
     };
   } catch (error) {
     logger.error(`Error updating journey metric: ${error.message}`, error);
+    debugLog(`Error updating journey metric:`, { metricId, error: (error as Error).message });
     throw new Error(`Failed to update journey metric: ${error.message}`);
   }
 }
@@ -174,11 +183,13 @@ export async function updateJourneyMetric(
  */
 export async function getJourneyMetrics(journeyId: string): Promise<JourneyMetricData[]> {
   try {
+    debugLog(`Getting journey metrics:`, { journeyId });
+    
     // Validate journey exists
     await validateJourney(journeyId);
     
     // Get metrics with stage metrics
-    const metrics = await prisma.journeyMetric.findMany({
+    const metrics = await prisma.JourneyMetric.findMany({
       where: { journeyId },
       include: {
         stageMetrics: true
@@ -205,6 +216,7 @@ export async function getJourneyMetrics(journeyId: string): Promise<JourneyMetri
     }));
   } catch (error) {
     logger.error(`Error getting journey metrics: ${error.message}`, error);
+    debugLog(`Error getting journey metrics:`, { journeyId, error: (error as Error).message });
     throw new Error(`Failed to get journey metrics: ${error.message}`);
   }
 }
@@ -214,22 +226,26 @@ export async function getJourneyMetrics(journeyId: string): Promise<JourneyMetri
  */
 export async function deleteJourneyMetric(metricId: string): Promise<void> {
   try {
+    debugLog(`Deleting journey metric:`, { metricId });
+    
     // Validate metric exists
     await validateJourneyMetric(metricId);
     
     // Delete stage metrics first (cascade doesn't always work as expected)
-    await prisma.journeyStageMetric.deleteMany({
+    await prisma.JourneyStageMetric.deleteMany({
       where: { metricId }
     });
     
     // Delete the metric
-    await prisma.journeyMetric.delete({
+    await prisma.JourneyMetric.delete({
       where: { id: metricId }
     });
     
     logger.info(`Deleted journey metric ${metricId}`);
+    debugLog(`Successfully deleted journey metric:`, { metricId });
   } catch (error) {
     logger.error(`Error deleting journey metric: ${error.message}`, error);
+    debugLog(`Error deleting journey metric:`, { metricId, error: (error as Error).message });
     throw new Error(`Failed to delete journey metric: ${error.message}`);
   }
 }
@@ -243,12 +259,14 @@ export async function updateStageMetricValue(
   actualValue: number
 ): Promise<JourneyStageMetricData> {
   try {
+    debugLog(`Updating stage metric value:`, { stageId, metricId, actualValue });
+    
     // Validate stage and metric exist
     await validateJourneyStage(stageId);
     await validateJourneyMetric(metricId);
     
     // Update stage metric
-    const stageMetric = await prisma.journeyStageMetric.upsert({
+    const stageMetric = await prisma.JourneyStageMetric.upsert({
       where: {
         stageId_metricId: {
           stageId,
@@ -269,6 +287,7 @@ export async function updateStageMetricValue(
     });
     
     logger.info(`Updated stage metric value for stage ${stageId}, metric ${metricId}`);
+    debugLog(`Successfully updated stage metric value:`, stageMetric);
     
     return {
       id: stageMetric.id,
@@ -279,6 +298,11 @@ export async function updateStageMetricValue(
     };
   } catch (error) {
     logger.error(`Error updating stage metric value: ${error.message}`, error);
+    debugLog(`Error updating stage metric value:`, { 
+      stageId, 
+      metricId, 
+      error: (error as Error).message 
+    });
     throw new Error(`Failed to update stage metric value: ${error.message}`);
   }
 }
@@ -289,11 +313,13 @@ export async function updateStageMetricValue(
  */
 export async function calculateJourneyMetrics(journeyId: string): Promise<JourneyMetricData[]> {
   try {
+    debugLog(`Calculating journey metrics:`, { journeyId });
+    
     // Validate journey exists
     await validateJourney(journeyId);
     
     // Get journey with stages, metrics, and analytics
-    const journey = await prisma.journey.findUnique({
+    const journey = await prisma.Journey.findUnique({
       where: { id: journeyId },
       include: {
         stages: {
@@ -311,7 +337,7 @@ export async function calculateJourneyMetrics(journeyId: string): Promise<Journe
     });
     
     // Get the latest analytics
-    const latestAnalytics = await prisma.journeyAnalytics.findFirst({
+    const latestAnalytics = await prisma.JourneyAnalytics.findFirst({
       where: { journeyId },
       orderBy: {
         date: 'desc'
@@ -320,7 +346,7 @@ export async function calculateJourneyMetrics(journeyId: string): Promise<Journe
     
     // Calculate metrics
     for (const metric of journey.metrics) {
-      let journeyMetricValue: number = null;
+      let journeyMetricValue: number | null = null;
       
       // Calculate journey-level metrics
       switch (metric.metricType) {
@@ -372,7 +398,7 @@ export async function calculateJourneyMetrics(journeyId: string): Promise<Journe
               // This is just a placeholder - real implementation would need a formula parser
               journeyMetricValue = 0;
             } catch (e) {
-              logger.warn(`Could not evaluate formula for metric ${metric.id}: ${e.message}`);
+              logger.warn(`Could not evaluate formula for metric ${metric.id}: ${(e as Error).message}`);
               journeyMetricValue = 0;
             }
           }
@@ -381,7 +407,7 @@ export async function calculateJourneyMetrics(journeyId: string): Promise<Journe
       
       // Update the journey-level metric value
       if (journeyMetricValue !== null) {
-        await prisma.journeyMetric.update({
+        await prisma.JourneyMetric.update({
           where: { id: metric.id },
           data: {
             targetValue: metric.targetValue // Keep the same target
@@ -391,7 +417,7 @@ export async function calculateJourneyMetrics(journeyId: string): Promise<Journe
       
       // Calculate stage-level metrics
       for (const stage of journey.stages) {
-        let stageMetricValue: number = null;
+        let stageMetricValue: number | null = null;
         
         // Calculate different types of metrics for this stage
         switch (metric.metricType) {
@@ -436,7 +462,7 @@ export async function calculateJourneyMetrics(journeyId: string): Promise<Journe
         if (stageMetricValue !== null) {
           if (stageMetric) {
             // Update existing stage metric
-            await prisma.journeyStageMetric.update({
+            await prisma.JourneyStageMetric.update({
               where: {
                 id: stageMetric.id
               },
@@ -447,7 +473,7 @@ export async function calculateJourneyMetrics(journeyId: string): Promise<Journe
             });
           } else {
             // Create new stage metric
-            await prisma.journeyStageMetric.create({
+            await prisma.JourneyStageMetric.create({
               data: {
                 id: randomUUID(),
                 stageId: stage.id,
@@ -461,10 +487,13 @@ export async function calculateJourneyMetrics(journeyId: string): Promise<Journe
       }
     }
     
+    debugLog(`Successfully calculated journey metrics`);
+    
     // Get updated metrics
     return await getJourneyMetrics(journeyId);
   } catch (error) {
     logger.error(`Error calculating journey metrics: ${error.message}`, error);
+    debugLog(`Error calculating journey metrics:`, { journeyId, error: (error as Error).message });
     throw new Error(`Failed to calculate journey metrics: ${error.message}`);
   }
 } 

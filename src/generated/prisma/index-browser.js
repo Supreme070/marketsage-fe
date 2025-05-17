@@ -120,6 +120,17 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
+exports.Prisma.OrganizationScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  plan: 'plan',
+  logoUrl: 'logoUrl',
+  websiteUrl: 'websiteUrl',
+  address: 'address',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.UserScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -131,7 +142,9 @@ exports.Prisma.UserScalarFieldEnum = {
   updatedAt: 'updatedAt',
   lastLogin: 'lastLogin',
   isActive: 'isActive',
-  role: 'role'
+  role: 'role',
+  organizationId: 'organizationId',
+  company: 'company'
 };
 
 exports.Prisma.AccountScalarFieldEnum = {
@@ -160,6 +173,30 @@ exports.Prisma.VerificationTokenScalarFieldEnum = {
   identifier: 'identifier',
   token: 'token',
   expires: 'expires'
+};
+
+exports.Prisma.IntegrationScalarFieldEnum = {
+  id: 'id',
+  type: 'type',
+  name: 'name',
+  description: 'description',
+  credentials: 'credentials',
+  status: 'status',
+  lastSyncedAt: 'lastSyncedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  organizationId: 'organizationId',
+  createdBy: 'createdBy'
+};
+
+exports.Prisma.IntegrationSyncHistoryScalarFieldEnum = {
+  id: 'id',
+  integrationId: 'integrationId',
+  status: 'status',
+  startedAt: 'startedAt',
+  completedAt: 'completedAt',
+  recordsProcessed: 'recordsProcessed',
+  error: 'error'
 };
 
 exports.Prisma.ContactScalarFieldEnum = {
@@ -261,6 +298,46 @@ exports.Prisma.SMSTemplateScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   createdById: 'createdById'
+};
+
+exports.Prisma.ABTestScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  description: 'description',
+  entityType: 'entityType',
+  entityId: 'entityId',
+  status: 'status',
+  testType: 'testType',
+  testElements: 'testElements',
+  winnerMetric: 'winnerMetric',
+  winnerThreshold: 'winnerThreshold',
+  distributionPercent: 'distributionPercent',
+  winnerVariantId: 'winnerVariantId',
+  startedAt: 'startedAt',
+  endedAt: 'endedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  createdById: 'createdById'
+};
+
+exports.Prisma.ABTestVariantScalarFieldEnum = {
+  id: 'id',
+  testId: 'testId',
+  name: 'name',
+  description: 'description',
+  content: 'content',
+  trafficPercent: 'trafficPercent',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.ABTestResultScalarFieldEnum = {
+  id: 'id',
+  testId: 'testId',
+  variantId: 'variantId',
+  metric: 'metric',
+  value: 'value',
+  sampleSize: 'sampleSize',
+  recordedAt: 'recordedAt'
 };
 
 exports.Prisma.SMSCampaignScalarFieldEnum = {
@@ -368,14 +445,356 @@ exports.Prisma.AnalyticsScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
-exports.Prisma.IntegrationConnectionScalarFieldEnum = {
+exports.Prisma.EngagementTimeScalarFieldEnum = {
+  id: 'id',
+  contactId: 'contactId',
+  entityType: 'entityType',
+  entityId: 'entityId',
+  engagementType: 'engagementType',
+  dayOfWeek: 'dayOfWeek',
+  hourOfDay: 'hourOfDay',
+  timestamp: 'timestamp'
+};
+
+exports.Prisma.SmartSegmentScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  description: 'description',
+  rules: 'rules',
+  score: 'score',
+  status: 'status',
+  createdAt: 'createdAt',
+  lastUpdated: 'lastUpdated'
+};
+
+exports.Prisma.ContentTemplateScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  description: 'description',
+  industry: 'industry',
+  category: 'category',
+  type: 'type',
+  template: 'template',
+  keywords: 'keywords',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ContentGenerationScalarFieldEnum = {
+  id: 'id',
+  templateId: 'templateId',
+  entityType: 'entityType',
+  entityId: 'entityId',
+  prompt: 'prompt',
+  result: 'result',
+  createdById: 'createdById',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.SendTimeOptimizationScalarFieldEnum = {
+  id: 'id',
+  contactId: 'contactId',
+  dayOfWeek: 'dayOfWeek',
+  hourOfDay: 'hourOfDay',
+  engagementScore: 'engagementScore',
+  confidenceLevel: 'confidenceLevel',
+  lastUpdated: 'lastUpdated'
+};
+
+exports.Prisma.ConversionEventScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  description: 'description',
+  eventType: 'eventType',
+  category: 'category',
+  valueType: 'valueType',
+  isSystem: 'isSystem',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  createdById: 'createdById'
+};
+
+exports.Prisma.ConversionTrackingScalarFieldEnum = {
+  id: 'id',
+  eventId: 'eventId',
+  entityType: 'entityType',
+  entityId: 'entityId',
+  contactId: 'contactId',
+  value: 'value',
+  occurredAt: 'occurredAt',
+  metadata: 'metadata',
+  attributionModel: 'attributionModel',
+  touchPoints: 'touchPoints'
+};
+
+exports.Prisma.ConversionFunnelScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  description: 'description',
+  stages: 'stages',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  createdById: 'createdById'
+};
+
+exports.Prisma.ConversionFunnelReportScalarFieldEnum = {
+  id: 'id',
+  funnelId: 'funnelId',
+  startDate: 'startDate',
+  endDate: 'endDate',
+  data: 'data',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.AttributionSettingsScalarFieldEnum = {
+  id: 'id',
+  defaultModel: 'defaultModel',
+  customWeights: 'customWeights',
+  lookbackWindow: 'lookbackWindow',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ContentAnalysisScalarFieldEnum = {
+  id: 'id',
+  type: 'type',
+  contentType: 'contentType',
+  originalContent: 'originalContent',
+  result: 'result',
+  createdAt: 'createdAt',
+  userId: 'userId'
+};
+
+exports.Prisma.ContentRecommendationScalarFieldEnum = {
+  id: 'id',
+  type: 'type',
+  entityType: 'entityType',
+  entityId: 'entityId',
+  originalContent: 'originalContent',
+  suggestedContent: 'suggestedContent',
+  reason: 'reason',
+  impactScore: 'impactScore',
+  isApplied: 'isApplied',
+  createdAt: 'createdAt',
+  appliedAt: 'appliedAt',
+  userId: 'userId'
+};
+
+exports.Prisma.SubjectLineTestScalarFieldEnum = {
+  id: 'id',
+  campaignId: 'campaignId',
+  originalSubject: 'originalSubject',
+  variants: 'variants',
+  status: 'status',
+  winnerVariantId: 'winnerVariantId',
+  createdAt: 'createdAt',
+  startedAt: 'startedAt',
+  endedAt: 'endedAt',
+  createdById: 'createdById'
+};
+
+exports.Prisma.SubjectLineTestResultScalarFieldEnum = {
+  id: 'id',
+  testId: 'testId',
+  variantId: 'variantId',
+  opens: 'opens',
+  clicks: 'clicks',
+  sent: 'sent',
+  openRate: 'openRate',
+  clickRate: 'clickRate'
+};
+
+exports.Prisma.SentimentAnalysisScalarFieldEnum = {
+  id: 'id',
+  entityType: 'entityType',
+  entityId: 'entityId',
+  content: 'content',
+  score: 'score',
+  positive: 'positive',
+  negative: 'negative',
+  emotions: 'emotions',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.ContentPersonalizationScalarFieldEnum = {
+  id: 'id',
+  campaignId: 'campaignId',
+  contactId: 'contactId',
+  originalContent: 'originalContent',
+  personalizedContent: 'personalizedContent',
+  replacements: 'replacements',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.PredictionModelScalarFieldEnum = {
   id: 'id',
   name: 'name',
   type: 'type',
-  config: 'config',
-  status: 'status',
+  description: 'description',
+  algorithm: 'algorithm',
+  features: 'features',
+  metrics: 'metrics',
+  version: 'version',
+  isActive: 'isActive',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
+};
+
+exports.Prisma.PredictionScalarFieldEnum = {
+  id: 'id',
+  modelId: 'modelId',
+  entityType: 'entityType',
+  entityId: 'entityId',
+  predictionType: 'predictionType',
+  value: 'value',
+  confidence: 'confidence',
+  features: 'features',
+  explanation: 'explanation',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.ChurnPredictionScalarFieldEnum = {
+  id: 'id',
+  contactId: 'contactId',
+  score: 'score',
+  riskLevel: 'riskLevel',
+  topFactors: 'topFactors',
+  nextActionDate: 'nextActionDate',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.LifetimeValuePredictionScalarFieldEnum = {
+  id: 'id',
+  contactId: 'contactId',
+  predictedValue: 'predictedValue',
+  confidenceLevel: 'confidenceLevel',
+  timeframe: 'timeframe',
+  segments: 'segments',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.CampaignPerformancePredictionScalarFieldEnum = {
+  id: 'id',
+  campaignId: 'campaignId',
+  openRate: 'openRate',
+  clickRate: 'clickRate',
+  conversionRate: 'conversionRate',
+  revenue: 'revenue',
+  factors: 'factors',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.OptimalSendTimeScalarFieldEnum = {
+  id: 'id',
+  contactId: 'contactId',
+  channelType: 'channelType',
+  dayOfWeek: 'dayOfWeek',
+  hourOfDay: 'hourOfDay',
+  probability: 'probability',
+  confidenceLevel: 'confidenceLevel',
+  lastUpdated: 'lastUpdated'
+};
+
+exports.Prisma.JourneyScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  description: 'description',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  createdById: 'createdById'
+};
+
+exports.Prisma.JourneyStageScalarFieldEnum = {
+  id: 'id',
+  journeyId: 'journeyId',
+  name: 'name',
+  description: 'description',
+  order: 'order',
+  expectedDuration: 'expectedDuration',
+  conversionGoal: 'conversionGoal',
+  isEntryPoint: 'isEntryPoint',
+  isExitPoint: 'isExitPoint',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.JourneyTransitionScalarFieldEnum = {
+  id: 'id',
+  fromStageId: 'fromStageId',
+  toStageId: 'toStageId',
+  name: 'name',
+  description: 'description',
+  conditions: 'conditions',
+  triggerType: 'triggerType',
+  triggerDetails: 'triggerDetails',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ContactJourneyScalarFieldEnum = {
+  id: 'id',
+  journeyId: 'journeyId',
+  contactId: 'contactId',
+  status: 'status',
+  startedAt: 'startedAt',
+  completedAt: 'completedAt',
+  currentStageId: 'currentStageId'
+};
+
+exports.Prisma.ContactJourneyStageScalarFieldEnum = {
+  id: 'id',
+  contactJourneyId: 'contactJourneyId',
+  stageId: 'stageId',
+  enteredAt: 'enteredAt',
+  exitedAt: 'exitedAt',
+  durationSeconds: 'durationSeconds'
+};
+
+exports.Prisma.ContactJourneyTransitionScalarFieldEnum = {
+  id: 'id',
+  contactJourneyId: 'contactJourneyId',
+  transitionId: 'transitionId',
+  timestamp: 'timestamp',
+  fromStageId: 'fromStageId',
+  toStageId: 'toStageId',
+  triggerSource: 'triggerSource'
+};
+
+exports.Prisma.JourneyMetricScalarFieldEnum = {
+  id: 'id',
+  journeyId: 'journeyId',
+  name: 'name',
+  description: 'description',
+  metricType: 'metricType',
+  targetValue: 'targetValue',
+  aggregationType: 'aggregationType',
+  formula: 'formula',
+  isSuccess: 'isSuccess',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.JourneyStageMetricScalarFieldEnum = {
+  id: 'id',
+  stageId: 'stageId',
+  metricId: 'metricId',
+  targetValue: 'targetValue',
+  actualValue: 'actualValue',
+  lastUpdated: 'lastUpdated'
+};
+
+exports.Prisma.JourneyAnalyticsScalarFieldEnum = {
+  id: 'id',
+  journeyId: 'journeyId',
+  date: 'date',
+  totalContacts: 'totalContacts',
+  activeContacts: 'activeContacts',
+  completedContacts: 'completedContacts',
+  droppedContacts: 'droppedContacts',
+  conversionRate: 'conversionRate',
+  averageDuration: 'averageDuration',
+  stageData: 'stageData'
 };
 
 exports.Prisma.SortOrder = {
@@ -397,6 +816,19 @@ exports.UserRole = exports.$Enums.UserRole = {
   ADMIN: 'ADMIN',
   IT_ADMIN: 'IT_ADMIN',
   SUPER_ADMIN: 'SUPER_ADMIN'
+};
+
+exports.IntegrationStatus = exports.$Enums.IntegrationStatus = {
+  PENDING: 'PENDING',
+  ACTIVE: 'ACTIVE',
+  ERROR: 'ERROR',
+  INACTIVE: 'INACTIVE'
+};
+
+exports.SyncStatus = exports.$Enums.SyncStatus = {
+  RUNNING: 'RUNNING',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED'
 };
 
 exports.ContactStatus = exports.$Enums.ContactStatus = {
@@ -429,6 +861,37 @@ exports.ActivityType = exports.$Enums.ActivityType = {
   UNSUBSCRIBED: 'UNSUBSCRIBED',
   REPLIED: 'REPLIED',
   FAILED: 'FAILED'
+};
+
+exports.EntityType = exports.$Enums.EntityType = {
+  EMAIL_CAMPAIGN: 'EMAIL_CAMPAIGN',
+  SMS_CAMPAIGN: 'SMS_CAMPAIGN',
+  WHATSAPP_CAMPAIGN: 'WHATSAPP_CAMPAIGN',
+  WORKFLOW: 'WORKFLOW',
+  LIST: 'LIST',
+  SEGMENT: 'SEGMENT'
+};
+
+exports.ABTestStatus = exports.$Enums.ABTestStatus = {
+  DRAFT: 'DRAFT',
+  RUNNING: 'RUNNING',
+  PAUSED: 'PAUSED',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED'
+};
+
+exports.ABTestType = exports.$Enums.ABTestType = {
+  SIMPLE_AB: 'SIMPLE_AB',
+  MULTIVARIATE: 'MULTIVARIATE',
+  ELEMENT: 'ELEMENT'
+};
+
+exports.ABTestMetric = exports.$Enums.ABTestMetric = {
+  OPEN_RATE: 'OPEN_RATE',
+  CLICK_RATE: 'CLICK_RATE',
+  CONVERSION_RATE: 'CONVERSION_RATE',
+  REVENUE: 'REVENUE',
+  CUSTOM: 'CUSTOM'
 };
 
 exports.WATemplateStatus = exports.$Enums.WATemplateStatus = {
@@ -466,15 +929,6 @@ exports.TriggerType = exports.$Enums.TriggerType = {
   SCHEDULED: 'SCHEDULED'
 };
 
-exports.EntityType = exports.$Enums.EntityType = {
-  EMAIL_CAMPAIGN: 'EMAIL_CAMPAIGN',
-  SMS_CAMPAIGN: 'SMS_CAMPAIGN',
-  WHATSAPP_CAMPAIGN: 'WHATSAPP_CAMPAIGN',
-  WORKFLOW: 'WORKFLOW',
-  LIST: 'LIST',
-  SEGMENT: 'SEGMENT'
-};
-
 exports.AnalyticsPeriod = exports.$Enums.AnalyticsPeriod = {
   DAILY: 'DAILY',
   WEEKLY: 'WEEKLY',
@@ -482,28 +936,99 @@ exports.AnalyticsPeriod = exports.$Enums.AnalyticsPeriod = {
   YEARLY: 'YEARLY'
 };
 
-exports.IntegrationType = exports.$Enums.IntegrationType = {
-  ECOMMERCE_WOOCOMMERCE: 'ECOMMERCE_WOOCOMMERCE',
-  ECOMMERCE_SHOPIFY: 'ECOMMERCE_SHOPIFY',
-  CRM_SALESFORCE: 'CRM_SALESFORCE',
-  CRM_HUBSPOT: 'CRM_HUBSPOT',
-  PAYMENT_STRIPE: 'PAYMENT_STRIPE',
-  PAYMENT_PAYPAL: 'PAYMENT_PAYPAL',
-  WEBHOOK: 'WEBHOOK',
-  API: 'API'
+exports.SmartSegmentStatus = exports.$Enums.SmartSegmentStatus = {
+  PENDING: 'PENDING',
+  ACTIVE: 'ACTIVE',
+  ARCHIVED: 'ARCHIVED'
 };
 
-exports.ConnectionStatus = exports.$Enums.ConnectionStatus = {
+exports.ContentTemplateType = exports.$Enums.ContentTemplateType = {
+  EMAIL_SUBJECT: 'EMAIL_SUBJECT',
+  EMAIL_BODY: 'EMAIL_BODY',
+  SMS_MESSAGE: 'SMS_MESSAGE',
+  WHATSAPP_MESSAGE: 'WHATSAPP_MESSAGE',
+  PUSH_NOTIFICATION: 'PUSH_NOTIFICATION'
+};
+
+exports.ConversionCategory = exports.$Enums.ConversionCategory = {
+  AWARENESS: 'AWARENESS',
+  CONSIDERATION: 'CONSIDERATION',
+  CONVERSION: 'CONVERSION',
+  RETENTION: 'RETENTION',
+  CUSTOM: 'CUSTOM'
+};
+
+exports.ConversionValueType = exports.$Enums.ConversionValueType = {
+  COUNT: 'COUNT',
+  REVENUE: 'REVENUE',
+  SCORE: 'SCORE'
+};
+
+exports.AttributionModel = exports.$Enums.AttributionModel = {
+  FIRST_TOUCH: 'FIRST_TOUCH',
+  LAST_TOUCH: 'LAST_TOUCH',
+  LINEAR: 'LINEAR',
+  TIME_DECAY: 'TIME_DECAY',
+  POSITION_BASED: 'POSITION_BASED',
+  CUSTOM: 'CUSTOM'
+};
+
+exports.PredictionModelType = exports.$Enums.PredictionModelType = {
+  CHURN: 'CHURN',
+  LTV: 'LTV',
+  CAMPAIGN_PERFORMANCE: 'CAMPAIGN_PERFORMANCE',
+  SEND_TIME: 'SEND_TIME',
+  OPEN_RATE: 'OPEN_RATE',
+  CLICK_RATE: 'CLICK_RATE',
+  CONVERSION_RATE: 'CONVERSION_RATE'
+};
+
+exports.ChurnRiskLevel = exports.$Enums.ChurnRiskLevel = {
+  LOW: 'LOW',
+  MEDIUM: 'MEDIUM',
+  HIGH: 'HIGH',
+  VERY_HIGH: 'VERY_HIGH'
+};
+
+exports.TransitionTriggerType = exports.$Enums.TransitionTriggerType = {
+  AUTOMATIC: 'AUTOMATIC',
+  EVENT: 'EVENT',
+  CONVERSION: 'CONVERSION',
+  CONDITION: 'CONDITION',
+  MANUAL: 'MANUAL'
+};
+
+exports.JourneyStatus = exports.$Enums.JourneyStatus = {
   ACTIVE: 'ACTIVE',
-  INACTIVE: 'INACTIVE',
-  ERROR: 'ERROR'
+  COMPLETED: 'COMPLETED',
+  DROPPED: 'DROPPED',
+  PAUSED: 'PAUSED'
+};
+
+exports.JourneyMetricType = exports.$Enums.JourneyMetricType = {
+  CONVERSION_RATE: 'CONVERSION_RATE',
+  CONTACTS_COUNT: 'CONTACTS_COUNT',
+  DURATION: 'DURATION',
+  REVENUE: 'REVENUE',
+  CUSTOM: 'CUSTOM'
+};
+
+exports.MetricAggregationType = exports.$Enums.MetricAggregationType = {
+  SUM: 'SUM',
+  AVERAGE: 'AVERAGE',
+  COUNT: 'COUNT',
+  MIN: 'MIN',
+  MAX: 'MAX'
 };
 
 exports.Prisma.ModelName = {
+  Organization: 'Organization',
   User: 'User',
   Account: 'Account',
   Session: 'Session',
   VerificationToken: 'VerificationToken',
+  Integration: 'Integration',
+  IntegrationSyncHistory: 'IntegrationSyncHistory',
   Contact: 'Contact',
   List: 'List',
   ListMember: 'ListMember',
@@ -512,6 +1037,9 @@ exports.Prisma.ModelName = {
   EmailCampaign: 'EmailCampaign',
   EmailActivity: 'EmailActivity',
   SMSTemplate: 'SMSTemplate',
+  ABTest: 'ABTest',
+  ABTestVariant: 'ABTestVariant',
+  ABTestResult: 'ABTestResult',
   SMSCampaign: 'SMSCampaign',
   SMSActivity: 'SMSActivity',
   WhatsAppTemplate: 'WhatsAppTemplate',
@@ -522,7 +1050,37 @@ exports.Prisma.ModelName = {
   Connection: 'Connection',
   WorkflowTrigger: 'WorkflowTrigger',
   Analytics: 'Analytics',
-  IntegrationConnection: 'IntegrationConnection'
+  EngagementTime: 'EngagementTime',
+  SmartSegment: 'SmartSegment',
+  ContentTemplate: 'ContentTemplate',
+  ContentGeneration: 'ContentGeneration',
+  SendTimeOptimization: 'SendTimeOptimization',
+  ConversionEvent: 'ConversionEvent',
+  ConversionTracking: 'ConversionTracking',
+  ConversionFunnel: 'ConversionFunnel',
+  ConversionFunnelReport: 'ConversionFunnelReport',
+  AttributionSettings: 'AttributionSettings',
+  ContentAnalysis: 'ContentAnalysis',
+  ContentRecommendation: 'ContentRecommendation',
+  SubjectLineTest: 'SubjectLineTest',
+  SubjectLineTestResult: 'SubjectLineTestResult',
+  SentimentAnalysis: 'SentimentAnalysis',
+  ContentPersonalization: 'ContentPersonalization',
+  PredictionModel: 'PredictionModel',
+  Prediction: 'Prediction',
+  ChurnPrediction: 'ChurnPrediction',
+  LifetimeValuePrediction: 'LifetimeValuePrediction',
+  CampaignPerformancePrediction: 'CampaignPerformancePrediction',
+  OptimalSendTime: 'OptimalSendTime',
+  Journey: 'Journey',
+  JourneyStage: 'JourneyStage',
+  JourneyTransition: 'JourneyTransition',
+  ContactJourney: 'ContactJourney',
+  ContactJourneyStage: 'ContactJourneyStage',
+  ContactJourneyTransition: 'ContactJourneyTransition',
+  JourneyMetric: 'JourneyMetric',
+  JourneyStageMetric: 'JourneyStageMetric',
+  JourneyAnalytics: 'JourneyAnalytics'
 };
 
 /**

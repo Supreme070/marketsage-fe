@@ -22,7 +22,7 @@ export async function GET(
     return unauthorized();
   }
 
-  const userId = params.id;
+  const { id: userId } = await params;
 
   // Users can view their own details, admins can view anyone
   if (
