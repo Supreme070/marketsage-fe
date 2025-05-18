@@ -231,7 +231,7 @@ export async function getJourneys(options?: {
             'contactCount', (SELECT COUNT(*) FROM "ContactJourneyStage" cjs WHERE cjs."stageId" = s.id)
           ) ORDER BY s.order ASC
         ) FROM "JourneyStage" s 
-         WHERE s."journeyId" = j.id GROUP BY s."journeyId") as stages,
+         WHERE s."journeyId" = j.id GROUP BY s."journeyId", s.order) as stages,
         (SELECT COUNT(*) FROM "ContactJourney" cj WHERE cj."journeyId" = j.id) as contact_count
       FROM "Journey" j
       WHERE 1=1 ${whereClause}

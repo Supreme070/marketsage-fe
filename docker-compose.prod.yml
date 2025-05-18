@@ -69,6 +69,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://marketsage:marketsage_password@db:5432/marketsage?schema=public
       - NODE_ENV=development
+      - SKIP_CONTACT_DELETE=true
     networks:
       - marketsage-network
     volumes:
@@ -77,44 +78,82 @@ services:
       - /app/.next
     command: >
       sh -c "
-        echo 'Waiting for database to be ready...' &&
-        sleep 10 &&
-        echo 'Database schema check...' && 
+        echo '🚀 Starting MarketSage database initialization and seeding...' &&
+        sleep 30 &&
+        echo '🔍 Checking database schema...' && 
         PGPASSWORD=marketsage_password psql -h db -U marketsage -d marketsage -c \"SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'userrole');\" &&
-        echo 'Resolving conflicting migrations...' && 
-        npx prisma migrate resolve --applied 20250516143846_add_journey_tables &&
-        echo 'Running migrations...' && 
-        npx prisma migrate deploy &&
-        echo 'Creating admin user...' &&
+        
+        echo '📋 Checking migration status...' &&
+        migration_status=$(npx prisma migrate status) &&
+        
+        if echo \"$migration_status\" | grep -q 'Database schema is up to date'; then
+          echo '✅ Migrations are already up to date' 
+        else
+          echo '🔄 Resolving conflicting migrations...' && 
+          echo '🔧 Fixing problematic migration...' &&
+          PGPASSWORD=marketsage_password psql -h db -U marketsage -d marketsage -c \"DELETE FROM _prisma_migrations WHERE migration_name='20250513102558_add_user_preferences' AND rolled_back_at IS NOT NULL;\" &&
+          echo '🔧 Fixing duplicate journey migrations...' &&
+          PGPASSWORD=marketsage_password psql -h db -U marketsage -d marketsage -c \"DELETE FROM _prisma_migrations WHERE migration_name='20250516015114_add_journey_tables' AND applied_steps_count=0;\" &&
+          
+          echo '🔄 Marking LeadPulse migrations as applied...' &&
+          npx prisma migrate resolve --applied 20250517190511_reset_for_leadpulse || true &&
+          npx prisma migrate resolve --applied 20250517190526_reset_for_leadpulse || true &&
+          
+          echo '📥 Deploying remaining migrations...' &&
+          npx prisma migrate deploy
+        fi &&
+        
+        echo '👤 Creating admin user if not exists...' &&
         PGPASSWORD=marketsage_password psql -h db -U marketsage -d marketsage -c \"INSERT INTO \\\"User\\\" (id, name, email, \\\"emailVerified\\\", password, role, \\\"createdAt\\\", \\\"updatedAt\\\") 
         VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d047', 'Admin User', 'admin@example.com', NOW(), 'password123', 'ADMIN', NOW(), NOW()) 
         ON CONFLICT (id) DO NOTHING;\" &&
-        echo 'Admin user created' &&
-        echo 'Running seed scripts...' &&
+        
+        echo '🌱 Running seed scripts...' &&
         cd /app &&
-        echo 'Seeding contacts...' &&
-        npx ts-node ./src/scripts/seedContacts.ts &&
-        echo 'Seeding lists...' &&
-        npx ts-node ./src/scripts/seedLists.ts &&
-        echo 'Seeding segments...' &&
-        node ./src/scripts/seedSegments.js &&
-        echo 'Seeding email campaigns...' &&
-        npx ts-node ./src/scripts/seedEmailCampaigns.ts &&
-        echo 'Seeding SMS templates...' &&
-        npx ts-node ./src/scripts/seedSMSTemplates.ts &&
-        echo 'Seeding SMS campaigns...' &&
-        npx ts-node ./src/scripts/seedSMSCampaigns.ts &&
-        echo 'Seeding WhatsApp templates...' &&
-        npx ts-node ./src/scripts/seedWhatsAppTemplates.ts &&
-        echo 'Seeding WhatsApp campaigns...' &&
-        npx ts-node ./src/scripts/seedWhatsAppCampaigns.ts &&
-        echo 'Seeding workflows...' &&
-        npx ts-node ./src/scripts/seedWorkflows.ts &&
-        echo 'Assigning contacts...' &&
-        npx ts-node ./src/scripts/assignContactsDocker.ts &&
-        echo 'Seeding customer journeys...' &&
-        npx ts-node ./src/scripts/seedJourneys.ts &&
-        echo 'Database seeded successfully!'
+        
+        echo '👀 Checking script directories...' &&
+        ls -la /app/src/scripts/ &&
+        
+        echo '📊 Seeding contacts (preserving existing contacts)...' &&
+        SKIP_CONTACT_DELETE=true npx tsx /app/src/scripts/seedContacts.ts &&
+        
+        echo '📋 Seeding lists...' &&
+        npx tsx /app/src/scripts/seedLists.ts &&
+        
+        echo '🔖 Seeding segments...' &&
+        node /app/src/scripts/seedSegments.js &&
+        
+        echo '📧 Seeding email campaigns...' &&
+        npx tsx /app/src/scripts/seedEmailCampaigns.ts &&
+        
+        echo '📱 Seeding SMS templates...' &&
+        npx tsx /app/src/scripts/seedSMSTemplates.ts &&
+        
+        echo '📱 Seeding SMS campaigns...' &&
+        npx tsx /app/src/scripts/seedSMSCampaigns.ts &&
+        
+        echo '💬 Seeding WhatsApp templates...' &&
+        npx tsx /app/src/scripts/seedWhatsAppTemplates.ts &&
+        
+        echo '💬 Seeding WhatsApp campaigns...' &&
+        npx tsx /app/src/scripts/seedWhatsAppCampaigns.ts &&
+        
+        echo '🔄 Seeding workflows...' &&
+        npx tsx /app/src/scripts/seedWorkflows.ts &&
+        
+        echo '🛤️ Seeding journeys...' &&
+        npx tsx /app/src/scripts/seedJourneys.ts &&
+        
+        echo '🔔 Seeding notifications...' &&
+        npx tsx /app/src/scripts/seedNotifications.ts &&
+        
+        echo '⚙️ Seeding user preferences...' &&
+        npx tsx /app/src/scripts/seedUserPreferences.ts &&
+        
+        echo '🔗 Assigning contacts to current user...' &&
+        npx tsx /app/src/scripts/assignContactsDocker.ts &&
+        
+        echo '✅ Database seeded successfully!'
       "
 
 volumes:

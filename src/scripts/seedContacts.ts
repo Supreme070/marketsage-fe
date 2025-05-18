@@ -5,11 +5,14 @@ import { randomUUID } from "crypto";
 // Load environment variables
 dotenv.config();
 
+// Allow connection to both Docker internal and local connections
+const databaseUrl = process.env.DATABASE_URL || "postgresql://marketsage:marketsage_password@localhost:5432/marketsage?schema=public";
+
 // Create Prisma client with direct connection to database
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: "postgresql://marketsage:marketsage_password@db:5432/marketsage?schema=public"
+      url: databaseUrl
     }
   }
 });
@@ -219,8 +222,15 @@ async function seedContacts() {
 
   // Delete existing contacts to avoid duplicates
   try {
-    const deleteCount = await prisma.contact.deleteMany({});
-    console.log(`Deleted ${deleteCount.count} existing contacts.`);
+    // Check if we should skip contact deletion
+    const skipDelete = process.env.SKIP_CONTACT_DELETE === 'true';
+    
+    if (!skipDelete) {
+      const deleteCount = await prisma.contact.deleteMany({});
+      console.log(`Deleted ${deleteCount.count} existing contacts.`);
+    } else {
+      console.log("Skipping contact deletion as SKIP_CONTACT_DELETE is set to true.");
+    }
   } catch (error) {
     console.error("Error deleting existing contacts:", error);
     return;
@@ -231,10 +241,19 @@ async function seedContacts() {
     where: {
       role: "ADMIN",
     },
+    select: {
+      id: true,
+      email: true
+    }
   });
 
   if (!adminUser) {
-    adminUser = await prisma.user.findFirst({});
+    adminUser = await prisma.user.findFirst({
+      select: {
+        id: true,
+        email: true
+      }
+    });
 
     if (!adminUser) {
       console.error("No users found in the database. Please create a user first.");

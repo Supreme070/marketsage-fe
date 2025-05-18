@@ -612,6 +612,40 @@ async function seedWorkflows() {
   const existingWorkflows = await prisma.workflow.count();
   console.log(`Found ${existingWorkflows} existing workflows`);
 
+  // Find an admin user to associate with workflows
+  const adminUser = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { role: "ADMIN" },
+        { role: "SUPER_ADMIN" },
+        { role: "IT_ADMIN" },
+        {} // Fallback to any user if no admin found
+      ]
+    },
+    select: { id: true }
+  });
+
+  if (!adminUser) {
+    console.log("No user found to associate with workflows. Creating a default user...");
+    // Create a default user if none exists
+    const newUser = await prisma.user.create({
+      data: {
+        id: randomUUID(),
+        name: "Default Admin",
+        email: "admin@example.com",
+        role: "ADMIN",
+        password: "$2a$10$O8u2.lz1yvmFn4MjXHiRL.C56J6DNGbGw.kPjQZpJN/4DkwQH9THm", // hashed "password"
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+    });
+    console.log(`Created default user with ID: ${newUser.id}`);
+    var userId = newUser.id;
+  } else {
+    var userId = adminUser.id;
+    console.log(`Using existing user with ID: ${userId} for workflows`);
+  }
+
   // Only seed if no workflows exist
   if (existingWorkflows === 0) {
     for (const workflow of sampleWorkflows) {
@@ -623,7 +657,7 @@ async function seedWorkflows() {
           description: workflow.description,
           status: workflow.status,
           definition: workflow.definition,
-          createdById: "1", // Replace with your admin user ID
+          createdById: userId,
           createdAt: now,
           updatedAt: now,
         },

@@ -23,6 +23,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useNotifications } from "@/context/notification-context";
 
 // This would come from an API in a real application
 const SAMPLE_NOTIFICATIONS = [
@@ -109,7 +110,7 @@ const SAMPLE_NOTIFICATIONS = [
 ];
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState(SAMPLE_NOTIFICATIONS);
+  const { notifications, unreadCount, markAsRead, markAllAsRead, loading } = useNotifications();
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("newest");
@@ -132,23 +133,11 @@ export default function NotificationsPage() {
     .sort((a, b) => {
       // Sort by date
       if (sortBy === "newest") {
-        return b.timestamp.getTime() - a.timestamp.getTime();
+        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
       } else {
-        return a.timestamp.getTime() - b.timestamp.getTime();
+        return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
       }
     });
-
-  const markAsRead = (id: string) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? { ...n, read: true } : n
-    ));
-  };
-  
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
-  };
-
-  const unreadCount = notifications.filter(n => !n.read).length;
   
   const getTypeIcon = (type: string) => {
     switch(type) {
@@ -169,7 +158,7 @@ export default function NotificationsPage() {
           </p>
         </div>
         {unreadCount > 0 && (
-          <Button onClick={markAllAsRead} variant="outline" className="flex items-center gap-2">
+          <Button onClick={() => markAllAsRead()} variant="outline" className="flex items-center gap-2">
             <CheckCheck className="h-4 w-4" />
             Mark all as read
           </Button>
@@ -323,6 +312,7 @@ export default function NotificationsPage() {
                     notifications={filteredNotifications} 
                     markAsRead={markAsRead}
                     getTypeIcon={getTypeIcon}
+                    loading={loading}
                   />
                 </TabsContent>
                 <TabsContent value="unread">
@@ -330,6 +320,7 @@ export default function NotificationsPage() {
                     notifications={filteredNotifications.filter(n => !n.read)} 
                     markAsRead={markAsRead}
                     getTypeIcon={getTypeIcon}
+                    loading={loading}
                   />
                 </TabsContent>
                 <TabsContent value="read">
@@ -337,6 +328,7 @@ export default function NotificationsPage() {
                     notifications={filteredNotifications.filter(n => n.read)} 
                     markAsRead={markAsRead}
                     getTypeIcon={getTypeIcon}
+                    loading={loading}
                   />
                 </TabsContent>
               </Tabs>
@@ -349,12 +341,21 @@ export default function NotificationsPage() {
 }
 
 interface NotificationListProps {
-  notifications: typeof SAMPLE_NOTIFICATIONS;
-  markAsRead: (id: string) => void;
+  notifications: any[];
+  markAsRead: (id: string) => Promise<void>;
   getTypeIcon: (type: string) => React.ReactNode;
+  loading: boolean;
 }
 
-function NotificationList({ notifications, markAsRead, getTypeIcon }: NotificationListProps) {
+function NotificationList({ notifications, markAsRead, getTypeIcon, loading }: NotificationListProps) {
+  if (loading) {
+    return (
+      <div className="py-12 text-center text-muted-foreground">
+        <p className="text-lg font-medium">Loading notifications...</p>
+      </div>
+    );
+  }
+  
   if (notifications.length === 0) {
     return (
       <div className="py-12 text-center text-muted-foreground">
@@ -373,7 +374,7 @@ function NotificationList({ notifications, markAsRead, getTypeIcon }: Notificati
           className={`py-4 relative ${!notification.read ? 'bg-muted/30 rounded-md px-2' : ''}`}
         >
           <a 
-            href={notification.link} 
+            href={notification.link || "#"} 
             className="block"
             onClick={() => !notification.read && markAsRead(notification.id)}
           >
@@ -385,7 +386,7 @@ function NotificationList({ notifications, markAsRead, getTypeIcon }: Notificati
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium">{notification.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(notification.timestamp, { addSuffix: true })}
+                    {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true })}
                   </p>
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">{notification.message}</p>

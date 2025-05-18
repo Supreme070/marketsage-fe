@@ -3,15 +3,38 @@
  * Run with: npx ts-node src/scripts/seedJourneys.ts
  */
 
-import prisma from '@/lib/db/prisma';
+import { PrismaClient } from "@prisma/client";
+import { randomUUID } from "crypto";
 import { seedSampleJourneys } from '@/data/sampleJourneys';
+
+// Allow connection to both Docker internal and local connections
+// Try both db:5432 (Docker) and localhost:5432 (local development)
+const databaseUrl = process.env.DATABASE_URL || 
+  "postgresql://marketsage:marketsage_password@db:5432/marketsage?schema=public";
+
+console.log(`Connecting to database with URL pattern: ${databaseUrl.replace(/password.*@/, "password@")}`);
+
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: databaseUrl
+    }
+  }
+});
 
 async function main() {
   try {
+    console.log("Starting journey seeding process...");
+    
     // Get or create admin user
     let adminUser = await (prisma as any).user.findFirst({
-      where: {
-        role: 'ADMIN'
+      where: { 
+        role: "ADMIN" 
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true
       }
     });
 
@@ -19,17 +42,20 @@ async function main() {
       console.log("No admin user found, creating one...");
       adminUser = await (prisma as any).user.create({
         data: {
+          id: randomUUID(),
           name: "Admin User",
           email: "admin@example.com",
+          password: "password123",
           role: "ADMIN",
-          isActive: true,
-          password: "$2b$10$vfhPXgoLQzaHDn6Se7Llge2ePEW.JHw3lLd7OwKnOkh9rnpHT32rO" // Hashed password for 'password123'
-        }
+        },
       });
       console.log("Created admin user:", adminUser.email);
+    } else {
+      console.log("Using existing admin user:", adminUser.email);
     }
 
     // Seed journeys using admin user ID
+    console.log("Seeding sample journeys with user ID:", adminUser.id);
     const result = await seedSampleJourneys(prisma as any, adminUser.id);
     
     if (result) {

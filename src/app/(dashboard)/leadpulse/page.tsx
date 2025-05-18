@@ -2,11 +2,28 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Activity, Users, Eye, MousePointer, BarChart3, ArrowUpRight, FileText } from 'lucide-react';
+import { PlusCircle, Activity, Users, ArrowUpRight, Clock } from 'lucide-react';
+import VisitorPulseVisualization from '@/components/leadpulse/VisitorPulseVisualization';
+import JourneyVisualization from '@/components/leadpulse/JourneyVisualization';
+import VisitorInsights from '@/components/leadpulse/VisitorInsights';
+import LiveVisitorMap from '@/components/leadpulse/LiveVisitorMap';
+import VisitorBehaviorAnalysis from '@/components/leadpulse/VisitorBehaviorAnalysis';
+import { 
+  getActiveVisitors, 
+  getVisitorJourneys, 
+  getVisitorInsights, 
+  getVisitorSegments,
+  getVisitorLocations,
+  VisitorJourney,
+  VisitorPath,
+  InsightItem,
+  VisitorSegment,
+  VisitorLocation
+} from '@/lib/leadpulse/dataProvider';
 
 export default function LeadPulseDashboard() {
   const router = useRouter();
@@ -14,17 +31,74 @@ export default function LeadPulseDashboard() {
   const [totalVisitors, setTotalVisitors] = useState(0);
   const [conversionRate, setConversionRate] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [selectedTimeRange, setSelectedTimeRange] = useState('24h');
+  const [selectedVisitorId, setSelectedVisitorId] = useState<string | undefined>();
+  const [selectedLocation, setSelectedLocation] = useState<string | undefined>();
   
-  // Mock data for now - would be fetched from API
+  // Data state with proper typing
+  const [visitorData, setVisitorData] = useState<VisitorJourney[]>([]);
+  const [journeyData, setJourneyData] = useState<VisitorPath[]>([]);
+  const [insightData, setInsightData] = useState<InsightItem[]>([]);
+  const [segmentData, setSegmentData] = useState<VisitorSegment[]>([]);
+  const [locationData, setLocationData] = useState<VisitorLocation[]>([]);
+  
+  // Fetch data on component mount and when time range changes
   useEffect(() => {
-    // Simulating API call
-    setTimeout(() => {
-      setActiveVisitors(12);
-      setTotalVisitors(2458);
-      setConversionRate(3.2);
-      setLoading(false);
-    }, 1000);
-  }, []);
+    async function fetchData() {
+      setLoading(true);
+      try {
+        // Fetch all data in parallel
+        const [visitors, journeys, insights, segments, locations] = await Promise.all([
+          getActiveVisitors(selectedTimeRange),
+          getVisitorJourneys(selectedVisitorId),
+          getVisitorInsights(),
+          getVisitorSegments(),
+          getVisitorLocations(selectedTimeRange)
+        ]);
+        
+        setVisitorData(visitors);
+        setJourneyData(journeys);
+        setInsightData(insights);
+        setSegmentData(segments);
+        setLocationData(locations);
+        
+        // Calculate summary metrics
+        setActiveVisitors(visitors.filter(v => v.lastActive.includes('min') || v.lastActive.includes('just')).length);
+        setTotalVisitors(visitors.length);
+        
+        // Calculate conversion rate from journey data
+        const convertedJourneys = journeys.filter(j => j.status === 'converted');
+        const convRate = journeys.length > 0 
+          ? (convertedJourneys.length / journeys.length) * 100 
+          : 0;
+        setConversionRate(convRate);
+      } catch (error) {
+        console.error('Error fetching LeadPulse data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchData();
+  }, [selectedTimeRange, selectedVisitorId]);
+  
+  // Handle visitor selection
+  const handleSelectVisitor = (visitorId: string) => {
+    setSelectedVisitorId(visitorId);
+  };
+  
+  // Handle location selection
+  const handleSelectLocation = (location: string) => {
+    setSelectedLocation(location);
+    // In a real implementation, we would filter visitors by location
+    // For now, we'll just log it
+    console.log(`Selected location: ${location}`);
+  };
+  
+  // Handle time range change
+  const handleTimeRangeChange = (range: string) => {
+    setSelectedTimeRange(range);
+  };
   
   return (
     <div className="space-y-6">
@@ -32,22 +106,55 @@ export default function LeadPulseDashboard() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">LeadPulse</h1>
           <p className="text-muted-foreground">
-            Advanced visitor intelligence and engagement system
+            Real-time visitor intelligence and engagement system
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => router.push('/leadpulse/setup')}
-          >
-            Install Tracking Code
-          </Button>
-          <Button 
-            onClick={() => router.push('/leadpulse/forms/new')}
-          >
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Create Form
-          </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 bg-muted p-1 rounded-md">
+            <Button 
+              variant={selectedTimeRange === '1h' ? "default" : "ghost"} 
+              size="sm"
+              onClick={() => handleTimeRangeChange('1h')}
+            >
+              1h
+            </Button>
+            <Button 
+              variant={selectedTimeRange === '24h' ? "default" : "ghost"} 
+              size="sm"
+              onClick={() => handleTimeRangeChange('24h')}
+            >
+              24h
+            </Button>
+            <Button 
+              variant={selectedTimeRange === '7d' ? "default" : "ghost"} 
+              size="sm"
+              onClick={() => handleTimeRangeChange('7d')}
+            >
+              7d
+            </Button>
+            <Button 
+              variant={selectedTimeRange === '30d' ? "default" : "ghost"} 
+              size="sm"
+              onClick={() => handleTimeRangeChange('30d')}
+            >
+              30d
+            </Button>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => router.push('/leadpulse/setup')}
+            >
+              Install Tracking Code
+            </Button>
+            <Button 
+              onClick={() => router.push('/leadpulse/forms/new')}
+            >
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Create Form
+            </Button>
+          </div>
         </div>
       </div>
       
@@ -73,12 +180,18 @@ export default function LeadPulseDashboard() {
             <CardTitle className="text-sm font-medium">
               Total Visitors
             </CardTitle>
-            <CardDescription>All-time unique visitors</CardDescription>
+            <CardDescription>In selected time period</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center">
-              <Eye className="h-5 w-5 text-muted-foreground mr-2" />
-              <div className="text-2xl font-bold">{totalVisitors.toLocaleString()}</div>
+              <Users className="h-5 w-5 text-muted-foreground mr-2" />
+              <div className="text-2xl font-bold">{totalVisitors}</div>
+              <div className="flex items-center space-x-1 ml-2">
+                <div className="text-xs text-muted-foreground flex items-center">
+                  <Clock className="h-3 w-3 mr-1" />
+                  {selectedTimeRange}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -93,7 +206,7 @@ export default function LeadPulseDashboard() {
           <CardContent>
             <div className="flex items-center">
               <Activity className="h-5 w-5 text-muted-foreground mr-2" />
-              <div className="text-2xl font-bold">{conversionRate}%</div>
+              <div className="text-2xl font-bold">{conversionRate.toFixed(1)}%</div>
               <div className="flex items-center ml-auto text-green-500">
                 <ArrowUpRight className="h-4 w-4 mr-1" />
                 <span className="text-sm">0.5%</span>
@@ -103,7 +216,44 @@ export default function LeadPulseDashboard() {
         </Card>
       </div>
       
-      <Tabs defaultValue="visitors">
+      {/* World Map Visualization */}
+      <LiveVisitorMap 
+        visitorData={visitorData}
+        isLoading={loading}
+        onSelectLocation={handleSelectLocation}
+        timeRange={selectedTimeRange}
+      />
+      
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+        {/* Pulse Visualization */}
+        <VisitorPulseVisualization 
+          data={visitorData}
+          visitorId={selectedVisitorId}
+          isLoading={loading}
+          onSelectVisitor={handleSelectVisitor}
+        />
+        
+        {/* AI Insights */}
+        <VisitorInsights
+          insights={insightData}
+          segments={segmentData}
+          isLoading={loading}
+        />
+      </div>
+      
+      {/* Journey Visualization */}
+      <JourneyVisualization
+        data={journeyData}
+        selectedVisitorId={selectedVisitorId}
+        isLoading={loading}
+      />
+      
+      {/* Behavior Analysis */}
+      <VisitorBehaviorAnalysis 
+        isLoading={loading}
+      />
+      
+      <Tabs defaultValue="visitors" className="mt-6">
         <TabsList>
           <TabsTrigger value="visitors">Visitor Activity</TabsTrigger>
           <TabsTrigger value="journeys">Visitor Journeys</TabsTrigger>
@@ -120,7 +270,7 @@ export default function LeadPulseDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <RecentVisitorsTable />
+              <RecentVisitorsTable visitors={visitorData} />
             </CardContent>
           </Card>
           
@@ -148,8 +298,8 @@ export default function LeadPulseDashboard() {
             <CardContent>
               <div className="flex items-center justify-center p-12 border rounded-md">
                 <div className="text-center">
-                  <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">Journey visualization will appear here</p>
+                  <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">Please select a visitor to see their detailed journey</p>
                 </div>
               </div>
             </CardContent>
@@ -263,15 +413,15 @@ export default function LeadPulseDashboard() {
   );
 }
 
-// Mock table components
-function RecentVisitorsTable() {
-  const visitors = [
-    { id: 'vis_1', ip: '192.168.1.1', location: 'Lagos, Nigeria', device: 'Mobile, Chrome', lastActive: '2 mins ago', engagementScore: 72 },
-    { id: 'vis_2', ip: '192.168.1.2', location: 'Abuja, Nigeria', device: 'Desktop, Safari', lastActive: '5 mins ago', engagementScore: 45 },
-    { id: 'vis_3', ip: '192.168.1.3', location: 'Accra, Ghana', device: 'Tablet, Chrome', lastActive: '12 mins ago', engagementScore: 63 },
-    { id: 'vis_4', ip: '192.168.1.4', location: 'Lagos, Nigeria', device: 'Desktop, Firefox', lastActive: '17 mins ago', engagementScore: 28 },
-    { id: 'vis_5', ip: '192.168.1.5', location: 'Nairobi, Kenya', device: 'Mobile, Safari', lastActive: '32 mins ago', engagementScore: 91 },
-  ];
+// Table components
+function RecentVisitorsTable({ visitors = [] }: { visitors: VisitorJourney[] }) {
+  if (!visitors || visitors.length === 0) {
+    return (
+      <div className="text-center py-4 text-muted-foreground">
+        No visitor data available
+      </div>
+    );
+  }
   
   return (
     <div className="relative overflow-x-auto">
@@ -287,11 +437,11 @@ function RecentVisitorsTable() {
           </tr>
         </thead>
         <tbody>
-          {visitors.map(visitor => (
+          {visitors.slice(0, 5).map(visitor => (
             <tr key={visitor.id} className="bg-white border-b">
-              <td className="px-6 py-4">{visitor.id}</td>
-              <td className="px-6 py-4">{visitor.location}</td>
-              <td className="px-6 py-4">{visitor.device}</td>
+              <td className="px-6 py-4">{visitor.id.substring(0, 8)}...</td>
+              <td className="px-6 py-4">{visitor.location || 'Unknown'}</td>
+              <td className="px-6 py-4">{visitor.device || 'Unknown'}</td>
               <td className="px-6 py-4">{visitor.lastActive}</td>
               <td className="px-6 py-4">
                 <div className="flex items-center">

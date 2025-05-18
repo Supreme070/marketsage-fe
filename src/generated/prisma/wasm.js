@@ -120,6 +120,18 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
+exports.Prisma.NotificationScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  title: 'title',
+  message: 'message',
+  type: 'type',
+  category: 'category',
+  read: 'read',
+  link: 'link',
+  timestamp: 'timestamp'
+};
+
 exports.Prisma.OrganizationScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -797,6 +809,39 @@ exports.Prisma.JourneyAnalyticsScalarFieldEnum = {
   stageData: 'stageData'
 };
 
+exports.Prisma.TaskScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  description: 'description',
+  status: 'status',
+  priority: 'priority',
+  dueDate: 'dueDate',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  creatorId: 'creatorId',
+  assigneeId: 'assigneeId',
+  contactId: 'contactId',
+  segmentId: 'segmentId',
+  campaignId: 'campaignId',
+  regionId: 'regionId'
+};
+
+exports.Prisma.TaskDependencyScalarFieldEnum = {
+  id: 'id',
+  taskId: 'taskId',
+  dependsOnTaskId: 'dependsOnTaskId',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.TaskCommentScalarFieldEnum = {
+  id: 'id',
+  taskId: 'taskId',
+  content: 'content',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  createdById: 'createdById'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -1022,6 +1067,7 @@ exports.MetricAggregationType = exports.$Enums.MetricAggregationType = {
 };
 
 exports.Prisma.ModelName = {
+  Notification: 'Notification',
   Organization: 'Organization',
   User: 'User',
   Account: 'Account',
@@ -1080,7 +1126,10 @@ exports.Prisma.ModelName = {
   ContactJourneyTransition: 'ContactJourneyTransition',
   JourneyMetric: 'JourneyMetric',
   JourneyStageMetric: 'JourneyStageMetric',
-  JourneyAnalytics: 'JourneyAnalytics'
+  JourneyAnalytics: 'JourneyAnalytics',
+  Task: 'Task',
+  TaskDependency: 'TaskDependency',
+  TaskComment: 'TaskComment'
 };
 
 /**

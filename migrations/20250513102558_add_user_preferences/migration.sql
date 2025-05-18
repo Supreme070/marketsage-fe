@@ -1,8 +1,8 @@
 -- AlterTable
-ALTER TABLE "User" ADD COLUMN     "company" TEXT;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "company" TEXT;
 
 -- CreateTable
-CREATE TABLE "UserPreference" (
+CREATE TABLE IF NOT EXISTS "UserPreference" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "preferences" TEXT NOT NULL,
@@ -13,7 +13,17 @@ CREATE TABLE "UserPreference" (
 );
 
 -- CreateIndex
+DROP INDEX IF EXISTS "UserPreference_userId_key";
 CREATE UNIQUE INDEX "UserPreference_userId_key" ON "UserPreference"("userId");
 
--- AddForeignKey
-ALTER TABLE "UserPreference" ADD CONSTRAINT "UserPreference_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- Check if foreign key exists before adding
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints 
+        WHERE constraint_name = 'UserPreference_userId_fkey'
+    ) THEN
+        ALTER TABLE "UserPreference" ADD CONSTRAINT "UserPreference_userId_fkey" 
+        FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+END $$;

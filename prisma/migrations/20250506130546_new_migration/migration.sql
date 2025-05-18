@@ -1,44 +1,109 @@
 -- CreateEnum
-CREATE TYPE "UserRole" AS ENUM ('USER', 'ADMIN', 'IT_ADMIN', 'SUPER_ADMIN');
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'UserRole') THEN
+        CREATE TYPE "UserRole" AS ENUM ('USER', 'ADMIN', 'IT_ADMIN', 'SUPER_ADMIN');
+    END IF;
+END $$;
 
 -- CreateEnum
-CREATE TYPE "ContactStatus" AS ENUM ('ACTIVE', 'UNSUBSCRIBED', 'BOUNCED', 'SPAM');
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'ContactStatus') THEN
+        CREATE TYPE "ContactStatus" AS ENUM ('ACTIVE', 'UNSUBSCRIBED', 'BOUNCED', 'SPAM');
+    END IF;
+END $$;
 
 -- CreateEnum
-CREATE TYPE "ListType" AS ENUM ('STATIC', 'DYNAMIC');
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'ListType') THEN
+        CREATE TYPE "ListType" AS ENUM ('STATIC', 'DYNAMIC');
+    END IF;
+END $$;
 
 -- CreateEnum
-CREATE TYPE "CampaignStatus" AS ENUM ('DRAFT', 'SCHEDULED', 'SENDING', 'SENT', 'PAUSED', 'CANCELLED');
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'CampaignStatus') THEN
+        CREATE TYPE "CampaignStatus" AS ENUM ('DRAFT', 'SCHEDULED', 'SENDING', 'SENT', 'PAUSED', 'CANCELLED');
+    END IF;
+END $$;
 
 -- CreateEnum
-CREATE TYPE "ActivityType" AS ENUM ('SENT', 'DELIVERED', 'OPENED', 'CLICKED', 'BOUNCED', 'UNSUBSCRIBED', 'REPLIED', 'FAILED');
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'ActivityType') THEN
+        CREATE TYPE "ActivityType" AS ENUM ('SENT', 'DELIVERED', 'OPENED', 'CLICKED', 'BOUNCED', 'UNSUBSCRIBED', 'REPLIED', 'FAILED');
+    END IF;
+END $$;
 
 -- CreateEnum
-CREATE TYPE "WATemplateStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'WATemplateStatus') THEN
+        CREATE TYPE "WATemplateStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
+    END IF;
+END $$;
 
 -- CreateEnum
-CREATE TYPE "WorkflowStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'PAUSED', 'ARCHIVED');
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'WorkflowStatus') THEN
+        CREATE TYPE "WorkflowStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'PAUSED', 'ARCHIVED');
+    END IF;
+END $$;
 
 -- CreateEnum
-CREATE TYPE "WorkflowNodeType" AS ENUM ('TRIGGER', 'CONDITION', 'ACTION', 'DELAY', 'EMAIL', 'SMS', 'WHATSAPP', 'NOTIFICATION', 'WEBHOOK');
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'WorkflowNodeType') THEN
+        CREATE TYPE "WorkflowNodeType" AS ENUM ('TRIGGER', 'CONDITION', 'ACTION', 'DELAY', 'EMAIL', 'SMS', 'WHATSAPP', 'NOTIFICATION', 'WEBHOOK');
+    END IF;
+END $$;
 
 -- CreateEnum
-CREATE TYPE "TriggerType" AS ENUM ('CONTACT_CREATED', 'CONTACT_UPDATED', 'EMAIL_OPENED', 'EMAIL_CLICKED', 'FORM_SUBMITTED', 'WEBHOOK', 'SCHEDULED');
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'TriggerType') THEN
+        CREATE TYPE "TriggerType" AS ENUM ('CONTACT_CREATED', 'CONTACT_UPDATED', 'EMAIL_OPENED', 'EMAIL_CLICKED', 'FORM_SUBMITTED', 'WEBHOOK', 'SCHEDULED');
+    END IF;
+END $$;
 
 -- CreateEnum
-CREATE TYPE "EntityType" AS ENUM ('EMAIL_CAMPAIGN', 'SMS_CAMPAIGN', 'WHATSAPP_CAMPAIGN', 'WORKFLOW', 'LIST', 'SEGMENT');
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'EntityType') THEN
+        CREATE TYPE "EntityType" AS ENUM ('EMAIL_CAMPAIGN', 'SMS_CAMPAIGN', 'WHATSAPP_CAMPAIGN', 'WORKFLOW', 'LIST', 'SEGMENT');
+    END IF;
+END $$;
 
 -- CreateEnum
-CREATE TYPE "AnalyticsPeriod" AS ENUM ('DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY');
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'AnalyticsPeriod') THEN
+        CREATE TYPE "AnalyticsPeriod" AS ENUM ('DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY');
+    END IF;
+END $$;
 
 -- CreateEnum
-CREATE TYPE "IntegrationType" AS ENUM ('ECOMMERCE_WOOCOMMERCE', 'ECOMMERCE_SHOPIFY', 'CRM_SALESFORCE', 'CRM_HUBSPOT', 'PAYMENT_STRIPE', 'PAYMENT_PAYPAL', 'WEBHOOK', 'API');
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'IntegrationType') THEN
+        CREATE TYPE "IntegrationType" AS ENUM ('ECOMMERCE_WOOCOMMERCE', 'ECOMMERCE_SHOPIFY', 'CRM_SALESFORCE', 'CRM_HUBSPOT', 'PAYMENT_STRIPE', 'PAYMENT_PAYPAL', 'WEBHOOK', 'API');
+    END IF;
+END $$;
 
 -- CreateEnum
-CREATE TYPE "ConnectionStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'ERROR');
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'ConnectionStatus') THEN
+        CREATE TYPE "ConnectionStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'ERROR');
+    END IF;
+END $$;
 
 -- CreateTable
-CREATE TABLE "User" (
+CREATE TABLE IF NOT EXISTS "User" (
     "id" TEXT NOT NULL,
     "name" TEXT,
     "email" TEXT NOT NULL,
@@ -411,46 +476,46 @@ CREATE TABLE "_SMSCampaignSegments" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Account_provider_providerAccountId_key" ON "Account"("provider", "providerAccountId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Account_provider_providerAccountId_key" ON "Account"("provider", "providerAccountId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Session_sessionToken_key" ON "Session"("sessionToken");
+CREATE UNIQUE INDEX IF NOT EXISTS "Session_sessionToken_key" ON "Session"("sessionToken");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "VerificationToken_token_key" ON "VerificationToken"("token");
+CREATE UNIQUE INDEX IF NOT EXISTS "VerificationToken_token_key" ON "VerificationToken"("token");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "VerificationToken_identifier_token_key" ON "VerificationToken"("identifier", "token");
+CREATE UNIQUE INDEX IF NOT EXISTS "VerificationToken_identifier_token_key" ON "VerificationToken"("identifier", "token");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ListMember_listId_contactId_key" ON "ListMember"("listId", "contactId");
+CREATE UNIQUE INDEX IF NOT EXISTS "ListMember_listId_contactId_key" ON "ListMember"("listId", "contactId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Connection_sourceId_targetId_key" ON "Connection"("sourceId", "targetId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Connection_sourceId_targetId_key" ON "Connection"("sourceId", "targetId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Analytics_entityType_entityId_period_key" ON "Analytics"("entityType", "entityId", "period");
+CREATE UNIQUE INDEX IF NOT EXISTS "Analytics_entityType_entityId_period_key" ON "Analytics"("entityType", "entityId", "period");
 
 -- CreateIndex
-CREATE INDEX "_SMSCampaignLists_B_index" ON "_SMSCampaignLists"("B");
+CREATE INDEX IF NOT EXISTS "_SMSCampaignLists_B_index" ON "_SMSCampaignLists"("B");
 
 -- CreateIndex
-CREATE INDEX "_WACampaignLists_B_index" ON "_WACampaignLists"("B");
+CREATE INDEX IF NOT EXISTS "_WACampaignLists_B_index" ON "_WACampaignLists"("B");
 
 -- CreateIndex
-CREATE INDEX "_WACampaignSegments_B_index" ON "_WACampaignSegments"("B");
+CREATE INDEX IF NOT EXISTS "_WACampaignSegments_B_index" ON "_WACampaignSegments"("B");
 
 -- CreateIndex
-CREATE INDEX "_CampaignLists_B_index" ON "_CampaignLists"("B");
+CREATE INDEX IF NOT EXISTS "_CampaignLists_B_index" ON "_CampaignLists"("B");
 
 -- CreateIndex
-CREATE INDEX "_CampaignSegments_B_index" ON "_CampaignSegments"("B");
+CREATE INDEX IF NOT EXISTS "_CampaignSegments_B_index" ON "_CampaignSegments"("B");
 
 -- CreateIndex
-CREATE INDEX "_SMSCampaignSegments_B_index" ON "_SMSCampaignSegments"("B");
+CREATE INDEX IF NOT EXISTS "_SMSCampaignSegments_B_index" ON "_SMSCampaignSegments"("B");
 
 -- AddForeignKey
 ALTER TABLE "Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -568,3 +633,121 @@ ALTER TABLE "_SMSCampaignSegments" ADD CONSTRAINT "_SMSCampaignSegments_A_fkey" 
 
 -- AddForeignKey
 ALTER TABLE "_SMSCampaignSegments" ADD CONSTRAINT "_SMSCampaignSegments_B_fkey" FOREIGN KEY ("B") REFERENCES "Segment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- LeadPulse Models
+-- CreateTable
+CREATE TABLE IF NOT EXISTS "AnonymousVisitor" (
+    "id" TEXT NOT NULL,
+    "fingerprint" TEXT NOT NULL,
+    "ipAddress" TEXT,
+    "userAgent" TEXT,
+    "referrer" TEXT,
+    "firstVisit" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "lastVisit" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "visitCount" INTEGER NOT NULL DEFAULT 1,
+    "isIdentified" BOOLEAN NOT NULL DEFAULT false,
+    "contactId" TEXT,
+    "metadata" JSONB,
+    "geo" JSONB,
+    "device" JSONB,
+    "score" INTEGER NOT NULL DEFAULT 0,
+    "engagementLevel" TEXT,
+
+    CONSTRAINT "AnonymousVisitor_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE IF NOT EXISTS "LeadPulseTouchpoint" (
+    "id" TEXT NOT NULL,
+    "visitorId" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "url" TEXT,
+    "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "duration" INTEGER,
+    "metadata" JSONB,
+    "score" INTEGER NOT NULL DEFAULT 0,
+
+    CONSTRAINT "LeadPulseTouchpoint_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE IF NOT EXISTS "LeadPulseForm" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "fields" JSONB NOT NULL,
+    "design" JSONB,
+    "thankyouMessage" TEXT,
+    "redirectUrl" TEXT,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdById" TEXT NOT NULL,
+    "submissionCount" INTEGER NOT NULL DEFAULT 0,
+    "conversionRate" DOUBLE PRECISION,
+
+    CONSTRAINT "LeadPulseForm_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE IF NOT EXISTS "LeadPulseJourney" (
+    "id" TEXT NOT NULL,
+    "visitorId" TEXT NOT NULL,
+    "startDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "lastUpdate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "stage" TEXT NOT NULL DEFAULT 'AWARENESS',
+    "completionDate" TIMESTAMP(3),
+    "score" INTEGER NOT NULL DEFAULT 0,
+    "isCompleted" BOOLEAN NOT NULL DEFAULT false,
+    "source" TEXT,
+
+    CONSTRAINT "LeadPulseJourney_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE IF NOT EXISTS "LeadPulseConfig" (
+    "id" TEXT NOT NULL,
+    "websiteUrl" TEXT NOT NULL,
+    "trackingDomains" JSONB,
+    "excludedPaths" JSONB,
+    "visitorExpiry" INTEGER NOT NULL DEFAULT 90,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdById" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+
+    CONSTRAINT "LeadPulseConfig_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE IF NOT EXISTS "LeadPulseWhatsAppQR" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "number" TEXT NOT NULL,
+    "message" TEXT,
+    "qrImageUrl" TEXT,
+    "scanCount" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdById" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+
+    CONSTRAINT "LeadPulseWhatsAppQR_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX IF NOT EXISTS "AnonymousVisitor_fingerprint_key" ON "AnonymousVisitor"("fingerprint");
+
+-- Add Foreign Keys for LeadPulse models
+ALTER TABLE "AnonymousVisitor" ADD CONSTRAINT "AnonymousVisitor_contactId_fkey" FOREIGN KEY ("contactId") REFERENCES "Contact"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE "LeadPulseTouchpoint" ADD CONSTRAINT "LeadPulseTouchpoint_visitorId_fkey" FOREIGN KEY ("visitorId") REFERENCES "AnonymousVisitor"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "LeadPulseForm" ADD CONSTRAINT "LeadPulseForm_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+ALTER TABLE "LeadPulseJourney" ADD CONSTRAINT "LeadPulseJourney_visitorId_fkey" FOREIGN KEY ("visitorId") REFERENCES "AnonymousVisitor"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "LeadPulseConfig" ADD CONSTRAINT "LeadPulseConfig_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+ALTER TABLE "LeadPulseWhatsAppQR" ADD CONSTRAINT "LeadPulseWhatsAppQR_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

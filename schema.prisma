@@ -70,12 +70,13 @@ model Contact {
   createdAt        DateTime           @default(now())
   updatedAt        DateTime
   createdById      String
+  AnonymousVisitor AnonymousVisitor[]
   createdBy        User               @relation("UserToContact", fields: [createdById], references: [id])
+  ContactJourney   ContactJourney[]
   EmailActivity    EmailActivity[]
   ListMember       ListMember[]
   SMSActivity      SMSActivity[]
   WhatsAppActivity WhatsAppActivity[]
-  ContactJourney   ContactJourney[]
 }
 
 model EmailActivity {
@@ -231,37 +232,36 @@ model Session {
 }
 
 model User {
-  id               String             @id @default(cuid())
-  name             String?
-  email            String             @unique
-  emailVerified    DateTime?
-  password         String?
-  image            String?
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  lastLogin        DateTime?
-  isActive         Boolean            @default(true)
-  role             UserRole           @default(USER)
-  company          String?
-  Account          Account[]
-  Contact          Contact[]          @relation("UserToContact")
-  EmailCampaign    EmailCampaign[]    @relation("UserToEmailCampaign")
-  EmailTemplate    EmailTemplate[]    @relation("UserToEmailTemplate")
-  List             List[]             @relation("UserToList")
-  SMSCampaign      SMSCampaign[]      @relation("UserToSMSCampaign")
-  SMSTemplate      SMSTemplate[]      @relation("UserToSMSTemplate")
-  Segment          Segment[]          @relation("UserToSegment")
-  Session          Session[]
-  preference       UserPreference?    @relation("UserToPreference")
-  WhatsAppCampaign WhatsAppCampaign[] @relation("UserToWhatsAppCampaign")
-  WhatsAppTemplate WhatsAppTemplate[] @relation("UserToWhatsAppTemplate")
-  Workflow         Workflow[]         @relation("UserToWorkflow")
-  Journey          Journey[]
-  // LeadPulse Relations
-  LeadPulseForms       LeadPulseForm[]       @relation("UserToLeadPulseForm")
-  LeadPulseWebhooks    LeadPulseWebhook[]    @relation("UserToLeadPulseWebhook")
+  id                   String                @id @default(cuid())
+  name                 String?
+  email                String                @unique
+  emailVerified        DateTime?
+  password             String?
+  image                String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  lastLogin            DateTime?
+  isActive             Boolean               @default(true)
+  role                 UserRole              @default(USER)
+  company              String?
+  Account              Account[]
+  Contact              Contact[]             @relation("UserToContact")
+  EmailCampaign        EmailCampaign[]       @relation("UserToEmailCampaign")
+  EmailTemplate        EmailTemplate[]       @relation("UserToEmailTemplate")
+  Journey              Journey[]
   LeadPulseConfigs     LeadPulseConfig[]     @relation("UserToLeadPulseConfig")
+  LeadPulseForms       LeadPulseForm[]       @relation("UserToLeadPulseForm")
   LeadPulseWhatsAppQRs LeadPulseWhatsAppQR[] @relation("UserToLeadPulseWhatsAppQR")
+  List                 List[]                @relation("UserToList")
+  Notification         Notification[]
+  SMSCampaign          SMSCampaign[]         @relation("UserToSMSCampaign")
+  SMSTemplate          SMSTemplate[]         @relation("UserToSMSTemplate")
+  Segment              Segment[]             @relation("UserToSegment")
+  Session              Session[]
+  preference           UserPreference?       @relation("UserToPreference")
+  WhatsAppCampaign     WhatsAppCampaign[]    @relation("UserToWhatsAppCampaign")
+  WhatsAppTemplate     WhatsAppTemplate[]    @relation("UserToWhatsAppTemplate")
+  Workflow             Workflow[]            @relation("UserToWorkflow")
 }
 
 model VerificationToken {
@@ -362,71 +362,71 @@ model UserPreference {
 }
 
 model Journey {
-  id               String              @id
+  id               String             @id
   name             String
   description      String?
-  isActive         Boolean             @default(true)
+  isActive         Boolean            @default(true)
   createdById      String
-  createdAt        DateTime            @default(now())
+  createdAt        DateTime           @default(now())
   updatedAt        DateTime
-  createdBy        User                @relation(fields: [createdById], references: [id])
-  JourneyStage     JourneyStage[]
   ContactJourney   ContactJourney[]
-  JourneyMetric    JourneyMetric[]
+  createdBy        User               @relation(fields: [createdById], references: [id])
   JourneyAnalytics JourneyAnalytics[]
+  JourneyMetric    JourneyMetric[]
+  JourneyStage     JourneyStage[]
 }
 
 model JourneyStage {
-  id                        String                     @id
-  journeyId                 String
-  name                      String
-  description               String?
-  order                     Int
-  expectedDuration          Int?
-  conversionGoal            Float?
-  isEntryPoint              Boolean                    @default(false)
-  isExitPoint               Boolean                    @default(false)
-  createdAt                 DateTime                   @default(now())
-  updatedAt                 DateTime
-  Journey                   Journey                    @relation(fields: [journeyId], references: [id], onDelete: Cascade)
-  JourneyTransition_from    JourneyTransition[]        @relation("JourneyTransition_fromStageIdToJourneyStage")
-  JourneyTransition_to      JourneyTransition[]        @relation("JourneyTransition_toStageIdToJourneyStage")
-  ContactJourney            ContactJourney[]           @relation("ContactJourney_currentStageIdToJourneyStage")
-  ContactJourneyStage       ContactJourneyStage[]
+  id                            String                     @id
+  journeyId                     String
+  name                          String
+  description                   String?
+  order                         Int
+  expectedDuration              Int?
+  conversionGoal                Float?
+  isEntryPoint                  Boolean                    @default(false)
+  isExitPoint                   Boolean                    @default(false)
+  createdAt                     DateTime                   @default(now())
+  updatedAt                     DateTime
+  ContactJourney                ContactJourney[]           @relation("ContactJourney_currentStageIdToJourneyStage")
+  ContactJourneyStage           ContactJourneyStage[]
   ContactJourneyTransition_from ContactJourneyTransition[] @relation("ContactJourneyTransition_fromStageIdToJourneyStage")
   ContactJourneyTransition_to   ContactJourneyTransition[] @relation("ContactJourneyTransition_toStageIdToJourneyStage")
-  JourneyStageMetric        JourneyStageMetric[]
+  Journey                       Journey                    @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  JourneyStageMetric            JourneyStageMetric[]
+  JourneyTransition_from        JourneyTransition[]        @relation("JourneyTransition_fromStageIdToJourneyStage")
+  JourneyTransition_to          JourneyTransition[]        @relation("JourneyTransition_toStageIdToJourneyStage")
 }
 
 model JourneyTransition {
-  id                  String                  @id
-  fromStageId         String
-  toStageId           String
-  name                String
-  description         String?
-  triggerType         String
-  triggerDetails      Json?
-  conditions          Json?
-  createdAt           DateTime                @default(now())
-  updatedAt           DateTime
-  fromStage           JourneyStage            @relation("JourneyTransition_fromStageIdToJourneyStage", fields: [fromStageId], references: [id], onDelete: Cascade)
-  toStage             JourneyStage            @relation("JourneyTransition_toStageIdToJourneyStage", fields: [toStageId], references: [id], onDelete: Cascade)
+  id                       String                     @id
+  fromStageId              String
+  toStageId                String
+  name                     String
+  description              String?
+  triggerType              String
+  triggerDetails           Json?
+  conditions               Json?
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime
   ContactJourneyTransition ContactJourneyTransition[]
+  fromStage                JourneyStage               @relation("JourneyTransition_fromStageIdToJourneyStage", fields: [fromStageId], references: [id], onDelete: Cascade)
+  toStage                  JourneyStage               @relation("JourneyTransition_toStageIdToJourneyStage", fields: [toStageId], references: [id], onDelete: Cascade)
 }
 
 model ContactJourney {
-  id                  String                  @id
-  contactId           String
-  journeyId           String
-  currentStageId      String?
-  entryDate           DateTime                @default(now())
-  lastUpdated         DateTime
-  completionDate      DateTime?
-  isCompleted         Boolean                 @default(false)
-  properties          Json?
-  Contact             Contact                 @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  Journey             Journey                 @relation(fields: [journeyId], references: [id], onDelete: Cascade)
-  currentStage        JourneyStage?           @relation("ContactJourney_currentStageIdToJourneyStage", fields: [currentStageId], references: [id])
+  id                       String                     @id
+  contactId                String
+  journeyId                String
+  currentStageId           String?
+  entryDate                DateTime                   @default(now())
+  lastUpdated              DateTime
+  completionDate           DateTime?
+  isCompleted              Boolean                    @default(false)
+  properties               Json?
+  Contact                  Contact                    @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  currentStage             JourneyStage?              @relation("ContactJourney_currentStageIdToJourneyStage", fields: [currentStageId], references: [id])
+  Journey                  Journey                    @relation(fields: [journeyId], references: [id], onDelete: Cascade)
   ContactJourneyStage      ContactJourneyStage[]
   ContactJourneyTransition ContactJourneyTransition[]
 }
@@ -445,47 +445,47 @@ model ContactJourneyStage {
 }
 
 model ContactJourneyTransition {
-  id               String           @id
-  contactJourneyId String
-  transitionId     String
-  fromStageId      String
-  toStageId        String
-  transitionDate   DateTime         @default(now())
-  triggerDetails   Json?
-  ContactJourney   ContactJourney   @relation(fields: [contactJourneyId], references: [id], onDelete: Cascade)
+  id                String            @id
+  contactJourneyId  String
+  transitionId      String
+  fromStageId       String
+  toStageId         String
+  transitionDate    DateTime          @default(now())
+  triggerDetails    Json?
+  ContactJourney    ContactJourney    @relation(fields: [contactJourneyId], references: [id], onDelete: Cascade)
+  fromStage         JourneyStage      @relation("ContactJourneyTransition_fromStageIdToJourneyStage", fields: [fromStageId], references: [id], onDelete: Cascade)
+  toStage           JourneyStage      @relation("ContactJourneyTransition_toStageIdToJourneyStage", fields: [toStageId], references: [id], onDelete: Cascade)
   JourneyTransition JourneyTransition @relation(fields: [transitionId], references: [id], onDelete: Cascade)
-  fromStage        JourneyStage     @relation("ContactJourneyTransition_fromStageIdToJourneyStage", fields: [fromStageId], references: [id], onDelete: Cascade)
-  toStage          JourneyStage     @relation("ContactJourneyTransition_toStageIdToJourneyStage", fields: [toStageId], references: [id], onDelete: Cascade)
 }
 
 model JourneyMetric {
-  id               String   @id
-  journeyId        String
-  name             String
-  description      String?
-  metricType       String
-  targetValue      Float?
-  aggregationType  String?
-  formula          String?
-  isSuccess        Boolean  @default(false)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime
-  Journey          Journey  @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  id              String   @id
+  journeyId       String
+  name            String
+  description     String?
+  metricType      String
+  targetValue     Float?
+  aggregationType String?
+  formula         String?
+  isSuccess       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime
+  Journey         Journey  @relation(fields: [journeyId], references: [id], onDelete: Cascade)
 }
 
 model JourneyStageMetric {
-  id               String      @id
-  stageId          String
-  name             String
-  description      String?
-  metricType       String
-  targetValue      Float?
-  aggregationType  String?
-  formula          String?
-  isSuccess        Boolean     @default(false)
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime
-  JourneyStage     JourneyStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  id              String       @id
+  stageId         String
+  name            String
+  description     String?
+  metricType      String
+  targetValue     Float?
+  aggregationType String?
+  formula         String?
+  isSuccess       Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime
+  JourneyStage    JourneyStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
 }
 
 model JourneyAnalytics {
@@ -499,6 +499,110 @@ model JourneyAnalytics {
   dropoffPoints     Json?
   metrics           Json?
   Journey           Journey  @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+}
+
+model AnonymousVisitor {
+  id                  String                @id @default(cuid())
+  fingerprint         String                @unique
+  ipAddress           String?
+  userAgent           String?
+  referrer            String?
+  firstVisit          DateTime              @default(now())
+  lastVisit           DateTime              @default(now())
+  visitCount          Int                   @default(1)
+  isIdentified        Boolean               @default(false)
+  contactId           String?
+  metadata            Json?
+  geo                 Json?
+  device              Json?
+  score               Int                   @default(0)
+  engagementLevel     String?
+  Contact             Contact?              @relation(fields: [contactId], references: [id])
+  LeadPulseJourney    LeadPulseJourney[]
+  LeadPulseTouchpoint LeadPulseTouchpoint[]
+}
+
+model LeadPulseTouchpoint {
+  id        String           @id @default(cuid())
+  visitorId String
+  type      String
+  url       String?
+  timestamp DateTime         @default(now())
+  duration  Int?
+  metadata  Json?
+  score     Int              @default(0)
+  visitor   AnonymousVisitor @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+}
+
+model LeadPulseForm {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  fields          Json
+  design          Json?
+  thankyouMessage String?
+  redirectUrl     String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdById     String
+  submissionCount Int      @default(0)
+  conversionRate  Float?
+  createdBy       User     @relation("UserToLeadPulseForm", fields: [createdById], references: [id])
+}
+
+model LeadPulseJourney {
+  id             String           @id @default(cuid())
+  visitorId      String
+  startDate      DateTime         @default(now())
+  lastUpdate     DateTime         @default(now())
+  stage          String           @default("AWARENESS")
+  completionDate DateTime?
+  score          Int              @default(0)
+  isCompleted    Boolean          @default(false)
+  source         String?
+  visitor        AnonymousVisitor @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+}
+
+model LeadPulseConfig {
+  id              String   @id @default(cuid())
+  websiteUrl      String
+  trackingDomains Json?
+  excludedPaths   Json?
+  visitorExpiry   Int      @default(90)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdById     String
+  isActive        Boolean  @default(true)
+  createdBy       User     @relation("UserToLeadPulseConfig", fields: [createdById], references: [id])
+}
+
+model LeadPulseWhatsAppQR {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  number      String
+  message     String?
+  qrImageUrl  String?
+  scanCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+  isActive    Boolean  @default(true)
+  createdBy   User     @relation("UserToLeadPulseWhatsAppQR", fields: [createdById], references: [id])
+}
+
+model Notification {
+  id        String   @id
+  userId    String
+  title     String
+  message   String
+  type      String
+  category  String
+  read      Boolean  @default(false)
+  link      String?
+  timestamp DateTime @default(now())
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum ActivityType {
@@ -606,131 +710,4 @@ enum WorkflowStatus {
   INACTIVE
   PAUSED
   ARCHIVED
-}
-
-// LeadPulse Models
-model AnonymousVisitor {
-  id                String               @id @default(cuid())
-  fingerprint       String               @unique
-  firstVisitedAt    DateTime             @default(now())
-  lastVisitedAt     DateTime             @updatedAt
-  visits            Int                  @default(1)
-  conversionStatus  ConversionStatus     @default(ANONYMOUS)
-  ipAddress         String?
-  country           String?
-  region            String?
-  city              String?
-  device            String?
-  browser           String?
-  os                String?
-  referrer          String?
-  utmSource         String?
-  utmMedium         String?
-  utmCampaign       String?
-  contactId         String?              // If converted to a contact
-  engagementScore   Float                @default(0)
-  metadata          Json?
-  LeadPulseTouchpoint LeadPulseTouchpoint[]
-  LeadPulseForm       LeadPulseForm[]
-  LeadPulseJourney    LeadPulseJourney[]
-}
-
-model LeadPulseTouchpoint {
-  id                String               @id @default(cuid())
-  visitorId         String
-  timestamp         DateTime             @default(now())
-  pageUrl           String
-  pageTitle         String?
-  duration          Int?                 // Time spent on page in seconds
-  clickData         Json?                // Data about clicks on the page
-  scrollDepth       Int?                 // Percentage of page scrolled
-  exitIntent        Boolean              @default(false)
-  visitor           AnonymousVisitor     @relation(fields: [visitorId], references: [id], onDelete: Cascade)
-}
-
-model LeadPulseForm {
-  id                String               @id @default(cuid())
-  name              String
-  description       String?
-  formType          FormType             @default(STANDARD)
-  fields            Json                 // Form field configuration
-  conditionalLogic  Json?                // Rules for showing/hiding fields
-  designSettings    Json?                // Visual customization options
-  createdById       String
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
-  isActive          Boolean              @default(true)
-  conversionRate    Float?
-  submissions       Int                  @default(0)
-  views             Int                  @default(0)
-  createdBy         User                 @relation("UserToLeadPulseForm", fields: [createdById], references: [id])
-  AnonymousVisitor  AnonymousVisitor[]
-}
-
-model LeadPulseJourney {
-  id                String               @id @default(cuid())
-  visitorId         String
-  touchpoints       Json                 // Array of touchpoint IDs and metadata
-  score             Float                @default(0)
-  predictedConversion Float?             // AI-predicted likelihood of conversion
-  predictedValue    Float?               // AI-predicted value of the lead
-  startedAt         DateTime             @default(now())
-  lastActivity      DateTime             @updatedAt
-  convertedAt       DateTime?            // When visitor became a contact
-  visitor           AnonymousVisitor     @relation(fields: [visitorId], references: [id], onDelete: Cascade)
-}
-
-model LeadPulseWebhook {
-  id                String               @id @default(cuid())
-  name              String
-  url               String
-  secret            String
-  events            String[]             // Array of event types to trigger webhook
-  createdById       String
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
-  isActive          Boolean              @default(true)
-  createdBy         User                 @relation("UserToLeadPulseWebhook", fields: [createdById], references: [id])
-}
-
-model LeadPulseConfig {
-  id                String               @id @default(cuid())
-  pixelId           String               @unique
-  websiteUrl        String
-  websiteName       String?
-  createdById       String
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
-  isActive          Boolean              @default(true)
-  settings          Json                 // Configuration settings
-  createdBy         User                 @relation("UserToLeadPulseConfig", fields: [createdById], references: [id])
-}
-
-model LeadPulseWhatsAppQR {
-  id                String               @id @default(cuid())
-  name              String
-  whatsappNumber    String
-  message           String?
-  qrCodeUrl         String
-  scans             Int                  @default(0)
-  createdById       String
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
-  createdBy         User                 @relation("UserToLeadPulseWhatsAppQR", fields: [createdById], references: [id])
-}
-
-enum ConversionStatus {
-  ANONYMOUS
-  ENGAGED
-  QUALIFIED
-  CONVERTED
-}
-
-enum FormType {
-  STANDARD
-  EXIT_INTENT
-  EMBEDDED
-  POPUP
-  CHATBOT
-  PROGRESSIVE
 }

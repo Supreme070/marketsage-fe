@@ -90,22 +90,91 @@ export default function EngagementDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState(mockData);
   const [chartType, setChartType] = useState('bar');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Simulate API call to fetch data
-    const timer = setTimeout(() => {
-      setData(mockData);
-      setLoading(false);
-    }, 1500);
+    // Fetch real data from API
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/dashboard?period=${timeRange}`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch dashboard data');
+        }
+        
+        const apiData = await response.json();
+        
+        // Transform API data to match the component's expected format
+        const transformedData = {
+          emailStats: apiData.emailStats,
+          opensByHour: apiData.opensByHour || mockData.opensByHour,
+          opensByDay: mockData.opensByDay, // Use mock data for now
+          deliveryStatus: [
+            { name: 'Delivered', value: apiData.emailStats.delivered || 0 },
+            { name: 'Bounced', value: apiData.emailStats.bounced || 0 },
+          ],
+          engagementStatus: [
+            { name: 'Opened', value: apiData.emailStats.opened || 0 },
+            { name: 'Not Opened', value: (apiData.emailStats.delivered - apiData.emailStats.opened) || 0 },
+          ],
+          clickStatus: [
+            { name: 'Clicked', value: apiData.emailStats.clicked || 0 },
+            { name: 'Not Clicked', value: (apiData.emailStats.opened - apiData.emailStats.clicked) || 0 },
+          ],
+          topCampaigns: apiData.campaignPerformance || mockData.topCampaigns,
+          clicksByLink: mockData.clicksByLink, // Use mock data for now
+        };
+        
+        setData(transformedData);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching analytics data:', error);
+        // Fall back to mock data on error
+        setData(mockData);
+        toast.error('Failed to load analytics data. Using sample data instead.');
+        setLoading(false);
+      }
+    };
 
-    return () => clearTimeout(timer);
-  }, []);
+    fetchData();
+  }, [timeRange]);
 
   const handleRefresh = async () => {
     try {
       setRefreshing(true);
-      // Simulate API call to refresh data
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Fetch real data from API
+      const response = await fetch(`/api/dashboard?period=${timeRange}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch dashboard data');
+      }
+      
+      const apiData = await response.json();
+      
+      // Transform API data as before
+      const transformedData = {
+        emailStats: apiData.emailStats,
+        opensByHour: apiData.opensByHour || mockData.opensByHour,
+        opensByDay: mockData.opensByDay,
+        deliveryStatus: [
+          { name: 'Delivered', value: apiData.emailStats.delivered || 0 },
+          { name: 'Bounced', value: apiData.emailStats.bounced || 0 },
+        ],
+        engagementStatus: [
+          { name: 'Opened', value: apiData.emailStats.opened || 0 },
+          { name: 'Not Opened', value: (apiData.emailStats.delivered - apiData.emailStats.opened) || 0 },
+        ],
+        clickStatus: [
+          { name: 'Clicked', value: apiData.emailStats.clicked || 0 },
+          { name: 'Not Clicked', value: (apiData.emailStats.opened - apiData.emailStats.clicked) || 0 },
+        ],
+        topCampaigns: apiData.campaignPerformance || mockData.topCampaigns,
+        clicksByLink: mockData.clicksByLink,
+      };
+      
+      setData(transformedData);
       setRefreshing(false);
       toast.success('Dashboard data refreshed');
     } catch (error) {

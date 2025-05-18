@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { formatDistanceToNow } from "date-fns";
+import { useNotifications } from "@/context/notification-context";
 
 // Sample notification data - in a real app this would come from an API
 const SAMPLE_NOTIFICATIONS = [
@@ -60,20 +61,8 @@ interface HeaderProps {
 }
 
 export function Header({ className }: HeaderProps) {
-  const [notifications, setNotifications] = useState(SAMPLE_NOTIFICATIONS);
   const [open, setOpen] = useState(false);
-  
-  const unreadCount = notifications.filter(n => !n.read).length;
-  
-  const markAsRead = (id: string) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? { ...n, read: true } : n
-    ));
-  };
-  
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
-  };
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   
   const getTypeColor = (type: string) => {
     switch(type) {
@@ -114,7 +103,7 @@ export function Header({ className }: HeaderProps) {
             <div className="flex items-center justify-between p-4">
               <h4 className="font-medium text-sm">Notifications</h4>
               {unreadCount > 0 && (
-                <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-auto py-1 text-xs">
+                <Button variant="ghost" size="sm" onClick={() => markAllAsRead()} className="h-auto py-1 text-xs">
                   Mark all as read
                 </Button>
               )}
@@ -127,13 +116,13 @@ export function Header({ className }: HeaderProps) {
                 </div>
               ) : (
                 <div>
-                  {notifications.map((notification) => (
+                  {notifications.slice(0, 5).map((notification) => (
                     <div 
                       key={notification.id}
                       className={`p-3 hover:bg-muted/50 relative ${!notification.read ? 'bg-muted/30' : ''}`}
                     >
                       <a 
-                        href={notification.link} 
+                        href={notification.link || "#"} 
                         className="block"
                         onClick={() => markAsRead(notification.id)}
                       >
@@ -143,7 +132,7 @@ export function Header({ className }: HeaderProps) {
                             <p className="text-sm font-medium">{notification.title}</p>
                             <p className="text-xs text-muted-foreground">{notification.message}</p>
                             <p className="text-xs text-muted-foreground mt-1">
-                              {formatDistanceToNow(notification.timestamp, { addSuffix: true })}
+                              {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true })}
                             </p>
                           </div>
                         </div>

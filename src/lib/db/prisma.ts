@@ -46,7 +46,7 @@ const createPrismaClient = (): CustomPrismaClient => {
 const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
 // Add middleware for query timeout and retry
-prisma.$use(async (params, next) => {
+prisma.$use(async (params: any, next: any) => {
   let attempts = 0;
 
   async function runWithRetry() {

@@ -19,15 +19,9 @@ sleep 20
 echo "🔍 Checking service status..."
 docker ps
 
-# Clean existing data if needed
-echo "🧹 Cleaning existing contacts..."
-echo 'DELETE FROM "Contact";' > delete_contacts.sql
-docker cp delete_contacts.sql marketsage-db:/tmp/
-docker exec marketsage-db psql -U marketsage -d marketsage -f /tmp/delete_contacts.sql
-
-# Seed African contacts
-echo "🌍 Seeding African contacts..."
-docker exec marketsage-web npx tsx /app/src/scripts/seedContacts.ts
+# Seed African contacts (preserving existing contacts)
+echo "🌍 Seeding African contacts (preserving existing contacts)..."
+docker exec -e SKIP_CONTACT_DELETE=true marketsage-web npx tsx /app/src/scripts/seedContacts.ts
 
 # Seed lists
 echo "📋 Seeding lists..."

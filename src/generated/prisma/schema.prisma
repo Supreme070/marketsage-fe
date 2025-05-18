@@ -9,6 +9,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Notification model for system notifications
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String // info, success, warning, error
+  category  String // system, campaigns, workflows, etc.
+  read      Boolean  @default(false)
+  link      String? // Optional link to navigate to when clicked
+  timestamp DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 // Updated UserRole enum to add more specific roles
 enum UserRole {
   USER
@@ -71,6 +87,12 @@ model User {
   contentRecommendations ContentRecommendation[] @relation("ContentRecommendationUser")
   subjectLineTests       SubjectLineTest[]       @relation("SubjectLineTestCreator")
   journeys               Journey[]               @relation("JourneyCreator")
+  notifications          Notification[] // Add relation to notifications
+
+  // Task management relations
+  createdTasks  Task[]        @relation("TaskCreator")
+  assignedTasks Task[]        @relation("TaskAssignee")
+  taskComments  TaskComment[]
 }
 
 // NextAuth.js required models
@@ -263,6 +285,7 @@ model EmailCampaign {
   lists      List[]          @relation("CampaignLists")
   segments   Segment[]       @relation("CampaignSegments")
   activities EmailActivity[]
+  tasks      Task[]
 }
 
 model EmailActivity {
@@ -1192,4 +1215,56 @@ enum MetricAggregationType {
   COUNT
   MIN
   MAX
+}
+
+// Task management models
+model Task {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  status      String    @default("TODO")
+  priority    String    @default("MEDIUM")
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  creatorId   String
+  assigneeId  String?
+  contactId   String?
+  segmentId   String?
+  campaignId  String?
+  regionId    String?
+
+  // Relations
+  creator      User             @relation(name: "TaskCreator", fields: [creatorId], references: [id])
+  assignee     User?            @relation(name: "TaskAssignee", fields: [assigneeId], references: [id])
+  campaign     EmailCampaign?   @relation(fields: [campaignId], references: [id])
+  dependencies TaskDependency[] @relation("DependentTask")
+  dependsOn    TaskDependency[] @relation("PrerequisiteTask")
+  comments     TaskComment[]
+}
+
+model TaskDependency {
+  id              String   @id @default(cuid())
+  taskId          String
+  dependsOnTaskId String
+  createdAt       DateTime @default(now())
+
+  // Relations
+  task          Task @relation("DependentTask", fields: [taskId], references: [id], onDelete: Cascade)
+  dependsOnTask Task @relation("PrerequisiteTask", fields: [dependsOnTaskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, dependsOnTaskId])
+}
+
+model TaskComment {
+  id          String   @id @default(cuid())
+  taskId      String
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String
+
+  // Relations
+  task      Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  createdBy User @relation(fields: [createdById], references: [id])
 }

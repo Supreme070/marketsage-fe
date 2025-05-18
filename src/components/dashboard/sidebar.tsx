@@ -49,6 +49,11 @@ const sidebarNavItems: NavItem[] = [
     icon: BarChart4,
   },
   {
+    title: "Tasks",
+    href: "/tasks",
+    icon: FileText,
+  },
+  {
     title: "Contacts",
     href: "/contacts",
     icon: Users,

@@ -42,4 +42,7 @@ ts-node src/scripts/seedUserPreferences.ts
 echo "Assigning contacts to lists..."
 ts-node src/scripts/assignContactsToLists.ts
 
+echo "Seeding notifications..."
+ts-node src/scripts/seedNotifications.ts
+
 echo "Seeding complete!" 

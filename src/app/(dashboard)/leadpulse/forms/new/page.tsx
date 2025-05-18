@@ -287,8 +287,15 @@ export default function NewFormPage() {
         <div className="md:col-span-2">
           <Card>
             <CardHeader>
+              <CardTitle>Form Builder</CardTitle>
+              <CardDescription>
+                Create and customize your form
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent>
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-3 mb-4">
                   <TabsTrigger value="fields">
                     <Settings className="h-4 w-4 mr-2" />
                     Form Fields
@@ -302,204 +309,202 @@ export default function NewFormPage() {
                     Embed Code
                   </TabsTrigger>
                 </TabsList>
-              </Tabs>
-            </CardHeader>
-            
-            <CardContent>
-              <TabsContent value="fields" className="mt-0">
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-medium">Form Fields</h3>
-                    <Button onClick={addField} size="sm">
-                      <PlusCircle className="h-4 w-4 mr-2" />
-                      Add Field
-                    </Button>
-                  </div>
-                  
+
+                <TabsContent value="fields" className="mt-0">
                   <div className="space-y-4">
-                    {fields.map((field, index) => (
-                      <Card key={field.id} className="relative">
-                        <CardHeader className="pb-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <MoveVertical className="h-4 w-4 mr-2 text-muted-foreground cursor-move" />
-                              <CardTitle className="text-base">{field.label || 'Unnamed Field'}</CardTitle>
-                            </div>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              onClick={() => removeField(field.id)}
-                              className="h-8 w-8 text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <CardDescription>
-                            {fieldTypes.find(t => t.value === field.type)?.label || field.type}
-                          </CardDescription>
-                        </CardHeader>
-                        
-                        <CardContent className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor={`field-label-${field.id}`}>Field Label</Label>
-                              <Input 
-                                id={`field-label-${field.id}`}
-                                value={field.label}
-                                onChange={(e) => updateField(field.id, 'label', e.target.value)}
-                                placeholder="Label"
-                              />
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <Label htmlFor={`field-name-${field.id}`}>Field Name</Label>
-                              <Input 
-                                id={`field-name-${field.id}`}
-                                value={field.name}
-                                onChange={(e) => updateField(field.id, 'name', e.target.value)}
-                                placeholder="name"
-                              />
-                            </div>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor={`field-type-${field.id}`}>Field Type</Label>
-                              <Select 
-                                value={field.type}
-                                onValueChange={(value) => updateField(field.id, 'type', value)}
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-lg font-medium">Form Fields</h3>
+                      <Button onClick={addField} size="sm">
+                        <PlusCircle className="h-4 w-4 mr-2" />
+                        Add Field
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {fields.map((field, index) => (
+                        <Card key={field.id} className="relative">
+                          <CardHeader className="pb-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center">
+                                <MoveVertical className="h-4 w-4 mr-2 text-muted-foreground cursor-move" />
+                                <CardTitle className="text-base">{field.label || 'Unnamed Field'}</CardTitle>
+                              </div>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => removeField(field.id)}
+                                className="h-8 w-8 text-destructive"
                               >
-                                <SelectTrigger id={`field-type-${field.id}`}>
-                                  <SelectValue placeholder="Select field type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {fieldTypes.map((type) => (
-                                    <SelectItem key={type.value} value={type.value}>
-                                      {type.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
-                            
-                            <div className="space-y-2">
-                              <Label htmlFor={`field-placeholder-${field.id}`}>Placeholder</Label>
-                              <Input 
-                                id={`field-placeholder-${field.id}`}
-                                value={field.placeholder || ''}
-                                onChange={(e) => updateField(field.id, 'placeholder', e.target.value)}
-                                placeholder="Placeholder text"
-                              />
-                            </div>
-                          </div>
+                            <CardDescription>
+                              {fieldTypes.find(t => t.value === field.type)?.label || field.type}
+                            </CardDescription>
+                          </CardHeader>
                           
-                          <div className="flex items-center space-x-2">
-                            <Switch 
-                              id={`field-required-${field.id}`}
-                              checked={field.required}
-                              onCheckedChange={(checked) => updateField(field.id, 'required', checked)}
-                            />
-                            <Label htmlFor={`field-required-${field.id}`}>Required field</Label>
-                          </div>
-                          
-                          {/* Options for select, checkbox, radio fields */}
-                          {(field.type === 'SELECT' || field.type === 'CHECKBOX' || field.type === 'RADIO') && (
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <Label>Options</Label>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => addOption(field.id)}
-                                >
-                                  Add Option
-                                </Button>
+                          <CardContent className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor={`field-label-${field.id}`}>Field Label</Label>
+                                <Input 
+                                  id={`field-label-${field.id}`}
+                                  value={field.label}
+                                  onChange={(e) => updateField(field.id, 'label', e.target.value)}
+                                  placeholder="Label"
+                                />
                               </div>
                               
-                              {field.options && field.options.length > 0 ? (
-                                <div className="space-y-2">
-                                  {field.options.map((option, optionIndex) => (
-                                    <div key={optionIndex} className="flex items-center space-x-2">
-                                      <Input 
-                                        value={option.label}
-                                        onChange={(e) => updateOption(field.id, optionIndex, 'label', e.target.value)}
-                                        placeholder="Option label"
-                                        className="flex-1"
-                                      />
-                                      <Input 
-                                        value={option.value}
-                                        onChange={(e) => updateOption(field.id, optionIndex, 'value', e.target.value)}
-                                        placeholder="Option value"
-                                        className="flex-1"
-                                      />
-                                      <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        onClick={() => removeOption(field.id, optionIndex)}
-                                        className="h-8 w-8 text-destructive"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="text-center p-4 border border-dashed rounded-md text-muted-foreground">
-                                  No options added. Click "Add Option" to add some.
-                                </div>
-                              )}
+                              <div className="space-y-2">
+                                <Label htmlFor={`field-name-${field.id}`}>Field Name</Label>
+                                <Input 
+                                  id={`field-name-${field.id}`}
+                                  value={field.name}
+                                  onChange={(e) => updateField(field.id, 'name', e.target.value)}
+                                  placeholder="name"
+                                />
+                              </div>
                             </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                  
-                  <Button onClick={addField} className="w-full">
-                    <PlusCircle className="h-4 w-4 mr-2" />
-                    Add Another Field
-                  </Button>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="design" className="mt-0">
-                <div className="text-center p-12 border rounded-md space-y-6">
-                  <Paintbrush className="h-12 w-12 mx-auto text-muted-foreground" />
-                  <div>
-                    <h3 className="text-lg font-medium">Form Design Preview</h3>
-                    <p className="text-muted-foreground">
-                      Form appearance customization coming soon...
-                    </p>
-                  </div>
-                  <div>
-                    <Button variant="outline">Switch to Advanced Editor</Button>
-                  </div>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="embed" className="mt-0">
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-medium mb-2">Embed your form</h3>
-                    <p className="text-muted-foreground">
-                      To embed this form on your website, save it first, then copy and paste this code to your site.
-                    </p>
-                  </div>
-                  
-                  <div className="bg-muted p-4 rounded-md">
-                    <code className="text-sm">
-                      &lt;div id="leadpulse-form"&gt;&lt;/div&gt;<br />
-                      &lt;script src="https://marketsage.africa/api/leadpulse/form.js?id=YOUR_FORM_ID"&gt;&lt;/script&gt;
-                    </code>
-                  </div>
-                  
-                  <div>
-                    <Button variant="outline" disabled>
-                      Copy Code
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor={`field-type-${field.id}`}>Field Type</Label>
+                                <Select 
+                                  value={field.type}
+                                  onValueChange={(value) => updateField(field.id, 'type', value)}
+                                >
+                                  <SelectTrigger id={`field-type-${field.id}`}>
+                                    <SelectValue placeholder="Select field type" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {fieldTypes.map((type) => (
+                                      <SelectItem key={type.value} value={type.value}>
+                                        {type.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label htmlFor={`field-placeholder-${field.id}`}>Placeholder</Label>
+                                <Input 
+                                  id={`field-placeholder-${field.id}`}
+                                  value={field.placeholder || ''}
+                                  onChange={(e) => updateField(field.id, 'placeholder', e.target.value)}
+                                  placeholder="Placeholder text"
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center space-x-2">
+                              <Switch 
+                                id={`field-required-${field.id}`}
+                                checked={field.required}
+                                onCheckedChange={(checked) => updateField(field.id, 'required', checked)}
+                              />
+                              <Label htmlFor={`field-required-${field.id}`}>Required field</Label>
+                            </div>
+                            
+                            {/* Options for select, checkbox, radio fields */}
+                            {(field.type === 'SELECT' || field.type === 'CHECKBOX' || field.type === 'RADIO') && (
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <Label>Options</Label>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => addOption(field.id)}
+                                  >
+                                    Add Option
+                                  </Button>
+                                </div>
+                                
+                                {field.options && field.options.length > 0 ? (
+                                  <div className="space-y-2">
+                                    {field.options.map((option, optionIndex) => (
+                                      <div key={optionIndex} className="flex items-center space-x-2">
+                                        <Input 
+                                          value={option.label}
+                                          onChange={(e) => updateOption(field.id, optionIndex, 'label', e.target.value)}
+                                          placeholder="Option label"
+                                          className="flex-1"
+                                        />
+                                        <Input 
+                                          value={option.value}
+                                          onChange={(e) => updateOption(field.id, optionIndex, 'value', e.target.value)}
+                                          placeholder="Option value"
+                                          className="flex-1"
+                                        />
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          onClick={() => removeOption(field.id, optionIndex)}
+                                          className="h-8 w-8 text-destructive"
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="text-center p-4 border border-dashed rounded-md text-muted-foreground">
+                                    No options added. Click "Add Option" to add some.
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                    
+                    <Button onClick={addField} className="w-full">
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                      Add Another Field
                     </Button>
                   </div>
-                </div>
-              </TabsContent>
+                </TabsContent>
+                
+                <TabsContent value="design" className="mt-0">
+                  <div className="text-center p-12 border rounded-md space-y-6">
+                    <Paintbrush className="h-12 w-12 mx-auto text-muted-foreground" />
+                    <div>
+                      <h3 className="text-lg font-medium">Form Design Preview</h3>
+                      <p className="text-muted-foreground">
+                        Form appearance customization coming soon...
+                      </p>
+                    </div>
+                    <div>
+                      <Button variant="outline">Switch to Advanced Editor</Button>
+                    </div>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="embed" className="mt-0">
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium mb-2">Embed your form</h3>
+                      <p className="text-muted-foreground">
+                        To embed this form on your website, save it first, then copy and paste this code to your site.
+                      </p>
+                    </div>
+                    
+                    <div className="bg-muted p-4 rounded-md">
+                      <code className="text-sm">
+                        &lt;div id="leadpulse-form"&gt;&lt;/div&gt;<br />
+                        &lt;script src="https://marketsage.africa/api/leadpulse/form.js?id=YOUR_FORM_ID"&gt;&lt;/script&gt;
+                      </code>
+                    </div>
+                    
+                    <div>
+                      <Button variant="outline" disabled>
+                        Copy Code
+                      </Button>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         </div>
