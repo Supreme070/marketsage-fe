@@ -252,6 +252,26 @@ docker compose up -d
 docker compose logs -f
 ```
 
+## Updating Dependencies in Docker
+
+When you need to add new dependencies to your Docker environment (like the Kanban board implementation):
+
+1. Update your `package.json` with the new dependency
+2. Rebuild the image with:
+   ```bash
+   docker-compose --profile rebuild run rebuild_web
+   ```
+3. Restart the web service with zero downtime:
+   ```bash
+   docker-compose up -d --no-deps web
+   ```
+
+This approach is production-friendly as it:
+- Ensures proper rebuilding of all dependencies
+- Minimizes downtime during updates
+- Maintains compatibility with CI/CD pipelines
+- Doesn't rely on external scripts
+
 ## License
 
 [Specify your license here]

@@ -12,7 +12,7 @@ COPY package.json package-lock.json* ./
 RUN apk update && \
     apk add --no-cache --virtual .build-deps libc6-compat python3 make g++ && \
     apk add --no-cache postgresql-client && \
-    npm ci && \
+    npm install && \
     apk del .build-deps
 
 # Rebuild the source code only when needed

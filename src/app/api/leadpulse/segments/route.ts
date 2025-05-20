@@ -8,6 +8,9 @@ import { generateMockSegmentData } from '@/app/api/leadpulse/_mockData';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Use mock data for now - when AnonymousVisitor model is properly added to the schema,
+    // we can uncomment and use the real data query
+    /*
     // Attempt to generate real segments
     try {
       const totalVisitors = await prisma.anonymousVisitor.count();
@@ -104,8 +107,9 @@ export async function GET(request: NextRequest) {
       console.error('Error generating segments from Prisma data:', prismaError);
       // Continue to fallback data
     }
+    */
     
-    // If no data or error, return mock segments as fallback
+    // Return mock segments as fallback
     const mockSegments = generateMockSegmentData();
     return NextResponse.json({ segments: mockSegments });
     

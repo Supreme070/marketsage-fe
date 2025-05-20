@@ -1,48 +1,76 @@
 #!/bin/bash
+# Script to run all seed scripts for MarketSage
+# Save as seed-all.sh in the scripts directory and run with:
+# bash src/scripts/seed-all.sh
 
 # Exit on error
 set -e
 
-echo "Starting database seeding process..."
+echo "==== Starting MarketSage Database Seeding Process ===="
 
-# Wait for the database to be ready
+# Wait for the database to be ready (if needed)
 echo "Waiting for database to be ready..."
 npx prisma db push --accept-data-loss
 
-echo "Seeding contacts..."
-ts-node src/scripts/seedContacts.ts
+# Create default user first (if available)
+if [ -f "src/scripts/createDefaultUser.js" ]; then
+  echo -e "\n==== Creating Default User ===="
+  node src/scripts/createDefaultUser.js
+fi
 
-echo "Seeding lists..."
-ts-node src/scripts/seedLists.ts
+# Run seed scripts using the appropriate command based on file extension
+# JavaScript files use node directly, TypeScript files use ts-node with flags
 
-echo "Seeding segments..."
+echo -e "\n==== Seeding Segments ===="
 node src/scripts/seedSegments.js
 
-echo "Seeding email campaigns..."
-ts-node src/scripts/seedEmailCampaigns.ts
+echo -e "\n==== Seeding Lists ===="
+# Choose the available script (TS or JS)
+if [ -f "src/scripts/seedLists.ts" ]; then
+  NODE_OPTIONS="--experimental-specifier-resolution=node" npx ts-node --esm src/scripts/seedLists.ts
+else
+  node src/scripts/seedListsJS.js
+fi
 
-echo "Seeding SMS templates..."
-ts-node src/scripts/seedSMSTemplates.ts
+echo -e "\n==== Seeding Contacts ===="
+NODE_OPTIONS="--experimental-specifier-resolution=node" npx ts-node --esm src/scripts/seedContacts.ts
 
-echo "Seeding SMS campaigns..."
-ts-node src/scripts/seedSMSCampaigns.ts
+echo -e "\n==== Seeding Workflows ===="
+node src/scripts/seedWorkflows.js
 
-echo "Seeding WhatsApp templates..."
-ts-node src/scripts/seedWhatsAppTemplates.ts
+echo -e "\n==== Seeding WhatsApp Templates ===="
+node src/scripts/seedWhatsAppTemplates.js
 
-echo "Seeding WhatsApp campaigns..."
-ts-node src/scripts/seedWhatsAppCampaigns.ts
+echo -e "\n==== Seeding SMS Templates ===="
+NODE_OPTIONS="--experimental-specifier-resolution=node" npx ts-node --esm src/scripts/seedSMSTemplates.ts
 
-echo "Seeding workflows..."
-ts-node src/scripts/seedWorkflows.ts
+echo -e "\n==== Seeding Email Campaigns ===="
+NODE_OPTIONS="--experimental-specifier-resolution=node" npx ts-node --esm src/scripts/seedEmailCampaigns.ts
 
-echo "Seeding user preferences..."
-ts-node src/scripts/seedUserPreferences.ts
+echo -e "\n==== Seeding SMS Campaigns ===="
+NODE_OPTIONS="--experimental-specifier-resolution=node" npx ts-node --esm src/scripts/seedSMSCampaigns.ts
 
-echo "Assigning contacts to lists..."
-ts-node src/scripts/assignContactsToLists.ts
+echo -e "\n==== Seeding WhatsApp Campaigns ===="
+NODE_OPTIONS="--experimental-specifier-resolution=node" npx ts-node --esm src/scripts/seedWhatsAppCampaigns.ts
 
-echo "Seeding notifications..."
-ts-node src/scripts/seedNotifications.ts
+echo -e "\n==== Seeding Journeys ===="
+NODE_OPTIONS="--experimental-specifier-resolution=node" npx ts-node --esm src/scripts/seedJourneys.ts
 
-echo "Seeding complete!" 
+echo -e "\n==== Seeding Notifications ===="
+# Choose the right file to use (TS or JS)
+if [ -f "src/scripts/seedNotifications.ts" ]; then
+  NODE_OPTIONS="--experimental-specifier-resolution=node" npx ts-node --esm src/scripts/seedNotifications.ts
+else
+  node src/scripts/seedNotifications.js
+fi
+
+echo -e "\n==== Seeding User Preferences ===="
+NODE_OPTIONS="--experimental-specifier-resolution=node" npx ts-node --esm src/scripts/seedUserPreferences.ts
+
+# Optional: Assign contacts to current user if needed
+if [ -f "src/scripts/assignContactsToCurrentUser.ts" ]; then
+  echo -e "\n==== Assigning Contacts to Current User ===="
+  NODE_OPTIONS="--experimental-specifier-resolution=node" npx ts-node --esm src/scripts/assignContactsToCurrentUser.ts
+fi
+
+echo -e "\n==== All Seed Scripts Completed Successfully ===="

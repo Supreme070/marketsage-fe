@@ -70,19 +70,19 @@ export async function GET(request: NextRequest) {
         updatedAt: "desc",
       },
       include: {
-        WhatsAppTemplate: {
+        template: {
           select: {
             id: true,
             name: true,
           }
         },
-        List: {
+        lists: {
           select: {
             id: true,
             name: true,
           }
         },
-        Segment: {
+        segments: {
           select: {
             id: true,
             name: true,
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
         },
         _count: {
           select: { 
-            WhatsAppActivity: true 
+            activities: true 
           }
         }
       },
@@ -107,11 +107,11 @@ export async function GET(request: NextRequest) {
       sentAt: campaign.sentAt,
       createdAt: campaign.createdAt,
       updatedAt: campaign.updatedAt,
-      template: campaign.WhatsAppTemplate,
-      lists: campaign.List,
-      segments: campaign.Segment,
+      template: campaign.template,
+      lists: campaign.lists,
+      segments: campaign.segments,
       statistics: {
-        totalRecipients: campaign._count.WhatsAppActivity,
+        totalRecipients: campaign._count.activities,
       }
     }));
 
@@ -196,21 +196,21 @@ export async function POST(request: NextRequest) {
           updatedAt: now,
           // Connect lists if provided
           ...(listIds && listIds.length > 0 ? {
-            List: {
+            lists: {
               connect: listIds.map(id => ({ id })),
             },
           } : {}),
           // Connect segments if provided
           ...(segmentIds && segmentIds.length > 0 ? {
-            Segment: {
+            segments: {
               connect: segmentIds.map(id => ({ id })),
             },
           } : {}),
         },
         include: {
-          WhatsAppTemplate: true,
-          List: true,
-          Segment: true,
+          template: true,
+          lists: true,
+          segments: true,
         },
       });
       

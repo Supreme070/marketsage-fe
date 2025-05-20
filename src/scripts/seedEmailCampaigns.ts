@@ -80,6 +80,11 @@ async function seedEmailMarketing() {
     where: {
       role: "ADMIN",
     },
+    select: {
+      id: true,
+      email: true,
+      role: true
+    }
   });
 
   if (!adminUser) {
@@ -171,12 +176,12 @@ async function seedEmailMarketing() {
           updatedAt: now,
           ...(templateToUse ? { templateId: templateToUse.id } : {}),
           ...(listsToUse.length > 0 ? {
-            List: {
+            lists: {
               connect: listsToUse.map(list => ({ id: list.id })),
             },
           } : {}),
           ...(segments.length > 0 && i === 2 ? { // Only connect segments to the third campaign
-            Segment: {
+            segments: {
               connect: segments.map(segment => ({ id: segment.id })),
             },
           } : {}),

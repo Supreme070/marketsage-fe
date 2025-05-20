@@ -51,10 +51,21 @@ async function seedLists() {
     where: {
       role: "ADMIN",
     },
+    select: {
+      id: true,
+      email: true,
+      role: true
+    }
   });
 
   if (!adminUser) {
-    adminUser = await prisma.user.findFirst({});
+    adminUser = await prisma.user.findFirst({
+      select: {
+        id: true,
+        email: true,
+        role: true
+      }
+    });
 
     if (!adminUser) {
       console.error("No users found in the database. Please create a user first.");

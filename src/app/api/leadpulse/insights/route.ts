@@ -8,6 +8,9 @@ import { generateMockInsightData } from '@/app/api/leadpulse/_mockData';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Use mock data for now - when AnonymousVisitor model is properly added to the schema,
+    // we can uncomment and use the real data query
+    /*
     // Attempt to fetch real insight data
     // In a production system, this would:
     // 1. Query visitor analytics data
@@ -113,8 +116,9 @@ export async function GET(request: NextRequest) {
       console.error('Error generating insights from Prisma data:', prismaError);
       // Continue to fallback data
     }
+    */
     
-    // If no data or error, return mock insights as fallback
+    // Return mock insights as fallback
     const mockInsights = generateMockInsightData();
     return NextResponse.json({ insights: mockInsights });
     

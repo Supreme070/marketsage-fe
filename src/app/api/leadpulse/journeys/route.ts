@@ -34,6 +34,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const visitorId = searchParams.get('visitorId');
     
+    // Use mock data for now - when AnonymousVisitor model is properly added to the schema,
+    // we can uncomment and use the real data query
+    /*
     // Attempt to fetch real data
     try {
       // If visitor ID is provided, fetch that specific journey
@@ -186,8 +189,9 @@ export async function GET(request: NextRequest) {
       console.error('Error fetching journey data from Prisma:', prismaError);
       // Continue to fallback data
     }
+    */
     
-    // If no data or error, return mock data as fallback
+    // Return mock data
     const mockJourneys = generateMockJourneyData(visitorId || undefined);
     return NextResponse.json({ journeys: mockJourneys });
     

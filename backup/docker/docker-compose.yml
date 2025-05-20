@@ -1,0 +1,160 @@
+version: '3.8'
+
+services:
+  # Web application service with integrated database initialization
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - DATABASE_URL=postgresql://marketsage:marketsage_password@db:5432/marketsage?schema=public
+    container_name: marketsage-web
+    restart: always
+    ports:
+      - "3030:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://marketsage:marketsage_password@db:5432/marketsage?schema=public
+      - NODE_ENV=development
+      - NEXTAUTH_URL=http://localhost:3030
+      - NEXTAUTH_SECRET=this-is-a-development-secret-key-replace-in-production
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - marketsage-network
+    volumes:
+      - ./scripts:/app/scripts
+      - ./prisma:/app/prisma
+      - ./startup.sh:/app/startup.sh
+
+  # Service for safely rebuilding web container
+  rebuild_web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - DATABASE_URL=postgresql://marketsage:marketsage_password@db:5432/marketsage?schema=public
+    command: >
+      sh -c "
+        echo 'Container rebuilt with latest changes, including @hello-pangea/dnd for Kanban board.'
+        echo 'To restart the web service, run: docker-compose up -d --no-deps web'
+      "
+    profiles: ["rebuild"]
+
+  # PostgreSQL database service
+  db:
+    image: postgres:15-alpine
+    container_name: marketsage-db
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=marketsage
+      - POSTGRES_PASSWORD=marketsage_password
+      - POSTGRES_DB=marketsage
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marketsage"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - marketsage-network
+
+  # Database seeder service
+  seed:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: marketsage-seed
+    restart: "no"
+    depends_on:
+      - db
+      - web
+    environment:
+      - DATABASE_URL=postgresql://marketsage:marketsage_password@db:5432/marketsage?schema=public
+      - NODE_ENV=development
+    networks:
+      - marketsage-network
+    volumes:
+      - ./:/app
+      - /app/node_modules
+      - /app/.next
+    command: >
+      sh -c "
+        echo 'Waiting for database to be ready...' &&
+        sleep 10 &&
+        echo 'Database schema check...' && 
+        PGPASSWORD=marketsage_password psql -h db -U marketsage -d marketsage -c \"SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'userrole');\" &&
+        echo 'Resolving conflicting migrations...' && 
+        npx prisma migrate resolve --applied 20250516143846_add_journey_tables &&
+        echo 'Running migrations...' && 
+        npx prisma migrate deploy &&
+        echo '👤 Creating admin user if not exists...' &&
+        PGPASSWORD=marketsage_password psql -h db -U marketsage -d marketsage -c "INSERT INTO \"User\" (id, name, email, \"emailVerified\", password, role, \"createdAt\", \"updatedAt\") 
+        VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d047', 'Admin User', 'admin@example.com', NOW(), 'password123', 'ADMIN', NOW(), NOW()) 
+        ON CONFLICT (id) DO NOTHING;" &&
+        
+        echo '👤 Creating development users if not exist...' &&
+        PGPASSWORD=marketsage_password psql -h db -U marketsage -d marketsage -c "
+        INSERT INTO \"User\" (id, name, email, \"emailVerified\", password, role, \"createdAt\", \"updatedAt\") 
+        VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d111', 'Supreme Admin', 'supreme@marketsage.africa', NOW(), 'MS_Super2025!', 'SUPER_ADMIN', NOW(), NOW())
+        ON CONFLICT (email) DO NOTHING;
+        
+        INSERT INTO \"User\" (id, name, email, \"emailVerified\", password, role, \"createdAt\", \"updatedAt\") 
+        VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d222', 'Anita Manager', 'anita@marketsage.africa', NOW(), 'MS_Admin2025!', 'ADMIN', NOW(), NOW())
+        ON CONFLICT (email) DO NOTHING;
+        
+        INSERT INTO \"User\" (id, name, email, \"emailVerified\", password, role, \"createdAt\", \"updatedAt\") 
+        VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d333', 'Kola Techleads', 'kola@marketsage.africa', NOW(), 'MS_ITAdmin2025!', 'IT_ADMIN', NOW(), NOW())
+        ON CONFLICT (email) DO NOTHING;
+        
+        INSERT INTO \"User\" (id, name, email, \"emailVerified\", password, role, \"createdAt\", \"updatedAt\") 
+        VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d444', 'Regular User', 'user@marketsage.africa', NOW(), 'MS_User2025!', 'USER', NOW(), NOW())
+        ON CONFLICT (email) DO NOTHING;" &&
+        echo 'Admin user created' &&
+        echo 'Installing TypeScript and UUID packages...' &&
+        npm install -g typescript ts-node &&
+        npm install uuid @types/uuid &&
+        echo 'Running seed scripts...' &&
+        cd /app &&
+        echo 'Seeding contacts...' &&
+        npx ts-node ./src/scripts/seedContacts.ts &&
+        echo 'Seeding lists...' &&
+        npx ts-node ./src/scripts/seedLists.ts &&
+        echo 'Seeding segments...' &&
+        node ./src/scripts/seedSegments.js &&
+        echo 'Seeding email campaigns...' &&
+        npx ts-node ./src/scripts/seedEmailCampaigns.ts &&
+        echo 'Seeding SMS templates...' &&
+        npx ts-node ./src/scripts/seedSMSTemplates.ts &&
+        echo 'Seeding SMS campaigns...' &&
+        npx ts-node ./src/scripts/seedSMSCampaigns.ts &&
+        echo 'Seeding WhatsApp templates...' &&
+        npx ts-node ./src/scripts/seedWhatsAppTemplates.ts &&
+        echo 'Seeding WhatsApp campaigns...' &&
+        npx ts-node ./src/scripts/seedWhatsAppCampaigns.ts &&
+        echo 'Seeding workflows...' &&
+        npx ts-node ./src/scripts/seedWorkflows.ts &&
+        echo 'Assigning contacts...' &&
+        npx ts-node ./src/scripts/assignContactsDocker.ts &&
+        echo 'Seeding customer journeys...' &&
+        npx ts-node ./src/scripts/seedJourneys.ts &&
+        echo 'Database seeded successfully!'
+      "
+
+volumes:
+  postgres-data:
+    driver: local
+
+networks:
+  marketsage-network:
+    driver: bridge

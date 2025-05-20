@@ -61,7 +61,12 @@ async function main() {
     // Get admin user for association
     const adminUser = await prisma.user.findFirst({
       where: {
-        role: "ADMIN"
+        role: "ADMIN",
+      },
+      select: {
+        id: true,
+        email: true,
+        role: true
       }
     });
 
@@ -121,20 +126,20 @@ async function main() {
             createdById: adminUser.id,
             ...(templateToUse ? { templateId: templateToUse.id } : {}),
             ...(listsToUse.length > 0 ? {
-              List: {
+              lists: {
                 connect: listsToUse.map(list => ({ id: list.id })),
               },
             } : {}),
             ...(segments.length > 0 && i === 2 ? { // Only connect segments to the third campaign
-              Segment: {
+              segments: {
                 connect: segments.map(segment => ({ id: segment.id })),
               },
             } : {}),
           },
           include: {
-            WhatsAppTemplate: true,
-            List: true,
-            Segment: true,
+            template: true,
+            lists: true,
+            segments: true,
           },
         });
         

@@ -56,6 +56,9 @@ export async function GET(request: NextRequest) {
         startDate.setDate(startDate.getDate() - 1); // Default to 24h
     }
     
+    // Use mock data for now - when AnonymousVisitor model is properly added to the schema,
+    // we can uncomment and use the real data query
+    /*
     // Attempt to fetch real data
     try {
       // Check if the AnonymousVisitor model exists in the schema
@@ -132,8 +135,9 @@ export async function GET(request: NextRequest) {
       console.error('Error fetching from Prisma:', prismaError);
       // Continue to fallback data
     }
+    */
     
-    // If no data or error, return mock data as fallback
+    // Return mock data
     const mockVisitors = generateMockVisitorData();
     return NextResponse.json({ visitors: mockVisitors });
     

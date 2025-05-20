@@ -5,6 +5,11 @@ import prisma from '@/lib/db/prisma';
 import { taskSchema } from '@/lib/validations/task';
 import { z } from 'zod';
 
+// Helper function to check if Prisma is available
+function isPrismaAvailable() {
+  return prisma && typeof prisma.task === 'object' && prisma.task !== null;
+}
+
 // GET /api/tasks - Get all tasks with filtering options
 export async function GET(req: Request) {
   try {
@@ -12,6 +17,15 @@ export async function GET(req: Request) {
     
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    // Check if Prisma client is properly initialized
+    if (!isPrismaAvailable()) {
+      console.error('Prisma client not properly initialized');
+      return NextResponse.json(
+        { error: 'Database connection unavailable', tasks: [] },
+        { status: 503 }
+      );
     }
     
     const { searchParams } = new URL(req.url);
@@ -36,46 +50,53 @@ export async function GET(req: Request) {
     if (campaignId) where.campaignId = campaignId;
     if (regionId) where.regionId = regionId;
     
-    // Get tasks with filters
-    const tasks = await prisma.task.findMany({
-      where,
-      include: {
-        creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-          }
-        },
-        assignee: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-          }
-        },
-        contact: true,
-        segment: true,
-        campaign: true,
-        dependencies: true,
-        comments: {
-          orderBy: {
-            createdAt: 'desc',
+    try {
+      // Get tasks with filters
+      const tasks = await prisma.task.findMany({
+        where,
+        include: {
+          creator: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true,
+            }
+          },
+          assignee: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true,
+            }
+          },
+          campaign: true,
+          dependencies: true,
+          dependsOn: true,
+          comments: {
+            orderBy: {
+              createdAt: 'desc',
+            },
           },
         },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
-    
-    return NextResponse.json(tasks);
-  } catch (error) {
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+      
+      return NextResponse.json(tasks);
+    } catch (dbError: any) {
+      console.error('Database query error:', dbError);
+      return NextResponse.json(
+        { error: 'Database query failed', details: dbError?.message || 'Unknown database error' },
+        { status: 500 }
+      );
+    }
+  } catch (error: any) {
     console.error('Error fetching tasks:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch tasks' },
+      { error: 'Failed to fetch tasks', details: error?.message || 'Unknown error' },
       { status: 500 }
     );
   }
@@ -90,39 +111,56 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    const json = await req.json();
-    const body = taskSchema.parse(json);
-    
-    // Create task
-    const task = await prisma.task.create({
-      data: {
-        title: body.title,
-        description: body.description,
-        status: body.status,
-        priority: body.priority,
-        dueDate: body.dueDate,
-        assigneeId: body.assigneeId,
-        creatorId: session.user.id,
-        contactId: body.contactId,
-        segmentId: body.segmentId,
-        campaignId: body.campaignId,
-        regionId: body.regionId,
-      },
-    });
-    
-    return NextResponse.json(task);
-  } catch (error) {
-    console.error('Error creating task:', error);
-    
-    if (error instanceof z.ZodError) {
+    // Check if Prisma client is properly initialized
+    if (!isPrismaAvailable()) {
+      console.error('Prisma client not properly initialized');
       return NextResponse.json(
-        { error: 'Invalid request data', details: error.errors },
-        { status: 400 }
+        { error: 'Database connection unavailable' },
+        { status: 503 }
       );
     }
     
+    const json = await req.json();
+    
+    try {
+      const body = taskSchema.parse(json);
+      
+      // Create task
+      const task = await prisma.task.create({
+        data: {
+          title: body.title,
+          description: body.description,
+          status: body.status,
+          priority: body.priority,
+          dueDate: body.dueDate,
+          assigneeId: body.assigneeId,
+          creatorId: session.user.id,
+          contactId: body.contactId,
+          segmentId: body.segmentId,
+          campaignId: body.campaignId,
+          regionId: body.regionId,
+        },
+      });
+      
+      return NextResponse.json(task);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return NextResponse.json(
+          { error: 'Invalid request data', details: error.errors },
+          { status: 400 }
+        );
+      }
+      
+      console.error('Database error creating task:', error);
+      return NextResponse.json(
+        { error: 'Failed to create task', details: error?.message || 'Unknown error' },
+        { status: 500 }
+      );
+    }
+  } catch (error: any) {
+    console.error('Error handling task creation request:', error);
     return NextResponse.json(
-      { error: 'Failed to create task' },
+      { error: 'Failed to process request', details: error?.message || 'Unknown error' },
       { status: 500 }
     );
   }
@@ -135,6 +173,15 @@ export async function PUT(req: Request) {
     
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    // Check if Prisma client is properly initialized
+    if (!isPrismaAvailable()) {
+      console.error('Prisma client not properly initialized');
+      return NextResponse.json(
+        { error: 'Database connection unavailable' },
+        { status: 503 }
+      );
     }
     
     const json = await req.json();

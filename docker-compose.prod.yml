@@ -108,6 +108,24 @@ services:
         VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d047', 'Admin User', 'admin@example.com', NOW(), 'password123', 'ADMIN', NOW(), NOW()) 
         ON CONFLICT (id) DO NOTHING;\" &&
         
+        echo '👤 Creating development users if not exist...' &&
+        PGPASSWORD=marketsage_password psql -h db -U marketsage -d marketsage -c \"
+        INSERT INTO \\\"User\\\" (id, name, email, \\\"emailVerified\\\", password, role, \\\"createdAt\\\", \\\"updatedAt\\\") 
+        VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d111', 'Supreme Admin', 'supreme@marketsage.africa', NOW(), 'MS_Super2025!', 'SUPER_ADMIN', NOW(), NOW())
+        ON CONFLICT (email) DO NOTHING;
+        
+        INSERT INTO \\\"User\\\" (id, name, email, \\\"emailVerified\\\", password, role, \\\"createdAt\\\", \\\"updatedAt\\\") 
+        VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d222', 'Anita Manager', 'anita@marketsage.africa', NOW(), 'MS_Admin2025!', 'ADMIN', NOW(), NOW())
+        ON CONFLICT (email) DO NOTHING;
+        
+        INSERT INTO \\\"User\\\" (id, name, email, \\\"emailVerified\\\", password, role, \\\"createdAt\\\", \\\"updatedAt\\\") 
+        VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d333', 'Kola Techleads', 'kola@marketsage.africa', NOW(), 'MS_ITAdmin2025!', 'IT_ADMIN', NOW(), NOW())
+        ON CONFLICT (email) DO NOTHING;
+        
+        INSERT INTO \\\"User\\\" (id, name, email, \\\"emailVerified\\\", password, role, \\\"createdAt\\\", \\\"updatedAt\\\") 
+        VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d444', 'Regular User', 'user@marketsage.africa', NOW(), 'MS_User2025!', 'USER', NOW(), NOW())
+        ON CONFLICT (email) DO NOTHING;\" &&
+        
         echo '🌱 Running seed scripts...' &&
         cd /app &&
         

@@ -1,13 +1,132 @@
-import { JourneyData, JourneyStageData, TransitionTriggerType } from '@/lib/journey-mapping';
-import { randomUUID } from 'crypto';
+// Define TransitionTriggerType enum directly in this file to avoid import issues
+const TransitionTriggerType = {
+  AUTOMATIC: 'AUTOMATIC',
+  EVENT: 'EVENT',
+  CONVERSION: 'CONVERSION',
+  CONDITION: 'CONDITION',
+  MANUAL: 'MANUAL'
+};
+
+// Use a different variable name than crypto to avoid conflict
+// with the global crypto variable
+const nodeCrypto = require('crypto');
+const generateUUID = nodeCrypto.randomUUID;
+
+// Define interface for prisma parameter
+interface PrismaClient {
+  Journey: any;
+  JourneyStage: any;
+  JourneyTransition: any;
+  $queryRaw: any;
+  $executeRaw: any;
+  $queryRawUnsafe: any;
+  $disconnect: () => Promise<void>;
+}
+
+// Define shared interface properties that all transitions have
+interface BaseTransition {
+  fromStageId: string;
+  toStageId: string;
+  triggerType: string;
+  name: string;
+  description?: string;
+  // All transitions can optionally have trigger details
+  triggerDetails?: any;
+}
+
+// Event transition - specific to EVENT trigger type
+interface EventTransition extends BaseTransition {
+  triggerType: 'EVENT';
+  triggerDetails: {
+    eventName: string;
+    occurrences?: number;
+    afterDays?: number;
+  };
+}
+
+// Automatic transition - specific to AUTOMATIC trigger type
+interface AutomaticTransition extends BaseTransition {
+  triggerType: 'AUTOMATIC';
+  triggerDetails: {
+    delayHours: number;
+  };
+}
+
+// Condition transition - specific to CONDITION trigger type
+interface ConditionTransition extends BaseTransition {
+  triggerType: 'CONDITION';
+  // Condition transitions may have empty triggerDetails
+  triggerDetails?: any;
+  conditions: {
+    operator: string;
+    conditions: Array<{
+      key: string;
+      operator: string;
+      value: any;
+    }>;
+  };
+}
+
+// Union type for all transition types
+type JourneyTransition = EventTransition | AutomaticTransition | ConditionTransition;
+
+// Interface for journey stages
+interface JourneyStage {
+  id: string;
+  name: string;
+  description: string;
+  order: number;
+  isEntryPoint: boolean;
+  isExitPoint: boolean;
+  expectedDuration: number;
+  conversionGoal: number;
+  transitions?: JourneyTransition[];
+}
+
+// Interface for journeys
+interface Journey {
+  id: string;
+  name: string;
+  description: string;
+  isActive: boolean;
+  createdAt: Date;
+  createdById: string;
+  stages: JourneyStage[];
+  metrics: any[];
+}
+
+/**
+ * Helper function to safely get trigger details
+ * @param transition Any transition type
+ * @returns JSON string of triggerDetails or null
+ */
+function getTransitionTriggerDetails(transition: JourneyTransition): string | null {
+  if (transition.triggerDetails) {
+    return JSON.stringify(transition.triggerDetails);
+  }
+  return null;
+}
+
+/**
+ * Function to safely check and handle transition conditions
+ * @param transition Any transition type
+ * @returns JSON string of conditions or null
+ */
+function getTransitionConditions(transition: JourneyTransition): string | null {
+  // Check if this is a condition transition
+  if (transition.triggerType === 'CONDITION' && 'conditions' in transition) {
+    return JSON.stringify(transition.conditions);
+  }
+  return null;
+}
 
 /**
  * Sample journey data for testing and demonstration
  */
-export const sampleJourneys: JourneyData[] = [
+const sampleJourneys: Journey[] = [
   // Email Nurture Journey
   {
-    id: randomUUID(),
+    id: generateUUID(),
     name: "Product Onboarding Journey",
     description: "Guide new users through product features and setup process to ensure successful adoption",
     isActive: true,
@@ -15,7 +134,7 @@ export const sampleJourneys: JourneyData[] = [
     createdById: "user_id_here", // Replace with an actual user ID when using
     stages: [
       {
-        id: randomUUID(),
+        id: generateUUID(),
         name: "Welcome",
         description: "Initial welcome and account setup guidance",
         order: 0,
@@ -27,16 +146,17 @@ export const sampleJourneys: JourneyData[] = [
           {
             fromStageId: "placeholder", // Will be replaced with actual stage ID
             toStageId: "placeholder", // Will be replaced with actual stage ID
-            triggerType: TransitionTriggerType.AUTOMATIC,
+            triggerType: TransitionTriggerType.AUTOMATIC as 'AUTOMATIC',
             name: "Welcome Email Sent",
+            description: "Automatic transition after welcome email is sent",
             triggerDetails: {
               delayHours: 0
             }
-          }
+          } as AutomaticTransition
         ]
       },
       {
-        id: randomUUID(),
+        id: generateUUID(),
         name: "Initial Setup",
         description: "User completes basic profile and application settings",
         order: 1,
@@ -48,16 +168,17 @@ export const sampleJourneys: JourneyData[] = [
           {
             fromStageId: "placeholder",
             toStageId: "placeholder",
-            triggerType: TransitionTriggerType.EVENT,
+            triggerType: TransitionTriggerType.EVENT as 'EVENT',
             name: "Setup Completed",
+            description: "Triggered when profile setup is completed",
             triggerDetails: {
               eventName: "profile_completed"
             }
-          }
+          } as EventTransition
         ]
       },
       {
-        id: randomUUID(),
+        id: generateUUID(),
         name: "Feature Exploration",
         description: "Introduction to key product features with guided walkthroughs",
         order: 2,
@@ -69,8 +190,10 @@ export const sampleJourneys: JourneyData[] = [
           {
             fromStageId: "placeholder",
             toStageId: "placeholder",
-            triggerType: TransitionTriggerType.CONDITION,
+            triggerType: TransitionTriggerType.CONDITION as 'CONDITION',
             name: "Features Explored",
+            description: "Transition when user has explored enough features",
+            triggerDetails: {}, // Empty trigger details for condition transition
             conditions: {
               operator: "AND",
               conditions: [
@@ -78,11 +201,11 @@ export const sampleJourneys: JourneyData[] = [
                 { key: "time_in_app", operator: ">", value: 10 } // minutes
               ]
             }
-          }
+          } as ConditionTransition
         ]
       },
       {
-        id: randomUUID(),
+        id: generateUUID(),
         name: "Advanced Features",
         description: "Deeper dive into advanced capabilities and integration options",
         order: 3,
@@ -94,17 +217,18 @@ export const sampleJourneys: JourneyData[] = [
           {
             fromStageId: "placeholder",
             toStageId: "placeholder",
-            triggerType: TransitionTriggerType.EVENT,
+            triggerType: TransitionTriggerType.EVENT as 'EVENT',
             name: "Advanced Usage",
+            description: "User has used advanced features multiple times",
             triggerDetails: {
               eventName: "advanced_feature_used",
               occurrences: 2
             }
-          }
+          } as EventTransition
         ]
       },
       {
-        id: randomUUID(),
+        id: generateUUID(),
         name: "Active User",
         description: "Regular usage patterns established, focused on retention and expansion",
         order: 4,
@@ -119,7 +243,7 @@ export const sampleJourneys: JourneyData[] = [
   
   // E-commerce Customer Journey
   {
-    id: randomUUID(),
+    id: generateUUID(),
     name: "E-commerce Purchase Journey",
     description: "Track and optimize the customer journey from first visit to purchase and retention",
     isActive: true,
@@ -127,7 +251,7 @@ export const sampleJourneys: JourneyData[] = [
     createdById: "user_id_here", // Replace with an actual user ID when using
     stages: [
       {
-        id: randomUUID(),
+        id: generateUUID(),
         name: "First Visit",
         description: "Initial website visit and browsing behavior",
         order: 0,
@@ -139,17 +263,18 @@ export const sampleJourneys: JourneyData[] = [
           {
             fromStageId: "placeholder",
             toStageId: "placeholder",
-            triggerType: TransitionTriggerType.EVENT,
+            triggerType: TransitionTriggerType.EVENT as 'EVENT',
             name: "Product View",
+            description: "User has viewed multiple products",
             triggerDetails: {
               eventName: "product_view",
               occurrences: 2
             }
-          }
+          } as EventTransition
         ]
       },
       {
-        id: randomUUID(),
+        id: generateUUID(),
         name: "Product Interest",
         description: "Shows interest in specific product categories or items",
         order: 1,
@@ -161,16 +286,17 @@ export const sampleJourneys: JourneyData[] = [
           {
             fromStageId: "placeholder",
             toStageId: "placeholder",
-            triggerType: TransitionTriggerType.EVENT,
+            triggerType: TransitionTriggerType.EVENT as 'EVENT',
             name: "Add to Cart",
+            description: "User has added item to cart",
             triggerDetails: {
               eventName: "add_to_cart"
             }
-          }
+          } as EventTransition
         ]
       },
       {
-        id: randomUUID(),
+        id: generateUUID(),
         name: "Cart Addition",
         description: "Products added to cart but purchase not yet completed",
         order: 2,
@@ -182,17 +308,20 @@ export const sampleJourneys: JourneyData[] = [
           {
             fromStageId: "placeholder",
             toStageId: "placeholder",
-            triggerType: TransitionTriggerType.EVENT,
+            triggerType: TransitionTriggerType.EVENT as 'EVENT',
             name: "Checkout Started",
+            description: "User has begun checkout process",
             triggerDetails: {
               eventName: "begin_checkout"
             }
-          },
+          } as EventTransition,
           {
             fromStageId: "placeholder",
             toStageId: "placeholder", // Will point to Abandonment Recovery stage
-            triggerType: TransitionTriggerType.CONDITION,
+            triggerType: TransitionTriggerType.CONDITION as 'CONDITION',
             name: "Cart Abandoned",
+            description: "Cart has been inactive for specified time",
+            triggerDetails: {}, // Empty trigger details for condition transition
             conditions: {
               operator: "AND",
               conditions: [
@@ -200,11 +329,11 @@ export const sampleJourneys: JourneyData[] = [
                 { key: "checkout_completed", operator: "=", value: false }
               ]
             }
-          }
+          } as ConditionTransition
         ]
       },
       {
-        id: randomUUID(),
+        id: generateUUID(),
         name: "Abandonment Recovery",
         description: "Cart abandoned, recovery emails and remarketing activated",
         order: 3,
@@ -216,16 +345,17 @@ export const sampleJourneys: JourneyData[] = [
           {
             fromStageId: "placeholder",
             toStageId: "placeholder", // Back to Cart Addition
-            triggerType: TransitionTriggerType.EVENT,
+            triggerType: TransitionTriggerType.EVENT as 'EVENT',
             name: "Return to Cart",
+            description: "User returns to cart from email",
             triggerDetails: {
               eventName: "cart_view_from_email"
             }
-          }
+          } as EventTransition
         ]
       },
       {
-        id: randomUUID(),
+        id: generateUUID(),
         name: "Checkout",
         description: "Active checkout process",
         order: 4,
@@ -237,16 +367,17 @@ export const sampleJourneys: JourneyData[] = [
           {
             fromStageId: "placeholder",
             toStageId: "placeholder",
-            triggerType: TransitionTriggerType.EVENT,
+            triggerType: TransitionTriggerType.EVENT as 'EVENT',
             name: "Purchase Completed",
+            description: "User completes purchase",
             triggerDetails: {
               eventName: "purchase_complete"
             }
-          }
+          } as EventTransition
         ]
       },
       {
-        id: randomUUID(),
+        id: generateUUID(),
         name: "First Purchase",
         description: "Completed first purchase",
         order: 5,
@@ -258,16 +389,17 @@ export const sampleJourneys: JourneyData[] = [
           {
             fromStageId: "placeholder",
             toStageId: "placeholder",
-            triggerType: TransitionTriggerType.AUTOMATIC,
+            triggerType: TransitionTriggerType.AUTOMATIC as 'AUTOMATIC',
             name: "Post-Purchase Flow",
+            description: "Automatic transition after purchase",
             triggerDetails: {
               delayHours: 24 // Wait 24 hours before moving to next stage
             }
-          }
+          } as AutomaticTransition
         ]
       },
       {
-        id: randomUUID(),
+        id: generateUUID(),
         name: "Post-Purchase Engagement",
         description: "Follow-up with order confirmations, shipment tracking, and cross-sell opportunities",
         order: 6,
@@ -279,17 +411,18 @@ export const sampleJourneys: JourneyData[] = [
           {
             fromStageId: "placeholder",
             toStageId: "placeholder",
-            triggerType: TransitionTriggerType.EVENT,
+            triggerType: TransitionTriggerType.EVENT as 'EVENT',
             name: "Return Visit",
+            description: "User returns after week from purchase",
             triggerDetails: {
               eventName: "site_revisit",
               afterDays: 7
             }
-          }
+          } as EventTransition
         ]
       },
       {
-        id: randomUUID(),
+        id: generateUUID(),
         name: "Repeat Customer",
         description: "Multiple purchases completed, focus on retention and loyalty",
         order: 7,
@@ -306,7 +439,7 @@ export const sampleJourneys: JourneyData[] = [
 /**
  * This function connects stage IDs in the transitions to create a complete journey
  */
-export function getConnectedJourneys(): JourneyData[] {
+function getConnectedJourneys(): Journey[] {
   return sampleJourneys.map(journey => {
     const stages = [...journey.stages];
     
@@ -346,10 +479,21 @@ export function getConnectedJourneys(): JourneyData[] {
 /**
  * Function to seed the sample journeys to the database
  */
-export async function seedSampleJourneys(prisma: any, userId: string) {
+async function seedSampleJourneys(prisma: PrismaClient, userId: string) {
   try {
     console.log("Seeding sample journeys...");
     const journeys = getConnectedJourneys();
+    
+    // First check if the TransitionTriggerType enum is available
+    let enumAvailable = true;
+    try {
+      // Try to perform a simple query that would fail if the enum doesn't exist
+      await prisma.$queryRaw`SELECT 'AUTOMATIC'::TransitionTriggerType`;
+      console.log("TransitionTriggerType enum is available");
+    } catch (error) {
+      console.warn("TransitionTriggerType enum check failed, will use string values");
+      enumAvailable = false;
+    }
     
     for (const journey of journeys) {
       // Create the journey
@@ -391,20 +535,57 @@ export async function seedSampleJourneys(prisma: any, userId: string) {
         if (!stage.transitions) continue;
         
         for (const transition of stage.transitions) {
-          await prisma.JourneyTransition.create({
-            data: {
-              id: randomUUID(),
-              fromStageId: transition.fromStageId,
-              toStageId: transition.toStageId,
-              name: transition.name,
-              description: transition.description,
-              triggerType: transition.triggerType,
-              triggerDetails: transition.triggerDetails ? JSON.stringify(transition.triggerDetails) : null,
-              conditions: transition.conditions ? JSON.stringify(transition.conditions) : null,
-              createdAt: new Date(),
-              updatedAt: new Date()
+          try {
+            // Ensure required properties exist or set defaults
+            const description = transition.description || '';
+            // Use our safe getter function for trigger details
+            const triggerDetails = getTransitionTriggerDetails(transition);
+            // Use our safe getter function for conditions
+            const conditions = getTransitionConditions(transition);
+            
+            await prisma.JourneyTransition.create({
+              data: {
+                id: generateUUID(),
+                fromStageId: transition.fromStageId,
+                toStageId: transition.toStageId,
+                name: transition.name,
+                description: description,
+                triggerType: transition.triggerType,
+                triggerDetails: triggerDetails,
+                conditions: conditions,
+                createdAt: new Date(),
+                updatedAt: new Date()
+              }
+            });
+          } catch (error: any) { // Use 'any' type to handle unknown error
+            if (error.message && error.message.includes('TransitionTriggerType')) {
+              console.warn(`TransitionTriggerType enum error, trying with raw query instead`);
+              
+              // Fallback to using raw SQL if the enum doesn't exist
+              const transitionId = generateUUID();
+              const triggerType = String(transition.triggerType); // Convert enum to string
+              const description = transition.description || '';
+              // Use our safe getter functions
+              const triggerDetails = getTransitionTriggerDetails(transition);
+              const conditions = getTransitionConditions(transition);
+              
+              await prisma.$executeRaw`
+                INSERT INTO "JourneyTransition" (
+                  "id", "fromStageId", "toStageId", "name", "description",
+                  "triggerType", "triggerDetails", "conditions",
+                  "createdAt", "updatedAt"
+                ) VALUES (
+                  ${transitionId}, ${transition.fromStageId}, ${transition.toStageId},
+                  ${transition.name}, ${description},
+                  ${triggerType}, ${triggerDetails}::jsonb, ${conditions}::jsonb,
+                  NOW(), NOW()
+                )
+              `;
+            } else {
+              // Re-throw any other error
+              throw error;
             }
-          });
+          }
         }
       }
       
@@ -417,4 +598,12 @@ export async function seedSampleJourneys(prisma: any, userId: string) {
     console.error("Error seeding sample journeys:", error);
     return false;
   }
-} 
+}
+
+// Export functions and data using CommonJS syntax
+module.exports = {
+  sampleJourneys,
+  getConnectedJourneys,
+  seedSampleJourneys,
+  TransitionTriggerType
+};

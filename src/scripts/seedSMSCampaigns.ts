@@ -62,6 +62,11 @@ async function seedSMSCampaigns() {
     where: {
       role: "ADMIN",
     },
+    select: {
+      id: true,
+      email: true,
+      role: true
+    }
   });
 
   if (!adminUser) {
@@ -103,12 +108,12 @@ async function seedSMSCampaigns() {
           updatedAt: now,
           createdById: adminUser.id,
           ...(lists.length > 0 && {
-            List: {
+            lists: {
               connect: [{ id: lists[0].id }]
             }
           }),
           ...(segments.length > 0 && {
-            Segment: {
+            segments: {
               connect: [{ id: segments[0].id }]
             }
           }),

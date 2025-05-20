@@ -1,3 +1,8 @@
+/**
+ * Script to seed sample customer segments into the database
+ * Run with: docker exec -it marketsage-web node src/scripts/seedSegments.js
+ */
+
 const { PrismaClient } = require('@prisma/client');
 const dotenv = require('dotenv');
 const { randomUUID } = require('crypto');
@@ -45,15 +50,27 @@ const sampleSegments = [
 async function seedSegments() {
   console.log("Starting to seed segments...");
 
-  // Get the first admin user
+  // Get the first admin user - avoid querying for organizationId which doesn't exist
   let adminUser = await prisma.user.findFirst({
     where: {
       role: "ADMIN",
     },
+    select: {
+      id: true,
+      email: true,
+      name: true
+    }
   });
 
   if (!adminUser) {
-    adminUser = await prisma.user.findFirst({});
+    // Try to find any user if no admin is found
+    adminUser = await prisma.user.findFirst({
+      select: {
+        id: true,
+        email: true,
+        name: true
+      }
+    });
 
     if (!adminUser) {
       console.error("No users found in the database. Please create a user first.");
@@ -99,4 +116,4 @@ seedSegments()
   })
   .finally(() => {
     console.log("Segment seeding complete.");
-  }); 
+  });

@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database service only (optimized)
+  db:
+    image: postgres:16-alpine
+    container_name: marketsage-db
+    restart: always
+    platform: linux/amd64
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=marketsage
+      - POSTGRES_PASSWORD=marketsage_password
+      - POSTGRES_DB=marketsage
+      # Optimize postgres for development
+      - POSTGRES_INITDB_ARGS=--encoding=UTF8
+      - POSTGRES_HOST_AUTH_METHOD=md5 
+      # Tune postgres for performance
+      - PGDATA=/var/lib/postgresql/data/pgdata
+      - POSTGRES_SHARED_BUFFERS=128MB
+      - POSTGRES_EFFECTIVE_CACHE_SIZE=512MB
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marketsage"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - marketsage-network
+    command: >
+      postgres
+        -c shared_buffers=128MB
+        -c effective_cache_size=512MB
+        -c work_mem=4MB
+        -c max_connections=10
+
+volumes:
+  postgres-data:
+    driver: local
+
+networks:
+  marketsage-network:
+    driver: bridge 

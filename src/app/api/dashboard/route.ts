@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
           },
         },
         include: {
-          EmailActivity: true,
+          activities: true,
         },
       });
     } catch (error) {
@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
     // Get SMS campaigns data
     let smsCampaigns = [];
     try {
-      smsCampaigns = await prisma.smSCampaign.findMany({
+      smsCampaigns = await prisma.sMSCampaign.findMany({
         where: {
           createdById: userId,
           createdAt: {
@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
           },
         },
         include: {
-          SMSActivity: true,
+          activities: true,
         },
       });
     } catch (error) {
@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
           },
         },
         include: {
-          WhatsAppActivity: true,
+          activities: true,
         },
       });
     } catch (error) {
@@ -174,7 +174,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate email stats
-    const emailActivities = emailCampaigns.flatMap(campaign => campaign.EmailActivity);
+    const emailActivities = emailCampaigns.flatMap(campaign => campaign.activities);
     const sentEmails = emailCampaigns.length;
     const openedEmails = emailActivities.filter(activity => activity.type === "OPENED").length;
     const clickedEmails = emailActivities.filter(activity => activity.type === "CLICKED").length;
@@ -211,7 +211,7 @@ export async function GET(request: NextRequest) {
 
     // Get campaign performance data
     const campaignPerformance = emailCampaigns.map(campaign => {
-      const activities = campaign.EmailActivity;
+      const activities = campaign.activities;
       const sent = 1; // Each campaign counts as 1 sent batch
       const opened = activities.filter(a => a.type === "OPENED").length;
       const clicked = activities.filter(a => a.type === "CLICKED").length;
