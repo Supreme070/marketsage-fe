@@ -77,16 +77,7 @@ const SAMPLE_NOTIFICATIONS = [
     link: "/contacts/view/123",
     category: "contacts"
   },
-  {
-    id: "6",
-    title: "Journey milestone reached",
-    message: "10 contacts completed the 'Customer Onboarding' journey.",
-    timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
-    read: true,
-    type: "success",
-    link: "/journeys/customer-onboarding",
-    category: "journeys"
-  },
+
   {
     id: "7",
     title: "Segment updated",
@@ -241,14 +232,6 @@ export default function NotificationsPage() {
                     onClick={() => setFilter("contacts")}
                   >
                     Contacts
-                  </Button>
-                  <Button 
-                    variant={filter === "journeys" ? "default" : "ghost"} 
-                    className="w-full justify-start" 
-                    size="sm"
-                    onClick={() => setFilter("journeys")}
-                  >
-                    Journeys
                   </Button>
                   <Button 
                     variant={filter === "workflows" ? "default" : "ghost"} 

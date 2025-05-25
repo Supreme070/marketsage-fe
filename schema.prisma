@@ -72,7 +72,6 @@ model Contact {
   createdById      String
   AnonymousVisitor AnonymousVisitor[]
   createdBy        User               @relation("UserToContact", fields: [createdById], references: [id])
-  ContactJourney   ContactJourney[]
   EmailActivity    EmailActivity[]
   ListMember       ListMember[]
   SMSActivity      SMSActivity[]
@@ -248,7 +247,6 @@ model User {
   Contact              Contact[]             @relation("UserToContact")
   EmailCampaign        EmailCampaign[]       @relation("UserToEmailCampaign")
   EmailTemplate        EmailTemplate[]       @relation("UserToEmailTemplate")
-  Journey              Journey[]
   LeadPulseConfigs     LeadPulseConfig[]     @relation("UserToLeadPulseConfig")
   LeadPulseForms       LeadPulseForm[]       @relation("UserToLeadPulseForm")
   LeadPulseWhatsAppQRs LeadPulseWhatsAppQR[] @relation("UserToLeadPulseWhatsAppQR")
@@ -361,145 +359,23 @@ model UserPreference {
   user        User     @relation("UserToPreference", fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model Journey {
-  id               String             @id
-  name             String
-  description      String?
-  isActive         Boolean            @default(true)
-  createdById      String
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime
-  ContactJourney   ContactJourney[]
-  createdBy        User               @relation(fields: [createdById], references: [id])
-  JourneyAnalytics JourneyAnalytics[]
-  JourneyMetric    JourneyMetric[]
-  JourneyStage     JourneyStage[]
-}
 
-model JourneyStage {
-  id                            String                     @id
-  journeyId                     String
-  name                          String
-  description                   String?
-  order                         Int
-  expectedDuration              Int?
-  conversionGoal                Float?
-  isEntryPoint                  Boolean                    @default(false)
-  isExitPoint                   Boolean                    @default(false)
-  createdAt                     DateTime                   @default(now())
-  updatedAt                     DateTime
-  ContactJourney                ContactJourney[]           @relation("ContactJourney_currentStageIdToJourneyStage")
-  ContactJourneyStage           ContactJourneyStage[]
-  ContactJourneyTransition_from ContactJourneyTransition[] @relation("ContactJourneyTransition_fromStageIdToJourneyStage")
-  ContactJourneyTransition_to   ContactJourneyTransition[] @relation("ContactJourneyTransition_toStageIdToJourneyStage")
-  Journey                       Journey                    @relation(fields: [journeyId], references: [id], onDelete: Cascade)
-  JourneyStageMetric            JourneyStageMetric[]
-  JourneyTransition_from        JourneyTransition[]        @relation("JourneyTransition_fromStageIdToJourneyStage")
-  JourneyTransition_to          JourneyTransition[]        @relation("JourneyTransition_toStageIdToJourneyStage")
-}
 
-model JourneyTransition {
-  id                       String                     @id
-  fromStageId              String
-  toStageId                String
-  name                     String
-  description              String?
-  triggerType              String
-  triggerDetails           Json?
-  conditions               Json?
-  createdAt                DateTime                   @default(now())
-  updatedAt                DateTime
-  ContactJourneyTransition ContactJourneyTransition[]
-  fromStage                JourneyStage               @relation("JourneyTransition_fromStageIdToJourneyStage", fields: [fromStageId], references: [id], onDelete: Cascade)
-  toStage                  JourneyStage               @relation("JourneyTransition_toStageIdToJourneyStage", fields: [toStageId], references: [id], onDelete: Cascade)
-}
 
-model ContactJourney {
-  id                       String                     @id
-  contactId                String
-  journeyId                String
-  currentStageId           String?
-  entryDate                DateTime                   @default(now())
-  lastUpdated              DateTime
-  completionDate           DateTime?
-  isCompleted              Boolean                    @default(false)
-  properties               Json?
-  Contact                  Contact                    @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  currentStage             JourneyStage?              @relation("ContactJourney_currentStageIdToJourneyStage", fields: [currentStageId], references: [id])
-  Journey                  Journey                    @relation(fields: [journeyId], references: [id], onDelete: Cascade)
-  ContactJourneyStage      ContactJourneyStage[]
-  ContactJourneyTransition ContactJourneyTransition[]
-}
 
-model ContactJourneyStage {
-  id               String         @id
-  contactJourneyId String
-  stageId          String
-  entryDate        DateTime       @default(now())
-  exitDate         DateTime?
-  duration         Int?
-  isCompleted      Boolean        @default(false)
-  notes            String?
-  ContactJourney   ContactJourney @relation(fields: [contactJourneyId], references: [id], onDelete: Cascade)
-  JourneyStage     JourneyStage   @relation(fields: [stageId], references: [id], onDelete: Cascade)
-}
 
-model ContactJourneyTransition {
-  id                String            @id
-  contactJourneyId  String
-  transitionId      String
-  fromStageId       String
-  toStageId         String
-  transitionDate    DateTime          @default(now())
-  triggerDetails    Json?
-  ContactJourney    ContactJourney    @relation(fields: [contactJourneyId], references: [id], onDelete: Cascade)
-  fromStage         JourneyStage      @relation("ContactJourneyTransition_fromStageIdToJourneyStage", fields: [fromStageId], references: [id], onDelete: Cascade)
-  toStage           JourneyStage      @relation("ContactJourneyTransition_toStageIdToJourneyStage", fields: [toStageId], references: [id], onDelete: Cascade)
-  JourneyTransition JourneyTransition @relation(fields: [transitionId], references: [id], onDelete: Cascade)
-}
 
-model JourneyMetric {
-  id              String   @id
-  journeyId       String
-  name            String
-  description     String?
-  metricType      String
-  targetValue     Float?
-  aggregationType String?
-  formula         String?
-  isSuccess       Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime
-  Journey         Journey  @relation(fields: [journeyId], references: [id], onDelete: Cascade)
-}
 
-model JourneyStageMetric {
-  id              String       @id
-  stageId         String
-  name            String
-  description     String?
-  metricType      String
-  targetValue     Float?
-  aggregationType String?
-  formula         String?
-  isSuccess       Boolean      @default(false)
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime
-  JourneyStage    JourneyStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
-}
 
-model JourneyAnalytics {
-  id                String   @id
-  journeyId         String
-  date              DateTime
-  totalContacts     Int      @default(0)
-  stageDistribution Json?
-  averageDuration   Int?
-  conversionRate    Float?
-  dropoffPoints     Json?
-  metrics           Json?
-  Journey           Journey  @relation(fields: [journeyId], references: [id], onDelete: Cascade)
-}
+
+
+
+
+
+
+
+
+
 
 model AnonymousVisitor {
   id                  String                @id @default(cuid())

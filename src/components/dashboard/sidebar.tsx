@@ -20,7 +20,6 @@ import {
   FileText,
   AlertCircle,
   MailQuestion,
-  GitBranch,
   BrainCircuit,
   Beaker,
   MapPin,
@@ -47,11 +46,6 @@ const sidebarNavItems: NavItem[] = [
     title: "Dashboard",
     href: "/dashboard",
     icon: BarChart4,
-  },
-  {
-    title: "Tasks",
-    href: "/tasks",
-    icon: FileText,
   },
   {
     title: "Contacts",
@@ -172,11 +166,6 @@ const sidebarNavItems: NavItem[] = [
         icon: BrainCircuit,
       },
     ],
-  },
-  {
-    title: "Customer Journeys",
-    href: "/journeys",
-    icon: GitBranch,
   },
   {
     title: "Integrations",

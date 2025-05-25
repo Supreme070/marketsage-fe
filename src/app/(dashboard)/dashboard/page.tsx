@@ -115,60 +115,7 @@ const defaultDashboardData = {
   },
 };
 
-// Upcoming tasks component
-function UpcomingTasks() {
-  const [tasks, setTasks] = useState([
-    { id: 1, title: "Review campaign performance", due: "Today", priority: "high", completed: false },
-    { id: 2, title: "Approve email templates", due: "Tomorrow", priority: "medium", completed: false },
-    { id: 3, title: "Update contact segments", due: "In 2 days", priority: "low", completed: false },
-    { id: 4, title: "Schedule monthly newsletter", due: "Next week", priority: "medium", completed: false },
-  ]);
 
-  const toggleTask = (id: number) => {
-    setTasks(tasks.map(task => 
-      task.id === id ? { ...task, completed: !task.completed } : task
-    ));
-  };
-
-  return (
-    <div className="space-y-4">
-      {tasks.map(task => (
-        <div key={task.id} className={`flex items-center justify-between p-3 bg-muted/20 rounded-md hover:bg-muted/40 transition-colors ${task.completed ? 'opacity-60' : ''}`}>
-          <div className="flex items-center gap-3">
-            <div className={`w-1.5 h-1.5 rounded-full ${
-              task.priority === 'high' ? 'bg-red-500' : 
-              task.priority === 'medium' ? 'bg-amber-500' : 
-              'bg-green-500'
-            }`}></div>
-            <span className={`text-sm font-medium ${task.completed ? 'line-through' : ''}`}>{task.title}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">{task.due}</Badge>
-            <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => toggleTask(task.id)}>
-              {task.completed ? (
-                <Undo className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <CheckCircle className="h-4 w-4" />
-              )}
-              <span className="sr-only">{task.completed ? 'Mark as incomplete' : 'Complete'}</span>
-            </Button>
-          </div>
-        </div>
-      ))}
-      <div className="flex justify-between">
-        <Button variant="outline" size="sm" onClick={() => setTasks(tasks.filter(task => !task.completed))}>
-          Clear Completed
-        </Button>
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/tasks/new">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Task
-          </Link>
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 // Recent activity component
 function RecentActivity() {
@@ -176,7 +123,6 @@ function RecentActivity() {
     { id: 1, type: "campaign", title: "Email campaign sent", description: "Monthly Newsletter", time: "2 hours ago", href: "/email/campaigns" },
     { id: 2, type: "contact", title: "New contacts added", description: "12 contacts imported", time: "Yesterday", href: "/contacts" },
     { id: 3, type: "automation", title: "Workflow triggered", description: "Welcome sequence", time: "2 days ago", href: "/workflows" },
-    { id: 4, type: "journey", title: "Journey milestone", description: "50% completion rate", time: "3 days ago", href: "/journeys" },
   ];
 
   const getIcon = (type: string) => {
@@ -184,7 +130,6 @@ function RecentActivity() {
       case "campaign": return <Mail className="h-4 w-4 text-blue-500" />;
       case "contact": return <Users className="h-4 w-4 text-green-500" />;
       case "automation": return <Zap className="h-4 w-4 text-amber-500" />;
-      case "journey": return <Activity className="h-4 w-4 text-purple-500" />;
       default: return <Info className="h-4 w-4" />;
     }
   };
@@ -562,18 +507,8 @@ export default function DashboardPage() {
             </Card>
                   </div>
 
-          {/* Tasks, Insights and Quick Actions */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle>Upcoming Tasks</CardTitle>
-                <CardDescription>Tasks requiring your attention</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <UpcomingTasks />
-              </CardContent>
-            </Card>
-
+          {/* Insights and Quick Actions */}
+          <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle>AI Insights</CardTitle>

@@ -17,7 +17,7 @@ const prisma = new PrismaClient({
 });
 
 export type NotificationType = 'info' | 'success' | 'warning' | 'error';
-export type NotificationCategory = 'campaigns' | 'contacts' | 'system' | 'journeys' | 'workflows' | 'segments';
+export type NotificationCategory = 'campaigns' | 'contacts' | 'system' | 'workflows' | 'segments';
 
 export interface NotificationData {
   id?: string;
