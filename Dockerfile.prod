@@ -12,6 +12,10 @@ COPY package.json package-lock.json* ./
 RUN apk update && \
     apk add --no-cache --virtual .build-deps libc6-compat python3 make g++ && \
     apk add --no-cache postgresql-client && \
+    npm config set fetch-timeout 600000 && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set fetch-retries 5 && \
     npm install && \
     apk del .build-deps
 
@@ -27,7 +31,15 @@ RUN ls -la ./src/ && ls -la ./src/scripts || echo "Scripts directory not found i
 # Remove the problematic bcrypt binary and rebuild for the current architecture
 RUN rm -rf node_modules/bcrypt/lib/binding/napi-v3 && \
     apk add --no-cache --virtual .build-deps python3 make g++ && \
-    npm rebuild bcrypt --build-from-source && \
+    npm config set fetch-timeout 600000 && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set fetch-retries 5 && \
+    npm config set registry https://registry.npmjs.org/ && \
+    (npm rebuild bcrypt --build-from-source || \
+     (echo "bcrypt rebuild failed, trying alternative approach..." && \
+      npm uninstall bcrypt && \
+      npm install bcrypt@5.1.1 --save)) && \
     apk del .build-deps
 
 # Make startup script executable
