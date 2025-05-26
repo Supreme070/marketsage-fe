@@ -24,6 +24,7 @@ import {
   Beaker,
   MapPin,
   Eye,
+  Route,
   type LucideIcon
 } from "lucide-react";
 
@@ -151,6 +152,11 @@ const sidebarNavItems: NavItem[] = [
     icon: Zap,
   },
   {
+    title: "Customer Journeys",
+    href: "/dashboard/journeys",
+    icon: Route,
+  },
+  {
     title: "Conversions",
     href: "/conversions",
     icon: LineChart,
@@ -163,6 +169,11 @@ const sidebarNavItems: NavItem[] = [
       {
         title: "Predictive Analytics",
         href: "/dashboard/predictive-analytics",
+        icon: BrainCircuit,
+      },
+      {
+        title: "Decision Support",
+        href: "/dashboard/decision-support",
         icon: BrainCircuit,
       },
     ],
