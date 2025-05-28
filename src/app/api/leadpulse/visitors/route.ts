@@ -1,183 +1,349 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/db/prisma';
-import { generateMockVisitorData, VisitorJourney } from '@/app/api/leadpulse/_mockData';
+import { headers } from 'next/headers';
 
-// Define interface for the visitor data structure from Prisma
-interface PrismaVisitor {
+// Database simulation - in production this would be your actual database
+interface VisitorSession {
   id: string;
   fingerprint: string;
-  lastVisitedAt: Date;
+  location: string;
+  device: string;
+  browser: string;
   engagementScore: number;
-  city?: string | null;
-  country?: string | null;
-  device?: string | null;
-  browser?: string | null;
-  LeadPulseTouchpoint: PrismaTouchpoint[];
-  // Add other fields as needed
+  lastActive: Date;
+  sessionStart: Date;
+  pageViews: number;
+  clicks: number;
+  formInteractions: number;
+  conversions: number;
+  isActive: boolean;
+  pulseData: Array<{
+    timestamp: Date;
+    value: number;
+    type: 'pageview' | 'click' | 'form_interaction' | 'conversion';
+    url?: string;
+    title?: string;
+  }>;
 }
 
-interface PrismaTouchpoint {
-  id: string;
-  timestamp: Date;
-  pageUrl: string;
-  pageTitle?: string | null;
-  clickData?: any;
-  exitIntent: boolean;
-  formId?: string | null;
-  // Add other fields as needed
+// Simulated in-memory database (in production, use PostgreSQL/MongoDB)
+let visitorsDB: VisitorSession[] = [];
+
+// Initialize with some test data
+if (visitorsDB.length === 0) {
+  visitorsDB = generateInitialVisitorData();
 }
 
-/**
- * GET /api/leadpulse/visitors
- * Returns active visitors with their pulse data
- */
+function generateInitialVisitorData(): VisitorSession[] {
+  const now = new Date();
+  const visitors: VisitorSession[] = [];
+  
+  // Generate 50 realistic visitor sessions
+  for (let i = 0; i < 50; i++) {
+    const sessionStart = new Date(now.getTime() - Math.random() * 24 * 60 * 60 * 1000); // Last 24h
+    const lastActive = new Date(sessionStart.getTime() + Math.random() * 3 * 60 * 60 * 1000); // Up to 3h later
+    const isActive = Math.random() > 0.7 && (now.getTime() - lastActive.getTime()) < 30 * 60 * 1000; // 30% chance active if within 30 mins
+    
+    const pageViews = Math.floor(Math.random() * 15) + 1;
+    const clicks = Math.floor(Math.random() * 8);
+    const formInteractions = Math.random() > 0.7 ? Math.floor(Math.random() * 3) : 0;
+    const conversions = Math.random() > 0.9 ? 1 : 0;
+    
+    // Calculate engagement score based on behavior
+    const engagementScore = Math.min(100, 
+      (pageViews * 5) + 
+      (clicks * 10) + 
+      (formInteractions * 20) + 
+      (conversions * 50) +
+      Math.random() * 20
+    );
+    
+    const locations = [
+      'Lagos, Nigeria', 'Abuja, Nigeria', 'Kano, Nigeria', 'Port Harcourt, Nigeria',
+      'Accra, Ghana', 'Kumasi, Ghana', 'Nairobi, Kenya', 'Kampala, Uganda',
+      'Cairo, Egypt', 'Cape Town, South Africa', 'Johannesburg, South Africa',
+      'Casablanca, Morocco', 'Tunis, Tunisia', 'Addis Ababa, Ethiopia'
+    ];
+    
+    const devices = [
+      'Mobile, Chrome', 'Desktop, Chrome', 'Mobile, Safari', 'Desktop, Firefox',
+      'Mobile, Edge', 'Desktop, Safari', 'Tablet, Chrome', 'Mobile, Opera'
+    ];
+    
+    const browsers = ['Chrome', 'Safari', 'Firefox', 'Edge', 'Opera'];
+    
+    // Generate pulse data
+    const pulseData = [];
+    let currentTime = sessionStart;
+    
+    for (let j = 0; j < pageViews + clicks + formInteractions + conversions; j++) {
+      currentTime = new Date(currentTime.getTime() + Math.random() * 300000); // 0-5 min intervals
+      
+      let type: 'pageview' | 'click' | 'form_interaction' | 'conversion';
+      let value = 1;
+      
+      if (j < pageViews) {
+        type = 'pageview';
+        value = 1;
+      } else if (j < pageViews + clicks) {
+        type = 'click';
+        value = 2;
+      } else if (j < pageViews + clicks + formInteractions) {
+        type = 'form_interaction';
+        value = 3;
+      } else {
+        type = 'conversion';
+        value = 5;
+      }
+      
+      const urls = [
+        '/home', '/products', '/pricing', '/about', '/contact',
+        '/features', '/blog', '/support', '/dashboard', '/signup'
+      ];
+      
+      pulseData.push({
+        timestamp: currentTime,
+        value,
+        type,
+        url: urls[Math.floor(Math.random() * urls.length)],
+        title: `Page ${j + 1}`
+      });
+    }
+    
+    visitors.push({
+      id: `visitor_${i + 1}`,
+      fingerprint: `fp_${Math.random().toString(36).substr(2, 16)}`,
+      location: locations[Math.floor(Math.random() * locations.length)],
+      device: devices[Math.floor(Math.random() * devices.length)],
+      browser: browsers[Math.floor(Math.random() * browsers.length)],
+      engagementScore,
+      lastActive,
+      sessionStart,
+      pageViews,
+      clicks,
+      formInteractions,
+      conversions,
+      isActive,
+      pulseData
+    });
+  }
+  
+  return visitors;
+}
+
+function filterVisitorsByTimeRange(visitors: VisitorSession[], timeRange: string): VisitorSession[] {
+  const now = new Date();
+  let cutoffTime: Date;
+  
+  switch (timeRange) {
+    case '1h':
+      cutoffTime = new Date(now.getTime() - 60 * 60 * 1000);
+      break;
+    case '24h':
+      cutoffTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      break;
+    case '7d':
+      cutoffTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      break;
+    case '30d':
+      cutoffTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      break;
+    default:
+      cutoffTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  }
+  
+  return visitors.filter(visitor => visitor.lastActive >= cutoffTime);
+}
+
+// GET: Fetch visitors
 export async function GET(request: NextRequest) {
   try {
-    // Get time range from query
     const { searchParams } = new URL(request.url);
     const timeRange = searchParams.get('timeRange') || '24h';
+    const limit = parseInt(searchParams.get('limit') || '50');
+    const offset = parseInt(searchParams.get('offset') || '0');
     
-    // Convert timeRange to a Date object for filtering
-    let startDate = new Date();
-    switch (timeRange) {
-      case '1h':
-        startDate.setHours(startDate.getHours() - 1);
-        break;
-      case '24h':
-        startDate.setDate(startDate.getDate() - 1);
-        break;
-      case '7d':
-        startDate.setDate(startDate.getDate() - 7);
-        break;
-      case '30d':
-        startDate.setDate(startDate.getDate() - 30);
-        break;
-      default:
-        startDate.setDate(startDate.getDate() - 1); // Default to 24h
-    }
+    // Filter by time range
+    let filteredVisitors = filterVisitorsByTimeRange(visitorsDB, timeRange);
     
-    // Use mock data for now - when AnonymousVisitor model is properly added to the schema,
-    // we can uncomment and use the real data query
-    /*
-    // Attempt to fetch real data
-    try {
-      // Check if the AnonymousVisitor model exists in the schema
-      const visitors = await prisma.anonymousVisitor.findMany({
-        where: {
-          lastVisit: {
-            gte: startDate
-          }
-        },
-        orderBy: {
-          lastVisit: 'desc'
-        },
-        include: {
-          // Include touchpoints to generate pulse data
-          LeadPulseTouchpoint: {
-            orderBy: {
-              timestamp: 'asc'
-            }
-          }
-        },
-        take: 20 // Limit to 20 most recent visitors
-      });
-      
-      // If we have real data, transform it to the expected format
-      if (visitors && visitors.length > 0) {
-        const transformedVisitors = visitors.map((visitor: PrismaVisitor) => {
-          // Convert touchpoints to pulse data
-          const pulseData = visitor.LeadPulseTouchpoint.map((touchpoint: PrismaTouchpoint) => {
-            // Determine type
-            let type: 'pageview' | 'click' | 'form_interaction' | 'conversion' = 'pageview';
-            
-            if (touchpoint.clickData) {
-              type = 'click';
-            } else if (touchpoint.exitIntent) {
-              type = 'conversion';
-            } else if (touchpoint.formId) {
-              type = 'form_interaction';
-            }
-            
-            // Determine engagement value based on type
-            let value = 1; // Default value
-            if (type === 'click') value = 2;
-            if (type === 'form_interaction') value = 3;
-            if (type === 'conversion') value = 5;
-            
-            return {
-              timestamp: touchpoint.timestamp.toISOString(),
-              value,
-              type,
-              url: touchpoint.pageUrl,
-              title: touchpoint.pageTitle
-            };
-          });
-          
-          // Determine how long ago the visitor was active
-          const lastActive = getTimeAgo(visitor.lastVisitedAt);
-          
-          return {
-            id: visitor.id,
-            visitorId: visitor.id,
-            fingerprint: visitor.fingerprint,
-            location: visitor.city ? `${visitor.city}, ${visitor.country}` : visitor.country || 'Unknown',
-            device: visitor.device,
-            browser: visitor.browser,
-            engagementScore: visitor.engagementScore,
-            lastActive,
-            pulseData
-          };
-        });
-        
-        return NextResponse.json({ visitors: transformedVisitors });
+    // Apply pagination
+    const total = filteredVisitors.length;
+    filteredVisitors = filteredVisitors.slice(offset, offset + limit);
+    
+    // Transform to API response format
+    const visitors = filteredVisitors.map(visitor => ({
+      id: visitor.id,
+      visitorId: visitor.id,
+      fingerprint: visitor.fingerprint,
+      location: visitor.location,
+      device: visitor.device,
+      browser: visitor.browser,
+      engagementScore: Math.round(visitor.engagementScore),
+      lastActive: formatLastActive(visitor.lastActive),
+      pulseData: visitor.pulseData.map(pulse => ({
+        timestamp: pulse.timestamp.toISOString(),
+        value: pulse.value,
+        type: pulse.type,
+        url: pulse.url,
+        title: pulse.title
+      }))
+    }));
+    
+    // Calculate analytics
+    const analytics = {
+      totalVisitors: total,
+      activeVisitors: filteredVisitors.filter(v => v.isActive).length,
+      avgEngagementScore: Math.round(
+        filteredVisitors.reduce((sum, v) => sum + v.engagementScore, 0) / filteredVisitors.length
+      ),
+      conversionRate: Math.round(
+        (filteredVisitors.filter(v => v.conversions > 0).length / filteredVisitors.length) * 100
+      ),
+      timeRange
+    };
+    
+    return NextResponse.json({
+      success: true,
+      visitors,
+      analytics,
+      pagination: {
+        total,
+        limit,
+        offset,
+        hasMore: offset + limit < total
       }
-    } catch (prismaError) {
-      console.error('Error fetching from Prisma:', prismaError);
-      // Continue to fallback data
-    }
-    */
-    
-    // Return mock data
-    const mockVisitors = generateMockVisitorData();
-    return NextResponse.json({ visitors: mockVisitors });
+    });
     
   } catch (error) {
-    console.error('Error in visitors API:', error);
+    console.error('Error fetching visitors:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch visitors' },
+      { success: false, error: 'Failed to fetch visitors' },
       { status: 500 }
     );
   }
 }
 
-// Helper function to convert timestamp to "time ago" format
-function getTimeAgo(date: Date): string {
-  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-  
-  let interval = Math.floor(seconds / 31536000);
-  if (interval >= 1) {
-    return interval === 1 ? '1 year ago' : `${interval} years ago`;
+// POST: Track new visitor event
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { 
+      fingerprint, 
+      event, 
+      url, 
+      title, 
+      location, 
+      device, 
+      browser 
+    } = body;
+    
+    if (!fingerprint || !event) {
+      return NextResponse.json(
+        { success: false, error: 'Fingerprint and event are required' },
+        { status: 400 }
+      );
+    }
+    
+    const now = new Date();
+    
+    // Find existing visitor or create new one
+    let visitor = visitorsDB.find(v => v.fingerprint === fingerprint);
+    
+    if (!visitor) {
+      // Create new visitor session
+      visitor = {
+        id: `visitor_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        fingerprint,
+        location: location || 'Unknown',
+        device: device || 'Unknown',
+        browser: browser || 'Unknown',
+        engagementScore: 0,
+        lastActive: now,
+        sessionStart: now,
+        pageViews: 0,
+        clicks: 0,
+        formInteractions: 0,
+        conversions: 0,
+        isActive: true,
+        pulseData: []
+      };
+      
+      visitorsDB.push(visitor);
+    }
+    
+    // Update visitor with new event
+    visitor.lastActive = now;
+    visitor.isActive = true;
+    
+    // Determine event value and type
+    let value = 1;
+    let eventType: 'pageview' | 'click' | 'form_interaction' | 'conversion' = 'pageview';
+    
+    switch (event.type) {
+      case 'pageview':
+        eventType = 'pageview';
+        value = 1;
+        visitor.pageViews++;
+        visitor.engagementScore += 5;
+        break;
+      case 'click':
+        eventType = 'click';
+        value = 2;
+        visitor.clicks++;
+        visitor.engagementScore += 10;
+        break;
+      case 'form_interaction':
+        eventType = 'form_interaction';
+        value = 3;
+        visitor.formInteractions++;
+        visitor.engagementScore += 20;
+        break;
+      case 'conversion':
+        eventType = 'conversion';
+        value = 5;
+        visitor.conversions++;
+        visitor.engagementScore += 50;
+        break;
+    }
+    
+    // Add pulse data point
+    visitor.pulseData.push({
+      timestamp: now,
+      value,
+      type: eventType,
+      url: url || '/',
+      title: title || 'Page'
+    });
+    
+    // Cap engagement score at 100
+    visitor.engagementScore = Math.min(100, visitor.engagementScore);
+    
+    return NextResponse.json({
+      success: true,
+      visitor: {
+        id: visitor.id,
+        engagementScore: Math.round(visitor.engagementScore),
+        isActive: visitor.isActive
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error tracking visitor event:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to track event' },
+      { status: 500 }
+    );
   }
+}
+
+function formatLastActive(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   
-  interval = Math.floor(seconds / 2592000);
-  if (interval >= 1) {
-    return interval === 1 ? '1 month ago' : `${interval} months ago`;
-  }
-  
-  interval = Math.floor(seconds / 86400);
-  if (interval >= 1) {
-    return interval === 1 ? '1 day ago' : `${interval} days ago`;
-  }
-  
-  interval = Math.floor(seconds / 3600);
-  if (interval >= 1) {
-    return interval === 1 ? '1 hour ago' : `${interval} hours ago`;
-  }
-  
-  interval = Math.floor(seconds / 60);
-  if (interval >= 1) {
-    return interval === 1 ? '1 min ago' : `${interval} mins ago`;
-  }
-  
-  return seconds < 10 ? 'just now' : `${Math.floor(seconds)} seconds ago`;
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins} mins ago`;
+  if (diffHours < 24) return `${diffHours} hours ago`;
+  return `${diffDays} days ago`;
 } 

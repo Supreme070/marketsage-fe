@@ -82,6 +82,11 @@ const sidebarNavItems: NavItem[] = [
         icon: BarChart4,
       },
       {
+        title: "Analytics",
+        href: "/leadpulse/analytics",
+        icon: LineChart,
+      },
+      {
         title: "Forms",
         href: "/leadpulse/forms/new",
         icon: FileText,

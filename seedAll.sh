@@ -67,6 +67,9 @@ fi
 echo -e "\n==== Seeding User Preferences ===="
 NODE_OPTIONS="--experimental-specifier-resolution=node" npx ts-node --esm src/scripts/seedUserPreferences.ts
 
+echo -e "\n==== Seeding Task Management ===="
+NODE_OPTIONS="--experimental-specifier-resolution=node" npx ts-node --esm src/scripts/seedTaskManagement.ts
+
 # Optional: Assign contacts to current user if needed
 if [ -f "src/scripts/assignContactsToCurrentUser.ts" ]; then
   echo -e "\n==== Assigning Contacts to Current User ===="

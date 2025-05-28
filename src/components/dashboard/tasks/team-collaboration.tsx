@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,8 +25,21 @@ import {
   User,
   Target,
   ArrowRight,
-  MoreHorizontal
+  MoreHorizontal,
+  Check,
+  X,
+  Eye,
+  MessageCircle,
+  Phone,
+  Video
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface TeamMember {
   id: string;
@@ -50,15 +63,34 @@ interface Handoff {
   priority: "low" | "medium" | "high" | "urgent";
   status: "pending" | "accepted" | "in-progress" | "completed";
   comments: number;
+  createdAt: string;
+}
+
+interface Message {
+  id: string;
+  from: TeamMember;
+  content: string;
+  timestamp: string;
+  type: "text" | "handoff" | "system";
 }
 
 export function TeamCollaboration() {
   const [selectedTeam, setSelectedTeam] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [newMessage, setNewMessage] = useState("");
+  const [selectedHandoff, setSelectedHandoff] = useState<Handoff | null>(null);
+  const [handoffForm, setHandoffForm] = useState({
+    task: "",
+    description: "",
+    assignTo: "",
+    priority: "medium",
+    dueDate: ""
+  });
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [handoffs, setHandoffs] = useState<Handoff[]>([]);
 
   // Mock data for team members
-  const teamMembers: TeamMember[] = [
+  const [teamMembers] = useState<TeamMember[]>([
     {
       id: "1",
       name: "Adebayo Ogundimu",
@@ -109,55 +141,138 @@ export function TeamCollaboration() {
       activeTasks: 6,
       completionRate: 90
     }
-  ];
+  ]);
 
-  // Mock data for handoffs
-  const handoffs: Handoff[] = [
-    {
-      id: "1",
-      from: teamMembers[0],
-      to: teamMembers[2],
-      task: "Lead Qualification - Lagos Tech",
-      description: "Marketing qualified lead ready for sales follow-up. High intent signals detected.",
-      dueDate: "2024-02-10",
-      priority: "high",
-      status: "pending",
-      comments: 3
-    },
-    {
-      id: "2",
-      from: teamMembers[1],
-      to: teamMembers[0],
-      task: "Campaign Creative Review",
-      description: "Email campaign designs ready for marketing manager approval before launch.",
-      dueDate: "2024-02-09",
-      priority: "medium",
-      status: "in-progress",
-      comments: 5
-    },
-    {
-      id: "3",
-      from: teamMembers[3],
-      to: teamMembers[1],
-      task: "Case Study Content",
-      description: "Need content team to create case study from successful Abuja client implementation.",
-      dueDate: "2024-02-12",
-      priority: "medium",
-      status: "accepted",
-      comments: 2
-    },
-    {
-      id: "4",
-      from: teamMembers[2],
-      to: teamMembers[4],
-      task: "CRM Integration Setup",
-      description: "Configure WhatsApp integration for new enterprise client onboarding.",
-      dueDate: "2024-02-11",
-      priority: "urgent",
-      status: "completed",
-      comments: 8
+  // Initialize with mock handoffs
+  useState(() => {
+    const initialHandoffs: Handoff[] = [
+      {
+        id: "1",
+        from: teamMembers[0],
+        to: teamMembers[2],
+        task: "Lead Qualification - Lagos Tech",
+        description: "Marketing qualified lead ready for sales follow-up. High intent signals detected.",
+        dueDate: "2024-02-10",
+        priority: "high",
+        status: "pending",
+        comments: 3,
+        createdAt: "2024-02-05T10:30:00Z"
+      },
+      {
+        id: "2",
+        from: teamMembers[1],
+        to: teamMembers[0],
+        task: "Campaign Creative Review",
+        description: "Email campaign designs ready for marketing manager approval before launch.",
+        dueDate: "2024-02-09",
+        priority: "medium",
+        status: "in-progress",
+        comments: 5,
+        createdAt: "2024-02-04T14:20:00Z"
+      },
+      {
+        id: "3",
+        from: teamMembers[3],
+        to: teamMembers[1],
+        task: "Case Study Content",
+        description: "Need content team to create case study from successful Abuja client implementation.",
+        dueDate: "2024-02-12",
+        priority: "medium",
+        status: "accepted",
+        comments: 2,
+        createdAt: "2024-02-03T16:45:00Z"
+      },
+      {
+        id: "4",
+        from: teamMembers[2],
+        to: teamMembers[4],
+        task: "CRM Integration Setup",
+        description: "Configure WhatsApp integration for new enterprise client onboarding.",
+        dueDate: "2024-02-11",
+        priority: "urgent",
+        status: "completed",
+        comments: 8,
+        createdAt: "2024-02-01T09:15:00Z"
+      }
+    ];
+    setHandoffs(initialHandoffs);
+  });
+
+  // Filter handoffs based on search and team
+  const filteredHandoffs = useMemo(() => {
+    let filtered = handoffs;
+
+    if (selectedTeam !== "all") {
+      filtered = filtered.filter(handoff => 
+        handoff.from.team.toLowerCase() === selectedTeam || 
+        handoff.to.team.toLowerCase() === selectedTeam
+      );
     }
-  ];
+
+    if (searchTerm) {
+      filtered = filtered.filter(handoff =>
+        handoff.task.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        handoff.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        handoff.from.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        handoff.to.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [handoffs, selectedTeam, searchTerm]);
+
+  // Create new handoff
+  const createHandoff = () => {
+    if (!handoffForm.task || !handoffForm.assignTo) return;
+
+    const assignee = teamMembers.find(member => member.id === handoffForm.assignTo);
+    if (!assignee) return;
+
+    const newHandoff: Handoff = {
+      id: Date.now().toString(),
+      from: teamMembers[0], // Assuming current user is first member
+      to: assignee,
+      task: handoffForm.task,
+      description: handoffForm.description,
+      dueDate: handoffForm.dueDate,
+      priority: handoffForm.priority as any,
+      status: "pending",
+      comments: 0,
+      createdAt: new Date().toISOString()
+    };
+
+    setHandoffs(prev => [newHandoff, ...prev]);
+    setHandoffForm({
+      task: "",
+      description: "",
+      assignTo: "",
+      priority: "medium",
+      dueDate: ""
+    });
+  };
+
+  // Update handoff status
+  const updateHandoffStatus = (handoffId: string, newStatus: Handoff['status']) => {
+    setHandoffs(prev => prev.map(handoff =>
+      handoff.id === handoffId ? { ...handoff, status: newStatus } : handoff
+    ));
+  };
+
+  // Send message
+  const sendMessage = () => {
+    if (!newMessage.trim()) return;
+
+    const message: Message = {
+      id: Date.now().toString(),
+      from: teamMembers[0], // Assuming current user
+      content: newMessage,
+      timestamp: new Date().toISOString(),
+      type: "text"
+    };
+
+    setMessages(prev => [message, ...prev]);
+    setNewMessage("");
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -201,14 +316,70 @@ export function TeamCollaboration() {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
-                Filter
-              </Button>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                New Handoff
-              </Button>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Handoff
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create Task Handoff</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <Input
+                      placeholder="Task title"
+                      value={handoffForm.task}
+                      onChange={(e) => setHandoffForm(prev => ({ ...prev, task: e.target.value }))}
+                    />
+                    <Textarea
+                      placeholder="Description and context"
+                      value={handoffForm.description}
+                      onChange={(e) => setHandoffForm(prev => ({ ...prev, description: e.target.value }))}
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      <Select
+                        value={handoffForm.assignTo}
+                        onValueChange={(value) => setHandoffForm(prev => ({ ...prev, assignTo: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Assign to" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {teamMembers.map(member => (
+                            <SelectItem key={member.id} value={member.id}>
+                              {member.name} ({member.team})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select
+                        value={handoffForm.priority}
+                        onValueChange={(value) => setHandoffForm(prev => ({ ...prev, priority: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Low</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="urgent">Urgent</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Input
+                      type="date"
+                      value={handoffForm.dueDate}
+                      onChange={(e) => setHandoffForm(prev => ({ ...prev, dueDate: e.target.value }))}
+                    />
+                    <Button onClick={createHandoff} className="w-full">
+                      Create Handoff
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </CardHeader>
@@ -224,34 +395,21 @@ export function TeamCollaboration() {
                   <SelectItem value="all">All Teams</SelectItem>
                   <SelectItem value="marketing">Marketing</SelectItem>
                   <SelectItem value="sales">Sales</SelectItem>
+                  <SelectItem value="content">Content</SelectItem>
                   <SelectItem value="technical">Technical</SelectItem>
-                  <SelectItem value="cross-team">Cross-Team</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <label className="text-sm font-medium">Search</label>
+            <div className="md:col-span-2">
+              <label className="text-sm font-medium">Search Handoffs</label>
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search tasks or people..."
+                  placeholder="Search tasks, descriptions, or team members..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-9"
                 />
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Quick Actions</label>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1">
-                  <Bell className="h-4 w-4 mr-2" />
-                  Notifications
-                </Button>
-                <Button variant="outline" size="sm" className="flex-1">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Schedule
-                </Button>
               </div>
             </div>
           </div>
@@ -303,7 +461,7 @@ export function TeamCollaboration() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {handoffs.map((handoff) => (
+              {filteredHandoffs.map((handoff) => (
                 <Card key={handoff.id} className="p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">

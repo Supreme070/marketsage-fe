@@ -168,6 +168,9 @@ services:
         echo '⚙️ Seeding user preferences...' &&
         npx tsx /app/src/scripts/seedUserPreferences.ts &&
         
+        echo '📋 Seeding task management...' &&
+        npx tsx /app/src/scripts/seedTaskManagement.ts &&
+        
         echo '🔗 Assigning contacts to current user...' &&
         npx tsx /app/src/scripts/assignContactsDocker.ts &&
         

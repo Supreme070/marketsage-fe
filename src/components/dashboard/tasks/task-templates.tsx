@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   Search, 
   Filter, 
@@ -24,8 +25,22 @@ import {
   TrendingUp,
   Calendar,
   CheckCircle,
-  Plus
+  Plus,
+  Edit,
+  Trash2,
+  Download,
+  Upload,
+  Heart,
+  Bookmark
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 
 interface TaskTemplate {
   id: string;
@@ -39,6 +54,9 @@ interface TaskTemplate {
   rating: number;
   usageCount: number;
   tags: string[];
+  isFavorite?: boolean;
+  createdBy: string;
+  lastUsed?: string;
   preview: {
     tasks: Array<{
       name: string;
@@ -54,9 +72,23 @@ export function TaskTemplates() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedDifficulty, setSelectedDifficulty] = useState("all");
   const [selectedTemplate, setSelectedTemplate] = useState<TaskTemplate | null>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [sortBy, setSortBy] = useState("popular");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  // Mock data for task templates
-  const templates: TaskTemplate[] = [
+  const [newTemplate, setNewTemplate] = useState({
+    name: "",
+    description: "",
+    category: "marketing" as const,
+    difficulty: "beginner" as const,
+    estimatedTime: "",
+    channels: [] as string[],
+    tags: "",
+    tasks: [] as any[]
+  });
+
+  // Enhanced mock data with more templates
+  const [templates, setTemplates] = useState<TaskTemplate[]>([
     {
       id: "1",
       name: "Email Campaign Launch",
@@ -69,6 +101,9 @@ export function TaskTemplates() {
       rating: 4.8,
       usageCount: 342,
       tags: ["email", "campaign", "sme", "nigeria"],
+      isFavorite: true,
+      createdBy: "MarketSage Team",
+      lastUsed: "2024-02-01",
       preview: {
         tasks: [
           { name: "Campaign Strategy Planning", type: "analysis", description: "Define target audience and campaign objectives", duration: "2h" },
@@ -94,6 +129,9 @@ export function TaskTemplates() {
       rating: 4.9,
       usageCount: 567,
       tags: ["sales", "follow-up", "leads", "conversion"],
+      isFavorite: false,
+      createdBy: "Tunde Bakare",
+      lastUsed: "2024-01-28",
       preview: {
         tasks: [
           { name: "Initial Contact Email", type: "email", description: "Send personalized introduction email", duration: "15m" },
@@ -117,6 +155,9 @@ export function TaskTemplates() {
       rating: 4.7,
       usageCount: 234,
       tags: ["content", "social-media", "blog", "engagement"],
+      isFavorite: true,
+      createdBy: "Fatima Abdullahi",
+      lastUsed: "2024-01-30",
       preview: {
         tasks: [
           { name: "Content Strategy Planning", type: "analysis", description: "Plan content themes and calendar", duration: "3h" },
@@ -146,6 +187,9 @@ export function TaskTemplates() {
       rating: 4.6,
       usageCount: 189,
       tags: ["onboarding", "enterprise", "training", "setup"],
+      isFavorite: false,
+      createdBy: "Ngozi Okafor",
+      lastUsed: "2024-02-02",
       preview: {
         tasks: [
           { name: "Welcome Email", type: "email", description: "Send welcome package and next steps", duration: "20m" },
@@ -172,6 +216,9 @@ export function TaskTemplates() {
       rating: 4.8,
       usageCount: 156,
       tags: ["product-launch", "multi-channel", "nigeria", "awareness"],
+      isFavorite: true,
+      createdBy: "Adebayo Ogundimu",
+      lastUsed: "2024-01-25",
       preview: {
         tasks: [
           { name: "Launch Strategy", type: "analysis", description: "Develop comprehensive launch strategy", duration: "4h" },
@@ -191,33 +238,118 @@ export function TaskTemplates() {
           { name: "Post-Launch Optimization", type: "analysis", description: "Optimize based on results", duration: "2h" }
         ]
       }
-    },
-    {
-      id: "6",
-      name: "Customer Win-Back",
-      description: "Re-engage inactive customers with personalized offers and content",
-      category: "marketing",
-      difficulty: "intermediate",
-      estimatedTime: "12 days",
-      tasks: 8,
-      channels: ["Email", "SMS", "WhatsApp"],
-      rating: 4.4,
-      usageCount: 298,
-      tags: ["win-back", "retention", "inactive", "personalization"],
+    }
+  ]);
+
+  // Filter and sort templates
+  const filteredTemplates = useMemo(() => {
+    let filtered = templates;
+
+    // Apply filters
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter(template => template.category === selectedCategory);
+    }
+
+    if (selectedDifficulty !== "all") {
+      filtered = filtered.filter(template => template.difficulty === selectedDifficulty);
+    }
+
+    if (searchTerm) {
+      filtered = filtered.filter(template =>
+        template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        template.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        template.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+
+    // Apply sorting
+    switch (sortBy) {
+      case "popular":
+        filtered = filtered.sort((a, b) => b.usageCount - a.usageCount);
+        break;
+      case "rating":
+        filtered = filtered.sort((a, b) => b.rating - a.rating);
+        break;
+      case "recent":
+        filtered = filtered.sort((a, b) => 
+          new Date(b.lastUsed || "2024-01-01").getTime() - 
+          new Date(a.lastUsed || "2024-01-01").getTime()
+        );
+        break;
+      case "name":
+        filtered = filtered.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+    }
+
+    return filtered;
+  }, [templates, selectedCategory, selectedDifficulty, searchTerm, sortBy]);
+
+  // Toggle favorite
+  const toggleFavorite = (templateId: string) => {
+    setTemplates(prev => prev.map(template =>
+      template.id === templateId 
+        ? { ...template, isFavorite: !template.isFavorite }
+        : template
+    ));
+  };
+
+  // Use template (create tasks from template)
+  const useTemplate = (template: TaskTemplate) => {
+    // This would typically create actual tasks in the Kanban board
+    console.log("Using template:", template.name);
+    
+    // Update usage count
+    setTemplates(prev => prev.map(t =>
+      t.id === template.id 
+        ? { ...t, usageCount: t.usageCount + 1, lastUsed: new Date().toISOString().split('T')[0] }
+        : t
+    ));
+    
+    // Close dialog if open
+    setSelectedTemplate(null);
+    
+    // In a real app, you'd navigate to the Kanban board with the new tasks
+    alert(`Created ${template.tasks} tasks from "${template.name}" template!`);
+  };
+
+  // Create new template
+  const createTemplate = () => {
+    if (!newTemplate.name || !newTemplate.description) return;
+
+    const template: TaskTemplate = {
+      id: Date.now().toString(),
+      name: newTemplate.name,
+      description: newTemplate.description,
+      category: newTemplate.category,
+      difficulty: newTemplate.difficulty,
+      estimatedTime: newTemplate.estimatedTime || "1 day",
+      tasks: newTemplate.tasks.length || 1,
+      channels: newTemplate.channels,
+      rating: 0,
+      usageCount: 0,
+      tags: newTemplate.tags.split(",").map(tag => tag.trim()),
+      isFavorite: false,
+      createdBy: "You",
       preview: {
-        tasks: [
-          { name: "Customer Segmentation", type: "analysis", description: "Identify inactive customer segments", duration: "2h" },
-          { name: "Personalized Email", type: "email", description: "Send 'We miss you' email", duration: "1h" },
-          { name: "Special Offer", type: "email", description: "Provide exclusive comeback offer", duration: "1h" },
-          { name: "SMS Follow-up", type: "sms", description: "Send SMS with limited-time offer", duration: "30m" },
-          { name: "WhatsApp Outreach", type: "whatsapp", description: "Personal message from account manager", duration: "45m" },
-          { name: "Survey Request", type: "email", description: "Ask why they became inactive", duration: "30m" },
-          { name: "Final Attempt", type: "email", description: "Last chance re-engagement email", duration: "45m" },
-          { name: "Results Analysis", type: "analysis", description: "Analyze win-back campaign results", duration: "2h" }
+        tasks: newTemplate.tasks.length > 0 ? newTemplate.tasks : [
+          { name: "Template Task", type: "analysis", description: "Complete this task", duration: "1h" }
         ]
       }
-    }
-  ];
+    };
+
+    setTemplates(prev => [template, ...prev]);
+    setNewTemplate({
+      name: "",
+      description: "",
+      category: "marketing",
+      difficulty: "beginner",
+      estimatedTime: "",
+      channels: [],
+      tags: "",
+      tasks: []
+    });
+    setShowCreateDialog(false);
+  };
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
@@ -261,16 +393,6 @@ export function TaskTemplates() {
       default: return <Star className="h-3 w-3" />;
     }
   };
-
-  const filteredTemplates = templates.filter(template => {
-    const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         template.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         template.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesCategory = selectedCategory === "all" || template.category === selectedCategory;
-    const matchesDifficulty = selectedDifficulty === "all" || template.difficulty === selectedDifficulty;
-    
-    return matchesSearch && matchesCategory && matchesDifficulty;
-  });
 
   return (
     <div className="space-y-6">

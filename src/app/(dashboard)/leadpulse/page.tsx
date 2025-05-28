@@ -6,12 +6,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Activity, Users, ArrowUpRight, Clock } from 'lucide-react';
+import { PlusCircle, Activity, Users, ArrowUpRight, Clock, TrendingUp } from 'lucide-react';
 import VisitorPulseVisualization from '@/components/leadpulse/VisitorPulseVisualization';
 import JourneyVisualization from '@/components/leadpulse/JourneyVisualization';
 import VisitorInsights from '@/components/leadpulse/VisitorInsights';
 import LiveVisitorMap from '@/components/leadpulse/LiveVisitorMap';
 import VisitorBehaviorAnalysis from '@/components/leadpulse/VisitorBehaviorAnalysis';
+
 import { 
   getActiveVisitors, 
   getVisitorJourneys, 
@@ -34,6 +35,7 @@ export default function LeadPulseDashboard() {
   const [selectedTimeRange, setSelectedTimeRange] = useState('24h');
   const [selectedVisitorId, setSelectedVisitorId] = useState<string | undefined>();
   const [selectedLocation, setSelectedLocation] = useState<string | undefined>();
+  const [activeTab, setActiveTab] = useState('visitors');
   
   // Data state with proper typing
   const [visitorData, setVisitorData] = useState<VisitorJourney[]>([]);
@@ -253,7 +255,7 @@ export default function LeadPulseDashboard() {
         isLoading={loading}
       />
       
-      <Tabs defaultValue="visitors" className="mt-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
         <TabsList>
           <TabsTrigger value="visitors">Visitor Activity</TabsTrigger>
           <TabsTrigger value="journeys">Visitor Journeys</TabsTrigger>

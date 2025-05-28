@@ -9,6 +9,7 @@ import ModernKanbanBoard from "./modern-kanban-board";
 import { TaskAnalytics } from "./task-analytics";
 import { TaskTemplates } from "./task-templates";
 import { TeamCollaboration } from "./team-collaboration";
+import { TaskCalendar } from "./task-calendar";
 import { 
   Kanban, 
   BarChart3, 
@@ -93,15 +94,21 @@ export function TaskManagementDashboard() {
       {/* Main Tabs Interface */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="flex items-center justify-between">
-          <TabsList className="grid w-full grid-cols-4 lg:w-[500px]">
+          <TabsList className="grid w-full grid-cols-5 lg:w-[600px]">
             <TabsTrigger value="kanban">Kanban</TabsTrigger>
+            <TabsTrigger value="calendar">Calendar</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="collaboration">Teams</TabsTrigger>
             <TabsTrigger value="templates">Templates</TabsTrigger>
           </TabsList>
 
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" className="flex items-center gap-2">
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="flex items-center gap-2"
+              onClick={() => setActiveTab("calendar")}
+            >
               <Calendar className="h-4 w-4" />
               Calendar View
             </Button>
@@ -114,6 +121,10 @@ export function TaskManagementDashboard() {
 
         <TabsContent value="kanban" className="space-y-4">
           <ModernKanbanBoard />
+        </TabsContent>
+
+        <TabsContent value="calendar">
+          <TaskCalendar />
         </TabsContent>
 
         <TabsContent value="analytics">
