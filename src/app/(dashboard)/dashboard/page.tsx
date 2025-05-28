@@ -263,54 +263,54 @@ export default function CommandCenterDashboard() {
         </div>
       </div>
 
-      {/* Key Metrics Row - Reduced from 8 to 4 */}
+      {/* Key Metrics Row - Industry Agnostic */}
       <div className="grid gap-4 grid-cols-4">
-        {/* Revenue */}
+        {/* Growth/ROI */}
         <div className="bg-slate-900 border border-green-600/30 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
-            <DollarSign className="h-5 w-5 text-green-400" />
-            <span className="text-sm text-green-400">+12%</span>
+            <TrendingUp className="h-5 w-5 text-green-400" />
+            <span className="text-sm text-green-400">+18%</span>
           </div>
           <div className="text-2xl font-bold text-green-100">
-            {formatCurrency(dashboardData.kpis.revenueToday)}
+            247%
           </div>
-          <div className="text-sm text-green-300/60">REVENUE TODAY</div>
+          <div className="text-sm text-green-300/60">GROWTH RATE</div>
         </div>
 
-        {/* Live Visitors */}
+        {/* Active Audience */}
         <div className="bg-slate-900 border border-red-600/30 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
-            <Activity className="h-5 w-5 text-red-400" />
+            <Users className="h-5 w-5 text-red-400" />
             <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
           </div>
           <div className="text-2xl font-bold text-red-100">
             {dashboardData.livePulse.activeVisitors}
           </div>
-          <div className="text-sm text-red-300/60">LIVE VISITORS</div>
+          <div className="text-sm text-red-300/60">ACTIVE AUDIENCE</div>
         </div>
 
-        {/* Conversion */}
+        {/* Engagement Rate */}
         <div className="bg-slate-900 border border-blue-600/30 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
-            <Target className="h-5 w-5 text-blue-400" />
-            <span className="text-sm text-blue-400">+5%</span>
+            <Activity className="h-5 w-5 text-blue-400" />
+            <span className="text-sm text-blue-400">+12%</span>
           </div>
           <div className="text-2xl font-bold text-blue-100">
-            {dashboardData.kpis.conversionRate.toFixed(1)}%
+            {dashboardData.livePulse.engagementTrend.toFixed(0)}%
           </div>
-          <div className="text-sm text-blue-300/60">CONVERSION RATE</div>
+          <div className="text-sm text-blue-300/60">ENGAGEMENT</div>
         </div>
 
-        {/* Active Automations */}
+        {/* Campaign Performance */}
         <div className="bg-slate-900 border border-orange-600/30 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
-            <Zap className="h-5 w-5 text-orange-400" />
-            <span className="text-sm text-orange-400">RUNNING</span>
+            <BarChart3 className="h-5 w-5 text-orange-400" />
+            <span className="text-sm text-orange-400">ACTIVE</span>
           </div>
           <div className="text-2xl font-bold text-orange-100">
             {dashboardData.kpis.runningAutomations}
           </div>
-          <div className="text-sm text-orange-300/60">AUTOMATIONS</div>
+          <div className="text-sm text-orange-300/60">CAMPAIGNS</div>
         </div>
       </div>
 
@@ -319,24 +319,24 @@ export default function CommandCenterDashboard() {
         {/* Left Side - Analytics Charts */}
         <div className="col-span-8 space-y-6">
           
-          {/* Revenue Trend Chart */}
+          {/* Audience Growth Trend */}
           <div className="bg-slate-900 border border-slate-700 rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-lg font-bold text-white">REVENUE TREND</h3>
+                <h3 className="text-lg font-bold text-white">AUDIENCE GROWTH</h3>
                 <p className="text-sm text-slate-400">Last 7 days performance</p>
               </div>
               <div className="text-green-400 text-sm">↗ +23% vs last week</div>
             </div>
             <div className="h-40 flex items-end justify-between gap-2 bg-slate-800/20 rounded p-3">
               {[
-                { day: 'Mon', value: 65, amount: '₦2.1M' },
-                { day: 'Tue', value: 78, amount: '₦2.8M' },
-                { day: 'Wed', value: 52, amount: '₦1.9M' },
-                { day: 'Thu', value: 89, amount: '₦3.2M' },
-                { day: 'Fri', value: 94, amount: '₦3.4M' },
-                { day: 'Sat', value: 76, amount: '₦2.7M' },
-                { day: 'Sun', value: 100, amount: '₦3.6M' }
+                { day: 'Mon', value: 65, amount: '2.1K' },
+                { day: 'Tue', value: 78, amount: '2.8K' },
+                { day: 'Wed', value: 52, amount: '1.9K' },
+                { day: 'Thu', value: 89, amount: '3.2K' },
+                { day: 'Fri', value: 94, amount: '3.4K' },
+                { day: 'Sat', value: 76, amount: '2.7K' },
+                { day: 'Sun', value: 100, amount: '3.6K' }
               ].map((data, index) => (
                 <div key={index} className="flex flex-col items-center gap-1 group relative">
                   {/* Amount above bar */}
@@ -354,30 +354,30 @@ export default function CommandCenterDashboard() {
               ))}
             </div>
             <div className="mt-3 text-xs text-slate-500 text-center">
-              7-day revenue performance overview
+              7-day audience acquisition overview
             </div>
           </div>
 
-          {/* Traffic & Engagement Analytics */}
+          {/* Communication & Engagement Analytics */}
           <div className="bg-slate-900 border border-slate-700 rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-lg font-bold text-white">TRAFFIC & ENGAGEMENT</h3>
-                <p className="text-sm text-slate-400">Real-time visitor activity</p>
+                <h3 className="text-lg font-bold text-white">COMMUNICATION PERFORMANCE</h3>
+                <p className="text-sm text-slate-400">Multi-channel engagement metrics</p>
               </div>
-              <div className="text-blue-400 text-sm">87% engagement rate</div>
+              <div className="text-blue-400 text-sm">87% response rate</div>
             </div>
             <div className="grid gap-4 grid-cols-3">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-400 mb-1">{dashboardData.livePulse.activeVisitors}</div>
-                <div className="text-xs text-slate-500">ACTIVE NOW</div>
+                <div className="text-xs text-slate-500">ACTIVE CONTACTS</div>
                 <div className="w-full bg-slate-700 rounded-full h-2 mt-2">
                   <div className="bg-blue-500 h-2 rounded-full" style={{ width: '67%' }}></div>
                 </div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-400 mb-1">{dashboardData.livePulse.conversionsToday}</div>
-                <div className="text-xs text-slate-500">CONVERSIONS</div>
+                <div className="text-xs text-slate-500">RESPONSES</div>
                 <div className="w-full bg-slate-700 rounded-full h-2 mt-2">
                   <div className="bg-purple-500 h-2 rounded-full" style={{ width: '45%' }}></div>
                 </div>
@@ -392,9 +392,9 @@ export default function CommandCenterDashboard() {
             </div>
           </div>
 
-          {/* Module Status Grid - More Spacious */}
+          {/* Module Status Grid - Universal */}
           <div className="grid gap-4 grid-cols-3">
-            {/* Workflows */}
+            {/* Automation */}
             <Link href="/workflows" className="group">
               <div className="bg-slate-900 border border-slate-700 hover:border-purple-500/50 rounded-lg p-4 transition-all">
                 <div className="flex items-center justify-between mb-3">
@@ -402,31 +402,31 @@ export default function CommandCenterDashboard() {
                   <div className="text-sm text-purple-400">{dashboardData.modules.workflows.trend}</div>
                 </div>
                 <div className="text-2xl font-bold text-white mb-1">{dashboardData.modules.workflows.count}</div>
-                <div className="text-sm text-slate-500">Active Workflows</div>
+                <div className="text-sm text-slate-500">Automation Flows</div>
               </div>
             </Link>
 
-            {/* Campaigns */}
+            {/* Outreach */}
             <Link href="/email/campaigns" className="group">
               <div className="bg-slate-900 border border-slate-700 hover:border-indigo-500/50 rounded-lg p-4 transition-all">
                 <div className="flex items-center justify-between mb-3">
-                  <Mail className="h-5 w-5 text-indigo-400" />
+                  <MessageSquare className="h-5 w-5 text-indigo-400" />
                   <div className="text-sm text-indigo-400">{dashboardData.modules.campaigns.trend}</div>
                 </div>
                 <div className="text-2xl font-bold text-white mb-1">{dashboardData.modules.campaigns.count}</div>
-                <div className="text-sm text-slate-500">Email Campaigns</div>
+                <div className="text-sm text-slate-500">Outreach Campaigns</div>
               </div>
             </Link>
 
-            {/* LeadPulse */}
+            {/* Audience Intelligence */}
             <Link href="/leadpulse" className="group">
               <div className="bg-slate-900 border border-slate-700 hover:border-red-500/50 rounded-lg p-4 transition-all">
                 <div className="flex items-center justify-between mb-3">
-                  <Activity className="h-5 w-5 text-red-400" />
+                  <Target className="h-5 w-5 text-red-400" />
                   <div className="text-sm text-red-400">{dashboardData.modules.leadpulse.trend}</div>
                 </div>
                 <div className="text-2xl font-bold text-white mb-1">{dashboardData.modules.leadpulse.count}</div>
-                <div className="text-sm text-slate-500">Lead Tracking</div>
+                <div className="text-sm text-slate-500">Audience Intelligence</div>
               </div>
             </Link>
           </div>
