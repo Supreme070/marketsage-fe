@@ -159,16 +159,19 @@ function RecentActivity() {
 }
 
 // Campaign performance component
-function CampaignPerformance({ campaigns = [] }) {
+function CampaignPerformance({ campaigns = [] }: { campaigns?: any[] }) {
   const formatPercent = (value: number) => {
     return `${(value * 100).toFixed(1)}%`;
   };
 
   // Use real campaigns if available, otherwise fallback to static data
-  const displayCampaigns = campaigns.length > 0 ? campaigns : [
-    { id: 1, name: "Monthly Newsletter", type: "email", openRate: 0.248, clickRate: 0.032, status: "active" },
-    { id: 2, name: "Product Announcement", type: "email", openRate: 0.325, clickRate: 0.057, status: "completed" },
-    { id: 3, name: "Promo Discount", type: "sms", openRate: null, clickRate: 0.123, status: "active" },
+  const displayCampaigns = campaigns.length > 0 ? campaigns.map((campaign, index) => ({
+    ...campaign,
+    id: campaign.id || `campaign-${index}` // Ensure unique ID
+  })) : [
+    { id: "default-1", name: "Monthly Newsletter", type: "email", openRate: 0.248, clickRate: 0.032, status: "active" },
+    { id: "default-2", name: "Product Announcement", type: "email", openRate: 0.325, clickRate: 0.057, status: "completed" },
+    { id: "default-3", name: "Promo Discount", type: "sms", openRate: null, clickRate: 0.123, status: "active" },
   ];
 
   return (

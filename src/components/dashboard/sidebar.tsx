@@ -25,6 +25,7 @@ import {
   MapPin,
   Eye,
   Route,
+  CheckCircle,
   type LucideIcon
 } from "lucide-react";
 
@@ -155,6 +156,11 @@ const sidebarNavItems: NavItem[] = [
     title: "Customer Journeys",
     href: "/dashboard/journeys",
     icon: Route,
+  },
+  {
+    title: "Task Management",
+    href: "/tasks",
+    icon: CheckCircle,
   },
   {
     title: "Conversions",

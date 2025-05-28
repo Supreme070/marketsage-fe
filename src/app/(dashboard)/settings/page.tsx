@@ -84,7 +84,15 @@ export default function SettingsPage() {
       const response = await fetch(`/api/users/${userId}`);
       
       if (!response.ok) {
-        throw new Error('Failed to fetch profile');
+        if (response.status === 403) {
+          toast.error('Access denied to profile');
+        } else if (response.status === 404) {
+          toast.error('User profile not found');
+        } else {
+          toast.error('Failed to load profile information');
+        }
+        console.error('Failed to fetch profile:', response.status, response.statusText);
+        return;
       }
       
       const userData = await response.json();
@@ -97,7 +105,7 @@ export default function SettingsPage() {
       });
     } catch (error) {
       console.error('Error fetching profile:', error);
-      toast.error('Failed to load profile information');
+      toast.error('Failed to load profile information - network error');
     } finally {
       setProfileLoading(false);
     }
@@ -109,14 +117,22 @@ export default function SettingsPage() {
       const response = await fetch(`/api/users/${userId}/preferences`);
       
       if (!response.ok) {
-        throw new Error('Failed to fetch preferences');
+        if (response.status === 403) {
+          toast.error('Access denied to preferences');
+        } else if (response.status === 404) {
+          toast.error('User preferences not found');
+        } else {
+          toast.error('Failed to load preferences');
+        }
+        console.error('Failed to fetch preferences:', response.status, response.statusText);
+        return;
       }
       
       const preferencesData = await response.json();
       setPreferences(preferencesData);
     } catch (error) {
       console.error('Error fetching preferences:', error);
-      toast.error('Failed to load preferences');
+      toast.error('Failed to load preferences - network error');
     } finally {
       setPreferencesLoading(false);
     }

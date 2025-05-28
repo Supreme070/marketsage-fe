@@ -51,6 +51,7 @@ export async function GET(
         id: true,
         name: true,
         email: true,
+        company: true,
         role: true,
         createdAt: true,
         updatedAt: true,
@@ -106,7 +107,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { name, email, password, role, isActive } = body;
+    const { name, email, company, password, role, isActive } = body;
 
     // Get the existing user first to check role and make security checks
     const existingUser = await prisma.user.findUnique({
@@ -145,6 +146,7 @@ export async function PATCH(
     const updateData: any = {};
 
     if (name) updateData.name = name;
+    if (company !== undefined) updateData.company = company;
 
     // Email updates require checking for duplicates
     if (email && email !== existingUser.email) {
@@ -185,6 +187,7 @@ export async function PATCH(
         id: true,
         name: true,
         email: true,
+        company: true,
         role: true,
         createdAt: true,
         updatedAt: true,

@@ -2,17 +2,31 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { handleApiError, unauthorized } from "@/lib/errors";
-import { getUserNotifications } from "@/lib/notification-service";
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/db/prisma";
 
-// Direct database connection
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL || "postgresql://marketsage:marketsage_password@db:5432/marketsage?schema=public"
-    }
-  }
-});
+// Mock data for when database is not available
+const MOCK_NOTIFICATIONS = [
+  {
+    id: "1",
+    title: "Welcome to MarketSage",
+    message: "Your task management system is ready to use!",
+    timestamp: new Date().toISOString(),
+    read: false,
+    type: "INFO",
+    category: "SYSTEM",
+    userId: "mock-user",
+  },
+  {
+    id: "2", 
+    title: "Database Setup Required",
+    message: "Connect your PostgreSQL database to enable full functionality",
+    timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 minutes ago
+    read: false,
+    type: "WARNING",
+    category: "SYSTEM",
+    userId: "mock-user",
+  },
+];
 
 /**
  * GET /api/notifications
@@ -26,6 +40,10 @@ export async function GET(request: NextRequest) {
     
     // Check if user is authenticated
     if (!session || !session.user) {
+      // Return mock data for unauthenticated users in development
+      if (process.env.NODE_ENV === "development") {
+        return NextResponse.json(MOCK_NOTIFICATIONS);
+      }
       return unauthorized();
     }
     
@@ -38,38 +56,44 @@ export async function GET(request: NextRequest) {
     
     // Get notifications for the user
     try {
-      // Build where clause
-      let whereCondition = `"userId" = '${session.user.id}'`;
+      // Build where clause for Prisma
+      const whereClause: any = {
+        userId: session.user.id,
+      };
       
       // Only include unread if specified
       if (!includeRead) {
-        whereCondition += ` AND read = false`;
+        whereClause.read = false;
       }
       
       // Filter by category if specified
       if (category) {
-        whereCondition += ` AND category = '${category}'`;
+        whereClause.category = category;
       }
       
       // Filter by type if specified
       if (type) {
-        whereCondition += ` AND type = '${type}'`;
+        whereClause.type = type;
       }
 
-      // Query notifications using raw SQL
-      const query = `
-        SELECT id, "userId", title, message, type, category, read, link, timestamp
-        FROM "Notification"
-        WHERE ${whereCondition}
-        ORDER BY timestamp DESC
-        LIMIT ${limit}
-      `;
+      // Query notifications using Prisma
+      const notifications = await (prisma as any).notification.findMany({
+        where: whereClause,
+        orderBy: {
+          timestamp: 'desc'
+        },
+        take: limit
+      });
       
-      const notifications = await prisma.$queryRawUnsafe(query);
       return NextResponse.json(notifications);
-    } catch (error) {
-      console.error('Error in notification query:', error);
-      throw new Error(`Failed to get user notifications: ${(error as Error).message}`);
+    } catch (dbError) {
+      console.error('Database error in notifications:', dbError);
+      // Return mock data if database is not available in development
+      if (process.env.NODE_ENV === "development") {
+        console.log("Database not available, returning mock notifications");
+        return NextResponse.json(MOCK_NOTIFICATIONS);
+      }
+      throw dbError;
     }
   } catch (error) {
     return handleApiError(error, "/api/notifications/route.ts");

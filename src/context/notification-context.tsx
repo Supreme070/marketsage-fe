@@ -51,12 +51,21 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             timestamp: new Date(notification.timestamp),
           }));
           setNotifications(formattedData);
+        } else {
+          console.error('Failed to fetch notifications:', res.status, res.statusText);
+          // Set empty array to avoid issues
+          setNotifications([]);
         }
       } catch (error) {
         console.error('Error fetching notifications:', error);
+        // Set empty array to avoid issues
+        setNotifications([]);
       } finally {
         setLoading(false);
       }
+    } else {
+      // If not authenticated, clear notifications
+      setNotifications([]);
     }
   };
   
