@@ -57,10 +57,10 @@ export function LandingHeader() {
 
   // Solution options with href links to specific feature sections
   const solutionOptions = [
-    { name: "Workflow Automation", href: "/solutions/workflow-automation", description: "Build sophisticated marketing journeys" },
-    { name: "Omnichannel Messaging", href: "/solutions/omnichannel-messaging", description: "Email, SMS & WhatsApp campaigns" },
-    { name: "Audience Segmentation", href: "/solutions/audience-segmentation", description: "Target the right customers" },
-    { name: "Analytics & Reporting", href: "/solutions/analytics-reporting", description: "Track campaign performance" }
+    { name: "LeadPulse Intelligence", href: "/solutions/leadpulse-intelligence", description: "Anonymous visitor tracking & behavioral scoring" },
+    { name: "Predictive AI Engine", href: "/solutions/predictive-ai-engine", description: "Conversion prediction & revenue opportunity detection" },
+    { name: "Automated Orchestration", href: "/solutions/automated-orchestration", description: "Real-time decision engine & multi-channel optimization" },
+    { name: "Revenue Intelligence", href: "/solutions/revenue-intelligence", description: "Hidden revenue detection & recovery analytics" }
   ];
 
   // Resource options

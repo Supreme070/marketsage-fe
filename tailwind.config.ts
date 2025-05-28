@@ -27,7 +27,7 @@ const config = {
             DEFAULT: '#6E59A5',
             dark: '#1A1F2C',
           },
-          orange: '#F97316',
+          orange: '#FBBF24',
           blue: '#0EA5E9',
         },
         
