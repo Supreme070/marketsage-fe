@@ -1,79 +1,104 @@
 #!/bin/bash
 # Script to run all seed scripts for MarketSage
-# Save as seed-all.sh in the scripts directory and run with:
-# bash src/scripts/seed-all.sh
+# Updated to match Docker Compose seeding configuration
+# Run with: bash seedAll.sh
 
 # Exit on error
 set -e
 
-echo "==== Starting MarketSage Database Seeding Process ===="
+echo "🚀 Starting MarketSage database initialization and seeding..."
 
-# Wait for the database to be ready (if needed)
-echo "Waiting for database to be ready..."
-npx prisma db push --accept-data-loss
+# Wait for database to be ready (60 seconds like Docker)
+echo "⏱️ Waiting 60 seconds for database to be ready..."
+sleep 60
 
-# Create default user first (if available)
-if [ -f "src/scripts/createDefaultUser.js" ]; then
-  echo -e "\n==== Creating Default User ===="
-  node src/scripts/createDefaultUser.js
-fi
+echo "🔍 Checking database schema..."
+PGPASSWORD=marketsage_password psql -h localhost -U marketsage -d marketsage -c "SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'userrole');"
 
-# Run seed scripts using the appropriate command based on file extension
-# JavaScript files use node directly, TypeScript files use ts-node with flags
+echo "📋 Checking migration status..."
+migration_status=$(npx prisma migrate status || echo 'Migration conflicts detected')
 
-echo -e "\n==== Seeding Segments ===="
-node src/scripts/seedSegments.js
-
-echo -e "\n==== Seeding Lists ===="
-# Choose the available script (TS or JS)
-if [ -f "src/scripts/seedLists.ts" ]; then
-  NODE_OPTIONS="--experimental-specifier-resolution=node" npx ts-node --esm src/scripts/seedLists.ts
+if echo "$migration_status" | grep -q 'Database schema is up to date'; then
+  echo '✅ Migrations are already up to date' 
 else
-  node src/scripts/seedListsJS.js
+  echo '🔄 Resolving migration conflicts...' 
+  echo '🗑️ Clearing migration history due to conflicts...'
+  PGPASSWORD=marketsage_password psql -h localhost -U marketsage -d marketsage -c "DELETE FROM _prisma_migrations;"
+  
+  echo '📥 Pushing current schema to database...'
+  npx prisma db push --accept-data-loss
+  
+  echo '✅ Schema synchronized successfully'
 fi
 
-echo -e "\n==== Seeding Contacts ===="
-NODE_OPTIONS="--experimental-specifier-resolution=node" npx ts-node --esm src/scripts/seedContacts.ts
+echo '👤 Creating admin user if not exists...'
+PGPASSWORD=marketsage_password psql -h localhost -U marketsage -d marketsage -c "INSERT INTO \"User\" (id, name, email, \"emailVerified\", password, role, \"createdAt\", \"updatedAt\") 
+VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d047', 'Admin User', 'admin@example.com', NOW(), 'password123', 'ADMIN', NOW(), NOW()) 
+ON CONFLICT (id) DO NOTHING;"
 
-echo -e "\n==== Seeding Workflows ===="
-node src/scripts/seedWorkflows.js
+echo '👤 Creating development users if not exist...'
+PGPASSWORD=marketsage_password psql -h localhost -U marketsage -d marketsage -c "
+INSERT INTO \"User\" (id, name, email, \"emailVerified\", password, role, \"createdAt\", \"updatedAt\") 
+VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d111', 'Supreme Admin', 'supreme@marketsage.africa', NOW(), 'MS_Super2025!', 'SUPER_ADMIN', NOW(), NOW())
+ON CONFLICT (email) DO NOTHING;
 
-echo -e "\n==== Seeding WhatsApp Templates ===="
-node src/scripts/seedWhatsAppTemplates.js
+INSERT INTO \"User\" (id, name, email, \"emailVerified\", password, role, \"createdAt\", \"updatedAt\") 
+VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d222', 'Anita Manager', 'anita@marketsage.africa', NOW(), 'MS_Admin2025!', 'ADMIN', NOW(), NOW())
+ON CONFLICT (email) DO NOTHING;
 
-echo -e "\n==== Seeding SMS Templates ===="
-NODE_OPTIONS="--experimental-specifier-resolution=node" npx ts-node --esm src/scripts/seedSMSTemplates.ts
+INSERT INTO \"User\" (id, name, email, \"emailVerified\", password, role, \"createdAt\", \"updatedAt\") 
+VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d333', 'Kola Techleads', 'kola@marketsage.africa', NOW(), 'MS_ITAdmin2025!', 'IT_ADMIN', NOW(), NOW())
+ON CONFLICT (email) DO NOTHING;
 
-echo -e "\n==== Seeding Email Campaigns ===="
-NODE_OPTIONS="--experimental-specifier-resolution=node" npx ts-node --esm src/scripts/seedEmailCampaigns.ts
+INSERT INTO \"User\" (id, name, email, \"emailVerified\", password, role, \"createdAt\", \"updatedAt\") 
+VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d444', 'Regular User', 'user@marketsage.africa', NOW(), 'MS_User2025!', 'USER', NOW(), NOW())
+ON CONFLICT (email) DO NOTHING;"
 
-echo -e "\n==== Seeding SMS Campaigns ===="
-NODE_OPTIONS="--experimental-specifier-resolution=node" npx ts-node --esm src/scripts/seedSMSCampaigns.ts
+echo '🌱 Running seed scripts...'
 
-echo -e "\n==== Seeding WhatsApp Campaigns ===="
-NODE_OPTIONS="--experimental-specifier-resolution=node" npx ts-node --esm src/scripts/seedWhatsAppCampaigns.ts
+echo '👀 Checking script directories...'
+ls -la ./src/scripts/
 
-echo -e "\n==== Seeding Journeys ===="
-NODE_OPTIONS="--experimental-specifier-resolution=node" npx ts-node --esm src/scripts/seedJourneys.ts
+echo '📊 Seeding contacts (preserving existing contacts)...'
+SKIP_CONTACT_DELETE=true npx tsx ./src/scripts/seedContacts.ts
 
-echo -e "\n==== Seeding Notifications ===="
-# Choose the right file to use (TS or JS)
-if [ -f "src/scripts/seedNotifications.ts" ]; then
-  NODE_OPTIONS="--experimental-specifier-resolution=node" npx ts-node --esm src/scripts/seedNotifications.ts
-else
-  node src/scripts/seedNotifications.js
-fi
+echo '📋 Seeding lists...'
+npx tsx ./src/scripts/seedLists.ts
 
-echo -e "\n==== Seeding User Preferences ===="
-NODE_OPTIONS="--experimental-specifier-resolution=node" npx ts-node --esm src/scripts/seedUserPreferences.ts
+echo '🔖 Seeding segments...'
+node ./src/scripts/seedSegments.js
 
-echo -e "\n==== Seeding Task Management ===="
-NODE_OPTIONS="--experimental-specifier-resolution=node" npx ts-node --esm src/scripts/seedTaskManagement.ts
+echo '📧 Seeding email campaigns...'
+npx tsx ./src/scripts/seedEmailCampaigns.ts
 
-# Optional: Assign contacts to current user if needed
-if [ -f "src/scripts/assignContactsToCurrentUser.ts" ]; then
-  echo -e "\n==== Assigning Contacts to Current User ===="
-  NODE_OPTIONS="--experimental-specifier-resolution=node" npx ts-node --esm src/scripts/assignContactsToCurrentUser.ts
-fi
+echo '📱 Seeding SMS templates...'
+npx tsx ./src/scripts/seedSMSTemplates.ts
 
-echo -e "\n==== All Seed Scripts Completed Successfully ===="
+echo '📱 Seeding SMS campaigns...'
+npx tsx ./src/scripts/seedSMSCampaigns.ts
+
+echo '💬 Seeding WhatsApp templates...'
+node ./src/scripts/seedWhatsAppTemplates.js
+
+echo '💬 Seeding WhatsApp campaigns...'
+npx tsx ./src/scripts/seedWhatsAppCampaigns.ts
+
+echo '🔄 Seeding workflows...'
+node ./src/scripts/seedWorkflows.js
+
+echo '🛤️ Seeding journeys...'
+npx tsx ./src/scripts/seedJourneys.ts
+
+echo '🔔 Seeding notifications...'
+npx tsx ./src/scripts/seedNotifications.ts
+
+echo '⚙️ Seeding user preferences...'
+npx tsx ./src/scripts/seedUserPreferences.ts
+
+echo '📋 Seeding task management...'
+npx tsx ./src/scripts/seedTaskManagement.ts
+
+echo '🔗 Assigning contacts to current user...'
+npx tsx ./src/scripts/assignContactsToCurrentUser.ts
+
+echo '✅ Database seeded successfully!'

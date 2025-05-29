@@ -520,8 +520,29 @@ export default function ModernKanbanBoard() {
           const errorData = await res.json().catch(() => ({}));
           throw new Error(errorData.error || "Failed to fetch tasks");
         }
-        const data: Task[] = await res.json();
-        setTasks(data);
+        const apiData = await res.json();
+        
+        // Transform API data to match our Task interface
+        const transformedTasks: Task[] = apiData.map((task: any) => ({
+          id: task.id,
+          title: task.title,
+          description: task.description,
+          status: task.status,
+          priority: task.priority,
+          dueDate: task.dueDate,
+          campaign: task.campaign?.name || null,
+          assignee: task.assignee ? {
+            name: task.assignee.name,
+            initials: task.assignee.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+            avatar: task.assignee.image
+          } : null,
+          attachments: 0, // Default value, update based on actual data structure
+          comments: task._count?.comments || 0,
+          tags: [], // Default value, update based on actual data structure
+          revenue: task.revenue
+        }));
+        
+        setTasks(transformedTasks);
       } catch (err) {
         console.error(err);
         setError(err instanceof Error ? err.message : "Failed to load tasks");
@@ -542,7 +563,28 @@ export default function ModernKanbanBoard() {
       });
       
       if (response.ok) {
-        const newTask = await response.json();
+        const apiTask = await response.json();
+        
+        // Transform the new task data to match our interface
+        const newTask: Task = {
+          id: apiTask.id,
+          title: apiTask.title,
+          description: apiTask.description,
+          status: apiTask.status,
+          priority: apiTask.priority,
+          dueDate: apiTask.dueDate,
+          campaign: apiTask.campaign?.name || null,
+          assignee: apiTask.assignee ? {
+            name: apiTask.assignee.name,
+            initials: apiTask.assignee.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+            avatar: apiTask.assignee.image
+          } : null,
+          attachments: 0,
+          comments: apiTask._count?.comments || 0,
+          tags: [],
+          revenue: apiTask.revenue
+        };
+        
         setTasks(prev => [...prev, newTask]);
         setShowCreateModal(false);
         return true;
@@ -570,8 +612,29 @@ export default function ModernKanbanBoard() {
       console.log("API response status:", response.status);
       
       if (response.ok) {
-        const updatedTask = await response.json();
-        console.log("Task updated successfully:", updatedTask);
+        const apiTask = await response.json();
+        console.log("Task updated successfully:", apiTask);
+        
+        // Transform the updated task data to match our interface
+        const updatedTask: Task = {
+          id: apiTask.id,
+          title: apiTask.title,
+          description: apiTask.description,
+          status: apiTask.status,
+          priority: apiTask.priority,
+          dueDate: apiTask.dueDate,
+          campaign: apiTask.campaign?.name || null,
+          assignee: apiTask.assignee ? {
+            name: apiTask.assignee.name,
+            initials: apiTask.assignee.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+            avatar: apiTask.assignee.image
+          } : null,
+          attachments: 0,
+          comments: apiTask._count?.comments || 0,
+          tags: [],
+          revenue: apiTask.revenue
+        };
+        
         setTasks(prev => prev.map(task => 
           task.id === taskId ? updatedTask : task
         ));

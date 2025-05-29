@@ -126,20 +126,20 @@ async function main() {
             createdById: adminUser.id,
             ...(templateToUse ? { templateId: templateToUse.id } : {}),
             ...(listsToUse.length > 0 ? {
-              lists: {
+              List: {
                 connect: listsToUse.map(list => ({ id: list.id })),
               },
             } : {}),
             ...(segments.length > 0 && i === 2 ? { // Only connect segments to the third campaign
-              segments: {
+              Segment: {
                 connect: segments.map(segment => ({ id: segment.id })),
               },
             } : {}),
           },
           include: {
-            template: true,
-            lists: true,
-            segments: true,
+            WhatsAppTemplate: true,
+            List: true,
+            Segment: true,
           },
         });
         

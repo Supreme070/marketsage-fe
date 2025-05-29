@@ -156,7 +156,7 @@ async function seedEmailMarketing() {
       const templateToUse = createdTemplates[i] || null;
       
       // Determine which lists to use (alternate between available lists)
-      const listsToUse = lists.filter((_, index) => index % (i + 1) === 0);
+      const selectedLists = lists.filter((_, index) => index % (i + 1) === 0);
       
       // Create the campaign
       const now = new Date();
@@ -175,13 +175,13 @@ async function seedEmailMarketing() {
           createdAt: now,
           updatedAt: now,
           ...(templateToUse ? { templateId: templateToUse.id } : {}),
-          ...(listsToUse.length > 0 ? {
-            lists: {
-              connect: listsToUse.map(list => ({ id: list.id })),
+          ...(selectedLists.length > 0 ? {
+            List: {
+              connect: selectedLists.map(list => ({ id: list.id })),
             },
           } : {}),
           ...(segments.length > 0 && i === 2 ? { // Only connect segments to the third campaign
-            segments: {
+            Segment: {
               connect: segments.map(segment => ({ id: segment.id })),
             },
           } : {}),

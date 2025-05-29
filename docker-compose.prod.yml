@@ -79,28 +79,24 @@ services:
     command: >
       sh -c "
         echo '🚀 Starting MarketSage database initialization and seeding...' &&
-        sleep 30 &&
+        sleep 60 &&
         echo '🔍 Checking database schema...' && 
         PGPASSWORD=marketsage_password psql -h db -U marketsage -d marketsage -c \"SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'userrole');\" &&
         
         echo '📋 Checking migration status...' &&
-        migration_status=$(npx prisma migrate status) &&
+        migration_status=$(npx prisma migrate status || echo 'Migration conflicts detected') &&
         
         if echo \"$migration_status\" | grep -q 'Database schema is up to date'; then
           echo '✅ Migrations are already up to date' 
         else
-          echo '🔄 Resolving conflicting migrations...' && 
-          echo '🔧 Fixing problematic migration...' &&
-          PGPASSWORD=marketsage_password psql -h db -U marketsage -d marketsage -c \"DELETE FROM _prisma_migrations WHERE migration_name='20250513102558_add_user_preferences' AND rolled_back_at IS NOT NULL;\" &&
-          echo '🔧 Fixing duplicate journey migrations...' &&
-          PGPASSWORD=marketsage_password psql -h db -U marketsage -d marketsage -c \"DELETE FROM _prisma_migrations WHERE migration_name='20250516015114_add_journey_tables' AND applied_steps_count=0;\" &&
+          echo '🔄 Resolving migration conflicts...' && 
+          echo '🗑️ Clearing migration history due to conflicts...' &&
+          PGPASSWORD=marketsage_password psql -h db -U marketsage -d marketsage -c \"DELETE FROM _prisma_migrations;\" &&
           
-          echo '🔄 Marking LeadPulse migrations as applied...' &&
-          npx prisma migrate resolve --applied 20250517190511_reset_for_leadpulse || true &&
-          npx prisma migrate resolve --applied 20250517190526_reset_for_leadpulse || true &&
+          echo '📥 Pushing current schema to database...' &&
+          npx prisma db push --accept-data-loss &&
           
-          echo '📥 Deploying remaining migrations...' &&
-          npx prisma migrate deploy
+          echo '✅ Schema synchronized successfully'
         fi &&
         
         echo '👤 Creating admin user if not exists...' &&
@@ -151,13 +147,13 @@ services:
         npx tsx /app/src/scripts/seedSMSCampaigns.ts &&
         
         echo '💬 Seeding WhatsApp templates...' &&
-        npx tsx /app/src/scripts/seedWhatsAppTemplates.ts &&
+        node /app/src/scripts/seedWhatsAppTemplates.js &&
         
         echo '💬 Seeding WhatsApp campaigns...' &&
         npx tsx /app/src/scripts/seedWhatsAppCampaigns.ts &&
         
         echo '🔄 Seeding workflows...' &&
-        npx tsx /app/src/scripts/seedWorkflows.ts &&
+        node /app/src/scripts/seedWorkflows.js &&
         
         echo '🛤️ Seeding journeys...' &&
         npx tsx /app/src/scripts/seedJourneys.ts &&

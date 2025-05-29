@@ -3,7 +3,11 @@ const nextConfig = {
   output: 'standalone',
   experimental: {
     serverComponentsExternalPackages: ['@prisma/client'],
+    fontLoaders: [
+      { loader: '@next/font/google', options: { subsets: ['latin'] } },
+    ],
   },
+  optimizeFonts: false,
   images: {
     domains: ['localhost'],
   },
