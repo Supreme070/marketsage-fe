@@ -78,6 +78,14 @@ export default function LeadPulseDashboard() {
           getVisitorLocations(selectedTimeRange)
         ]);
         
+        console.log('LeadPulse fetchData:', {
+          visitors: visitors.length,
+          journeys: journeys.length,
+          selectedVisitorId,
+          firstVisitor: visitors[0],
+          firstJourney: journeys[0]
+        });
+        
         setVisitorData(visitors);
         setJourneyData(journeys);
         setInsightData(insights);

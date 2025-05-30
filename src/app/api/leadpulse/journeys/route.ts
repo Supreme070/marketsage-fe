@@ -5,23 +5,28 @@ import { generateMockJourneyData, VisitorPath } from '@/app/api/leadpulse/_mockD
 // Define interfaces for Prisma types
 interface PrismaVisitor {
   id: string;
-  engagementScore: number;
+  score: number;
   contactId?: string | null;
   lastVisit: Date;
   LeadPulseTouchpoint: PrismaTouchpoint[];
-  // Add other fields as needed
+  LeadPulseJourney: PrismaJourney[];
 }
 
 interface PrismaTouchpoint {
   id: string;
   timestamp: Date;
-  pageUrl: string;
-  pageTitle?: string | null;
+  url?: string | null;
+  type: string;
   duration?: number | null;
-  clickData?: any;
-  exitIntent: boolean;
-  formId?: string | null;
-  // Add other fields as needed
+  metadata?: any;
+  score: number;
+}
+
+interface PrismaJourney {
+  id: string;
+  stage: string;
+  isCompleted: boolean;
+  completionDate?: Date | null;
 }
 
 /**
@@ -34,9 +39,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const visitorId = searchParams.get('visitorId');
     
-    // Use mock data for now - when AnonymousVisitor model is properly added to the schema,
-    // we can uncomment and use the real data query
-    /*
+    console.log('Journeys API - visitorId:', visitorId);
+    
     // Attempt to fetch real data
     try {
       // If visitor ID is provided, fetch that specific journey
@@ -50,25 +54,27 @@ export async function GET(request: NextRequest) {
               orderBy: {
                 timestamp: 'asc'
               }
-            }
+            },
+            LeadPulseJourney: true
           }
         });
         
+        console.log('Journeys API - Found visitor:', !!visitor, visitor?.id);
+        
         if (visitor) {
           // Convert to journey format
-          const touchpoints = (visitor as unknown as PrismaVisitor).LeadPulseTouchpoint.map((tp: PrismaTouchpoint) => {
+          const typedVisitor = visitor as unknown as PrismaVisitor;
+          const touchpoints = typedVisitor.LeadPulseTouchpoint.map((tp: PrismaTouchpoint) => {
             // Determine type based on data
             let type: 'pageview' | 'click' | 'form_view' | 'form_start' | 'form_submit' | 'conversion' = 'pageview';
             
-            if (tp.clickData) {
+            if (tp.type === 'click') {
               type = 'click';
-            } else if (tp.formId) {
-              if (tp.duration && tp.duration > 0) {
-                type = 'form_submit';
-              } else {
-                type = 'form_view';
-              }
-            } else if (tp.exitIntent) {
+            } else if (tp.type === 'form_view') {
+              type = 'form_view';
+            } else if (tp.type === 'form_submit') {
+              type = 'form_submit';
+            } else if (tp.type === 'conversion') {
               type = 'conversion';
             }
             
@@ -76,19 +82,17 @@ export async function GET(request: NextRequest) {
               id: tp.id,
               timestamp: tp.timestamp.toISOString(),
               type,
-              url: tp.pageUrl,
-              title: tp.pageTitle || undefined,
+              url: tp.url || '/',
+              title: `Page ${tp.id.slice(-8)}`,
               duration: tp.duration || undefined,
-              formId: tp.formId || undefined,
-              formName: 'Contact Form', // This would be fetched from forms table
-              conversionValue: type === 'conversion' ? 99.99 : undefined // This would be calculated from actual data
+              formId: tp.type.includes('form') ? 'form_contact' : undefined,
+              formName: tp.type.includes('form') ? 'Contact Form' : undefined,
+              conversionValue: type === 'conversion' ? 99.99 : undefined
             };
           });
           
           // Calculate prediction metrics
-          // This would be done with a ML model in production
-          const typedVisitor = visitor as unknown as PrismaVisitor;
-          const engagementScore = typedVisitor.engagementScore || 0;
+          const engagementScore = typedVisitor.score || 0;
           const probability = Math.min(engagementScore / 100, 0.95);
           const predictedValue = probability * 199.99;
           let status: 'active' | 'converted' | 'lost' = 'active';
@@ -100,7 +104,13 @@ export async function GET(request: NextRequest) {
             status = 'lost';
           }
           
-          const journey: VisitorPath = {
+          // Check if journey is completed
+          const journey = typedVisitor.LeadPulseJourney[0];
+          if (journey && journey.isCompleted) {
+            status = 'converted';
+          }
+          
+          const journeyPath: VisitorPath = {
             visitorId: typedVisitor.id,
             touchpoints,
             probability,
@@ -109,7 +119,7 @@ export async function GET(request: NextRequest) {
           };
           
           return NextResponse.json({ 
-            journeys: [journey]
+            journeys: [journeyPath]
           });
         }
       } else {
@@ -124,7 +134,8 @@ export async function GET(request: NextRequest) {
               orderBy: {
                 timestamp: 'asc'
               }
-            }
+            },
+            LeadPulseJourney: true
           }
         });
         
@@ -136,15 +147,13 @@ export async function GET(request: NextRequest) {
               // Determine type based on data
               let type: 'pageview' | 'click' | 'form_view' | 'form_start' | 'form_submit' | 'conversion' = 'pageview';
               
-              if (tp.clickData) {
+              if (tp.type === 'click') {
                 type = 'click';
-              } else if (tp.formId) {
-                if (tp.duration && tp.duration > 0) {
-                  type = 'form_submit';
-                } else {
-                  type = 'form_view';
-                }
-              } else if (tp.exitIntent) {
+              } else if (tp.type === 'form_view') {
+                type = 'form_view';
+              } else if (tp.type === 'form_submit') {
+                type = 'form_submit';
+              } else if (tp.type === 'conversion') {
                 type = 'conversion';
               }
               
@@ -152,17 +161,17 @@ export async function GET(request: NextRequest) {
                 id: tp.id,
                 timestamp: tp.timestamp.toISOString(),
                 type,
-                url: tp.pageUrl,
-                title: tp.pageTitle || undefined,
+                url: tp.url || '/',
+                title: `Page ${tp.id.slice(-8)}`,
                 duration: tp.duration || undefined,
-                formId: tp.formId || undefined,
-                formName: 'Contact Form',
+                formId: tp.type.includes('form') ? 'form_contact' : undefined,
+                formName: tp.type.includes('form') ? 'Contact Form' : undefined,
                 conversionValue: type === 'conversion' ? 99.99 : undefined
               };
             });
             
             // Calculate prediction metrics
-            const engagementScore = typedVisitor.engagementScore || 0;
+            const engagementScore = typedVisitor.score || 0;
             const probability = Math.min(engagementScore / 100, 0.95);
             const predictedValue = probability * 199.99;
             let status: 'active' | 'converted' | 'lost' = 'active';
@@ -171,6 +180,12 @@ export async function GET(request: NextRequest) {
               status = 'converted';
             } else if (typedVisitor.lastVisit.getTime() < (Date.now() - 7 * 24 * 60 * 60 * 1000)) {
               status = 'lost';
+            }
+            
+            // Check if journey is completed
+            const journey = typedVisitor.LeadPulseJourney[0];
+            if (journey && journey.isCompleted) {
+              status = 'converted';
             }
             
             return {
@@ -189,9 +204,8 @@ export async function GET(request: NextRequest) {
       console.error('Error fetching journey data from Prisma:', prismaError);
       // Continue to fallback data
     }
-    */
     
-    // Return mock data
+    // Return mock data as fallback
     const mockJourneys = generateMockJourneyData(visitorId || undefined);
     return NextResponse.json({ journeys: mockJourneys });
     

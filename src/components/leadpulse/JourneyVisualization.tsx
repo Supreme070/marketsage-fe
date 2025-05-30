@@ -71,10 +71,21 @@ export default function JourneyVisualization({
 }: Props) {
   const [viewMode, setViewMode] = useState<'list' | 'flow'>('flow');
   
+  // Debug logging to see what data we're getting
+  console.log('JourneyVisualization Debug:', {
+    data,
+    selectedVisitorId,
+    dataLength: data.length,
+    firstItem: data[0],
+    isLoading
+  });
+  
   // Get the selected visitor path
   const selectedPath = selectedVisitorId 
     ? data.find(path => path.visitorId === selectedVisitorId) 
     : data[0];
+    
+  console.log('Selected path:', selectedPath);
   
   // Function to get icon based on touchpoint type
   const getTouchpointIcon = (type: string) => {

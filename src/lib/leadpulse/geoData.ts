@@ -88,6 +88,7 @@ export const CITY_MAPPINGS: Record<string, { continent: string, country: string,
   'Buenos Aires': { continent: 'south-america', country: 'argentina' },
   'Abuja': { continent: 'africa', country: 'nigeria' },
   'Accra': { continent: 'africa', country: 'ghana' },
+  'Cape Town': { continent: 'africa', country: 'south-africa' },
 };
 
 // Major cities with coordinates for the map visualization
@@ -109,6 +110,7 @@ export const CITY_COORDINATES: Record<string, GeoCoord> = {
   'Buenos Aires': { lat: -34.6037, lng: -58.3816, x: 30, y: 51 },
   'Abuja': { lat: 9.0765, lng: 7.3986, x: 47, y: 40 },
   'Accra': { lat: 5.6037, lng: -0.1870, x: 44, y: 41 },
+  'Cape Town': { lat: -33.9249, lng: 18.4241, x: 49, y: 50 },
 };
 
 // Simplified paths for continent outlines (SVG paths)

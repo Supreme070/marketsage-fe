@@ -47,7 +47,7 @@ export default function LiveVisitorMap({
   const [selectedTimeRange, setSelectedTimeRange] = useState(timeRange);
   
   // State for geographical filtering
-  const [geoPath, setGeoPath] = useState<string[]>([]);
+  const [geoPath, setGeoPath] = useState<string[]>(['africa']); // Start focused on Africa
   
   // State for timeline playback
   const [isTimelineActive, setIsTimelineActive] = useState(false);

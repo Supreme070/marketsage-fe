@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import prisma from '@/lib/db/prisma';
 
 type VisitorLocation = {
   id: string;
@@ -17,8 +18,95 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const timeRange = searchParams.get('timeRange') || '24h';
 
-    // In a real implementation, we would fetch this data from a database
-    // For now, we'll return mock data
+    // Try to fetch real data from Prisma first
+    try {
+      // Calculate time cutoff based on timeRange
+      const now = new Date();
+      let cutoffTime: Date;
+      
+      switch (timeRange) {
+        case '1h':
+          cutoffTime = new Date(now.getTime() - 60 * 60 * 1000);
+          break;
+        case '6h':
+          cutoffTime = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+          break;
+        case '12h':
+          cutoffTime = new Date(now.getTime() - 12 * 60 * 60 * 1000);
+          break;
+        case '7d':
+          cutoffTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case '30d':
+          cutoffTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        default: // 24h
+          cutoffTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      }
+
+      // Fetch visitors from database
+      const visitors = await prisma.anonymousVisitor.findMany({
+        where: {
+          lastVisit: {
+            gte: cutoffTime
+          }
+        },
+        select: {
+          id: true,
+          geo: true,
+          lastVisit: true,
+          visitCount: true
+        }
+      });
+
+      if (visitors && visitors.length > 0) {
+        // Group visitors by city and aggregate data
+        const locationMap = new Map<string, VisitorLocation>();
+
+        visitors.forEach(visitor => {
+          const geo = visitor.geo as any;
+          if (!geo || !geo.city || !geo.country) return;
+
+          const cityKey = `${geo.city}, ${geo.country}`;
+          const isActive = visitor.lastVisit.getTime() > (now.getTime() - 30 * 60 * 60 * 1000);
+          
+          if (locationMap.has(cityKey)) {
+            const existing = locationMap.get(cityKey)!;
+            existing.visitCount += visitor.visitCount || 1;
+            if (isActive) existing.isActive = true;
+          } else {
+            // Get coordinates for the city (you might want to have a more comprehensive mapping)
+            const coordinates = getCityCoordinates(geo.city);
+            
+            locationMap.set(cityKey, {
+              id: `loc_${geo.city.toLowerCase().replace(/\s/g, '_')}`,
+              city: geo.city,
+              country: geo.country,
+              isActive,
+              lastActive: isActive ? 'just now' : formatLastActive(visitor.lastVisit),
+              visitCount: visitor.visitCount || 1,
+              latitude: coordinates.lat,
+              longitude: coordinates.lng
+            });
+          }
+        });
+
+        const realLocations = Array.from(locationMap.values());
+        
+        if (realLocations.length > 0) {
+          return NextResponse.json({
+            success: true,
+            locations: realLocations,
+            timeRange
+          });
+        }
+      }
+    } catch (prismaError) {
+      console.error('Error fetching real location data:', prismaError);
+      // Continue to fallback
+    }
+
+    // Fallback to mock data
     const mockLocations: VisitorLocation[] = [
       {
         id: 'loc_1',
@@ -135,5 +223,38 @@ export async function GET(request: Request) {
       { error: 'Failed to fetch visitor locations' },
       { status: 500 }
     );
+  }
+}
+
+// Helper functions
+function getCityCoordinates(city: string): { lat: number; lng: number } {
+  const cityCoords: Record<string, { lat: number; lng: number }> = {
+    'Lagos': { lat: 6.5244, lng: 3.3792 },
+    'Cape Town': { lat: -33.9249, lng: 18.4241 },
+    'Nairobi': { lat: -1.2921, lng: 36.8219 },
+    'Abuja': { lat: 9.0765, lng: 7.3986 },
+    'Accra': { lat: 5.6037, lng: -0.1870 },
+    'Cairo': { lat: 30.0444, lng: 31.2357 },
+    // Add more cities as needed
+  };
+  
+  return cityCoords[city] || { lat: 0, lng: 0 };
+}
+
+function formatLastActive(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  
+  if (diffMins < 1) {
+    return 'just now';
+  } else if (diffMins < 60) {
+    return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+  } else if (diffHours < 24) {
+    return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  } else {
+    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
   }
 } 

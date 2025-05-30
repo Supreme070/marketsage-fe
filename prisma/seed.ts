@@ -1,9 +1,16 @@
-import { PrismaClient, UserRole } from '@prisma/client';
+import prisma from '../src/lib/db/prisma';
 import { hash } from 'bcrypt';
 import { sampleContacts } from '../src/data/sampleContacts';
 import { randomUUID } from 'crypto';
+import { seedSampleJourneys } from '../src/data/sampleJourneys';
 
-const prisma = new PrismaClient();
+// Define UserRole enum locally since we can't import it from @prisma/client
+enum UserRole {
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  ADMIN = 'ADMIN', 
+  IT_ADMIN = 'IT_ADMIN',
+  USER = 'USER'
+}
 
 async function main() {
   console.log(`Start seeding ...`);
@@ -42,6 +49,9 @@ async function main() {
 
   // Create sample contacts
   await createContacts(admin.id);
+
+  // Create sample visitor journeys
+  await seedSampleJourneys(admin.id);
 
   console.log(`Seeding finished.`);
 }
