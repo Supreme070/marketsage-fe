@@ -88,6 +88,7 @@ export function TeamCollaboration() {
   });
   const [messages, setMessages] = useState<Message[]>([]);
   const [handoffs, setHandoffs] = useState<Handoff[]>([]);
+  const [updatingHandoff, setUpdatingHandoff] = useState<string | null>(null);
 
   // Mock data for team members
   const [teamMembers] = useState<TeamMember[]>([
@@ -252,10 +253,40 @@ export function TeamCollaboration() {
   };
 
   // Update handoff status
-  const updateHandoffStatus = (handoffId: string, newStatus: Handoff['status']) => {
-    setHandoffs(prev => prev.map(handoff =>
-      handoff.id === handoffId ? { ...handoff, status: newStatus } : handoff
-    ));
+  const updateHandoffStatus = async (handoffId: string, newStatus: Handoff['status']) => {
+    setUpdatingHandoff(handoffId);
+    
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setHandoffs(prev => prev.map(handoff =>
+        handoff.id === handoffId ? { ...handoff, status: newStatus } : handoff
+      ));
+      
+      // Close details dialog if handoff is completed
+      if (newStatus === 'completed' && selectedHandoff?.id === handoffId) {
+        setSelectedHandoff(null);
+      }
+      
+      console.log(`Handoff ${handoffId} status updated to: ${newStatus}`);
+    } catch (error) {
+      console.error("Error updating handoff status:", error);
+    } finally {
+      setUpdatingHandoff(null);
+    }
+  };
+
+  // View handoff details
+  const viewHandoffDetails = (handoff: Handoff) => {
+    setSelectedHandoff(handoff);
+    console.log("Opening handoff details:", handoff.task);
+  };
+
+  // Handle more options menu
+  const handleMoreOptions = (handoff: Handoff) => {
+    console.log("More options for:", handoff.task);
+    // This could open a context menu or dropdown
   };
 
   // Send message
@@ -272,6 +303,7 @@ export function TeamCollaboration() {
 
     setMessages(prev => [message, ...prev]);
     setNewMessage("");
+    console.log("Message sent:", newMessage);
   };
 
   const getStatusColor = (status: string) => {
@@ -508,10 +540,10 @@ export function TeamCollaboration() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" className="text-xs">
+                      <Button variant="outline" size="sm" className="text-xs" onClick={() => viewHandoffDetails(handoff)}>
                         View Details
                       </Button>
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleMoreOptions(handoff)}>
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </div>
@@ -522,6 +554,115 @@ export function TeamCollaboration() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Handoff Details Dialog */}
+      {selectedHandoff && (
+        <Dialog open={!!selectedHandoff} onOpenChange={() => setSelectedHandoff(null)}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Task Handoff Details</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback>{selectedHandoff.from.initials}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">{selectedHandoff.from.name}</p>
+                    <p className="text-sm text-muted-foreground">{selectedHandoff.from.role}</p>
+                  </div>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback>{selectedHandoff.to.initials}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">{selectedHandoff.to.name}</p>
+                    <p className="text-sm text-muted-foreground">{selectedHandoff.to.role}</p>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-3">
+                <div>
+                  <h4 className="font-medium mb-1">Task Title</h4>
+                  <p className="text-sm">{selectedHandoff.task}</p>
+                </div>
+                <div>
+                  <h4 className="font-medium mb-1">Description</h4>
+                  <p className="text-sm text-muted-foreground">{selectedHandoff.description}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-medium mb-1">Priority</h4>
+                    <Badge className={getPriorityColor(selectedHandoff.priority)}>
+                      {selectedHandoff.priority}
+                    </Badge>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-1">Status</h4>
+                    <Badge className={getHandoffStatusColor(selectedHandoff.status)}>
+                      {selectedHandoff.status}
+                    </Badge>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-1">Due Date</h4>
+                    <p className="text-sm">{new Date(selectedHandoff.dueDate).toLocaleDateString('en-NG')}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-1">Comments</h4>
+                    <p className="text-sm">{selectedHandoff.comments} comments</p>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="flex gap-2">
+                {selectedHandoff.status === 'pending' && (
+                  <>
+                    <Button 
+                      size="sm" 
+                      onClick={() => updateHandoffStatus(selectedHandoff.id, 'accepted')}
+                      disabled={updatingHandoff === selectedHandoff.id}
+                    >
+                      <Check className="h-4 w-4 mr-2" />
+                      {updatingHandoff === selectedHandoff.id ? "Accepting..." : "Accept"}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => updateHandoffStatus(selectedHandoff.id, 'in-progress')}
+                      disabled={updatingHandoff === selectedHandoff.id}
+                    >
+                      <Clock className="h-4 w-4 mr-2" />
+                      {updatingHandoff === selectedHandoff.id ? "Starting..." : "Start Work"}
+                    </Button>
+                  </>
+                )}
+                {selectedHandoff.status === 'in-progress' && (
+                  <Button 
+                    size="sm" 
+                    onClick={() => updateHandoffStatus(selectedHandoff.id, 'completed')}
+                    disabled={updatingHandoff === selectedHandoff.id}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    {updatingHandoff === selectedHandoff.id ? "Completing..." : "Mark Complete"}
+                  </Button>
+                )}
+                <Button variant="outline" size="sm">
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Add Comment
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Communication Hub */}
       <Card>
@@ -591,11 +732,17 @@ export function TeamCollaboration() {
                   placeholder="Share an update with your team..."
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage();
+                    }
+                  }}
                   rows={2}
                   className="flex-1"
                 />
                 <div className="flex flex-col gap-2">
-                  <Button size="sm">
+                  <Button size="sm" onClick={sendMessage}>
                     <Send className="h-4 w-4 mr-2" />
                     Send
                   </Button>

@@ -75,6 +75,7 @@ export function TaskTemplates() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [sortBy, setSortBy] = useState("popular");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [usingTemplate, setUsingTemplate] = useState<string | null>(null); // Track which template is being used
 
   const [newTemplate, setNewTemplate] = useState({
     name: "",
@@ -286,30 +287,84 @@ export function TaskTemplates() {
 
   // Toggle favorite
   const toggleFavorite = (templateId: string) => {
-    setTemplates(prev => prev.map(template =>
-      template.id === templateId 
-        ? { ...template, isFavorite: !template.isFavorite }
-        : template
-    ));
+    setTemplates(prev => prev.map(template => {
+      if (template.id === templateId) {
+        const newFavoriteStatus = !template.isFavorite;
+        
+        // Provide user feedback
+        if (newFavoriteStatus) {
+          console.log(`⭐ Added "${template.name}" to favorites`);
+        } else {
+          console.log(`⭐ Removed "${template.name}" from favorites`);
+        }
+        
+        return { ...template, isFavorite: newFavoriteStatus };
+      }
+      return template;
+    }));
   };
 
   // Use template (create tasks from template)
-  const useTemplate = (template: TaskTemplate) => {
-    // This would typically create actual tasks in the Kanban board
+  const useTemplate = async (template: TaskTemplate) => {
     console.log("Using template:", template.name);
+    setUsingTemplate(template.id); // Set loading state
     
-    // Update usage count
-    setTemplates(prev => prev.map(t =>
-      t.id === template.id 
-        ? { ...t, usageCount: t.usageCount + 1, lastUsed: new Date().toISOString().split('T')[0] }
-        : t
-    ));
-    
-    // Close dialog if open
-    setSelectedTemplate(null);
-    
-    // In a real app, you'd navigate to the Kanban board with the new tasks
-    alert(`Created ${template.tasks} tasks from "${template.name}" template!`);
+    try {
+      // Create tasks from template
+      const tasksToCreate = template.preview.tasks.map((task, index) => ({
+        title: task.name,
+        description: task.description,
+        status: index === 0 ? "IN_PROGRESS" : "TODO", // First task in progress, others TODO
+        priority: template.difficulty === "advanced" ? "HIGH" : 
+                 template.difficulty === "intermediate" ? "MEDIUM" : "LOW",
+        campaign: template.name, // Use template name as campaign
+      }));
+
+      // Create tasks via API
+      const createdTasks = [];
+      for (const taskData of tasksToCreate) {
+        try {
+          const response = await fetch("/api/tasks", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(taskData),
+          });
+          
+          if (response.ok) {
+            const newTask = await response.json();
+            createdTasks.push(newTask);
+          } else {
+            console.error("Failed to create task:", taskData.title);
+          }
+        } catch (error) {
+          console.error("Error creating task:", error);
+        }
+      }
+      
+      // Update usage count
+      setTemplates(prev => prev.map(t =>
+        t.id === template.id 
+          ? { ...t, usageCount: t.usageCount + 1, lastUsed: new Date().toISOString().split('T')[0] }
+          : t
+      ));
+      
+      // Close dialog if open
+      setSelectedTemplate(null);
+      
+      // Show success message
+      if (createdTasks.length > 0) {
+        alert(`✅ Successfully created ${createdTasks.length} tasks from "${template.name}" template! 
+        
+Check the Kanban board to see your new tasks.`);
+      } else {
+        alert(`❌ Failed to create tasks from "${template.name}" template. Please try again.`);
+      }
+    } catch (error) {
+      console.error("Error using template:", error);
+      alert(`❌ Error creating tasks from template. Please try again.`);
+    } finally {
+      setUsingTemplate(null); // Clear loading state
+    }
   };
 
   // Create new template
@@ -474,6 +529,9 @@ export function TaskTemplates() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <h4 className="font-semibold">{template.name}</h4>
+                        {template.isFavorite && (
+                          <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                        )}
                         <Badge className={`text-xs ${getCategoryColor(template.category)}`}>
                           {getCategoryIcon(template.category)}
                           <span className="ml-1">{template.category}</span>
@@ -505,13 +563,27 @@ export function TaskTemplates() {
                     </div>
                     
                     <div className="flex flex-col gap-2">
-                      <Button size="sm" variant="outline">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent template selection
+                          setSelectedTemplate(template);
+                        }}
+                      >
                         <Eye className="h-4 w-4 mr-2" />
                         Preview
                       </Button>
-                      <Button size="sm">
+                      <Button 
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent template selection
+                          useTemplate(template);
+                        }}
+                        disabled={usingTemplate === template.id}
+                      >
                         <Copy className="h-4 w-4 mr-2" />
-                        Use Template
+                        {usingTemplate === template.id ? "Creating..." : "Use Template"}
                       </Button>
                     </div>
                   </div>
@@ -627,18 +699,34 @@ export function TaskTemplates() {
 
                 {/* Actions */}
                 <div className="space-y-2">
-                  <Button className="w-full">
+                  <Button 
+                    className="w-full"
+                    onClick={() => useTemplate(selectedTemplate)}
+                    disabled={usingTemplate === selectedTemplate.id}
+                  >
                     <Copy className="h-4 w-4 mr-2" />
-                    Use This Template
+                    {usingTemplate === selectedTemplate.id ? "Creating Tasks..." : "Use This Template"}
                   </Button>
                   <div className="grid grid-cols-2 gap-2">
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        // Template is already selected, so this just keeps it open for full preview
+                        console.log("Full preview for:", selectedTemplate.name);
+                      }}
+                    >
                       <Eye className="h-4 w-4 mr-2" />
                       Full Preview
                     </Button>
-                    <Button variant="outline" size="sm">
-                      <Star className="h-4 w-4 mr-2" />
-                      Save to Favorites
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => toggleFavorite(selectedTemplate.id)}
+                      className={selectedTemplate.isFavorite ? "bg-yellow-50 border-yellow-200" : ""}
+                    >
+                      <Star className={`h-4 w-4 mr-2 ${selectedTemplate.isFavorite ? "text-yellow-500 fill-yellow-500" : ""}`} />
+                      {selectedTemplate.isFavorite ? "Favorited" : "Favorite"}
                     </Button>
                   </div>
                 </div>

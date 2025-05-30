@@ -173,6 +173,37 @@ export function TaskCalendar() {
     }
   };
 
+  // Handle task actions
+  const handleAddTask = () => {
+    console.log("Add task for date:", selectedDate);
+    // This could open a task creation dialog or navigate to task creation
+  };
+
+  const handleEditTask = (task: Task) => {
+    console.log("Edit task:", task.title);
+    // This could open an edit dialog
+  };
+
+  const handleAddComment = (task: Task) => {
+    console.log("Add comment to task:", task.title);
+    // This could open a comment dialog
+  };
+
+  const handleViewDetails = (task: Task) => {
+    console.log("View details for task:", task.title);
+    // This could navigate to task details page or open expanded dialog
+  };
+
+  const handleNewTask = () => {
+    console.log("Create new task");
+    // This could open a task creation dialog
+  };
+
+  const handleMoreFilters = () => {
+    console.log("Open more filters");
+    // This could open advanced filter options
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -199,7 +230,7 @@ export function TaskCalendar() {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleNewTask}>
                 <Plus className="h-4 w-4 mr-2" />
                 New Task
               </Button>
@@ -239,7 +270,7 @@ export function TaskCalendar() {
               </Select>
             </div>
             <div className="flex items-end">
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full" onClick={handleMoreFilters}>
                 <Filter className="h-4 w-4 mr-2" />
                 More Filters
               </Button>
@@ -387,7 +418,7 @@ export function TaskCalendar() {
               <div className="text-center text-muted-foreground py-8">
                 <CalendarIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p>No tasks scheduled for this date</p>
-                <Button variant="outline" size="sm" className="mt-2">
+                <Button variant="outline" size="sm" className="mt-2" onClick={handleAddTask}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Task
                 </Button>
@@ -434,9 +465,15 @@ export function TaskCalendar() {
               </div>
               
               <div className="flex gap-2">
-                <Button size="sm" variant="outline">Edit Task</Button>
-                <Button size="sm" variant="outline">Add Comment</Button>
-                <Button size="sm">View Details</Button>
+                <Button size="sm" variant="outline" onClick={() => handleEditTask(selectedTask)}>
+                  Edit Task
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handleAddComment(selectedTask)}>
+                  Add Comment
+                </Button>
+                <Button size="sm" onClick={() => handleViewDetails(selectedTask)}>
+                  View Details
+                </Button>
               </div>
             </div>
           )}

@@ -31,6 +31,35 @@ export function JourneyManagementDashboard() {
     avgEngagement: 74.2
   };
 
+  // Handle new journey creation
+  const handleNewJourney = () => {
+    console.log("Creating new journey...");
+    // Switch to builder tab and initialize new journey
+    setActiveTab("builder");
+  };
+
+  // Handle AI recommendation action
+  const handleRecommendationAction = (recommendation: any) => {
+    console.log("Acting on recommendation:", recommendation.title);
+    
+    switch (recommendation.type) {
+      case "optimization":
+        setActiveTab("builder");
+        break;
+      case "automation":
+        setActiveTab("analytics");
+        break;
+      case "timing":
+        setActiveTab("analytics");
+        break;
+      case "content":
+        setActiveTab("builder");
+        break;
+      default:
+        console.log("Unknown recommendation type");
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Overview Stats */}
@@ -100,7 +129,7 @@ export function JourneyManagementDashboard() {
           </TabsList>
 
           <div className="flex items-center gap-2">
-            <Button size="sm" className="flex items-center gap-2">
+            <Button size="sm" className="flex items-center gap-2" onClick={handleNewJourney}>
               <Plus className="h-4 w-4" />
               New Journey
             </Button>
@@ -198,7 +227,11 @@ export function JourneyManagementDashboard() {
                       priority: "low"
                     }
                   ].map((rec, index) => (
-                    <div key={index} className="p-3 border rounded-lg">
+                    <div 
+                      key={index} 
+                      className="p-3 border rounded-lg cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => handleRecommendationAction(rec)}
+                    >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <Zap className="h-4 w-4 text-yellow-500" />
@@ -214,7 +247,31 @@ export function JourneyManagementDashboard() {
                           {rec.priority}
                         </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground">{rec.description}</p>
+                      <p className="text-sm text-muted-foreground mb-2">{rec.description}</p>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRecommendationAction(rec);
+                          }}
+                        >
+                          Apply
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            console.log("Dismissing recommendation:", rec.title);
+                          }}
+                        >
+                          Dismiss
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>

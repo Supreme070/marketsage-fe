@@ -102,6 +102,52 @@ export function JourneyBuilder() {
     ));
   }, [nodes]);
 
+  // Handle journey actions
+  const handlePreview = () => {
+    console.log("Previewing journey:", journeyName);
+    // This could open a preview modal showing the journey flow
+  };
+
+  const handleSaveDraft = () => {
+    console.log("Saving journey draft:", journeyName);
+    // This would save the journey to the database as draft
+    const journeyData = {
+      name: journeyName,
+      nodes: nodes,
+      status: "draft"
+    };
+    console.log("Journey data:", journeyData);
+    alert("Journey saved as draft successfully!");
+  };
+
+  const handleActivate = () => {
+    console.log("Activating journey:", journeyName);
+    // This would validate and activate the journey
+    if (nodes.length < 2) {
+      alert("Please add at least one action step before activating the journey.");
+      return;
+    }
+    alert("Journey activated successfully! Contacts will now enter this journey.");
+  };
+
+  // Handle quick actions
+  const handleAISuggest = () => {
+    console.log("Getting AI suggestions for journey optimization");
+    // This could analyze the current journey and suggest improvements
+    const suggestions = [
+      "Add a welcome email after the trigger",
+      "Include a 2-day wait before follow-up",
+      "Add a condition to check email engagement"
+    ];
+    alert(`AI Suggestions:\n${suggestions.join('\n')}`);
+  };
+
+  const handleUseTemplate = () => {
+    console.log("Opening journey templates");
+    // This could open a template selection dialog
+    alert("Template selection would open here. Choose from pre-built journey templates.");
+  };
+
   const getNodeIcon = (type: string) => {
     const nodeType = nodeTypes.find(nt => nt.type === type);
     return nodeType?.icon || Circle;
@@ -125,15 +171,15 @@ export function JourneyBuilder() {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handlePreview}>
                 <Eye className="h-4 w-4 mr-2" />
                 Preview
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleSaveDraft}>
                 <Save className="h-4 w-4 mr-2" />
                 Save Draft
               </Button>
-              <Button size="sm">
+              <Button size="sm" onClick={handleActivate}>
                 <Play className="h-4 w-4 mr-2" />
                 Activate
               </Button>
@@ -214,11 +260,11 @@ export function JourneyBuilder() {
 
             <div className="space-y-2">
               <h4 className="font-medium text-sm">Quick Actions</h4>
-              <Button variant="outline" size="sm" className="w-full justify-start">
+              <Button variant="outline" size="sm" className="w-full justify-start" onClick={handleAISuggest}>
                 <Zap className="h-4 w-4 mr-2" />
                 AI Suggest
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start">
+              <Button variant="outline" size="sm" className="w-full justify-start" onClick={handleUseTemplate}>
                 <Users className="h-4 w-4 mr-2" />
                 Use Template
               </Button>

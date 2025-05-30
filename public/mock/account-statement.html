@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Account Statement - SwiftPay</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+        line-height: 1.6;
+        color: #1f2937;
+        background: #f3f4f6;
+      }
+
+      .container {
+        width: 95%;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 0;
+      }
+
+      .header {
+        background: #ffffff;
+        padding: 1rem 0;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 95%;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .logo {
+        font-size: 1.5rem;
+        font-weight: 700;
+        background: linear-gradient(90deg, #3b82f6, #6366f1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .balance-card {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border-radius: 1rem;
+        padding: 2rem;
+        color: white;
+        margin-bottom: 2rem;
+      }
+
+      .balance-label {
+        font-size: 0.875rem;
+        opacity: 0.9;
+      }
+
+      .balance-amount {
+        font-size: 2.5rem;
+        font-weight: 600;
+        margin: 0.5rem 0;
+      }
+
+      .card {
+        background: #ffffff;
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .filters {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+      }
+
+      .date-input {
+        padding: 0.5rem 1rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        background: #10b981;
+        color: white;
+        border: none;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+
+      .btn:hover {
+        background: #059669;
+      }
+
+      .transaction-list {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+      }
+
+      .transaction-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .transaction-item:last-child {
+        border-bottom: none;
+      }
+
+      .transaction-details h4 {
+        font-size: 0.875rem;
+        margin-bottom: 0.25rem;
+      }
+
+      .transaction-details p {
+        font-size: 0.75rem;
+        color: #6b7280;
+      }
+
+      .transaction-amount {
+        font-weight: 600;
+      }
+
+      .credit {
+        color: #10b981;
+      }
+
+      .debit {
+        color: #ef4444;
+      }
+
+      @media (max-width: 640px) {
+        .filters {
+          flex-direction: column;
+        }
+        
+        .date-input {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <nav class="nav">
+        <div class="logo">SwiftPay</div>
+        <div style="color: #6b7280; font-size: 0.875rem;">Welcome, Oluwaseun</div>
+      </nav>
+    </header>
+
+    <main class="container">
+      <div class="balance-card">
+        <div class="balance-label">Current Balance</div>
+        <div class="balance-amount">₦125,450.00</div>
+        <div style="font-size: 0.875rem;">Account Number: 0123456789</div>
+      </div>
+
+      <div class="card">
+        <h2 style="margin-bottom: 1.5rem;">Account Statement</h2>
+        
+        <div class="filters">
+          <input type="date" class="date-input" value="2024-03-01">
+          <input type="date" class="date-input" value="2024-03-25">
+          <button class="btn" style="background: #10b981;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 0.5rem;">
+              <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+              <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+            </svg>
+            Download PDF
+          </button>
+        </div>
+
+        <div class="transaction-list">
+          <div class="transaction-item">
+            <div class="transaction-details">
+              <h4>Transfer from Chidi Okonkwo</h4>
+              <p>Mar 25, 2024 • 14:30</p>
+            </div>
+            <div class="transaction-amount credit">+₦45,000.00</div>
+          </div>
+          
+          <div class="transaction-item">
+            <div class="transaction-details">
+              <h4>Paystack Payment - Jumia</h4>
+              <p>Mar 24, 2024 • 11:15</p>
+            </div>
+            <div class="transaction-amount debit">-₦12,500.00</div>
+          </div>
+          
+          <div class="transaction-item">
+            <div class="transaction-details">
+              <h4>ATM Withdrawal - Lekki Phase 1</h4>
+              <p>Mar 23, 2024 • 16:45</p>
+            </div>
+            <div class="transaction-amount debit">-₦20,000.00</div>
+          </div>
+          
+          <div class="transaction-item">
+            <div class="transaction-details">
+              <h4>Salary Credit - Tech Solutions Ltd</h4>
+              <p>Mar 22, 2024 • 09:00</p>
+            </div>
+            <div class="transaction-amount credit">+₦350,000.00</div>
+          </div>
+          
+          <div class="transaction-item">
+            <div class="transaction-details">
+              <h4>DSTV Subscription</h4>
+              <p>Mar 21, 2024 • 13:20</p>
+            </div>
+            <div class="transaction-amount debit">-₦24,500.00</div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </body>
+</html> 

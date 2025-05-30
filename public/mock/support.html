@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Support Center - SwiftPay</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+        line-height: 1.6;
+        color: #1f2937;
+        background: #f3f4f6;
+      }
+
+      .container {
+        width: 95%;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 0;
+      }
+
+      .header {
+        background: #ffffff;
+        padding: 1rem 0;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 95%;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .logo {
+        font-size: 1.5rem;
+        font-weight: 700;
+        background: linear-gradient(90deg, #3b82f6, #6366f1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .search-container {
+        background: white;
+        padding: 2rem;
+        border-radius: 1rem;
+        text-align: center;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      }
+
+      .search-box {
+        width: 100%;
+        max-width: 600px;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        margin-top: 1rem;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+      }
+
+      .card {
+        background: white;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      }
+
+      .card h3 {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        color: #10b981;
+      }
+
+      .card ul {
+        list-style: none;
+      }
+
+      .card li {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f3f4f6;
+      }
+
+      .card li:last-child {
+        border-bottom: none;
+      }
+
+      .card a {
+        color: #4b5563;
+        text-decoration: none;
+        transition: color 0.15s ease;
+      }
+
+      .card a:hover {
+        color: #10b981;
+      }
+
+      .chat-widget {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        background: #10b981;
+        color: white;
+        padding: 1rem 2rem;
+        border-radius: 9999px;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        transition: transform 0.15s ease;
+      }
+
+      .chat-widget:hover {
+        transform: translateY(-2px);
+      }
+
+      .support-form {
+        background: white;
+        padding: 2rem;
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      }
+
+      .form-group {
+        margin-bottom: 1.5rem;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+      }
+
+      .form-group input,
+      .form-group textarea,
+      .form-group select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        background: #10b981;
+        color: white;
+        border: none;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+
+      .btn:hover {
+        background: #059669;
+      }
+
+      @media (max-width: 640px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        
+        .chat-widget {
+          bottom: 1rem;
+          right: 1rem;
+          padding: 0.75rem 1.5rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <nav class="nav">
+        <div class="logo">SwiftPay</div>
+        <div style="color: #6b7280; font-size: 0.875rem;">Support Center</div>
+      </nav>
+    </header>
+
+    <main class="container">
+      <div class="search-container">
+        <h1 style="font-size: 2rem; margin-bottom: 0.5rem;">How can we help you?</h1>
+        <p style="color: #6b7280;">Search our help center or browse categories below</p>
+        <input type="search" class="search-box" placeholder="Search for help articles...">
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h3>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/>
+            </svg>
+            Account & Security
+          </h3>
+          <ul>
+            <li><a href="#">Account Verification (BVN)</a></li>
+            <li><a href="#">Reset Password</a></li>
+            <li><a href="#">Two-Factor Authentication</a></li>
+            <li><a href="#">Transaction Limits</a></li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M4 11.794V16l4-1 4 1v-4.206l-2.018.306L8 13.126 6.018 12.1 4 11.794z"/>
+              <path d="M4.268 1H12a1 1 0 0 1 1 1v11.768l.223.148A.5.5 0 0 0 14 13.5V2a2 2 0 0 0-2-2H6a2 2 0 0 0-1.732 1z"/>
+            </svg>
+            Payments & Transfers
+          </h3>
+          <ul>
+            <li><a href="#">Bank Transfers</a></li>
+            <li><a href="#">Paystack Integration</a></li>
+            <li><a href="#">Failed Transactions</a></li>
+            <li><a href="#">International Transfers</a></li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+            </svg>
+            Bills & Utilities
+          </h3>
+          <ul>
+            <li><a href="#">Airtime & Data</a></li>
+            <li><a href="#">DSTV/GOtv</a></li>
+            <li><a href="#">Electricity Bills</a></li>
+            <li><a href="#">Internet Services</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="support-form">
+        <h2 style="margin-bottom: 1.5rem;">Submit a Support Ticket</h2>
+        <form>
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" required>
+          </div>
+          
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" required>
+          </div>
+          
+          <div class="form-group">
+            <label>Category</label>
+            <select required>
+              <option value="">Select a category</option>
+              <option>Account Issues</option>
+              <option>Transaction Problems</option>
+              <option>Bill Payments</option>
+              <option>Technical Support</option>
+              <option>Other</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label>Description</label>
+            <textarea rows="4" required></textarea>
+          </div>
+          
+          <button type="submit" class="btn">Submit Ticket</button>
+        </form>
+      </div>
+
+      <div class="chat-widget">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+          <path d="M16 8c0 3.866-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.584.296-1.925.864-4.181 1.234-.2.032-.352-.176-.273-.362.354-.836.674-1.95.77-2.966C.744 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7zM5 8a1 1 0 1 0-2 0 1 1 0 0 0 2 0zm4 0a1 1 0 1 0-2 0 1 1 0 0 0 2 0zm3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+        </svg>
+        Chat with us
+      </div>
+    </main>
+
+    <footer style="background: white; padding: 2rem 0; margin-top: 4rem;">
+      <div class="container">
+        <div style="text-align: center; color: #6b7280;">
+          <p style="margin-bottom: 0.5rem;">Support Hours: Monday - Friday, 8:00 AM - 6:00 PM WAT</p>
+          <p>Emergency Support: +234 (0) 800 SWIFTPAY</p>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html> 

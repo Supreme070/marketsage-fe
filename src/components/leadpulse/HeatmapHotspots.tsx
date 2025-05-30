@@ -62,8 +62,9 @@ export default function HeatmapHotspots() {
   useEffect(() => {
     setLoading(true);
     
-    // Mock heatmap data with Nigerian business context
+    // Enhanced mock heatmap data with 4 different page types
     const mockHotspots: HotspotData[] = [
+      // Homepage hotspots
       {
         id: 'whatsapp-button',
         element: 'WhatsApp Contact Button',
@@ -74,17 +75,6 @@ export default function HeatmapHotspots() {
         conversionInfluence: 34.5,
         heatIntensity: 95,
         position: { x: 85, y: 25 }
-      },
-      {
-        id: 'pricing-naira',
-        element: 'Naira Pricing Section',
-        page: 'Pricing',
-        hovers: 1987,
-        clicks: 1245,
-        avgTime: 8.7,
-        conversionInfluence: 28.3,
-        heatIntensity: 87,
-        position: { x: 50, y: 45 }
       },
       {
         id: 'demo-video',
@@ -98,17 +88,6 @@ export default function HeatmapHotspots() {
         position: { x: 50, y: 60 }
       },
       {
-        id: 'mobile-form',
-        element: 'Mobile Signup Form',
-        page: 'Contact',
-        hovers: 1432,
-        clicks: 1089,
-        avgTime: 12.4,
-        conversionInfluence: 31.7,
-        heatIntensity: 82,
-        position: { x: 50, y: 35 }
-      },
-      {
         id: 'testimonials',
         element: 'Nigerian Enterprise Logos',
         page: 'Homepage',
@@ -119,20 +98,175 @@ export default function HeatmapHotspots() {
         heatIntensity: 65,
         position: { x: 50, y: 75 }
       },
+      
+      // Transactional page hotspots
       {
-        id: 'features-grid',
-        element: 'AI Features Grid',
-        page: 'Features',
-        hovers: 1156,
-        clicks: 734,
-        avgTime: 15.2,
-        conversionInfluence: 25.4,
-        heatIntensity: 71,
-        position: { x: 50, y: 50 }
+        id: 'payment-form',
+        element: 'Payment Form Fields',
+        page: 'Transactional',
+        hovers: 3245,
+        clicks: 2890,
+        avgTime: 67.4,
+        conversionInfluence: 89.2,
+        heatIntensity: 98,
+        position: { x: 50, y: 45 }
+      },
+      {
+        id: 'paystack-button',
+        element: 'Paystack Payment Button',
+        page: 'Transactional',
+        hovers: 2987,
+        clicks: 2654,
+        avgTime: 12.8,
+        conversionInfluence: 92.1,
+        heatIntensity: 96,
+        position: { x: 60, y: 70 }
+      },
+      {
+        id: 'card-input',
+        element: 'Card Number Input Field',
+        page: 'Transactional',
+        hovers: 2876,
+        clicks: 2234,
+        avgTime: 23.5,
+        conversionInfluence: 67.3,
+        heatIntensity: 84,
+        position: { x: 45, y: 55 }
+      },
+      {
+        id: 'security-badge',
+        element: 'SSL Security Badge',
+        page: 'Transactional',
+        hovers: 987,
+        clicks: 234,
+        avgTime: 4.2,
+        conversionInfluence: 28.7,
+        heatIntensity: 42,
+        position: { x: 75, y: 85 }
+      },
+      
+      // Account Statement page hotspots
+      {
+        id: 'balance-card',
+        element: 'Account Balance Card',
+        page: 'Account Statement',
+        hovers: 4567,
+        clicks: 3234,
+        avgTime: 15.6,
+        conversionInfluence: 45.2,
+        heatIntensity: 92,
+        position: { x: 30, y: 25 }
+      },
+      {
+        id: 'transaction-list',
+        element: 'Transaction History List',
+        page: 'Account Statement',
+        hovers: 3456,
+        clicks: 2987,
+        avgTime: 89.3,
+        conversionInfluence: 38.9,
+        heatIntensity: 87,
+        position: { x: 50, y: 55 }
+      },
+      {
+        id: 'download-statement',
+        element: 'Download PDF Button',
+        page: 'Account Statement',
+        hovers: 1876,
+        clicks: 1456,
+        avgTime: 3.7,
+        conversionInfluence: 22.4,
+        heatIntensity: 73,
+        position: { x: 80, y: 30 }
+      },
+      {
+        id: 'filter-dates',
+        element: 'Date Range Filter',
+        page: 'Account Statement',
+        hovers: 1234,
+        clicks: 876,
+        avgTime: 8.9,
+        conversionInfluence: 31.5,
+        heatIntensity: 61,
+        position: { x: 25, y: 40 }
+      },
+      
+      // Support page hotspots
+      {
+        id: 'chat-widget',
+        element: 'Live Chat Widget',
+        page: 'Support',
+        hovers: 3987,
+        clicks: 3245,
+        avgTime: 45.7,
+        conversionInfluence: 78.4,
+        heatIntensity: 94,
+        position: { x: 85, y: 80 }
+      },
+      {
+        id: 'faq-search',
+        element: 'FAQ Search Box',
+        page: 'Support',
+        hovers: 2134,
+        clicks: 1876,
+        avgTime: 12.3,
+        conversionInfluence: 42.8,
+        heatIntensity: 76,
+        position: { x: 50, y: 25 }
+      },
+      {
+        id: 'ticket-form',
+        element: 'Support Ticket Form',
+        page: 'Support',
+        hovers: 1987,
+        clicks: 1234,
+        avgTime: 156.4,
+        conversionInfluence: 56.7,
+        heatIntensity: 82,
+        position: { x: 50, y: 60 }
+      },
+      {
+        id: 'phone-number',
+        element: 'Emergency Phone Number',
+        page: 'Support',
+        hovers: 876,
+        clicks: 654,
+        avgTime: 6.8,
+        conversionInfluence: 71.2,
+        heatIntensity: 58,
+        position: { x: 70, y: 35 }
       }
     ];
 
-    const mockScrollData: ScrollData[] = [
+    // Filter hotspots by selected page
+    const filteredHotspots = mockHotspots.filter(hotspot => hotspot.page === getPageDisplayName(selectedPage));
+
+    // Page-specific scroll data
+    const mockScrollData: ScrollData[] = getScrollDataForPage(selectedPage);
+
+    // Page-specific heatmap zones
+    const mockHeatmapZones: HeatmapZone[] = getHeatmapZonesForPage(selectedPage);
+
+    setHotspotData(filteredHotspots);
+    setScrollData(mockScrollData);
+    setHeatmapZones(mockHeatmapZones);
+    setLoading(false);
+  }, [selectedPage]);
+
+  // Helper function to get page display name
+  const getPageDisplayName = (pageKey: string): string => {
+    const pageMap: Record<string, string> = {
+      'homepage': 'Homepage',
+      'transactional': 'Transactional',
+      'account': 'Account Statement',
+      'support': 'Support'
+    };
+    return pageMap[pageKey] || 'Homepage';
+  };
+
+  // Helper function to get scroll data for each page
+  const getScrollDataForPage = (pageKey: string): ScrollData[] => {
+    const baseData = [
       { depth: 10, visitors: 2456, dropOffRate: 5.2 },
       { depth: 25, visitors: 2298, dropOffRate: 12.8 },
       { depth: 50, visitors: 2087, dropOffRate: 18.4 },
@@ -141,21 +275,152 @@ export default function HeatmapHotspots() {
       { depth: 100, visitors: 987, dropOffRate: 52.1 }
     ];
 
-    const mockHeatmapZones: HeatmapZone[] = [
-      { name: 'Header Navigation', intensity: 75, clicks: 1834, area: 'header' },
-      { name: 'Hero CTA Button', intensity: 95, clicks: 2456, area: 'hero' },
-      { name: 'WhatsApp Integration', intensity: 89, clicks: 2134, area: 'hero' },
-      { name: 'Feature Showcase', intensity: 68, clicks: 1456, area: 'features' },
-      { name: 'Pricing Cards', intensity: 82, clicks: 1987, area: 'pricing' },
-      { name: 'Enterprise Logos', intensity: 45, clicks: 876, area: 'testimonials' },
-      { name: 'Footer Links', intensity: 32, clicks: 456, area: 'footer' }
-    ];
+    // Adjust visitor counts based on page type
+    const multiplier = pageKey === 'homepage' ? 1 : 
+                     pageKey === 'transactional' ? 0.4 : 
+                     pageKey === 'account' ? 0.6 : 0.3; // support
 
-    setHotspotData(mockHotspots);
-    setScrollData(mockScrollData);
-    setHeatmapZones(mockHeatmapZones);
-    setLoading(false);
-  }, [selectedPage]);
+    return baseData.map(item => ({
+      ...item,
+      visitors: Math.round(item.visitors * multiplier)
+    }));
+  };
+
+  // Helper function to get heatmap zones for each page
+  const getHeatmapZonesForPage = (pageKey: string): HeatmapZone[] => {
+    const zoneMap: Record<string, HeatmapZone[]> = {
+      'homepage': [
+        { name: 'Header Navigation', intensity: 75, clicks: 1834, area: 'header' },
+        { name: 'Hero CTA Button', intensity: 95, clicks: 2456, area: 'hero' },
+        { name: 'WhatsApp Integration', intensity: 89, clicks: 2134, area: 'hero' },
+        { name: 'Feature Showcase', intensity: 68, clicks: 1456, area: 'features' },
+        { name: 'Enterprise Logos', intensity: 45, clicks: 876, area: 'testimonials' },
+        { name: 'Footer Links', intensity: 32, clicks: 456, area: 'footer' }
+      ],
+      'transactional': [
+        { name: 'Payment Form Header', intensity: 82, clicks: 1234, area: 'header' },
+        { name: 'Card Input Fields', intensity: 96, clicks: 2890, area: 'hero' },
+        { name: 'Paystack Button', intensity: 98, clicks: 2654, area: 'features' },
+        { name: 'Security Badges', intensity: 42, clicks: 234, area: 'testimonials' },
+        { name: 'Terms & Conditions', intensity: 28, clicks: 145, area: 'footer' }
+      ],
+      'account': [
+        { name: 'Account Navigation', intensity: 78, clicks: 987, area: 'header' },
+        { name: 'Balance Overview', intensity: 92, clicks: 3234, area: 'hero' },
+        { name: 'Transaction Filters', intensity: 61, clicks: 876, area: 'features' },
+        { name: 'Transaction List', intensity: 87, clicks: 2987, area: 'pricing' },
+        { name: 'Export Options', intensity: 73, clicks: 1456, area: 'testimonials' }
+      ],
+      'support': [
+        { name: 'Support Navigation', intensity: 69, clicks: 543, area: 'header' },
+        { name: 'FAQ Search', intensity: 76, clicks: 1876, area: 'hero' },
+        { name: 'Ticket Categories', intensity: 58, clicks: 765, area: 'features' },
+        { name: 'Contact Form', intensity: 82, clicks: 1234, area: 'pricing' },
+        { name: 'Live Chat Widget', intensity: 94, clicks: 3245, area: 'testimonials' }
+      ]
+    };
+
+    return zoneMap[pageKey] || zoneMap['homepage'];
+  };
+
+  // Helper function to get page description
+  const getPageDescription = (pageKey: string): string => {
+    const descriptions: Record<string, string> = {
+      'homepage': 'Landing page visitor interactions and engagement patterns',
+      'transactional': 'Payment form behavior and checkout flow analysis',
+      'account': 'User dashboard interactions and financial data access patterns',
+      'support': 'Help center usage and customer service interaction patterns'
+    };
+    return descriptions[pageKey] || descriptions['homepage'];
+  };
+
+  // Helper function to get page visitor count
+  const getPageVisitors = (pageKey: string): number => {
+    const visitorCounts: Record<string, number> = {
+      'homepage': 12456,
+      'transactional': 4982,
+      'account': 7432,
+      'support': 3654
+    };
+    return visitorCounts[pageKey] || visitorCounts['homepage'];
+  };
+
+  // Helper function to get total interactions for page
+  const getTotalInteractions = (pageKey: string): number => {
+    return hotspotData.reduce((sum, hotspot) => sum + hotspot.clicks + hotspot.hovers, 0) || 12456;
+  };
+
+  // Helper function to get average engagement time
+  const getAvgEngagementTime = (pageKey: string): string => {
+    const avgTimes: Record<string, string> = {
+      'homepage': '2m 34s',
+      'transactional': '4m 12s',
+      'account': '3m 45s',
+      'support': '6m 23s'
+    };
+    return avgTimes[pageKey] || avgTimes['homepage'];
+  };
+
+  // Helper function to get conversion influence
+  const getConversionInfluence = (pageKey: string): string => {
+    const avgInfluence = hotspotData.length > 0 
+      ? (hotspotData.reduce((sum, hotspot) => sum + hotspot.conversionInfluence, 0) / hotspotData.length)
+      : 28.7;
+    return avgInfluence.toFixed(1);
+  };
+
+  // Helper function to get page mockup
+  const getPageMockup = (pageKey: string): React.ReactNode => {
+    const iframeSources: Record<string, string> = {
+      'homepage': '/mock/fintech-landing.html',
+      'transactional': '/mock/transactional.html',
+      'account': '/mock/account-statement.html',
+      'support': '/mock/support.html'
+    };
+    
+    const source = iframeSources[pageKey] || iframeSources['homepage'];
+    
+    return (
+      <div className="w-full h-full overflow-hidden">
+        <iframe 
+          src={source} 
+          className="w-full h-full border-0" 
+          title={`${getPageDisplayName(pageKey)} Preview`}
+        />
+      </div>
+    );
+  };
+
+  // Helper function to get page-specific insights
+  const getPageInsights = (pageKey: string): string[] => {
+    const insights: Record<string, string[]> = {
+      'homepage': [
+        '• "Get Started" CTA getting highest clicks',
+        '• Feature showcase has 23% higher engagement',
+        '• Mobile users scrolling 31% deeper',
+        '• Hero section driving 12% conversion lift'
+      ],
+      'transactional': [
+        '• Payment button has 89% conversion influence',
+        '• Card input fields cause 15% drop-off',
+        '• Paystack badge increases trust by 28%',
+        '• Mobile payment completion 23% higher'
+      ],
+      'account': [
+        '• Balance card most viewed element',
+        '• Transaction list engages 87% of users',
+        '• Export features used by 22% of visitors',
+        '• Date filters improve UX by 31%'
+      ],
+      'support': [
+        '• Live chat widget drives 78% engagement',
+        '• FAQ search reduces ticket volume 42%',
+        '• Help articles viewed for avg 6m 23s',
+        '• Phone support link clicked by 71% mobile users'
+      ]
+    };
+    return insights[pageKey] || insights['homepage'];
+  };
 
   // Live pulse simulation
   useEffect(() => {
@@ -236,26 +501,47 @@ export default function HeatmapHotspots() {
                 Homepage
               </Button>
               <Button 
-                variant={selectedPage === 'pricing' ? "default" : "ghost"} 
+                variant={selectedPage === 'transactional' ? "default" : "ghost"} 
                 size="sm"
-                onClick={() => setSelectedPage('pricing')}
+                onClick={() => setSelectedPage('transactional')}
                 className="text-xs h-7"
               >
-                Pricing
+                Transactional
               </Button>
               <Button 
-                variant={selectedPage === 'features' ? "default" : "ghost"} 
+                variant={selectedPage === 'account' ? "default" : "ghost"} 
                 size="sm"
-                onClick={() => setSelectedPage('features')}
+                onClick={() => setSelectedPage('account')}
                 className="text-xs h-7"
               >
-                Features
+                Account
+              </Button>
+              <Button 
+                variant={selectedPage === 'support' ? "default" : "ghost"} 
+                size="sm"
+                onClick={() => setSelectedPage('support')}
+                className="text-xs h-7"
+              >
+                Support
               </Button>
             </div>
             <Button variant="outline" size="sm" className="text-xs h-7">
               <Download className="h-3 w-3 mr-1" />
               Export
             </Button>
+          </div>
+        </div>
+
+        {/* Page Context */}
+        <div className="bg-muted/50 rounded-lg p-4 border">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-medium text-sm">{getPageDisplayName(selectedPage)} Analysis</h4>
+              <p className="text-xs text-muted-foreground mt-1">{getPageDescription(selectedPage)}</p>
+            </div>
+            <Badge variant="outline" className="text-xs">
+              {getPageVisitors(selectedPage).toLocaleString()} visitors
+            </Badge>
           </div>
         </div>
 
@@ -267,7 +553,7 @@ export default function HeatmapHotspots() {
               <MousePointer className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">12,456</div>
+              <div className="text-2xl font-bold">{getTotalInteractions(selectedPage).toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">Clicks & hovers</p>
             </CardContent>
           </Card>
@@ -278,7 +564,7 @@ export default function HeatmapHotspots() {
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">2m 34s</div>
+              <div className="text-2xl font-bold">{getAvgEngagementTime(selectedPage)}</div>
               <p className="text-xs text-muted-foreground">Time on hotspots</p>
             </CardContent>
           </Card>
@@ -289,7 +575,7 @@ export default function HeatmapHotspots() {
               <Target className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">28.7%</div>
+              <div className="text-2xl font-bold">{getConversionInfluence(selectedPage)}%</div>
               <p className="text-xs text-muted-foreground">Avg influence rate</p>
             </CardContent>
           </Card>
@@ -300,7 +586,7 @@ export default function HeatmapHotspots() {
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">6</div>
+              <div className="text-2xl font-bold">{heatmapZones.length}</div>
               <p className="text-xs text-muted-foreground">High-engagement areas</p>
             </CardContent>
           </Card>
@@ -317,28 +603,19 @@ export default function HeatmapHotspots() {
           <TabsContent value="heatmap" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Live Page Heatmap</CardTitle>
-                <CardDescription>Real-time user interactions on SwiftPay fintech landing page</CardDescription>
+                <CardTitle>Live Page Heatmap - {getPageDisplayName(selectedPage)}</CardTitle>
+                <CardDescription>{getPageDescription(selectedPage)}</CardDescription>
               </CardHeader>
               <CardContent>
-                {/* Live Heatmap with SwiftPay iframe */}
-                <div className="relative bg-gray-100 dark:bg-gray-800 rounded-lg h-96 overflow-hidden border-2 border-gray-200 dark:border-gray-700">
-                  {/* SwiftPay Landing Page Iframe */}
-                  <iframe
-                    src="/mock/fintech-landing.html"
-                    className="absolute inset-0 w-full h-full border-0"
-                    style={{
-                      pointerEvents: 'none',
-                      transform: 'scale(0.8)',
-                      transformOrigin: 'top left',
-                      width: '125%',
-                      height: '125%'
-                    }}
-                    title="SwiftPay Landing Page"
-                  />
+                {/* Live Heatmap with dynamic content */}
+                <div className="relative bg-gray-100 dark:bg-gray-800 rounded-lg h-[600px] overflow-hidden border-2 border-gray-200 dark:border-gray-700">
+                  {/* Page Content from HTML files */}
+                  <div className="absolute inset-0 bg-white dark:bg-gray-900">
+                    {getPageMockup(selectedPage)}
+                  </div>
                   
                   {/* Live Pulse Overlay */}
-                  <div className="absolute inset-0 pointer-events-none">
+                  <div className="absolute inset-0 pointer-events-none z-10">
                     {livePulses.map((pulse) => (
                       <div
                         key={pulse.id}
@@ -378,7 +655,7 @@ export default function HeatmapHotspots() {
                   </div>
                   
                   {/* Live Stats Overlay */}
-                  <div className="absolute top-2 right-2 bg-black/80 text-white text-xs px-3 py-2 rounded-lg">
+                  <div className="absolute top-2 right-2 bg-black/80 text-white text-xs px-3 py-2 rounded-lg z-20">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                       <span>Live • {livePulses.length} active users</span>
@@ -386,7 +663,7 @@ export default function HeatmapHotspots() {
                   </div>
                   
                   {/* Interaction Legend */}
-                  <div className="absolute bottom-2 left-2 bg-white/95 dark:bg-gray-900/95 text-xs px-3 py-2 rounded-lg border">
+                  <div className="absolute bottom-2 left-2 bg-white/95 dark:bg-gray-900/95 text-xs px-3 py-2 rounded-lg border z-20">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 bg-red-500 rounded-full"></div>
@@ -427,14 +704,9 @@ export default function HeatmapHotspots() {
                 <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
                   <h4 className="font-semibold mb-2 text-blue-900 dark:text-blue-100">Live Insights</h4>
                   <div className="grid md:grid-cols-2 gap-3 text-sm">
-                    <div className="space-y-1">
-                      <div className="text-blue-700 dark:text-blue-300">• "Create free account" CTA getting highest clicks</div>
-                      <div className="text-blue-700 dark:text-blue-300">• Pricing section has 23% higher engagement</div>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="text-blue-700 dark:text-blue-300">• Mobile users scrolling 31% deeper</div>
-                      <div className="text-blue-700 dark:text-blue-300">• Testimonials driving 12% conversion lift</div>
-                    </div>
+                    {getPageInsights(selectedPage).map((insight, index) => (
+                      <div key={index} className="text-blue-700 dark:text-blue-300">{insight}</div>
+                    ))}
                   </div>
                 </div>
               </CardContent>

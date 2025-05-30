@@ -260,6 +260,36 @@ export function JourneyTemplates() {
     return matchesSearch && matchesCategory && matchesDifficulty;
   });
 
+  // Handle template actions
+  const handleMoreFilters = () => {
+    console.log("Opening advanced filters");
+    alert("Advanced filters would open here with options for tags, channels, rating, etc.");
+  };
+
+  const handlePreviewTemplate = (template: JourneyTemplate, event?: React.MouseEvent) => {
+    if (event) event.stopPropagation();
+    console.log("Previewing template:", template.name);
+    alert(`Preview for "${template.name}" would open in a modal showing the complete journey flow.`);
+  };
+
+  const handleUseTemplate = (template: JourneyTemplate, event?: React.MouseEvent) => {
+    if (event) event.stopPropagation();
+    console.log("Using template:", template.name);
+    alert(`Template "${template.name}" would be loaded into the journey builder for customization.`);
+  };
+
+  const handleFullPreview = () => {
+    if (!selectedTemplate) return;
+    console.log("Opening full preview for:", selectedTemplate.name);
+    alert(`Full preview for "${selectedTemplate.name}" would open showing detailed journey visualization.`);
+  };
+
+  const handleFavoriteTemplate = () => {
+    if (!selectedTemplate) return;
+    console.log("Adding template to favorites:", selectedTemplate.name);
+    alert(`Template "${selectedTemplate.name}" added to your favorites!`);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header and Filters */}
@@ -310,7 +340,7 @@ export function JourneyTemplates() {
               </Select>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="flex-1">
+              <Button variant="outline" size="sm" className="flex-1" onClick={handleMoreFilters}>
                 <Filter className="h-4 w-4 mr-2" />
                 More Filters
               </Button>
@@ -371,11 +401,11 @@ export function JourneyTemplates() {
                     </div>
                     
                     <div className="flex flex-col gap-2">
-                      <Button size="sm" variant="outline">
+                      <Button size="sm" variant="outline" onClick={(e) => handlePreviewTemplate(template, e)}>
                         <Eye className="h-4 w-4 mr-2" />
                         Preview
                       </Button>
-                      <Button size="sm">
+                      <Button size="sm" onClick={(e) => handleUseTemplate(template, e)}>
                         <Copy className="h-4 w-4 mr-2" />
                         Use Template
                       </Button>
@@ -489,16 +519,16 @@ export function JourneyTemplates() {
 
                 {/* Actions */}
                 <div className="space-y-2">
-                  <Button className="w-full">
+                  <Button className="w-full" onClick={handleFullPreview}>
                     <Copy className="h-4 w-4 mr-2" />
                     Use This Template
                   </Button>
                   <div className="grid grid-cols-2 gap-2">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={handleFullPreview}>
                       <Eye className="h-4 w-4 mr-2" />
                       Full Preview
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={handleFavoriteTemplate}>
                       <Star className="h-4 w-4 mr-2" />
                       Save to Favorites
                     </Button>

@@ -219,6 +219,36 @@ export function ContactJourneyTracking() {
     return matchesSearch && matchesJourney && matchesStatus;
   });
 
+  // Handle tracking actions
+  const handleMoreFilters = () => {
+    console.log("Opening advanced filters for contact tracking");
+    alert("Advanced filters would open here with options for date range, engagement level, journey stage, etc.");
+  };
+
+  const handlePauseJourney = () => {
+    if (!selectedContact) return;
+    console.log("Pausing journey for:", selectedContact.name);
+    alert(`Journey paused for ${selectedContact.name}. They will not receive further messages until resumed.`);
+  };
+
+  const handleSkipStep = () => {
+    if (!selectedContact) return;
+    console.log("Skipping current step for:", selectedContact.name);
+    alert(`Current step skipped for ${selectedContact.name}. They will move to the next step in the journey.`);
+  };
+
+  const handleEditJourney = () => {
+    if (!selectedContact) return;
+    console.log("Opening journey editor for:", selectedContact.name);
+    alert(`Journey editor would open for ${selectedContact.name}, allowing you to modify their journey path.`);
+  };
+
+  const handleViewProfile = () => {
+    if (!selectedContact) return;
+    console.log("Opening profile for:", selectedContact.name);
+    alert(`Contact profile for ${selectedContact.name} would open showing detailed information and history.`);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header and Filters */}
@@ -269,7 +299,7 @@ export function ContactJourneyTracking() {
               </Select>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="flex-1">
+              <Button variant="outline" size="sm" className="flex-1" onClick={handleMoreFilters}>
                 <Filter className="h-4 w-4 mr-2" />
                 More Filters
               </Button>
@@ -466,19 +496,19 @@ export function ContactJourneyTracking() {
                 <div className="space-y-2">
                   <h4 className="font-medium">Actions</h4>
                   <div className="grid grid-cols-2 gap-2">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={handlePauseJourney}>
                       <Pause className="h-4 w-4 mr-2" />
                       Pause
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={handleSkipStep}>
                       <SkipForward className="h-4 w-4 mr-2" />
                       Skip Step
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={handleEditJourney}>
                       <Edit className="h-4 w-4 mr-2" />
                       Edit Journey
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={handleViewProfile}>
                       <Eye className="h-4 w-4 mr-2" />
                       View Profile
                     </Button>

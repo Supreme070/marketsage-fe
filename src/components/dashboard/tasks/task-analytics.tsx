@@ -323,13 +323,43 @@ export function TaskAnalytics() {
     });
   }, [filteredTasks]);
 
-  // Simulate data refresh
+  // Refresh data function
   const refreshData = async () => {
     setIsLoading(true);
-    // Simulate API call delay
+    console.log("Refreshing analytics data...");
+    
+    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     setLastUpdated(new Date());
     setIsLoading(false);
+  };
+
+  // Handle filter action
+  const handleFilter = () => {
+    console.log("Opening advanced filters...");
+    // This could open a filter dialog or expand filter options
+  };
+
+  // Handle export action
+  const handleExport = () => {
+    console.log("Exporting analytics data...");
+    
+    // Create CSV data
+    const csvData = filteredTasks.map(task => ({
+      Title: task.title,
+      Status: task.status,
+      Priority: task.priority,
+      Team: task.team,
+      Assignee: task.assignee,
+      Created: task.createdAt,
+      Completed: task.completedAt || 'N/A',
+      Revenue: task.revenue || 0,
+      'Time Spent (hours)': task.timeSpent || 0
+    }));
+    
+    // In a real app, this would trigger a download
+    console.log("Export data:", csvData);
+    alert("Export functionality would download CSV file with analytics data");
   };
 
   const getPriorityColor = (priority: string) => {
@@ -367,11 +397,11 @@ export function TaskAnalytics() {
                 <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleFilter}>
                 <Filter className="h-4 w-4 mr-2" />
                 Filter
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleExport}>
                 <Download className="h-4 w-4 mr-2" />
                 Export
               </Button>

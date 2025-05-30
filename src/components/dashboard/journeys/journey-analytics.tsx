@@ -71,6 +71,63 @@ export function JourneyAnalytics() {
     return "text-red-600";
   };
 
+  // Handle filter action
+  const handleFilter = () => {
+    console.log("Opening journey filters...");
+    // This could open a filter dialog with advanced options
+  };
+
+  // Handle export action
+  const handleExport = () => {
+    console.log("Exporting journey analytics...");
+    
+    // Create export data
+    const exportData = journeyPerformance.map(journey => ({
+      'Journey Name': journey.name,
+      'Total Contacts': journey.contacts,
+      'Completed': journey.completed,
+      'Completion Rate (%)': journey.rate,
+      'Revenue (₦)': journey.revenue
+    }));
+    
+    console.log("Export data:", exportData);
+    alert("Journey analytics would be exported as CSV file with performance data");
+  };
+
+  // Handle journey drill-down
+  const handleJourneyDrillDown = (journey: any) => {
+    console.log("Drilling down into journey:", journey.name);
+    setSelectedJourney(journey.name.toLowerCase().replace(' ', ''));
+  };
+
+  // Handle step analysis
+  const handleStepAnalysis = (step: any, index: number) => {
+    console.log("Analyzing step:", step.step, "at position", index + 1);
+    // This could open a detailed step analysis dialog
+  };
+
+  // Handle AI insight action
+  const handleInsightAction = (insight: any) => {
+    console.log("Taking action on insight:", insight.title);
+    
+    switch (insight.type) {
+      case "bottleneck":
+        console.log("Opening A/B test setup for bottleneck resolution");
+        break;
+      case "optimization":
+        console.log("Opening timing optimization settings");
+        break;
+      case "segmentation":
+        console.log("Opening segment creation tool");
+        break;
+      case "content":
+        console.log("Opening content optimization recommendations");
+        break;
+      default:
+        console.log("Unknown insight type");
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Analytics Header */}
@@ -84,11 +141,11 @@ export function JourneyAnalytics() {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleFilter}>
                 <Filter className="h-4 w-4 mr-2" />
                 Filter
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleExport}>
                 <Download className="h-4 w-4 mr-2" />
                 Export
               </Button>
@@ -209,7 +266,11 @@ export function JourneyAnalytics() {
           <CardContent>
             <div className="space-y-4">
               {journeyPerformance.map((journey, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                <div 
+                  key={index} 
+                  className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => handleJourneyDrillDown(journey)}
+                >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       {getStatusIcon(journey.rate)}
@@ -292,7 +353,10 @@ export function JourneyAnalytics() {
                   <div className="absolute left-6 top-16 w-0.5 h-8 bg-gray-200"></div>
                 )}
                 
-                <div className="flex items-center gap-4 p-4 border rounded-lg">
+                <div 
+                  className="flex items-center gap-4 p-4 border rounded-lg cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => handleStepAnalysis(step, index)}
+                >
                   <div className="flex-shrink-0">
                     <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
                       <span className="text-sm font-bold text-blue-600">{index + 1}</span>
@@ -388,7 +452,11 @@ export function JourneyAnalytics() {
                   priority: "low"
                 }
               ].map((insight, index) => (
-                <div key={index} className="p-3 border rounded-lg">
+                <div 
+                  key={index} 
+                  className="p-3 border rounded-lg cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => handleInsightAction(insight)}
+                >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-2">
                       {insight.type === "bottleneck" && <AlertCircle className="h-4 w-4 text-red-500" />}
@@ -407,7 +475,31 @@ export function JourneyAnalytics() {
                       {insight.priority}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">{insight.description}</p>
+                  <p className="text-sm text-muted-foreground mb-2">{insight.description}</p>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleInsightAction(insight);
+                      }}
+                    >
+                      Apply
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      className="text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        console.log("Dismissing insight:", insight.title);
+                      }}
+                    >
+                      Dismiss
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
