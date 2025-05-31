@@ -9,7 +9,8 @@ import {
   DollarSign, Users, Activity, Zap, Mail, MessageSquare, 
   Settings, TrendingUp, Calendar, RefreshCw, Plus, 
   ArrowUpRight, ArrowDownRight, Bell, Map, BarChart3,
-  Headphones, Workflow, Target, Clock, ChevronRight
+  Headphones, Workflow, Target, Clock, ChevronRight,
+  Monitor, Database, Globe
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -242,260 +243,280 @@ export default function CommandCenterDashboard() {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Command Center Header */}
-      <div className="bg-slate-900 border border-slate-700 rounded-lg p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <h1 className="text-xl font-bold text-white tracking-wider">
-                MARKETSAGE COMMAND CENTER
-              </h1>
-              <div className="text-xs text-green-400 bg-green-500/10 px-2 py-1 rounded">ONLINE</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-4 text-xs text-slate-400">
-            <div>LAGOS • {new Date().toLocaleTimeString()}</div>
-            <div>USER: {userName.toUpperCase()}</div>
-            <div className="text-green-400">SYS: OPERATIONAL</div>
-          </div>
+    <div className="space-y-6">
+      {/* Clean Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Marketing Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Real-time overview of your marketing performance
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <select 
+            className="px-3 py-1 text-sm border rounded-md bg-background"
+            value={timeRange} 
+            onChange={(e) => setTimeRange(e.target.value)}
+          >
+            <option value="24h">Last 24 hours</option>
+            <option value="7d">Last 7 days</option>
+            <option value="30d">Last 30 days</option>
+          </select>
+          <Button variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
         </div>
       </div>
 
-      {/* Key Metrics Row - Industry Agnostic */}
-      <div className="grid gap-4 grid-cols-4">
-        {/* Growth/ROI */}
-        <div className="bg-slate-900 border border-green-600/30 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <TrendingUp className="h-5 w-5 text-green-400" />
-            <span className="text-sm text-green-400">+18%</span>
-          </div>
-          <div className="text-2xl font-bold text-green-100">
-            247%
-          </div>
-          <div className="text-sm text-green-300/60">GROWTH RATE</div>
-        </div>
+      {/* Key Metrics Grid */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card className="border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Revenue
+            </CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₦{formatNumber(dashboardData.kpis.revenueToday)}</div>
+            <p className="text-xs text-muted-foreground flex items-center mt-1">
+              <TrendingUp className="h-3 w-3 mr-1 text-green-600" />
+              +12.5% from yesterday
+            </p>
+          </CardContent>
+        </Card>
 
-        {/* Active Audience */}
-        <div className="bg-slate-900 border border-red-600/30 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <Users className="h-5 w-5 text-red-400" />
-            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-          </div>
-          <div className="text-2xl font-bold text-red-100">
-            {dashboardData.livePulse.activeVisitors}
-          </div>
-          <div className="text-sm text-red-300/60">ACTIVE AUDIENCE</div>
-        </div>
+        <Card className="border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Active Visitors
+            </CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{dashboardData.livePulse.activeVisitors}</div>
+            <p className="text-xs text-muted-foreground flex items-center mt-1">
+              <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+              Live count
+            </p>
+          </CardContent>
+        </Card>
 
-        {/* Engagement Rate */}
-        <div className="bg-slate-900 border border-blue-600/30 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <Activity className="h-5 w-5 text-blue-400" />
-            <span className="text-sm text-blue-400">+12%</span>
-          </div>
-          <div className="text-2xl font-bold text-blue-100">
-            {dashboardData.livePulse.engagementTrend.toFixed(0)}%
-          </div>
-          <div className="text-sm text-blue-300/60">ENGAGEMENT</div>
-        </div>
+        <Card className="border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Conversion Rate
+            </CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{dashboardData.kpis.conversionRate.toFixed(1)}%</div>
+            <p className="text-xs text-muted-foreground flex items-center mt-1">
+              <TrendingUp className="h-3 w-3 mr-1 text-green-600" />
+              +0.3% from last week
+            </p>
+          </CardContent>
+        </Card>
 
-        {/* Campaign Performance */}
-        <div className="bg-slate-900 border border-orange-600/30 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <BarChart3 className="h-5 w-5 text-orange-400" />
-            <span className="text-sm text-orange-400">ACTIVE</span>
-          </div>
-          <div className="text-2xl font-bold text-orange-100">
-            {dashboardData.kpis.runningAutomations}
-          </div>
-          <div className="text-sm text-orange-300/60">CAMPAIGNS</div>
-        </div>
+        <Card className="border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Active Campaigns
+            </CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{dashboardData.kpis.runningAutomations}</div>
+            <p className="text-xs text-muted-foreground">
+              Across all channels
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Main Content: Analytics + Live Operations */}
+      {/* Main Content Grid */}
       <div className="grid gap-6 grid-cols-12">
-        {/* Left Side - Analytics Charts */}
-        <div className="col-span-8 space-y-6">
-          
-          {/* Audience Growth Trend */}
-          <div className="bg-slate-900 border border-slate-700 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
+        {/* Audience Growth Chart */}
+        <Card className="col-span-8 border">
+          <CardHeader>
+            <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-white">AUDIENCE GROWTH</h3>
-                <p className="text-sm text-slate-400">Last 7 days performance</p>
+                <CardTitle className="text-lg font-medium">Audience Growth</CardTitle>
+                <CardDescription>Daily new contacts over the last 7 days</CardDescription>
               </div>
-              <div className="text-green-400 text-sm">↗ +23% vs last week</div>
+              <Badge variant="outline" className="text-xs">+23% vs last week</Badge>
             </div>
-            <div className="h-40 flex items-end justify-between gap-2 bg-slate-800/20 rounded p-3">
-              {[
-                { day: 'Mon', value: 65, amount: '2.1K' },
-                { day: 'Tue', value: 78, amount: '2.8K' },
-                { day: 'Wed', value: 52, amount: '1.9K' },
-                { day: 'Thu', value: 89, amount: '3.2K' },
-                { day: 'Fri', value: 94, amount: '3.4K' },
-                { day: 'Sat', value: 76, amount: '2.7K' },
-                { day: 'Sun', value: 100, amount: '3.6K' }
-              ].map((data, index) => (
-                <div key={index} className="flex flex-col items-center gap-1 group relative">
-                  {/* Amount above bar */}
-                  <div className="text-xs text-green-400 font-medium mb-1">
-                    {data.amount}
+          </CardHeader>
+          <CardContent>
+            <div className="h-64 w-full">
+              <div className="flex items-end justify-between h-48 px-2">
+                {[
+                  { day: 'Mon', value: 65, amount: '2.1K' },
+                  { day: 'Tue', value: 78, amount: '2.8K' },
+                  { day: 'Wed', value: 52, amount: '1.9K' },
+                  { day: 'Thu', value: 89, amount: '3.2K' },
+                  { day: 'Fri', value: 94, amount: '3.4K' },
+                  { day: 'Sat', value: 76, amount: '2.7K' },
+                  { day: 'Sun', value: 100, amount: '3.6K' }
+                ].map((data, index) => (
+                  <div key={index} className="flex flex-col items-center gap-2 flex-1 max-w-16">
+                    <div className="text-xs text-muted-foreground font-medium">
+                      {data.amount}
+                    </div>
+                    <div 
+                      className="bg-blue-500 rounded-t w-8 hover:bg-blue-600 transition-colors"
+                      style={{ height: `${Math.max(data.value * 1.8, 20)}px` }}
+                    ></div>
+                    <span className="text-xs text-muted-foreground">
+                      {data.day}
+                    </span>
                   </div>
-                  <div 
-                    className="bg-gradient-to-t from-green-600 to-green-400 rounded-t w-8 transition-all hover:from-green-500 hover:to-green-300"
-                    style={{ height: `${Math.max(data.value * 0.8, 12)}px` }}
-                  ></div>
-                  <span className="text-xs text-slate-500 font-medium">
-                    {data.day}
-                  </span>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Activity Panel */}
+        <Card className="col-span-4 border">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-medium">Recent Activity</CardTitle>
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            </div>
+            <CardDescription>Latest system events and updates</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="max-h-64 overflow-y-auto">
+              {liveUpdates.slice(0, 6).map((activity, index) => (
+                <div key={activity.id} className="border-b last:border-b-0 p-4 hover:bg-muted/50 transition-colors">
+                  <Link href={activity.href} className="block">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-md p-1.5 bg-muted">
+                        {getActivityIcon(activity.type)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground line-clamp-1">
+                          {activity.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                          {activity.description}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {formatTimeAgo(activity.timestamp)}
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
                 </div>
               ))}
             </div>
-            <div className="mt-3 text-xs text-slate-500 text-center">
-              7-day audience acquisition overview
-            </div>
-          </div>
+          </CardContent>
+        </Card>
+      </div>
 
-          {/* Communication & Engagement Analytics */}
-          <div className="bg-slate-900 border border-slate-700 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-bold text-white">COMMUNICATION PERFORMANCE</h3>
-                <p className="text-sm text-slate-400">Multi-channel engagement metrics</p>
-              </div>
-              <div className="text-blue-400 text-sm">87% response rate</div>
-            </div>
-            <div className="grid gap-4 grid-cols-3">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-400 mb-1">{dashboardData.livePulse.activeVisitors}</div>
-                <div className="text-xs text-slate-500">ACTIVE CONTACTS</div>
-                <div className="w-full bg-slate-700 rounded-full h-2 mt-2">
-                  <div className="bg-blue-500 h-2 rounded-full" style={{ width: '67%' }}></div>
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-400 mb-1">{dashboardData.livePulse.conversionsToday}</div>
-                <div className="text-xs text-slate-500">RESPONSES</div>
-                <div className="w-full bg-slate-700 rounded-full h-2 mt-2">
-                  <div className="bg-purple-500 h-2 rounded-full" style={{ width: '45%' }}></div>
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-400 mb-1">{dashboardData.livePulse.engagementTrend.toFixed(0)}%</div>
-                <div className="text-xs text-slate-500">ENGAGEMENT</div>
-                <div className="w-full bg-slate-700 rounded-full h-2 mt-2">
-                  <div className="bg-green-500 h-2 rounded-full" style={{ width: '87%' }}></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Module Status Grid - Universal */}
-          <div className="grid gap-4 grid-cols-3">
-            {/* Automation */}
-            <Link href="/workflows" className="group">
-              <div className="bg-slate-900 border border-slate-700 hover:border-purple-500/50 rounded-lg p-4 transition-all">
-                <div className="flex items-center justify-between mb-3">
-                  <Workflow className="h-5 w-5 text-purple-400" />
-                  <div className="text-sm text-purple-400">{dashboardData.modules.workflows.trend}</div>
-                </div>
-                <div className="text-2xl font-bold text-white mb-1">{dashboardData.modules.workflows.count}</div>
-                <div className="text-sm text-slate-500">Automation Flows</div>
-              </div>
-            </Link>
-
-            {/* Outreach */}
-            <Link href="/email/campaigns" className="group">
-              <div className="bg-slate-900 border border-slate-700 hover:border-indigo-500/50 rounded-lg p-4 transition-all">
-                <div className="flex items-center justify-between mb-3">
-                  <MessageSquare className="h-5 w-5 text-indigo-400" />
-                  <div className="text-sm text-indigo-400">{dashboardData.modules.campaigns.trend}</div>
-                </div>
-                <div className="text-2xl font-bold text-white mb-1">{dashboardData.modules.campaigns.count}</div>
-                <div className="text-sm text-slate-500">Outreach Campaigns</div>
-              </div>
-            </Link>
-
-            {/* Audience Intelligence */}
-            <Link href="/leadpulse" className="group">
-              <div className="bg-slate-900 border border-slate-700 hover:border-red-500/50 rounded-lg p-4 transition-all">
-                <div className="flex items-center justify-between mb-3">
-                  <Target className="h-5 w-5 text-red-400" />
-                  <div className="text-sm text-red-400">{dashboardData.modules.leadpulse.trend}</div>
-                </div>
-                <div className="text-2xl font-bold text-white mb-1">{dashboardData.modules.leadpulse.count}</div>
-                <div className="text-sm text-slate-500">Audience Intelligence</div>
-              </div>
-            </Link>
-          </div>
-        </div>
-
-        {/* Right Side - Live Operations */}
-        <div className="col-span-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-lg h-full">
-            <div className="border-b border-slate-700 p-4">
+      {/* Channel Performance */}
+      <Card className="border">
+        <CardHeader>
+          <CardTitle className="text-lg font-medium">Channel Performance</CardTitle>
+          <CardDescription>Multi-channel engagement metrics and activity</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-6 grid-cols-3">
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-lg font-bold text-green-400">LIVE OPERATIONS</span>
-                </div>
-                <div className="text-xs text-slate-500">REAL-TIME</div>
+                <span className="text-sm text-muted-foreground">Email Campaigns</span>
+                <span className="text-sm font-medium">{dashboardData.modules.campaigns.count} active</span>
               </div>
-              <div className="text-sm text-slate-400 mt-1">System events and operations</div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 rounded-full" style={{ width: '67%' }}></div>
+              </div>
+              <div className="text-xs text-muted-foreground">67% engagement rate</div>
             </div>
-            <div className="p-4">
-              <div className="space-y-3">
-                <AnimatePresence mode="popLayout">
-                  {liveUpdates.slice(0, 6).map((activity) => (
-                    <motion.div
-                      key={activity.id}
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="border border-slate-700/50 rounded-lg p-3 bg-slate-800/30 hover:bg-slate-800/50 transition-colors"
-                    >
-                      <Link 
-                        href={activity.href}
-                        className="flex items-start gap-3 group"
-                        onClick={() => trackDashboardAction('click_activity', activity.type)}
-                      >
-                        <div className="rounded-lg p-2 bg-slate-700/50 border border-slate-600/50 flex-shrink-0">
-                          {getActivityIcon(activity.type)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm leading-tight text-slate-200 group-hover:text-blue-400 transition-colors">
-                            {activity.title}
-                          </p>
-                          <p className="text-xs text-slate-500 mt-1">
-                            {activity.description}
-                          </p>
-                          <div className="flex items-center justify-between mt-2">
-                            <p className="text-xs text-green-400 flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {formatTimeAgo(activity.timestamp)}
-                            </p>
-                            <span className="text-xs text-slate-600 uppercase font-medium">{activity.type}</span>
-                          </div>
-                        </div>
-                      </Link>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-                
-                {liveUpdates.length === 0 && (
-                  <div className="text-center py-8 text-slate-500">
-                    <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">MONITORING SYSTEM...</p>
-                    <p className="text-xs">Awaiting operations data</p>
-                  </div>
-                )}
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">SMS Campaigns</span>
+                <span className="text-sm font-medium">{dashboardData.livePulse.conversionsToday} sent today</span>
               </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div className="h-full bg-green-500 rounded-full" style={{ width: '45%' }}></div>
+              </div>
+              <div className="text-xs text-muted-foreground">45% open rate</div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">WhatsApp</span>
+                <span className="text-sm font-medium">{dashboardData.livePulse.engagementTrend.toFixed(0)}% response</span>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div className="h-full bg-purple-500 rounded-full" style={{ width: '87%' }}></div>
+              </div>
+              <div className="text-xs text-muted-foreground">87% response rate</div>
             </div>
           </div>
-        </div>
+        </CardContent>
+      </Card>
+
+      {/* Quick Actions */}
+      <div className="grid gap-4 grid-cols-4">
+        <Link href="/workflows" className="block">
+          <Card className="border hover:bg-muted/50 transition-colors cursor-pointer">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <Workflow className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <div className="font-medium text-sm">Workflows</div>
+                  <div className="text-xs text-muted-foreground">{dashboardData.modules.workflows.count} active</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/leadpulse" className="block">
+          <Card className="border hover:bg-muted/50 transition-colors cursor-pointer">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <Monitor className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <div className="font-medium text-sm">Lead Intelligence</div>
+                  <div className="text-xs text-muted-foreground">{dashboardData.modules.leadpulse.count} insights</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/email/campaigns" className="block">
+          <Card className="border hover:bg-muted/50 transition-colors cursor-pointer">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <Mail className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <div className="font-medium text-sm">Campaigns</div>
+                  <div className="text-xs text-muted-foreground">{dashboardData.modules.campaigns.count} running</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/segments" className="block">
+          <Card className="border hover:bg-muted/50 transition-colors cursor-pointer">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <Database className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <div className="font-medium text-sm">Segments</div>
+                  <div className="text-xs text-muted-foreground">Audience management</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
     </div>
   );
