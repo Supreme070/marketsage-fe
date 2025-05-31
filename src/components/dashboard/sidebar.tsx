@@ -50,6 +50,38 @@ const sidebarNavItems: NavItem[] = [
     icon: BarChart4,
   },
   {
+    title: "AI Intelligence",
+    href: "/ai-intelligence",
+    icon: BrainCircuit,
+    submenu: [
+      {
+        title: "Overview",
+        href: "/ai-intelligence",
+        icon: BarChart4,
+      },
+      {
+        title: "Content Intelligence",
+        href: "/ai-intelligence/content",
+        icon: FileText,
+      },
+      {
+        title: "Customer Intelligence",
+        href: "/ai-intelligence/customers",
+        icon: Users,
+      },
+      {
+        title: "Predictive Analytics",
+        href: "/ai-intelligence/predict",
+        icon: LineChart,
+      },
+      {
+        title: "AI Chat",
+        href: "/ai-intelligence/chat",
+        icon: MessageCircle,
+      },
+    ],
+  },
+  {
     title: "Contacts",
     href: "/contacts",
     icon: Users,

@@ -1,28 +1,25 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  experimental: {
-    serverComponentsExternalPackages: ['@prisma/client'],
-    fontLoaders: [
-      { loader: '@next/font/google', options: { subsets: ['latin'] } },
-    ],
-  },
-  optimizeFonts: false,
-  images: {
-    domains: ['localhost'],
-  },
-  env: {
-    CUSTOM_KEY: process.env.CUSTOM_KEY,
-  },
-  serverExternalPackages: ['bcrypt'],
-  transpilePackages: ['next-auth'],
+  
+  // Updated to use the correct serverExternalPackages instead of experimental
+  serverExternalPackages: [
+    '@prisma/client',
+    'bcrypt',
+    '@xenova/transformers',
+    'onnxruntime-node',
+    'sharp'
+  ],
+  
+  // Removed deprecated options that were causing warnings
   images: {
     unoptimized: true,
     domains: [
       "source.unsplash.com",
-      "images.unsplash.com",
+      "images.unsplash.com", 
       "ext.same-assets.com",
       "ugc.same-assets.com",
+      "localhost"
     ],
     remotePatterns: [
       {
@@ -47,13 +44,60 @@ const nextConfig = {
       },
     ],
   },
+  
+  env: {
+    CUSTOM_KEY: process.env.CUSTOM_KEY,
+  },
+  
+  transpilePackages: ['next-auth'],
+  
   typescript: {
     ignoreBuildErrors: true,
   },
+  
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Removing the rewrites as they're causing issues
+  
+  // Custom webpack configuration to handle ML packages
+  webpack: (config, { isServer, dev }) => {
+    // Exclude native binaries from client-side bundle
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        os: false,
+        crypto: false,
+        stream: false,
+        buffer: false,
+      };
+      
+      // Ignore ML package binaries on client side
+      config.externals.push({
+        '@xenova/transformers': 'commonjs @xenova/transformers',
+        'onnxruntime-node': 'commonjs onnxruntime-node',
+        'sharp': 'commonjs sharp'
+      });
+    }
+    
+    // Handle .node files
+    config.module.rules.push({
+      test: /\.node$/,
+      use: 'ignore-loader'
+    });
+    
+    // Ignore specific binary patterns
+    config.module.rules.push({
+      test: /\.(node|wasm)$/,
+      type: 'asset/resource',
+      generator: {
+        filename: 'static/[name].[hash][ext]'
+      }
+    });
+    
+    return config;
+  },
 };
 
 module.exports = nextConfig;
