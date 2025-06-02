@@ -369,17 +369,22 @@ export function useAITools(userId?: string) {
 }
 
 // Overview hook - combines all AI Intelligence data
-export function useAIIntelligenceOverview(userId?: string) {
+export function useAIIntelligenceOverview(
+  userId?: string,
+  timeRange: '24h' | '7d' | '30d' | 'all' = 'all'
+) {
   const [overview, setOverview] = useState({
     counts: { contentCount: 0, customerCount: 0, chatCount: 0, toolCount: 0 },
-    recent: []
+    recent: [] as any[]
   });
   const [loading, setLoading] = useState(false);
 
   const fetchOverview = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/ai/intelligence?userId=${userId}`);
+      const response = await fetch(
+        `/api/ai/intelligence?userId=${userId}&timeRange=${timeRange}`
+      );
       if (!response.ok) throw new Error('Failed to fetch overview');
       
       const result = await response.json();
@@ -389,7 +394,7 @@ export function useAIIntelligenceOverview(userId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, timeRange]);
 
   useEffect(() => {
     fetchOverview();

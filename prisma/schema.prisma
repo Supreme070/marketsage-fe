@@ -93,6 +93,12 @@ model User {
   createdTasks     Task[]             @relation("TaskCreator")
   assignedTasks    Task[]             @relation("TaskAssignee")
   taskComments     TaskComment[]
+  
+  // AI Intelligence relations
+  aiContentAnalyses AI_ContentAnalysis[] @relation("UserToContentAnalysis")
+  aiCustomerSegments AI_CustomerSegment[] @relation("UserToCustomerSegment")
+  aiChatHistory    AI_ChatHistory[]     @relation("UserToChatHistory")
+  aiTools          AI_Tool[]            @relation("UserToAITool")
 }
 
 // NextAuth.js required models
@@ -1267,4 +1273,70 @@ model TaskComment {
   // Relations
   task            Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
   createdBy       User      @relation(fields: [createdById], references: [id])
+}
+
+// AI Intelligence Models
+model AI_ContentAnalysis {
+  id              String    @id @default(cuid())
+  title           String
+  content         String
+  supremeScore    Int       @default(0)
+  sentiment       Float?
+  readability     Int?
+  engagement      Int?
+  analysis        String?   // JSON
+  tags            String[]  @default([])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String
+
+  // Relations
+  createdBy       User      @relation("UserToContentAnalysis", fields: [createdById], references: [id], onDelete: Cascade)
+}
+
+model AI_CustomerSegment {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  criteria        String?   // JSON
+  customerCount   Int       @default(0)
+  churnRisk       Float     @default(0)
+  lifetimeValue   Float     @default(0)
+  tags            String[]  @default([])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String
+
+  // Relations
+  createdBy       User      @relation("UserToCustomerSegment", fields: [createdById], references: [id], onDelete: Cascade)
+}
+
+model AI_ChatHistory {
+  id              String    @id @default(cuid())
+  userId          String
+  sessionId       String?
+  question        String
+  answer          String
+  context         String?   // JSON
+  confidence      Float     @default(0)
+  createdAt       DateTime  @default(now())
+
+  // Relations
+  user            User      @relation("UserToChatHistory", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AI_Tool {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  category        String
+  config          String?   // JSON
+  usage           String?   // JSON
+  isPublic        Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String
+
+  // Relations
+  createdBy       User      @relation("UserToAITool", fields: [createdById], references: [id], onDelete: Cascade)
 }
