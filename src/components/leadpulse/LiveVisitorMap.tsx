@@ -128,30 +128,26 @@ export default function LiveVisitorMap({
     
     const interval = setInterval(() => {
       if (filteredLocations.length > 0) {
-        const activeLocationKeys = filteredLocations
-          .filter(loc => loc.isActive)
-          .map(loc => loc.city);
+        const activeLocations = filteredLocations.filter(loc => loc.isActive);
           
-        if (activeLocationKeys.length === 0) return;
+        if (activeLocations.length === 0) return;
         
-        const randomCity = activeLocationKeys[Math.floor(Math.random() * activeLocationKeys.length)];
-        const cityCoord = CITY_COORDINATES[randomCity];
+        const randomLocation = activeLocations[Math.floor(Math.random() * activeLocations.length)];
+        const { x, y } = convertToSVGCoordinates(randomLocation.latitude, randomLocation.longitude);
         
-        if (cityCoord) {
-          const newPulse = {
-            id: `pulse_${Date.now()}`,
-            x: cityCoord.x,
-            y: cityCoord.y,
-            timestamp: Date.now()
-          };
-          
-          setActivityPulses(prev => [...prev, newPulse]);
-          
-          // Remove old pulses after animation completes
-          setTimeout(() => {
-            setActivityPulses(prev => prev.filter(p => p.id !== newPulse.id));
-          }, 2000);
-        }
+        const newPulse = {
+          id: `pulse_${Date.now()}`,
+          x,
+          y,
+          timestamp: Date.now()
+        };
+        
+        setActivityPulses(prev => [...prev, newPulse]);
+        
+        // Remove old pulses after animation completes
+        setTimeout(() => {
+          setActivityPulses(prev => prev.filter(p => p.id !== newPulse.id));
+        }, 2000);
       }
     }, 3000);
     
@@ -215,6 +211,43 @@ export default function LiveVisitorMap({
   const getActiveContinent = () => {
     if (!geoPath.length) return null;
     return geoPath[0];
+  };
+
+  // Function to convert lat/lng to SVG coordinates that match the NASA background image
+  const convertToSVGCoordinates = (latitude: number, longitude: number) => {
+    // Manual calibration based on known city positions on the NASA background
+    // The NASA image appears to use a rectangular projection with some adjustments
+    
+    // Base conversion
+    let x = ((longitude + 180) * (1000 / 360));
+    let y = ((90 - latitude) * (500 / 180));
+    
+    // Apply corrections based on manual calibration with known cities:
+    // New York (40.7128, -74.0060) should be around (294, 136) but needs to be more to the right
+    // Tokyo (35.6762, 139.6503) should be around (888, 151) 
+    // London (51.5074, -0.1278) should be around (499, 107)
+    
+    // Longitude adjustments - the image appears to have the Americas shifted slightly left
+    if (longitude < -30) { // Americas
+      x = x + 15; // Shift Americas right
+    } else if (longitude > 100) { // Asia/Pacific
+      x = x - 10; // Shift Asia slightly left
+    }
+    
+    // Latitude adjustments - the image has some vertical compression at higher latitudes
+    if (latitude > 60) { // Northern regions
+      y = y - 10;
+    } else if (latitude > 30) { // Mid-northern latitudes
+      y = y - 5;
+    } else if (latitude < -30) { // Southern regions
+      y = y + 10;
+    }
+    
+    // Clamp to bounds
+    x = Math.max(0, Math.min(1000, x));
+    y = Math.max(0, Math.min(500, y));
+    
+    return { x, y };
   };
 
   return (
@@ -329,42 +362,33 @@ export default function LiveVisitorMap({
                   ref={mapContainerRef}
                   className="relative w-full h-[300px] bg-gray-800/30 rounded-lg border border-gray-700/30 overflow-hidden"
                 >
+                  {/* NASA World Map Background */}
+                  <div 
+                    className="absolute inset-0 bg-center bg-cover opacity-90"
+                    style={{
+                      backgroundImage: 'url(/textures/world_map_2d.jpg)',
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      backgroundRepeat: 'no-repeat'
+                    }}
+                  />
+                  
+                  {/* Dark overlay for better contrast */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-gray-900/40 to-blue-900/20" />
+                  
                   <svg 
                     width="100%" 
                     height="100%" 
                     viewBox="0 0 1000 500" 
-                    className="absolute inset-0"
+                    className="absolute inset-0 z-10"
                     preserveAspectRatio="xMidYMid meet"
-                    style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' }}
                   >
-                    {/* World map background */}
-                    <defs>
-                      <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-                        <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#374151" strokeWidth="0.2"/>
-                      </pattern>
-                      <linearGradient id="mapGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#1e293b" stopOpacity="1" />
-                        <stop offset="100%" stopColor="#0f172a" stopOpacity="1" />
-                      </linearGradient>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#grid)" opacity="0.2" />
-                    
-                    {/* Render world map path */}
-                    <path
-                      d={WORLD_MAP_PATH}
-                      fill="#374151"
-                      stroke="#4b5563"
-                      strokeWidth="0.5"
-                      opacity="0.8"
-                    />
-                    
                     {/* Render filtered locations */}
                     {filteredLocations
                       .filter(loc => mapMode === 'heat' || mapMode === 'all' || (mapMode === 'active' && loc.isActive))
                       .map((location) => {
-                        // Convert lat/lng to SVG coordinates
-                        const x = ((location.longitude + 180) * (1000 / 360));
-                        const y = ((90 - location.latitude) * (500 / 180));
+                        // Convert lat/lng to SVG coordinates using calibrated conversion
+                        const { x, y } = convertToSVGCoordinates(location.latitude, location.longitude);
                         
                         return (
                           <g 
@@ -380,11 +404,11 @@ export default function LiveVisitorMap({
                               animate={{ scale: 1 }}
                               cx={x}
                               cy={y}
-                              r={location.isActive ? 4 : 3}
-                              fill={location.isActive ? "#3b82f6" : "#6366f1"}
+                              r={location.isActive ? 5 : 4}
+                              fill={location.isActive ? "#ff4444" : "#4488ff"}
                               stroke="white"
-                              strokeWidth="1"
-                              filter="drop-shadow(0 0 2px rgba(59, 130, 246, 0.5))"
+                              strokeWidth="2"
+                              filter="drop-shadow(0 0 4px rgba(0, 0, 0, 0.7))"
                             />
                             
                             {/* Active pulse for active visitors */}
@@ -392,13 +416,13 @@ export default function LiveVisitorMap({
                               <motion.circle
                                 cx={x}
                                 cy={y}
-                                r={4}
+                                r={5}
                                 fill="none"
-                                stroke="#3b82f6"
-                                strokeWidth="1"
-                                initial={{ r: 4, opacity: 0.8 }}
+                                stroke="#ff4444"
+                                strokeWidth="2"
+                                initial={{ r: 5, opacity: 0.8 }}
                                 animate={{ 
-                                  r: 12,
+                                  r: 15,
                                   opacity: 0
                                 }}
                                 transition={{
@@ -441,8 +465,8 @@ export default function LiveVisitorMap({
                             key={pulse.id}
                             cx={pulse.x}
                             cy={pulse.y}
-                            r={3}
-                            fill="#3b82f6"
+                            r={4}
+                            fill="#ff4444"
                             initial={{ opacity: 0.8, scale: 1 }}
                             animate={{ 
                               opacity: 0,

@@ -34,7 +34,7 @@ export default function TimelineSlider({
         const now = new Date();
         setCurrentTime(now);
         onTimeChange(now);
-      }, 1000); // Update every second in live mode
+      }, 10000); // Update every 10 seconds in live mode for realistic visitor data updates
     }
     
     return () => {

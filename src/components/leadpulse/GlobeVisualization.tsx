@@ -26,6 +26,9 @@ function debounce<T extends (...args: any[]) => void>(func: T, wait: number): T 
 
 interface ExtendedOrbitControls extends OrbitControls {
   target: THREE.Vector3;
+  autoRotate: boolean;
+  addEventListener: (type: string, listener: () => void) => void;
+  removeEventListener: (type: string, listener: () => void) => void;
 }
 
 interface GlobeVisualizationProps {
@@ -48,6 +51,7 @@ export default function GlobeVisualization({
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
   const [focusedRegion, setFocusedRegion] = useState<GeoRegion | null>(null);
   const [highlightedRegions, setHighlightedRegions] = useState<string[]>([]);
+  const [isUserInteracting, setIsUserInteracting] = useState(false);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -58,6 +62,7 @@ export default function GlobeVisualization({
   const mouseRef = useRef<THREE.Vector2>(new THREE.Vector2());
   const earthRef = useRef<THREE.Mesh | null>(null);
   const animationFrameRef = useRef<number>();
+  const lastUserInteractionRef = useRef<number>(0);
 
   // Update focused region when selectedPath changes
   useEffect(() => {
@@ -140,7 +145,7 @@ export default function GlobeVisualization({
     }
   }, [hoveredLocation, onSelectLocation]);
 
-  // Initialize the 3D scene
+  // Initialize the 3D scene ONCE (camera, earth, lights, controls)
   useEffect(() => {
     if (!mountRef.current) return;
 
@@ -167,67 +172,65 @@ export default function GlobeVisualization({
     controls.rotateSpeed = 0.5;
     controls.minDistance = 2.6;
     controls.maxDistance = 10;
+    controls.autoRotate = false; // Disable built-in auto-rotate
+    
+    // Add event listeners for user interaction detection
+    const onControlsStart = () => {
+      setIsUserInteracting(true);
+      lastUserInteractionRef.current = Date.now();
+    };
+    
+    const onControlsEnd = () => {
+      setIsUserInteracting(false);
+      lastUserInteractionRef.current = Date.now();
+    };
+    
+    const onControlsChange = () => {
+      lastUserInteractionRef.current = Date.now();
+    };
+    
+    controls.addEventListener('start', onControlsStart);
+    controls.addEventListener('end', onControlsEnd);
+    controls.addEventListener('change', onControlsChange);
+    
     controlsRef.current = controls;
 
     // Create earth sphere
     const earthGeometry = new THREE.SphereGeometry(2, 64, 64);
     
-    // Create simplified earth material with continents
+    // Load Earth texture
+    const textureLoader = new THREE.TextureLoader();
+    const earthTexture = textureLoader.load('/textures/earth_texture.jpg', 
+      (texture) => {
+        console.log('Earth texture loaded successfully');
+        // The texture is loaded, re-render if needed
+      },
+      (progress) => {
+        console.log('Loading earth texture...', (progress.loaded / progress.total * 100) + '%');
+      },
+      (error) => {
+        console.error('Error loading earth texture:', error);
+      }
+    );
+    
+    // Create earth material with texture
     const earthMaterial = new THREE.MeshPhongMaterial({
-      color: 0x3373aa, // Ocean blue color
-      shininess: 5
+      map: earthTexture,
+      shininess: 0.5,
+      transparent: false
     });
     
     const earth = new THREE.Mesh(earthGeometry, earthMaterial);
     scene.add(earth);
     earthRef.current = earth;
 
-    // Create a group for regions
+    // Create a group for regions (keeping for potential future region overlays)
     const regions = new THREE.Group();
     earth.add(regions);
     regionsRef.current = regions;
 
-    // Draw continent outlines
-    Object.values(GEO_HIERARCHY)
-      .filter(region => region.type === 'continent')
-      .forEach(continent => {
-        const boundaryGeometry = createContinentGeometry(continent.id);
-        const color = 0x50ad50; // Default color
-        
-        const boundaryMaterial = new THREE.LineBasicMaterial({ 
-          color,
-          transparent: true,
-          opacity: 0.6,
-          linewidth: 1
-        });
-        
-        const boundary = new THREE.Line(boundaryGeometry, boundaryMaterial);
-        boundary.userData = { 
-          type: 'region',
-          regionId: continent.id,
-          regionType: 'continent'
-        };
-        
-        regions.add(boundary);
-      });
-    
-    // Function to create region geometries
-    function createContinentGeometry(continentId: string) {
-      const geometry = new THREE.BufferGeometry();
-      
-      // Get region path points (simplified for demo)
-      const points = getContinentPath(continentId);
-      
-      // Convert points to vertices
-      const vertices = points.map(p => {
-        // Convert to Vector3 - this is a simplification
-        return latLongToVector3(p[0], p[1], 2.05);
-      });
-      
-      // Create geometry from vertices
-      geometry.setFromPoints(vertices);
-      return geometry;
-    }
+    // Note: Continent outlines are now provided by the Earth texture
+    // The previous manual continent drawing has been removed
     
     // Add ambient light
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
@@ -282,9 +285,18 @@ export default function GlobeVisualization({
         controlsRef.current.update();
       }
       
-      // Slowly rotate the earth unless focused on a region
-      if (!focusedRegion && earthRef.current) {
-        earthRef.current.rotation.y += 0.0005;
+      // Auto-rotate only when user is not interacting and hasn't interacted recently
+      const timeSinceLastInteraction = Date.now() - lastUserInteractionRef.current;
+      const shouldAutoRotate = !isUserInteracting && 
+                              timeSinceLastInteraction > 3000; // 3 second delay after interaction
+      
+      if (shouldAutoRotate && earthRef.current) {
+        earthRef.current.rotation.y += 0.0003; // Slower rotation
+      }
+      
+      // Animate pulse effects for live visitors
+      if (markersRef.current && (markersRef.current as any).animatePulses) {
+        (markersRef.current as any).animatePulses();
       }
       
       // Render scene
@@ -314,6 +326,13 @@ export default function GlobeVisualization({
     
     // Cleanup
     return () => {
+      // Remove event listeners
+      if (controlsRef.current) {
+        controlsRef.current.removeEventListener('start', onControlsStart);
+        controlsRef.current.removeEventListener('end', onControlsEnd);
+        controlsRef.current.removeEventListener('change', onControlsChange);
+      }
+      
       window.removeEventListener('resize', handleResize);
       if (mountRef.current) {
         mountRef.current.removeEventListener('mousemove', handleMouseMove);
@@ -341,7 +360,7 @@ export default function GlobeVisualization({
       regionsRef.current = null;
       earthRef.current = null;
     };
-  }, [handleMouseMove, handleClick, focusedRegion]);
+  }, [handleMouseMove, handleClick]); // Only depends on handlers, not on data
   
   // Helper function to convert latitude and longitude to 3D coordinates
   const latLongToVector3 = (lat: number, long: number, radius: number) => {
@@ -353,37 +372,6 @@ export default function GlobeVisualization({
     const y = radius * Math.cos(phi);
     
     return new THREE.Vector3(x, y, z);
-  };
-  
-  // Helper function to get continent path (simplified)
-  const getContinentPath = (continentId: string) => {
-    const continentPaths: Record<string, number[][]> = {
-      'africa': [
-        [6, 5, 2], [10, 10, 2], [15, 6, 2], [20, 10, 2], [25, 6, 2], 
-        [30, 10, 2], [25, 20, 2], [20, 30, 2], [15, 25, 2], [10, 30, 2], [6, 5, 2]
-      ],
-      'north-america': [
-        [30, 10, 2], [40, 5, 2], [50, 10, 2], [40, 20, 2], [30, 30, 2], 
-        [20, 25, 2], [25, 15, 2], [30, 10, 2]
-      ],
-      'south-america': [
-        [35, 30, 2], [45, 25, 2], [50, 35, 2], [45, 45, 2], [35, 50, 2], 
-        [25, 45, 2], [30, 35, 2], [35, 30, 2]
-      ],
-      'europe': [
-        [50, 15, 2], [60, 10, 2], [70, 15, 2], [60, 25, 2], [50, 15, 2]
-      ],
-      'asia': [
-        [70, 15, 2], [80, 5, 2], [90, 10, 2], [85, 20, 2], [90, 30, 2], 
-        [80, 35, 2], [70, 30, 2], [65, 20, 2], [70, 15, 2]
-      ],
-      'oceania': [
-        [85, 35, 2], [95, 30, 2], [100, 35, 2], [95, 45, 2], [85, 50, 2], 
-        [75, 45, 2], [80, 35, 2], [85, 35, 2]
-      ]
-    };
-    
-    return continentPaths[continentId] || [];
   };
   
   // Update camera to focus on selected region
@@ -459,11 +447,11 @@ export default function GlobeVisualization({
     });
   }, [highlightedRegions]);
   
-  // Update visitor location markers
+  // Update visitor location markers ONLY (preserves camera position)
   useEffect(() => {
     if (!markersRef.current || !sceneRef.current) return;
     
-    // Clear existing markers
+    // Clear existing markers and cleanup
     while (markersRef.current.children.length > 0) {
       const object = markersRef.current.children[0];
       markersRef.current.remove(object);
@@ -478,7 +466,14 @@ export default function GlobeVisualization({
       }
     }
     
-    const pulseAnimations: { [key: string]: number } = {};
+    // Track all pulse objects for animation in the main loop
+    const pulseObjects: Array<{
+      mesh: THREE.Mesh;
+      startTime: number;
+      baseScale: number;
+      maxScale: number;
+      duration: number;
+    }> = [];
     
     // Add new markers for each visitor location
     visitorData.forEach(location => {
@@ -490,66 +485,119 @@ export default function GlobeVisualization({
       // Create marker
       const markerGeometry = new THREE.SphereGeometry(0.03, 16, 16);
       const markerMaterial = new THREE.MeshBasicMaterial({ 
-        color: location.isActive ? 0xff3333 : 0x3388ff,
+        color: location.isActive ? 0xff4444 : 0x4488ff,
         transparent: true,
-        opacity: 0.8
+        opacity: 0.9
       });
       
       const marker = new THREE.Mesh(markerGeometry, markerMaterial);
       marker.position.copy(position);
       
       // Store location data for interaction
-      marker.userData = { city: location.city };
+      marker.userData = { 
+        location: location.city,
+        city: location.city 
+      };
       
       markersRef.current.add(marker);
       
-      // Add pulse effect for active locations
+      // Add enhanced pulse effect for active locations
       if (location.isActive) {
-        const pulseMaterial = new THREE.MeshBasicMaterial({
-          color: 0xff3333,
+        // Create multiple pulse spheres for better visual effect
+        for (let i = 0; i < 3; i++) {
+          const pulseMaterial = new THREE.MeshBasicMaterial({
+            color: 0xff0000, // Bright red for visibility
+            transparent: true,
+            opacity: 0.8 - (i * 0.2),
+          });
+          
+          const pulse = new THREE.Mesh(
+            new THREE.SphereGeometry(0.08 + (i * 0.02), 16, 16), // Larger spheres
+            pulseMaterial
+          );
+          pulse.position.copy(position);
+          
+          // Store pulse animation data
+          pulseObjects.push({
+            mesh: pulse,
+            startTime: Date.now() + (i * 400), // Stagger the pulses
+            baseScale: 1,
+            maxScale: 4 + (i * 0.5), // Even larger scaling
+            duration: 2000 // 2 second pulse cycle
+          });
+          
+          markersRef.current.add(pulse);
+        }
+        
+        // Add a brighter core for active visitors
+        const coreGeometry = new THREE.SphereGeometry(0.04, 16, 16); // Larger core
+        const coreMaterial = new THREE.MeshBasicMaterial({
+          color: 0xffffff,
           transparent: true,
-          opacity: 0.4
+          opacity: 1.0 // Full opacity
         });
         
-        const pulse = new THREE.Mesh(new THREE.SphereGeometry(0.05, 16, 16), pulseMaterial);
-        pulse.position.copy(position);
+        const core = new THREE.Mesh(coreGeometry, coreMaterial);
+        core.position.copy(position);
         
-        // Animation for pulse
-        const pulseScale = { value: 1 };
-        const pulseOpacity = { value: 0.4 };
+        // Animate the core with a gentle glow
+        pulseObjects.push({
+          mesh: core,
+          startTime: Date.now(),
+          baseScale: 1,
+          maxScale: 2,
+          duration: 1000 // Faster core pulse
+        });
         
-        const animatePulse = () => {
-          // Scale up
-          pulseScale.value += 0.01;
-          pulse.scale.set(pulseScale.value, pulseScale.value, pulseScale.value);
-          
-          // Fade out
-          pulseOpacity.value -= 0.005;
-          (pulse.material as THREE.MeshBasicMaterial).opacity = pulseOpacity.value;
-          
-          // Reset when completely faded
-          if (pulseOpacity.value <= 0) {
-            pulseScale.value = 1;
-            pulseOpacity.value = 0.4;
-            (pulse.material as THREE.MeshBasicMaterial).opacity = pulseOpacity.value;
-            pulse.scale.set(1, 1, 1);
-          }
-          
-          pulseAnimations[location.id] = requestAnimationFrame(animatePulse);
-        };
-        
-        animatePulse();
-        markersRef.current.add(pulse);
+        markersRef.current.add(core);
       }
     });
     
-    // Cleanup function to cancel all pulse animations
-    return () => {
-      Object.values(pulseAnimations).forEach(animationId => {
-        cancelAnimationFrame(animationId);
+    // Animation function for pulses (to be called from main render loop)
+    const animatePulses = () => {
+      const currentTime = Date.now();
+      
+      pulseObjects.forEach(pulseObj => {
+        const { mesh, startTime, baseScale, maxScale, duration } = pulseObj;
+        const elapsed = currentTime - startTime;
+        
+        if (elapsed >= 0) {
+          // Calculate pulse progress (0 to 1 and back)
+          const cycle = (elapsed % duration) / duration;
+          const pulseProgress = Math.sin(cycle * Math.PI * 2) * 0.5 + 0.5;
+          
+          // Scale animation
+          const scale = baseScale + (maxScale - baseScale) * pulseProgress;
+          mesh.scale.set(scale, scale, scale);
+          
+          // Opacity animation (more visible - don't fade out as much)
+          if (mesh.material instanceof THREE.MeshBasicMaterial) {
+            const originalOpacity = 0.8; // Fixed base opacity
+            mesh.material.opacity = originalOpacity * (1 - pulseProgress * 0.4); // Less fade out
+          }
+        }
       });
     };
-  }, [visitorData]);
+    
+    // Store animation function for cleanup
+    (markersRef.current as any).animatePulses = animatePulses;
+    
+    // Cleanup function
+    return () => {
+      // Clear animation function
+      if (markersRef.current) {
+        (markersRef.current as any).animatePulses = null;
+      }
+      
+      // Dispose of pulse geometries and materials
+      pulseObjects.forEach(({ mesh }) => {
+        if (mesh.geometry) mesh.geometry.dispose();
+        if (mesh.material instanceof THREE.Material) {
+          mesh.material.dispose();
+        }
+      });
+    };
+  }, [visitorData]); // Only depends on visitor data
   
   return (
     <div className="relative w-full h-full" style={{ width, height }}>
