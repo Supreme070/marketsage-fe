@@ -373,8 +373,28 @@ export function useAIIntelligenceOverview(
   userId?: string,
   timeRange: '24h' | '7d' | '30d' | 'all' = 'all'
 ) {
-  const [overview, setOverview] = useState({
+  const [overview, setOverview] = useState<{
+    counts: { contentCount: number; customerCount: number; chatCount: number; toolCount: number };
+    trends: { contentGrowth: number; customerGrowth: number; chatGrowth: number; toolGrowth: number };
+    aiInsights: Array<{
+      type: string;
+      priority: string;
+      title: string;
+      description: string;
+      actionable: boolean;
+      confidence: number;
+    }>;
+    dataSource: string;
+    confidence: number;
+    lastUpdated: string;
+    recent: any[];
+  }>({
     counts: { contentCount: 0, customerCount: 0, chatCount: 0, toolCount: 0 },
+    trends: { contentGrowth: 0, customerGrowth: 0, chatGrowth: 0, toolGrowth: 0 },
+    aiInsights: [],
+    dataSource: 'hybrid',
+    confidence: 0,
+    lastUpdated: '',
     recent: [] as any[]
   });
   const [loading, setLoading] = useState(false);
@@ -382,15 +402,50 @@ export function useAIIntelligenceOverview(
   const fetchOverview = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `/api/ai/intelligence?userId=${userId}&timeRange=${timeRange}`
-      );
-      if (!response.ok) throw new Error('Failed to fetch overview');
+      const params = new URLSearchParams();
+      if (userId) params.append('userId', userId);
+      params.append('timeRange', timeRange);
+
+      const response = await fetch(`/api/ai/intelligence?${params}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch AI Intelligence overview');
+      }
       
       const result = await response.json();
-      setOverview(result.data);
+      
+      if (result.success) {
+        setOverview({
+          ...result.data,
+          recent: result.data.recent || []
+        });
+        toast.success('AI Intelligence data loaded successfully');
+      } else {
+        throw new Error(result.error || 'Failed to load data');
+      }
     } catch (error) {
+      console.error('AI Intelligence fetch error:', error);
       toast.error('Failed to load AI Intelligence overview');
+      
+      // Fallback to demo data
+      setOverview({
+        counts: { contentCount: 5, customerCount: 5, chatCount: 12, toolCount: 8 },
+        trends: { contentGrowth: 12.0, customerGrowth: 8.0, chatGrowth: 24.0, toolGrowth: 16.0 },
+        aiInsights: [
+          {
+            type: 'insight',
+            priority: 'medium',
+            title: 'Nigeria Market Dominance',
+            description: '60% of customers are from Nigeria. Consider expanding to other West African markets.',
+            actionable: true,
+            confidence: 0.85
+          }
+        ],
+        dataSource: 'demo',
+        confidence: 0.75,
+        lastUpdated: new Date().toISOString(),
+        recent: []
+      });
     } finally {
       setLoading(false);
     }

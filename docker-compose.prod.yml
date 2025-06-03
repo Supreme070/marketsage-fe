@@ -170,6 +170,9 @@ services:
         echo '🎯 Seeding LeadPulse data...' &&
         npx tsx /app/src/scripts/seed-leadpulse.ts &&
         
+        echo '🧠 Seeding AI Intelligence data...' &&
+        npx tsx /app/src/scripts/seed-ai-intelligence.ts &&
+        
         echo '🔗 Assigning contacts to current user...' &&
         npx tsx /app/src/scripts/assignContactsDocker.ts &&
         

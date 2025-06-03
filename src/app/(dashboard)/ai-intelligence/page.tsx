@@ -195,7 +195,7 @@ export default function AIIntelligencePage() {
       x: 0,
       y: 6,
       w: 12,
-      h: 3,
+      h: 5,
       component: (
         <BarPanel
           title="AI Tools Usage Analytics"

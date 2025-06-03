@@ -101,6 +101,9 @@ npx tsx ./src/scripts/seedTaskManagement.ts
 echo '🎯 Seeding LeadPulse data...'
 npx tsx ./src/scripts/seed-leadpulse.ts
 
+echo '🧠 Seeding AI Intelligence data...'
+npx tsx ./src/scripts/seed-ai-intelligence.ts
+
 echo '🔗 Assigning contacts to current user...'
 npx tsx ./src/scripts/assignContactsToCurrentUser.ts
 

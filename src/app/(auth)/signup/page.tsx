@@ -53,16 +53,29 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      // In a real implementation, this would make an API call to register the user
-      console.log(values);
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: values.name,
+          email: values.email,
+          password: values.password,
+        }),
+      });
 
-      // For demo purposes, we'll simulate a successful registration and redirect to login
-      setTimeout(() => {
-        toast.success("Account created successfully!");
-        router.push("/login");
-      }, 1000);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Registration failed');
+      }
+
+      toast.success("Account created successfully! Please log in.");
+      router.push("/login");
     } catch (error) {
-      toast.error("Error creating account");
+      const errorMessage = error instanceof Error ? error.message : 'Error creating account';
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
