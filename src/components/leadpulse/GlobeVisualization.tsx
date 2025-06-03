@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import type { VisitorLocation } from '@/lib/leadpulse/dataProvider';
@@ -14,6 +14,19 @@ import {
   getGeoPath,
   getRegionByName
 } from '@/lib/leadpulse/geoHierarchy';
+
+// Debounce helper
+function debounce<T extends (...args: any[]) => void>(func: T, wait: number): T {
+  let timeout: NodeJS.Timeout;
+  return ((...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  }) as T;
+}
+
+interface ExtendedOrbitControls extends OrbitControls {
+  target: THREE.Vector3;
+}
 
 interface GlobeVisualizationProps {
   visitorData: VisitorLocation[];
@@ -38,27 +51,94 @@ export default function GlobeVisualization({
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const controlsRef = useRef<OrbitControls | null>(null);
+  const controlsRef = useRef<ExtendedOrbitControls | null>(null);
   const markersRef = useRef<THREE.Group | null>(null);
   const regionsRef = useRef<THREE.Group | null>(null);
   const raycasterRef = useRef<THREE.Raycaster>(new THREE.Raycaster());
   const mouseRef = useRef<THREE.Vector2>(new THREE.Vector2());
   const earthRef = useRef<THREE.Mesh | null>(null);
+  const animationFrameRef = useRef<number>();
 
   // Update focused region when selectedPath changes
   useEffect(() => {
-    if (selectedPath && selectedPath.length > 0) {
-      const regionId = selectedPath[selectedPath.length - 1];
-      const region = getGeoRegionById(regionId);
-      if (region) {
-        setFocusedRegion(region);
-        setHighlightedRegions(selectedPath);
+    // Skip if selectedPath is undefined or null
+    if (!selectedPath || !Array.isArray(selectedPath)) return;
+    
+    // Use a single state update to prevent multiple re-renders
+    const updateStates = () => {
+      if (selectedPath.length > 0) {
+        const regionId = selectedPath[selectedPath.length - 1];
+        const region = getGeoRegionById(regionId);
+        if (region) {
+          setFocusedRegion(region);
+          setHighlightedRegions(selectedPath);
+        }
+      } else {
+        setFocusedRegion(null);
+        setHighlightedRegions([]);
       }
-    } else {
-      setFocusedRegion(null);
-      setHighlightedRegions([]);
-    }
+    };
+
+    // Schedule the state update for the next frame to prevent immediate re-renders
+    const timeoutId = setTimeout(updateStates, 0);
+    
+    return () => clearTimeout(timeoutId);
   }, [selectedPath]);
+
+  // Debounced hover position update
+  const updateHoverPosition = useCallback(
+    debounce((x: number, y: number) => {
+      setHoverPosition({ x, y });
+    }, 16), // ~60fps
+    []
+  );
+
+  // Check intersections with raycaster
+  const checkIntersections = useCallback(() => {
+    if (!cameraRef.current || !sceneRef.current || !markersRef.current || !regionsRef.current) return;
+
+    raycasterRef.current.setFromCamera(mouseRef.current, cameraRef.current);
+
+    // Check marker intersections
+    const markerIntersects = raycasterRef.current.intersectObjects(markersRef.current.children, true);
+    const regionIntersects = raycasterRef.current.intersectObjects(regionsRef.current.children, true);
+
+    let newHoveredLocation = null;
+
+    if (markerIntersects.length > 0) {
+      const marker = markerIntersects[0].object;
+      newHoveredLocation = marker.userData?.location || null;
+    } else if (regionIntersects.length > 0) {
+      const region = regionIntersects[0].object;
+      newHoveredLocation = region.userData?.regionId || null;
+    }
+
+    if (newHoveredLocation !== hoveredLocation) {
+      setHoveredLocation(newHoveredLocation);
+    }
+  }, [hoveredLocation]);
+
+  // Handle mouse move
+  const handleMouseMove = useCallback((event: MouseEvent) => {
+    if (!mountRef.current || !rendererRef.current) return;
+    
+    const rect = rendererRef.current.domElement.getBoundingClientRect();
+    mouseRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouseRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    
+    // Update tooltip position with debounce
+    updateHoverPosition(event.clientX - rect.left, event.clientY - rect.top);
+    
+    // Check for intersections
+    checkIntersections();
+  }, [checkIntersections, updateHoverPosition]);
+
+  // Handle click
+  const handleClick = useCallback(() => {
+    if (hoveredLocation && onSelectLocation) {
+      onSelectLocation(hoveredLocation);
+    }
+  }, [hoveredLocation, onSelectLocation]);
 
   // Initialize the 3D scene
   useEffect(() => {
@@ -81,7 +161,7 @@ export default function GlobeVisualization({
     rendererRef.current = renderer;
 
     // Add orbit controls
-    const controls = new OrbitControls(camera, renderer.domElement);
+    const controls = new OrbitControls(camera, renderer.domElement) as ExtendedOrbitControls;
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.rotateSpeed = 0.5;
@@ -196,7 +276,7 @@ export default function GlobeVisualization({
     
     // Animation loop
     const animate = () => {
-      requestAnimationFrame(animate);
+      animationFrameRef.current = requestAnimationFrame(animate);
       
       if (controlsRef.current) {
         controlsRef.current.update();
@@ -227,44 +307,23 @@ export default function GlobeVisualization({
       }
     };
     
+    // Event listeners
     window.addEventListener('resize', handleResize);
-    
-    // Handle mouse move for raycasting
-    const handleMouseMove = (event: MouseEvent) => {
-      if (!mountRef.current || !rendererRef.current) return;
-      
-      const rect = rendererRef.current.domElement.getBoundingClientRect();
-      mouseRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      mouseRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-      
-      // Update tooltip position
-      setHoverPosition({ x: event.clientX - rect.left, y: event.clientY - rect.top });
-      
-      // Check for intersections with markers and regions
-      checkIntersections();
-    };
-    
-    // Handle click for selecting a location
-    const handleClick = () => {
-      if (hoveredLocation && onSelectLocation) {
-        onSelectLocation(hoveredLocation);
-      }
-    };
-    
     mountRef.current.addEventListener('mousemove', handleMouseMove);
     mountRef.current.addEventListener('click', handleClick);
     
-    // Clean up
+    // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize);
       if (mountRef.current) {
         mountRef.current.removeEventListener('mousemove', handleMouseMove);
         mountRef.current.removeEventListener('click', handleClick);
-        mountRef.current.innerHTML = '';
       }
-      
-      if (rendererRef.current) {
-        rendererRef.current.dispose();
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (rendererRef.current && rendererRef.current.domElement) {
+        rendererRef.current.domElement.remove();
       }
       
       // Dispose geometries and materials
@@ -282,48 +341,49 @@ export default function GlobeVisualization({
       regionsRef.current = null;
       earthRef.current = null;
     };
-  }, [width, height, onSelectLocation]);
+  }, [handleMouseMove, handleClick, focusedRegion]);
   
-  // Function to check for intersections with markers and regions
-  const checkIntersections = () => {
-    if (!cameraRef.current || !sceneRef.current) return;
+  // Helper function to convert latitude and longitude to 3D coordinates
+  const latLongToVector3 = (lat: number, long: number, radius: number) => {
+    const phi = (90 - lat) * (Math.PI / 180);
+    const theta = (long + 180) * (Math.PI / 180);
     
-    raycasterRef.current.setFromCamera(mouseRef.current, cameraRef.current);
+    const x = -radius * Math.sin(phi) * Math.cos(theta);
+    const z = radius * Math.sin(phi) * Math.sin(theta);
+    const y = radius * Math.cos(phi);
     
-    // Check markers first
-    if (markersRef.current) {
-      const markerIntersects = raycasterRef.current.intersectObjects(markersRef.current.children);
-      if (markerIntersects.length > 0) {
-        const intersection = markerIntersects[0];
-        const markerObject = intersection.object as THREE.Mesh & { 
-          userData: { city: string } 
-        };
-        setHoveredLocation(markerObject.userData.city);
-        return;
-      }
-    }
+    return new THREE.Vector3(x, y, z);
+  };
+  
+  // Helper function to get continent path (simplified)
+  const getContinentPath = (continentId: string) => {
+    const continentPaths: Record<string, number[][]> = {
+      'africa': [
+        [6, 5, 2], [10, 10, 2], [15, 6, 2], [20, 10, 2], [25, 6, 2], 
+        [30, 10, 2], [25, 20, 2], [20, 30, 2], [15, 25, 2], [10, 30, 2], [6, 5, 2]
+      ],
+      'north-america': [
+        [30, 10, 2], [40, 5, 2], [50, 10, 2], [40, 20, 2], [30, 30, 2], 
+        [20, 25, 2], [25, 15, 2], [30, 10, 2]
+      ],
+      'south-america': [
+        [35, 30, 2], [45, 25, 2], [50, 35, 2], [45, 45, 2], [35, 50, 2], 
+        [25, 45, 2], [30, 35, 2], [35, 30, 2]
+      ],
+      'europe': [
+        [50, 15, 2], [60, 10, 2], [70, 15, 2], [60, 25, 2], [50, 15, 2]
+      ],
+      'asia': [
+        [70, 15, 2], [80, 5, 2], [90, 10, 2], [85, 20, 2], [90, 30, 2], 
+        [80, 35, 2], [70, 30, 2], [65, 20, 2], [70, 15, 2]
+      ],
+      'oceania': [
+        [85, 35, 2], [95, 30, 2], [100, 35, 2], [95, 45, 2], [85, 50, 2], 
+        [75, 45, 2], [80, 35, 2], [85, 35, 2]
+      ]
+    };
     
-    // Then check regions
-    if (regionsRef.current) {
-      const regionIntersects = raycasterRef.current.intersectObjects(regionsRef.current.children, true);
-      if (regionIntersects.length > 0) {
-        const intersection = regionIntersects[0];
-        const regionObject = intersection.object as THREE.Mesh & { 
-          userData: { regionId: string } 
-        };
-        
-        if (regionObject.userData?.regionId) {
-          const region = getGeoRegionById(regionObject.userData.regionId);
-          if (region) {
-            setHoveredLocation(region.name);
-            return;
-          }
-        }
-      }
-    }
-    
-    // If no intersection, clear hover state
-    setHoveredLocation(null);
+    return continentPaths[continentId] || [];
   };
   
   // Update camera to focus on selected region
@@ -337,6 +397,7 @@ export default function GlobeVisualization({
     const startTarget = controlsRef.current.target.clone();
     const duration = 1000; // ms
     const startTime = Date.now();
+    let animationFrame: number;
     
     const animateCamera = () => {
       const elapsed = Date.now() - startTime;
@@ -347,18 +408,29 @@ export default function GlobeVisualization({
         : -1 + (4 - 2 * progress) * progress;
       
       // Update camera position
-      cameraRef.current!.position.lerpVectors(startPosition, position, easeProgress);
+      if (cameraRef.current) {
+        cameraRef.current.position.lerpVectors(startPosition, position, easeProgress);
+      }
       
       // Update controls target
-      controlsRef.current!.target.lerpVectors(startTarget, target, easeProgress);
-      controlsRef.current!.update();
+      if (controlsRef.current) {
+        controlsRef.current.target.lerpVectors(startTarget, target, easeProgress);
+        controlsRef.current.update();
+      }
       
       if (progress < 1) {
-        requestAnimationFrame(animateCamera);
+        animationFrame = requestAnimationFrame(animateCamera);
       }
     };
     
     animateCamera();
+    
+    // Cleanup animation frame on unmount or when dependencies change
+    return () => {
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+      }
+    };
   }, [focusedRegion]);
   
   // Update region highlights
@@ -406,9 +478,11 @@ export default function GlobeVisualization({
       }
     }
     
+    const pulseAnimations: { [key: string]: number } = {};
+    
     // Add new markers for each visitor location
     visitorData.forEach(location => {
-      if (!location.latitude || !location.longitude) return;
+      if (!location.latitude || !location.longitude || !markersRef.current) return;
       
       // Convert lat/long to 3D position on globe
       const position = latLongToVector3(location.latitude, location.longitude, 2.05);
@@ -427,10 +501,7 @@ export default function GlobeVisualization({
       // Store location data for interaction
       marker.userData = { city: location.city };
       
-      // Add to markers group
-      if (markersRef.current) {
-        markersRef.current.add(marker);
-      }
+      markersRef.current.add(marker);
       
       // Add pulse effect for active locations
       if (location.isActive) {
@@ -464,60 +535,21 @@ export default function GlobeVisualization({
             pulse.scale.set(1, 1, 1);
           }
           
-          requestAnimationFrame(animatePulse);
+          pulseAnimations[location.id] = requestAnimationFrame(animatePulse);
         };
         
         animatePulse();
-        
-        if (markersRef.current) {
-          markersRef.current.add(pulse);
-        }
+        markersRef.current.add(pulse);
       }
     });
-  }, [visitorData]);
-  
-  // Helper function to convert latitude and longitude to 3D coordinates
-  const latLongToVector3 = (lat: number, long: number, radius: number) => {
-    const phi = (90 - lat) * (Math.PI / 180);
-    const theta = (long + 180) * (Math.PI / 180);
     
-    const x = -radius * Math.sin(phi) * Math.cos(theta);
-    const z = radius * Math.sin(phi) * Math.sin(theta);
-    const y = radius * Math.cos(phi);
-    
-    return new THREE.Vector3(x, y, z);
-  };
-  
-  // Helper function to get continent path (simplified)
-  const getContinentPath = (continentId: string) => {
-    const continentPaths: Record<string, number[][]> = {
-      'africa': [
-        [6, 5, 2], [10, 10, 2], [15, 6, 2], [20, 10, 2], [25, 6, 2], 
-        [30, 10, 2], [25, 20, 2], [20, 30, 2], [15, 25, 2], [10, 30, 2], [6, 5, 2]
-      ],
-      'north-america': [
-        [30, 10, 2], [40, 5, 2], [50, 10, 2], [40, 20, 2], [30, 30, 2], 
-        [20, 25, 2], [25, 15, 2], [30, 10, 2]
-      ],
-      'south-america': [
-        [35, 30, 2], [45, 25, 2], [50, 35, 2], [45, 45, 2], [35, 50, 2], 
-        [25, 45, 2], [30, 35, 2], [35, 30, 2]
-      ],
-      'europe': [
-        [50, 15, 2], [60, 10, 2], [70, 15, 2], [60, 25, 2], [50, 15, 2]
-      ],
-      'asia': [
-        [70, 15, 2], [80, 5, 2], [90, 10, 2], [85, 20, 2], [90, 30, 2], 
-        [80, 35, 2], [70, 30, 2], [65, 20, 2], [70, 15, 2]
-      ],
-      'oceania': [
-        [85, 35, 2], [95, 30, 2], [100, 35, 2], [95, 45, 2], [85, 50, 2], 
-        [75, 45, 2], [80, 35, 2], [85, 35, 2]
-      ]
+    // Cleanup function to cancel all pulse animations
+    return () => {
+      Object.values(pulseAnimations).forEach(animationId => {
+        cancelAnimationFrame(animationId);
+      });
     };
-    
-    return continentPaths[continentId] || [];
-  };
+  }, [visitorData]);
   
   return (
     <div className="relative w-full h-full" style={{ width, height }}>

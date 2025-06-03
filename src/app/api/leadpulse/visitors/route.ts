@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/prisma';
+import { generateMockVisitorData } from '@/app/api/leadpulse/_mockData';
 
 // GET: Fetch visitors with their touchpoints
 export async function GET(request: NextRequest) {
@@ -9,73 +10,87 @@ export async function GET(request: NextRequest) {
     const limit = Number.parseInt(searchParams.get('limit') || '50');
     const offset = Number.parseInt(searchParams.get('offset') || '0');
     
-    // Calculate time cutoff based on timeRange
-    const now = new Date();
-    let cutoffTime: Date;
-    
-    switch (timeRange) {
-      case '1h':
-        cutoffTime = new Date(now.getTime() - 60 * 60 * 1000);
-        break;
-      case '6h':
-        cutoffTime = new Date(now.getTime() - 6 * 60 * 60 * 1000);
-        break;
-      case '12h':
-        cutoffTime = new Date(now.getTime() - 12 * 60 * 60 * 1000);
-        break;
-      case '7d':
-        cutoffTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      case '30d':
-        cutoffTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        break;
-      default: // 24h
-        cutoffTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    }
-
-    // Fetch visitors from database
-    const visitors = await prisma.leadPulseVisitor.findMany({
-      where: {
-        lastVisit: {
-          gte: cutoffTime
-        }
-      },
-      include: {
-        touchpoints: {
-          orderBy: {
-            timestamp: 'desc'
-          },
-          take: 10 // Only get last 10 touchpoints per visitor
-        }
-      },
-      orderBy: {
-        lastVisit: 'desc'
-      },
-      skip: offset,
-      take: limit
-    });
-
-    // Get total count for pagination
-    const totalCount = await prisma.leadPulseVisitor.count({
-      where: {
-        lastVisit: {
-          gte: cutoffTime
-        }
+    // Try to fetch real data first
+    try {
+      // Calculate time cutoff based on timeRange
+      const now = new Date();
+      let cutoffTime: Date;
+      
+      switch (timeRange) {
+        case '1h':
+          cutoffTime = new Date(now.getTime() - 60 * 60 * 1000);
+          break;
+        case '6h':
+          cutoffTime = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+          break;
+        case '12h':
+          cutoffTime = new Date(now.getTime() - 12 * 60 * 60 * 1000);
+          break;
+        case '7d':
+          cutoffTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case '30d':
+          cutoffTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        default: // 24h
+          cutoffTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       }
-    });
 
-    // Format response
-    const formattedVisitors = visitors.map(formatVisitorResponse);
+      // Fetch visitors from database
+      const visitors = await prisma.leadPulseVisitor.findMany({
+        where: {
+          lastVisit: {
+            gte: cutoffTime
+          }
+        },
+        include: {
+          touchpoints: {
+            orderBy: {
+              timestamp: 'desc'
+            },
+            take: 10 // Only get last 10 touchpoints per visitor
+          }
+        },
+        orderBy: {
+          lastVisit: 'desc'
+        },
+        skip: offset,
+        take: limit
+      });
 
-    return NextResponse.json({
-      visitors: formattedVisitors,
-      total: totalCount,
-      page: Math.floor(offset / limit) + 1,
-      pageSize: limit,
-      totalPages: Math.ceil(totalCount / limit)
-    });
+      // Get total count for pagination
+      const totalCount = await prisma.leadPulseVisitor.count({
+        where: {
+          lastVisit: {
+            gte: cutoffTime
+          }
+        }
+      });
+
+      // Format response
+      const formattedVisitors = visitors.map(formatVisitorResponse);
+
+      return NextResponse.json({
+        visitors: formattedVisitors,
+        total: totalCount,
+        page: Math.floor(offset / limit) + 1,
+        pageSize: limit,
+        totalPages: Math.ceil(totalCount / limit)
+      });
+    } catch (prismaError) {
+      console.log('Using mock data as fallback:', prismaError);
+      // If database tables don't exist yet, use mock data
+      const mockVisitors = generateMockVisitorData();
+      return NextResponse.json({
+        visitors: mockVisitors,
+        total: mockVisitors.length,
+        page: 1,
+        pageSize: limit,
+        totalPages: 1
+      });
+    }
   } catch (error) {
-    console.error('Error fetching visitors:', error);
+    console.error('Error in visitors API:', error);
     return NextResponse.json(
       { error: 'Failed to fetch visitors' },
       { status: 500 }

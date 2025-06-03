@@ -6,7 +6,6 @@
  */
 
 import { cache } from 'react';
-import prisma from '@/lib/db/prisma';
 
 // Type definitions that match the Prisma schema
 export type LeadPulseTouchpointType = 'PAGEVIEW' | 'CLICK' | 'FORM_VIEW' | 'FORM_START' | 'FORM_SUBMIT' | 'CONVERSION';
@@ -94,42 +93,21 @@ export interface VisitorLocation {
  */
 export const getVisitorLocations = cache(async (timeRange = '24h'): Promise<VisitorLocation[]> => {
   try {
-    // Calculate time cutoff
-    const now = new Date();
-    const cutoffTime = new Date(now.getTime() - getTimeRangeInMs(timeRange));
-    
-    // Fetch visitors with location data
-    const visitors = await prisma.leadPulseVisitor.findMany({
-      where: {
-        lastVisit: { gte: cutoffTime },
-        latitude: { not: null },
-        longitude: { not: null },
-        city: { not: null },
-        country: { not: null }
+    // Call API endpoint instead of using Prisma directly
+    const response = await fetch(`/api/leadpulse/locations?timeRange=${timeRange}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      select: {
-        id: true,
-        city: true,
-        country: true,
-        isActive: true,
-        lastVisit: true,
-        totalVisits: true,
-        latitude: true,
-        longitude: true
-      }
+      cache: 'no-store',
     });
-    
-    // Transform to VisitorLocation format
-    return visitors.map((visitor: any) => ({
-      id: visitor.id,
-      city: visitor.city!,
-      country: visitor.country!,
-      isActive: visitor.isActive,
-      lastActive: formatLastActive(visitor.lastVisit),
-      visitCount: visitor.totalVisits,
-      latitude: visitor.latitude!,
-      longitude: visitor.longitude!
-    }));
+
+    if (!response.ok) {
+      throw new Error(`Error fetching locations: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.locations || [];
   } catch (error) {
     console.error('Error fetching visitor locations:', error);
     return []; // Return empty array instead of mock data
@@ -141,26 +119,21 @@ export const getVisitorLocations = cache(async (timeRange = '24h'): Promise<Visi
  */
 export const getVisitorSegments = cache(async (): Promise<VisitorSegment[]> => {
   try {
-    // Fetch segments and their visitor counts
-    const segments = await prisma.leadPulseSegment.findMany({
-      include: {
-        _count: {
-          select: { visitors: true }
-        }
-      }
+    // Call API endpoint instead of using Prisma directly
+    const response = await fetch('/api/leadpulse/segments', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store',
     });
-    
-    // Get total visitor count
-    const totalVisitors = await prisma.leadPulseVisitor.count();
-    
-    // Transform to VisitorSegment format
-    return segments.map((segment: any) => ({
-      id: segment.id,
-      name: segment.name,
-      count: segment._count.visitors,
-      percentage: totalVisitors > 0 ? (segment._count.visitors / totalVisitors) * 100 : 0,
-      key: segment.id
-    }));
+
+    if (!response.ok) {
+      throw new Error(`Error fetching segments: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.segments || [];
   } catch (error) {
     console.error('Error fetching visitor segments:', error);
     return []; // Return empty array instead of mock data
@@ -172,23 +145,21 @@ export const getVisitorSegments = cache(async (): Promise<VisitorSegment[]> => {
  */
 export const getVisitorInsights = cache(async (): Promise<InsightItem[]> => {
   try {
-    // Fetch recent insights
-    const insights = await prisma.leadPulseInsight.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 10
+    // Call API endpoint instead of using Prisma directly
+    const response = await fetch('/api/leadpulse/insights', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store',
     });
-    
-    // Transform to InsightItem format
-    return insights.map((insight: any) => ({
-      id: insight.id,
-      type: insight.type as LeadPulseInsightType,
-      title: insight.title,
-      description: insight.description,
-      importance: insight.importance as LeadPulseImportance,
-      metric: insight.metric as any,
-      recommendation: insight.recommendation || undefined,
-      createdAt: insight.createdAt.toISOString()
-    }));
+
+    if (!response.ok) {
+      throw new Error(`Error fetching insights: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.insights || [];
   } catch (error) {
     console.error('Error fetching visitor insights:', error);
     return []; // Return empty array instead of mock data
@@ -209,17 +180,16 @@ export const getActiveVisitors = cache(async (timeRange = '24h'): Promise<Visito
       cache: 'no-store',
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      throw new Error(`Error fetching visitors: ${response.statusText}`);
+      throw new Error(data.error || `Error fetching visitors: ${response.statusText}`);
     }
 
-    const data = await response.json();
     return data.visitors || [];
   } catch (error) {
     console.error('Error fetching active visitors:', error);
-    
-    // Return mock data for now
-    return generateMockVisitorData();
+    return []; // Return empty array instead of mock data since API handles fallback
   }
 });
 
