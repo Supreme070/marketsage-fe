@@ -243,6 +243,10 @@ model User {
   isActive             Boolean               @default(true)
   role                 UserRole              @default(USER)
   company              String?
+  AIChatHistory        AI_ChatHistory[]      @relation("UserToChatHistory")
+  AIContentAnalysis    AI_ContentAnalysis[]  @relation("UserToContentAnalysis")
+  AICustomerSegments   AI_CustomerSegment[]  @relation("UserToCustomerSegment")
+  AITools              AI_Tool[]             @relation("UserToAITool")
   Account              Account[]
   Contact              Contact[]             @relation("UserToContact")
   EmailCampaign        EmailCampaign[]       @relation("UserToEmailCampaign")
@@ -260,11 +264,6 @@ model User {
   WhatsAppCampaign     WhatsAppCampaign[]    @relation("UserToWhatsAppCampaign")
   WhatsAppTemplate     WhatsAppTemplate[]    @relation("UserToWhatsAppTemplate")
   Workflow             Workflow[]            @relation("UserToWorkflow")
-  // AI Intelligence Relations
-  AIContentAnalysis    AI_ContentAnalysis[]  @relation("UserToContentAnalysis")
-  AICustomerSegments   AI_CustomerSegment[]  @relation("UserToCustomerSegment")
-  AIChatHistory        AI_ChatHistory[]      @relation("UserToChatHistory")
-  AITools              AI_Tool[]             @relation("UserToAITool")
 }
 
 model VerificationToken {
@@ -468,44 +467,43 @@ model Notification {
   User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// AI Intelligence Models for CRUD operations
 model AI_ContentAnalysis {
-  id             String   @id @default(cuid())
-  title          String
-  content        String   @db.Text
-  supremeScore   Int      @default(0)
-  sentiment      Float?
-  readability    Float?
-  engagement     Float?
-  analysis       Json?
-  tags           String[]
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  createdById    String
-  createdBy      User     @relation("UserToContentAnalysis", fields: [createdById], references: [id])
+  id           String   @id @default(cuid())
+  title        String
+  content      String
+  supremeScore Int      @default(0)
+  sentiment    Float?
+  readability  Float?
+  engagement   Float?
+  analysis     Json?
+  tags         String[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdById  String
+  createdBy    User     @relation("UserToContentAnalysis", fields: [createdById], references: [id])
 }
 
 model AI_CustomerSegment {
-  id             String   @id @default(cuid())
-  name           String
-  description    String?
-  criteria       Json?
-  customerCount  Int      @default(0)
-  churnRisk      Float    @default(0)
-  lifetimeValue  Float    @default(0)
-  tags           String[]
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  createdById    String
-  createdBy      User     @relation("UserToCustomerSegment", fields: [createdById], references: [id])
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  criteria      Json?
+  customerCount Int      @default(0)
+  churnRisk     Float    @default(0)
+  lifetimeValue Float    @default(0)
+  tags          String[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdById   String
+  createdBy     User     @relation("UserToCustomerSegment", fields: [createdById], references: [id])
 }
 
 model AI_ChatHistory {
   id         String   @id @default(cuid())
   userId     String
   sessionId  String?
-  question   String   @db.Text
-  answer     String   @db.Text
+  question   String
+  answer     String
   context    Json?
   confidence Float    @default(0)
   createdAt  DateTime @default(now())

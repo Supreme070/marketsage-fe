@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { PrismaClient, WorkflowStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     const searchQuery = url.searchParams.get("search");
     
     // Build where clause for filtering
-    let whereClause: any = {};
+    const whereClause: any = {};
     
     // If not admin, only show own workflows
     if (!isAdmin) {

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 
 interface TrafficData {
   date: string;
@@ -51,7 +51,7 @@ interface ABTestData {
 }
 
 // Simulated analytics database
-let analyticsDB = {
+const analyticsDB = {
   traffic: generateTrafficData(),
   heatmap: generateHeatmapData(),
   abtests: generateABTestData()

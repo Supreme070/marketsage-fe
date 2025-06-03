@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/prisma';
 import { logger } from '@/lib/logger';
 
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type'); // content, customer, chat, tool
     const userId = searchParams.get('userId') || 'default';
     const timeRange = searchParams.get('timeRange') || 'all'; // 24h, 7d, 30d, all
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const limit = Number.parseInt(searchParams.get('limit') || '10');
 
     const getCreatedAtFilter = () => {
       const now = Date.now();

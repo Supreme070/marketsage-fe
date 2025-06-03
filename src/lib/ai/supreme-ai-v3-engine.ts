@@ -90,7 +90,7 @@ class SupremeAIV3Core {
       const conversationHistory = contextPack.relevantMemories
         ?.filter((m: any) => m.type === 'insight' && m.tags?.includes('qa'))
         ?.slice(-6) // Last 6 Q&As for context
-        ?.map((m: any) => {
+        ?.flatMap((m: any) => {
           const content = m.content;
           const parts = content.split(' | A: ');
           if (parts.length === 2) {
@@ -102,8 +102,7 @@ class SupremeAIV3Core {
             ];
           }
           return [];
-        })
-        ?.flat() || [];
+        }) || [];
 
       // Add MarketSage platform context
       const marketSageContext = this.buildMarketSageContext(question);

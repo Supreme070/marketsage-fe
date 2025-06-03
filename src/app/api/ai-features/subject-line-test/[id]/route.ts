@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/db/prisma";
@@ -203,7 +203,7 @@ export async function PATCH(
         
         if (testDetails) {
           const variants = JSON.parse(testDetails.variants);
-          const winnerIndex = parseInt(winnerVariantId.split('_')[1], 10);
+          const winnerIndex = Number.parseInt(winnerVariantId.split('_')[1], 10);
           const winningSubject = variants[winnerIndex];
           
           // Update the campaign subject

@@ -346,8 +346,8 @@ async function runCampaignModel(features: any, modelId: string): Promise<{
   // In production, this would call a real ML model API or run a local model
   
   // Base rates from historical data or defaults
-  let baseOpenRate = features.historicalOpenRate || 0.2;
-  let baseClickRate = features.historicalClickRate || 0.05;
+  const baseOpenRate = features.historicalOpenRate || 0.2;
+  const baseClickRate = features.historicalClickRate || 0.05;
   
   // Adjust based on subject line features
   let openRateAdjustment = 0;

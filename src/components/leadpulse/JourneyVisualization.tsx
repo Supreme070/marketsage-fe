@@ -341,7 +341,7 @@ export default function JourneyVisualization({
           <div className="flex items-center justify-center h-40">
             <motion.div 
               animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
+              transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY }}
               className="animate-pulse"
             >
               Loading journey data...

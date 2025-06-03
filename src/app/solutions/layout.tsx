@@ -1,6 +1,6 @@
 import { LandingHeader } from "@/components/landing/landing-header";
 import { SiteFooter } from "@/components/landing/site-footer";
-import { Metadata } from "next";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Solutions | MarketSage - Marketing Automation for Nigerian Businesses",

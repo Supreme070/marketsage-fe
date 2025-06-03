@@ -6,7 +6,7 @@ import { ROICalculatorSection } from "@/components/landing/roi-calculator-sectio
 import { ComparisonSection } from "@/components/landing/comparison-section";
 import { IntelligenceCtaSection } from "@/components/landing/intelligence-cta-section";
 import { BrandLogo } from "@/components/landing/landing-footer-brand";
-import { Metadata } from "next";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "MarketSage Intelligence - See and Convert Your Invisible Revenue | African Marketing Intelligence Platform",

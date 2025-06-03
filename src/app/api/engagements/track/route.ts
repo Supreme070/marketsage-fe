@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { recordEngagement } from '@/lib/engagement-tracking';
 import { initializeAIFeatures } from '@/lib/ai-features-init';
 import { logger } from '@/lib/logger';

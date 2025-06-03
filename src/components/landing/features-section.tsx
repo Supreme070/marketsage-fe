@@ -104,7 +104,7 @@ const features = [
               '0 0 0 rgba(0, 0, 0, 0)'
             ]
           }}
-          transition={{ duration: 2, repeat: Infinity, repeatType: 'reverse' }}
+          transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, repeatType: 'reverse' }}
         >
           <Zap size={16} className="text-primary" />
         </motion.div>
@@ -114,7 +114,7 @@ const features = [
           className={`absolute left-12 top-7 h-0.5 w-10 ${isDark ? 'bg-primary-600/50' : 'bg-primary-500/50'}`}
           initial={{ width: 0 }}
           animate={{ width: 40 }}
-          transition={{ duration: 1, delay: 0.5, repeat: Infinity, repeatDelay: 2 }}
+          transition={{ duration: 1, delay: 0.5, repeat: Number.POSITIVE_INFINITY, repeatDelay: 2 }}
         />
         
         {/* Second node */}
@@ -128,7 +128,7 @@ const features = [
               '0 0 0 rgba(0, 0, 0, 0)'
             ]
           }}
-          transition={{ duration: 2, delay: 0.3, repeat: Infinity, repeatType: 'reverse' }}
+          transition={{ duration: 2, delay: 0.3, repeat: Number.POSITIVE_INFINITY, repeatType: 'reverse' }}
         >
           <Mail size={16} className="text-blue-500" />
         </motion.div>
@@ -138,7 +138,7 @@ const features = [
           className={`absolute left-[9.5rem] top-7 h-0.5 w-10 ${isDark ? 'bg-blue-600/50' : 'bg-blue-500/50'}`}
           initial={{ width: 0 }}
           animate={{ width: 40 }}
-          transition={{ duration: 1, delay: 1, repeat: Infinity, repeatDelay: 2 }}
+          transition={{ duration: 1, delay: 1, repeat: Number.POSITIVE_INFINITY, repeatDelay: 2 }}
         />
         
         {/* Third node */}
@@ -152,7 +152,7 @@ const features = [
               '0 0 0 rgba(0, 0, 0, 0)'
             ]
           }}
-          transition={{ duration: 2, delay: 0.6, repeat: Infinity, repeatType: 'reverse' }}
+          transition={{ duration: 2, delay: 0.6, repeat: Number.POSITIVE_INFINITY, repeatType: 'reverse' }}
         >
           <CheckCircle2 size={16} className="text-green-500" />
         </motion.div>
@@ -174,7 +174,7 @@ const features = [
             y: [0, -3, 0],
             rotate: [-2, 2, -2],
           }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
         >
           <div className={`w-8 h-1 mb-1 rounded-sm ${isDark ? 'bg-blue-500/60' : 'bg-blue-600/40'}`} />
           <div className={`w-6 h-1 mb-1 rounded-sm ${isDark ? 'bg-blue-500/60' : 'bg-blue-600/40'}`} />
@@ -188,7 +188,7 @@ const features = [
             x: [0, 40, 80],
             opacity: [0, 1, 0]
           }}
-          transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
+          transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, repeatDelay: 1 }}
         >
           <div className={`w-5 h-0.5 ${isDark ? 'bg-blue-400' : 'bg-blue-500'}`} />
           <div className={`w-2 h-2 ${isDark ? 'border-blue-400' : 'border-blue-500'} border-t border-r transform rotate-45 -mt-1 ml-3`} />
@@ -202,7 +202,7 @@ const features = [
             scale: [0.8, 1, 0.8],
             opacity: [0, 1, 0]
           }}
-          transition={{ duration: 3, repeat: Infinity, repeatDelay: 0.5, delay: 1.5 }}
+          transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, repeatDelay: 0.5, delay: 1.5 }}
         >
           <div className={`absolute inset-0 ${isDark ? 'bg-blue-700/40' : 'bg-blue-300/40'}`} />
           <div className={`absolute bottom-0 w-full h-4 ${isDark ? 'bg-blue-600/60' : 'bg-blue-500/40'}`} />
@@ -223,7 +223,7 @@ const features = [
         <motion.div 
           className={`absolute left-6 top-2 w-8 h-12 rounded-lg ${isDark ? 'bg-green-900/40' : 'bg-green-700/20'} border ${isDark ? 'border-green-600/40' : 'border-green-500/40'}`}
           animate={{ rotate: [-2, 2, -2] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
         >
           <div className={`absolute top-1 left-1/2 transform -translate-x-1/2 w-4 h-0.5 rounded-sm ${isDark ? 'bg-green-400/80' : 'bg-green-500/70'}`} />
           <div className={`absolute bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 rounded-full ${isDark ? 'border border-green-400/80' : 'border border-green-500/70'}`} />
@@ -238,7 +238,7 @@ const features = [
             opacity: [0, 1, 1],
             y: [0, 0, -5]
           }}
-          transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
+          transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, repeatDelay: 1 }}
         />
         
         <motion.div
@@ -249,7 +249,7 @@ const features = [
             opacity: [0, 1, 1],
             y: [0, 0, -8]
           }}
-          transition={{ duration: 2, delay: 0.5, repeat: Infinity, repeatDelay: 1 }}
+          transition={{ duration: 2, delay: 0.5, repeat: Number.POSITIVE_INFINITY, repeatDelay: 1 }}
         />
         
         <motion.div
@@ -260,7 +260,7 @@ const features = [
             opacity: [0, 1, 1],
             y: [0, 0, -10]
           }}
-          transition={{ duration: 2, delay: 1, repeat: Infinity, repeatDelay: 1 }}
+          transition={{ duration: 2, delay: 1, repeat: Number.POSITIVE_INFINITY, repeatDelay: 1 }}
         />
         
         {/* WhatsApp logo */}
@@ -269,7 +269,7 @@ const features = [
           animate={{ 
             scale: [0.9, 1.1, 0.9],
           }}
-          transition={{ duration: 3, repeat: Infinity }}
+          transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY }}
         >
           <MessageSquare size={18} className="text-green-400" />
         </motion.div>
@@ -290,7 +290,7 @@ const features = [
           <motion.div
             className="relative"
             animate={{ y: [0, -5, 0] }}
-            transition={{ duration: 2, repeat: Infinity, repeatType: 'reverse' }}
+            transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, repeatType: 'reverse' }}
           >
             <div className={`w-10 h-10 rounded-full ${isDark ? 'bg-amber-700/30' : 'bg-amber-500/20'} flex items-center justify-center`}>
               <Users size={16} className="text-amber-500" />
@@ -298,7 +298,7 @@ const features = [
             <motion.div 
               className={`absolute top-0 right-0 w-4 h-4 rounded-full ${isDark ? 'bg-blue-600/60' : 'bg-blue-500/40'} flex items-center justify-center text-[8px] font-bold ${isDark ? 'text-blue-200' : 'text-white'}`}
               animate={{ scale: [1, 1.2, 1] }}
-              transition={{ duration: 1, repeat: Infinity }}
+              transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY }}
             >
               A
             </motion.div>
@@ -308,7 +308,7 @@ const features = [
           <motion.div
             className="relative"
             animate={{ y: [0, -5, 0] }}
-            transition={{ duration: 2, delay: 0.3, repeat: Infinity, repeatType: 'reverse' }}
+            transition={{ duration: 2, delay: 0.3, repeat: Number.POSITIVE_INFINITY, repeatType: 'reverse' }}
           >
             <div className={`w-10 h-10 rounded-full ${isDark ? 'bg-amber-700/30' : 'bg-amber-500/20'} flex items-center justify-center`}>
               <Users size={16} className="text-amber-500" />
@@ -316,7 +316,7 @@ const features = [
             <motion.div 
               className={`absolute top-0 right-0 w-4 h-4 rounded-full ${isDark ? 'bg-green-600/60' : 'bg-green-500/40'} flex items-center justify-center text-[8px] font-bold ${isDark ? 'text-green-200' : 'text-white'}`}
               animate={{ scale: [1, 1.2, 1] }}
-              transition={{ duration: 1, delay: 0.3, repeat: Infinity }}
+              transition={{ duration: 1, delay: 0.3, repeat: Number.POSITIVE_INFINITY }}
             >
               B
             </motion.div>
@@ -326,7 +326,7 @@ const features = [
           <motion.div
             className="relative"
             animate={{ y: [0, -5, 0] }}
-            transition={{ duration: 2, delay: 0.6, repeat: Infinity, repeatType: 'reverse' }}
+            transition={{ duration: 2, delay: 0.6, repeat: Number.POSITIVE_INFINITY, repeatType: 'reverse' }}
           >
             <div className={`w-10 h-10 rounded-full ${isDark ? 'bg-amber-700/30' : 'bg-amber-500/20'} flex items-center justify-center`}>
               <Users size={16} className="text-amber-500" />
@@ -334,7 +334,7 @@ const features = [
             <motion.div 
               className={`absolute top-0 right-0 w-4 h-4 rounded-full ${isDark ? 'bg-purple-600/60' : 'bg-purple-500/40'} flex items-center justify-center text-[8px] font-bold ${isDark ? 'text-purple-200' : 'text-white'}`}
               animate={{ scale: [1, 1.2, 1] }}
-              transition={{ duration: 1, delay: 0.6, repeat: Infinity }}
+              transition={{ duration: 1, delay: 0.6, repeat: Number.POSITIVE_INFINITY }}
             >
               C
             </motion.div>
@@ -356,32 +356,32 @@ const features = [
           <motion.div 
             className={`w-3 rounded-t-sm ${isDark ? 'bg-purple-500/70' : 'bg-purple-600/50'}`}
             animate={{ height: [10, 20, 10] }}
-            transition={{ duration: 2, repeat: Infinity }}
+            transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
           />
           <motion.div 
             className={`w-3 rounded-t-sm ${isDark ? 'bg-blue-500/70' : 'bg-blue-600/50'}`}
             animate={{ height: [15, 8, 15] }}
-            transition={{ duration: 2, delay: 0.2, repeat: Infinity }}
+            transition={{ duration: 2, delay: 0.2, repeat: Number.POSITIVE_INFINITY }}
           />
           <motion.div 
             className={`w-3 rounded-t-sm ${isDark ? 'bg-green-500/70' : 'bg-green-600/50'}`}
             animate={{ height: [5, 15, 5] }}
-            transition={{ duration: 2, delay: 0.4, repeat: Infinity }}
+            transition={{ duration: 2, delay: 0.4, repeat: Number.POSITIVE_INFINITY }}
           />
           <motion.div 
             className={`w-3 rounded-t-sm ${isDark ? 'bg-amber-500/70' : 'bg-amber-600/50'}`}
             animate={{ height: [12, 18, 12] }}
-            transition={{ duration: 2, delay: 0.6, repeat: Infinity }}
+            transition={{ duration: 2, delay: 0.6, repeat: Number.POSITIVE_INFINITY }}
           />
           <motion.div 
             className={`w-3 rounded-t-sm ${isDark ? 'bg-red-500/70' : 'bg-red-600/50'}`}
             animate={{ height: [8, 14, 8] }}
-            transition={{ duration: 2, delay: 0.8, repeat: Infinity }}
+            transition={{ duration: 2, delay: 0.8, repeat: Number.POSITIVE_INFINITY }}
           />
           <motion.div 
             className={`w-3 rounded-t-sm ${isDark ? 'bg-indigo-500/70' : 'bg-indigo-600/50'}`}
             animate={{ height: [18, 10, 18] }}
-            transition={{ duration: 2, delay: 1, repeat: Infinity }}
+            transition={{ duration: 2, delay: 1, repeat: Number.POSITIVE_INFINITY }}
           />
         </div>
         
@@ -399,13 +399,13 @@ const features = [
             strokeDasharray="100"
             initial={{ strokeDashoffset: 100 }}
             animate={{ strokeDashoffset: 0 }}
-            transition={{ duration: 2, repeat: Infinity }}
+            transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
           />
           <motion.circle 
             cx="0" cy="50" r="1.5" 
             fill={isDark ? "#a78bfa" : "#8b5cf6"} 
             animate={{ cx: [0, 50, 100], cy: [50, 20, 10] }}
-            transition={{ duration: 2, repeat: Infinity }}
+            transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
           />
         </motion.svg>
       </div>
@@ -426,7 +426,7 @@ const features = [
             rotate: [-3, 3, -3],
             y: [0, -2, 0] 
           }}
-          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
         >
           {/* Screen */}
           <div className={`absolute inset-x-0.5 top-0.5 h-2 rounded-t-sm ${isDark ? 'bg-rose-500/50' : 'bg-rose-400/50'}`} />
@@ -435,17 +435,17 @@ const features = [
           <motion.div 
             className={`absolute inset-x-0.5 top-3 h-1 ${isDark ? 'bg-rose-500/80' : 'bg-rose-600/50'}`}
             animate={{ width: ['60%', '80%', '60%'] }}
-            transition={{ duration: 2, repeat: Infinity }}
+            transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
           />
           <motion.div 
             className={`absolute inset-x-0.5 top-5 h-1 ${isDark ? 'bg-rose-400/60' : 'bg-rose-500/40'}`}
             animate={{ width: ['40%', '70%', '40%'] }}
-            transition={{ duration: 2, delay: 0.3, repeat: Infinity }}
+            transition={{ duration: 2, delay: 0.3, repeat: Number.POSITIVE_INFINITY }}
           />
           <motion.div 
             className={`absolute inset-x-0.5 top-7 h-3 ${isDark ? 'bg-rose-500/40' : 'bg-rose-300/40'}`}
             animate={{ width: ['80%', '60%', '80%'] }}
-            transition={{ duration: 2, delay: 0.6, repeat: Infinity }}
+            transition={{ duration: 2, delay: 0.6, repeat: Number.POSITIVE_INFINITY }}
           />
           
           {/* Home button */}
@@ -456,31 +456,31 @@ const features = [
         <motion.div 
           className="absolute inset-0 flex items-center justify-center"
           animate={{ rotate: 360 }}
-          transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+          transition={{ duration: 8, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
         >
           <motion.div 
             className={`absolute h-0.5 w-10 ${isDark ? 'bg-rose-500/40' : 'bg-rose-500/30'} rounded-full`}
             style={{ transformOrigin: 'center' }}
             animate={{ scale: [0.6, 1, 0.6], opacity: [0.3, 0.7, 0.3] }}
-            transition={{ duration: 2, repeat: Infinity }}
+            transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
           />
           <motion.div 
             className={`absolute h-0.5 w-10 ${isDark ? 'bg-rose-500/40' : 'bg-rose-500/30'} rounded-full`}
             style={{ transform: 'rotate(45deg)', transformOrigin: 'center' }}
             animate={{ scale: [0.7, 1.1, 0.7], opacity: [0.4, 0.8, 0.4] }}
-            transition={{ duration: 2, delay: 0.3, repeat: Infinity }}
+            transition={{ duration: 2, delay: 0.3, repeat: Number.POSITIVE_INFINITY }}
           />
           <motion.div 
             className={`absolute h-0.5 w-10 ${isDark ? 'bg-rose-500/40' : 'bg-rose-500/30'} rounded-full`}
             style={{ transform: 'rotate(90deg)', transformOrigin: 'center' }}
             animate={{ scale: [0.8, 1.2, 0.8], opacity: [0.5, 0.9, 0.5] }}
-            transition={{ duration: 2, delay: 0.6, repeat: Infinity }}
+            transition={{ duration: 2, delay: 0.6, repeat: Number.POSITIVE_INFINITY }}
           />
           <motion.div 
             className={`absolute h-0.5 w-10 ${isDark ? 'bg-rose-500/40' : 'bg-rose-500/30'} rounded-full`}
             style={{ transform: 'rotate(135deg)', transformOrigin: 'center' }}
             animate={{ scale: [0.9, 1.3, 0.9], opacity: [0.6, 1, 0.6] }}
-            transition={{ duration: 2, delay: 0.9, repeat: Infinity }}
+            transition={{ duration: 2, delay: 0.9, repeat: Number.POSITIVE_INFINITY }}
           />
         </motion.div>
       </div>
@@ -702,7 +702,7 @@ function FeatureGroupCard({
             animate={{ opacity: [0, 0.15, 0] }}
             transition={{ 
               duration: 3, 
-              repeat: Infinity, 
+              repeat: Number.POSITIVE_INFINITY, 
               repeatType: "reverse", 
               ease: "easeInOut" 
             }}

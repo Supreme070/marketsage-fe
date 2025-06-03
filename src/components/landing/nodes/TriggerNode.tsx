@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, CSSProperties } from 'react';
-import { Handle, Position, NodeProps } from 'reactflow';
+import { Handle, Position, type NodeProps } from 'reactflow';
 import { motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
 

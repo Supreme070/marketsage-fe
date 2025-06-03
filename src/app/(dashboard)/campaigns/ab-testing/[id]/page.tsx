@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { getABTest, startABTest, stopABTest, ABTest } from "@/lib/ab-testing-service";
+import { getABTest, startABTest, stopABTest, type ABTest } from "@/lib/ab-testing-service";
 import { formatDistanceToNow, format } from "date-fns";
 import { ArrowLeft, CheckCircle, AlertCircle, Play, Pause, BarChart4, MailCheck, MailX, Github, Download, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";

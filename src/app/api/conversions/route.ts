@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { EntityType, AnalyticsPeriod } from "@prisma/client";
+import { type EntityType, AnalyticsPeriod } from "@prisma/client";
 import { 
   handleApiError, 
   unauthorized, 

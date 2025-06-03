@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { CampaignStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -165,7 +165,7 @@ export async function PATCH(
     
     // Transaction to update campaign with potential relationship changes
     const updatedCampaign = await prisma.$transaction(async (tx) => {
-      let campaign = await tx.emailCampaign.update({
+      const campaign = await tx.emailCampaign.update({
         where: { id: campaignId },
         data: mainData,
         include: {

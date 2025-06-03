@@ -176,7 +176,7 @@ class VectorStore {
   }
 
   // Search similar documents
-  async search(query: string, limit: number = 4): Promise<Document[]> {
+  async search(query: string, limit = 4): Promise<Document[]> {
     if (this.documents.length === 0) {
       await this.initialize();
     }

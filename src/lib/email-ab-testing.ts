@@ -167,7 +167,7 @@ export async function recordSubjectTestOpen(
       }
     });
     
-    let value = 1; // This is an open, so 100% open rate for this contact
+    const value = 1; // This is an open, so 100% open rate for this contact
     let sampleSize = 1;
     
     if (currentResult) {
@@ -233,7 +233,7 @@ export async function recordSubjectTestClick(
       }
     });
     
-    let value = 1; // This is a click, so 100% click rate for this contact
+    const value = 1; // This is a click, so 100% click rate for this contact
     let sampleSize = 1;
     
     if (currentResult) {

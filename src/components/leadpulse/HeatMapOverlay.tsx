@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
-import { VisitorLocation } from '@/lib/leadpulse/dataProvider';
+import type { VisitorLocation } from '@/lib/leadpulse/dataProvider';
 import { motion } from 'framer-motion';
-import { CITY_COORDINATES } from '@/lib/leadpulse/geoData';
 
 interface HeatMapOverlayProps {
   visitorData: VisitorLocation[];
@@ -30,21 +29,16 @@ export default function HeatMapOverlay({
     const points: HeatPoint[] = [];
     
     visitorData.forEach(location => {
-      const cityCoords = CITY_COORDINATES[location.city];
-      if (!cityCoords) return;
+      if (!location.latitude || !location.longitude) return;
       
-      // Convert x/y to percentage of map
-      const xPercent = cityCoords.x;
-      const yPercent = cityCoords.y;
+      // Convert lat/lng to SVG coordinates
+      const x = ((location.longitude + 180) * (1000 / 360));
+      const y = ((90 - location.latitude) * (500 / 180));
       
       // Scale the weight based on visitor count
       const weight = Math.min(1, (location.visitCount / 100) * 1.5);
       
-      points.push({
-        x: xPercent,
-        y: yPercent,
-        weight
-      });
+      points.push({ x, y, weight });
     });
     
     return points;
@@ -59,7 +53,7 @@ export default function HeatMapOverlay({
       className="absolute inset-0 pointer-events-none"
       width={mapWidth}
       height={mapHeight}
-      viewBox="0 0 100 60"
+      viewBox="0 0 1000 500"
       initial={{ opacity: 0 }}
       animate={{ opacity: 0.7 }}
       exit={{ opacity: 0 }}
@@ -77,7 +71,7 @@ export default function HeatMapOverlay({
         
         {/* Filter for blur effect */}
         <filter id="blurFilter" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" />
+          <feGaussianBlur in="SourceGraphic" stdDeviation="3" />
         </filter>
       </defs>
       
@@ -88,7 +82,7 @@ export default function HeatMapOverlay({
             key={`heat-${index}`}
             cx={point.x}
             cy={point.y}
-            r={point.weight * 5 + 0.5} // Scale radius based on weight
+            r={point.weight * 20 + 5} // Scale radius based on weight
             fill="url(#heatGradient)"
             opacity={point.weight * 0.8 + 0.2} // Scale opacity based on weight
           />

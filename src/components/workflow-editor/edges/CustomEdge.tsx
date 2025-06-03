@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { getBezierPath, EdgeProps, getSmoothStepPath } from "reactflow";
+import { getBezierPath, type EdgeProps, getSmoothStepPath } from "reactflow";
 
 export const CustomEdge = memo(
   ({

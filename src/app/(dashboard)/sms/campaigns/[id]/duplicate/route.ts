@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { PrismaClient, List, Segment, CampaignStatus } from "@prisma/client";
+import { PrismaClient, type List, type Segment, CampaignStatus } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 
 const prisma = new PrismaClient();

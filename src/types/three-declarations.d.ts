@@ -1,5 +1,5 @@
 declare module 'three/examples/jsm/controls/OrbitControls' {
-  import { Camera, Object3D } from 'three';
+  import { type Camera, Object3D } from 'three';
   
   export class OrbitControls {
     constructor(camera: Camera, domElement?: HTMLElement);

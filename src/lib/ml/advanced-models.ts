@@ -381,7 +381,7 @@ export class AdvancedChurnPredictor {
 
 // Advanced LTV Prediction Model
 export class AdvancedLTVPredictor {
-  async predictLifetimeValue(contactId: string, timeHorizonMonths: number = 12): Promise<{
+  async predictLifetimeValue(contactId: string, timeHorizonMonths = 12): Promise<{
     predictedLTV: number;
     monthlyBreakdown: number[];
     confidence: number;

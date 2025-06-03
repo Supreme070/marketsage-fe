@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Brain, Users, MessageSquare, BarChart3, Sparkles, RefreshCw, ArrowUpRight,
-  Activity, TrendingUp, Target, Heart, Eye
+  Activity, TrendingUp, Target, Heart, Eye, Filter, Download, Settings
 } from 'lucide-react';
 import { toast } from 'sonner';
 import LocalAIWidget from '@/components/ai/LocalAIWidget';
@@ -22,7 +22,7 @@ import SupremeContentPanel from '@/components/ai/SupremeContentPanel';
 import SupremeCustomerPanel from '@/components/ai/SupremeCustomerPanel';
 import { Progress } from '@/components/ui/progress';
 import { motion, AnimatePresence } from 'framer-motion';
-import { DashboardPanelConfig } from '@/components/panels/StaticDashboardGrid';
+import type { DashboardPanelConfig } from '@/components/panels/StaticDashboardGrid';
 import StaticDashboardGrid from '@/components/panels/StaticDashboardGrid';
 import SingleStatPanel from '@/components/panels/SingleStatPanel';
 import TimeSeriesPanel from '@/components/panels/TimeSeriesPanel';
@@ -34,7 +34,6 @@ export default function AIIntelligencePage() {
   const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d' | 'all'>('24h');
   const [refreshing, setRefreshing] = useState(false);
   const [chatInput, setChatInput] = useState('');
-  const [gridError, setGridError] = useState(false);
 
   // Hooks
   const chat = useSupremeChat('dashboard-user');
@@ -68,12 +67,6 @@ export default function AIIntelligencePage() {
     }
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-400';
-    if (score >= 60) return 'text-yellow-400';
-    return 'text-red-400';
-  };
-
   // --------------------
   // Grafana-style Overview Panels
   // --------------------
@@ -83,6 +76,7 @@ export default function AIIntelligencePage() {
   }));
 
   const overviewPanels: DashboardPanelConfig[] = [
+    // Top Row - Key Metrics (no big header panel, just clean stats)
     {
       id: 'stat_content',
       x: 0,
@@ -92,8 +86,12 @@ export default function AIIntelligencePage() {
       component: (
         <SingleStatPanel
           title="Content Analyses"
-          value={overview.counts.contentCount}
+          value={(overview.counts?.contentCount || 0).toString()}
+          unit=""
+          icon={<MessageSquare className="h-5 w-5 text-purple-400" />}
           isLoading={overviewLoading}
+          trend="up"
+          trendValue="12%"
         />
       ),
     },
@@ -106,8 +104,12 @@ export default function AIIntelligencePage() {
       component: (
         <SingleStatPanel
           title="Customer Segments"
-          value={overview.counts.customerCount}
+          value={(overview.counts?.customerCount || 0).toString()}
+          unit=""
+          icon={<Users className="h-5 w-5 text-blue-400" />}
           isLoading={overviewLoading}
+          trend="up"
+          trendValue="8%"
         />
       ),
     },
@@ -120,8 +122,12 @@ export default function AIIntelligencePage() {
       component: (
         <SingleStatPanel
           title="Chat Sessions"
-          value={overview.counts.chatCount}
+          value={(overview.counts?.chatCount || 0).toString()}
+          unit=""
+          icon={<Brain className="h-5 w-5 text-green-400" />}
           isLoading={overviewLoading}
+          trend="up"
+          trendValue="24%"
         />
       ),
     },
@@ -134,170 +140,159 @@ export default function AIIntelligencePage() {
       component: (
         <SingleStatPanel
           title="AI Tools"
-          value={overview.counts.toolCount}
+          value={(overview.counts?.toolCount || 0).toString()}
+          unit=""
+          icon={<Sparkles className="h-5 w-5 text-orange-400" />}
           isLoading={overviewLoading}
+          trend="up"
+          trendValue="16%"
         />
       ),
     },
+
+    // Second Row - Charts
     {
       id: 'timeseries_engagement',
       x: 0,
       y: 2,
-      w: 12,
+      w: 8,
       h: 4,
       component: (
         <TimeSeriesPanel
-          title="Engagement Score – Last Activity"
+          title="AI Intelligence Activity"
           data={mockSeries}
-          yLabel="Score"
+          yLabel="Activity Score"
+          stroke="#8b5cf6"
+          fillGradient={true}
+          isLoading={overviewLoading}
         />
       ),
     },
     {
       id: 'pie_distribution',
-      x: 0,
-      y: 6,
+      x: 8,
+      y: 2,
       w: 4,
-      h: 3,
+      h: 4,
       component: (
         <PiePanel
-          title="Insights Distribution"
+          title="Intelligence Distribution"
           data={[
-            { name: 'Content', value: overview.counts.contentCount },
-            { name: 'Segments', value: overview.counts.customerCount },
-            { name: 'Chats', value: overview.counts.chatCount },
-            { name: 'Tools', value: overview.counts.toolCount },
+            { name: 'Content', value: overview.counts?.contentCount || 0 },
+            { name: 'Segments', value: overview.counts?.customerCount || 0 },
+            { name: 'Chats', value: overview.counts?.chatCount || 0 },
+            { name: 'Tools', value: overview.counts?.toolCount || 0 },
           ]}
+          colors={['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b']}
           isLoading={overviewLoading}
         />
       ),
     },
+
+    // Third Row - Detailed Analytics
     {
       id: 'bar_tools',
-      x: 4,
+      x: 0,
       y: 6,
-      w: 8,
+      w: 12,
       h: 3,
       component: (
         <BarPanel
-          title="AI Tools Usage (Mock)"
+          title="AI Tools Usage Analytics"
           data={[
-            { tool: 'Predictor', uses: 120 },
-            { tool: 'Chat', uses: 300 },
-            { tool: 'Optimizer', uses: 80 },
-            { tool: 'Recommender', uses: 150 },
+            { tool: 'Content Predictor', uses: 156 },
+            { tool: 'Supreme Chat', uses: overview.counts?.chatCount || 0 },
+            { tool: 'Customer Optimizer', uses: 89 },
+            { tool: 'Insight Recommender', uses: 134 },
+            { tool: 'Sentiment Analyzer', uses: 78 },
           ]}
           xKey="tool"
           dataKey="uses"
-          name="Uses"
+          name="Usage Count"
+          isLoading={overviewLoading}
         />
       ),
     },
   ];
 
-  // Content Intelligence Panels
+  // Content Intelligence Panels - simplified
   const contentPanels: DashboardPanelConfig[] = [
-    {
-      id: 'content_performance_overview',
-      x: 0,
-      y: 0,
-      w: 12,
-      h: 2,
-      component: (
-        <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-lg p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-xl">
-                <MessageSquare className="h-8 w-8 text-purple-400" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                  Content Intelligence Analytics
-                  <Badge variant="secondary" className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 text-purple-400 border-purple-500/20">
-                    Supreme-AI Powered
-                  </Badge>
-                </h2>
-                <p className="text-muted-foreground">Advanced content analysis • Sentiment • Engagement • Performance Metrics</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold text-purple-400">
-                {contentAnalytics.data?.overview.avgSupremeScore.toFixed(1) || '94.2'}%
-              </div>
-              <div className="text-sm text-muted-foreground">Avg Content Score</div>
-            </div>
-          </div>
-        </div>
-      ),
-    },
     {
       id: 'content_supreme_score',
       x: 0,
-      y: 2,
+      y: 0,
       w: 3,
-      h: 3,
+      h: 2,
       component: (
         <SingleStatPanel
           title="Supreme Score"
           value={contentAnalytics.data?.overview.avgSupremeScore.toFixed(0) || '87'}
           unit="/100"
-          icon={<Target className="h-6 w-6" />}
+          icon={<Target className="h-5 w-5 text-purple-400" />}
           isLoading={contentAnalytics.loading}
+          trend={contentAnalytics.data?.overview.trend?.supremeScore && contentAnalytics.data.overview.trend.supremeScore > 0 ? 'up' : 'down'}
+          trendValue={`${Math.abs(contentAnalytics.data?.overview.trend?.supremeScore || 5.2).toFixed(1)}%`}
         />
       ),
     },
     {
       id: 'content_engagement',
       x: 3,
-      y: 2,
+      y: 0,
       w: 3,
-      h: 3,
+      h: 2,
       component: (
         <SingleStatPanel
           title="Engagement Rate"
           value={contentAnalytics.data?.overview.avgEngagement.toFixed(0) || '76'}
           unit="%"
-          icon={<Heart className="h-6 w-6" />}
+          icon={<Heart className="h-5 w-5 text-pink-400" />}
           isLoading={contentAnalytics.loading}
+          trend={contentAnalytics.data?.overview.trend?.engagement && contentAnalytics.data.overview.trend.engagement > 0 ? 'up' : 'down'}
+          trendValue={`${Math.abs(contentAnalytics.data?.overview.trend?.engagement || -2.1).toFixed(1)}%`}
         />
       ),
     },
     {
       id: 'content_sentiment',
       x: 6,
-      y: 2,
+      y: 0,
       w: 3,
-      h: 3,
+      h: 2,
       component: (
         <SingleStatPanel
           title="Sentiment Score"
-          value={contentAnalytics.data?.overview.avgSentiment.toFixed(2) || '0.85'}
+          value={contentAnalytics.data?.overview.avgSentiment.toFixed(2) || '0.82'}
           unit=""
-          icon={<TrendingUp className="h-6 w-6" />}
+          icon={<TrendingUp className="h-5 w-5 text-green-400" />}
           isLoading={contentAnalytics.loading}
+          trend={contentAnalytics.data?.overview.trend?.sentiment && contentAnalytics.data.overview.trend.sentiment > 0 ? 'up' : 'down'}
+          trendValue={`${Math.abs(contentAnalytics.data?.overview.trend?.sentiment || 8.7).toFixed(1)}%`}
         />
       ),
     },
     {
       id: 'content_readability',
       x: 9,
-      y: 2,
+      y: 0,
       w: 3,
-      h: 3,
+      h: 2,
       component: (
         <SingleStatPanel
           title="Readability"
-          value={contentAnalytics.data?.overview.avgReadability.toFixed(0) || '82'}
+          value={contentAnalytics.data?.overview.avgReadability.toFixed(0) || '84'}
           unit="%"
-          icon={<Eye className="h-6 w-6" />}
+          icon={<Eye className="h-5 w-5 text-blue-400" />}
           isLoading={contentAnalytics.loading}
+          trend={contentAnalytics.data?.overview.trend?.readability && contentAnalytics.data.overview.trend.readability > 0 ? 'up' : 'down'}
+          trendValue={`${Math.abs(contentAnalytics.data?.overview.trend?.readability || 3.4).toFixed(1)}%`}
         />
       ),
     },
     {
       id: 'content_performance_trend',
       x: 0,
-      y: 5,
+      y: 2,
       w: 8,
       h: 4,
       component: (
@@ -312,6 +307,7 @@ export default function AIIntelligencePage() {
           }))}
           yLabel="Supreme Score"
           stroke="#8b5cf6"
+          fillGradient={true}
           isLoading={contentAnalytics.loading}
         />
       ),
@@ -319,7 +315,7 @@ export default function AIIntelligencePage() {
     {
       id: 'content_types_distribution',
       x: 8,
-      y: 5,
+      y: 2,
       w: 4,
       h: 4,
       component: (
@@ -339,214 +335,107 @@ export default function AIIntelligencePage() {
         />
       ),
     },
-    {
-      id: 'content_keywords_performance',
-      x: 0,
-      y: 9,
-      w: 6,
-      h: 3,
-      component: (
-        <BarPanel
-          title="Top Keywords Performance"
-          data={contentAnalytics.data?.performance.topKeywords.map(item => ({
-            keyword: item.keyword,
-            score: item.avgScore,
-          })) || [
-            { keyword: 'fintech', score: 94 },
-            { keyword: 'banking', score: 87 },
-            { keyword: 'digital', score: 82 },
-            { keyword: 'payments', score: 78 },
-            { keyword: 'mobile', score: 75 },
-          ]}
-          xKey="keyword"
-          dataKey="score"
-          name="Score"
-          isLoading={contentAnalytics.loading}
-        />
-      ),
-    },
-    {
-      id: 'content_optimization_tips',
-      x: 6,
-      y: 9,
-      w: 6,
-      h: 3,
-      component: (
-        <div className="p-6 bg-card border rounded-lg">
-          <h3 className="font-semibold mb-4 flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-purple-400" />
-            AI Optimization Tips
-          </h3>
-          <div className="space-y-3">
-            {(contentAnalytics.data?.recommendations.slice(0, 3) || [
-              {
-                priority: 'high',
-                category: 'engagement',
-                title: 'Boost Engagement',
-                description: 'Add more call-to-action phrases (+12% engagement)',
-                estimatedImpact: '+12% engagement'
-              },
-              {
-                priority: 'medium',
-                category: 'readability',
-                title: 'Improve Readability',
-                description: 'Use shorter sentences for better comprehension',
-                estimatedImpact: '+6% readability'
-              },
-              {
-                priority: 'medium',
-                category: 'cultural',
-                title: 'Cultural Optimization',
-                description: 'Consider local Nigerian expressions',
-                estimatedImpact: '+8% sentiment'
-              }
-            ]).map((recommendation, index) => (
-              <div key={index} className={`flex items-start gap-3 p-3 rounded-lg ${
-                recommendation.priority === 'high' ? 'bg-purple-500/10' :
-                recommendation.priority === 'medium' ? 'bg-blue-500/10' : 'bg-green-500/10'
-              }`}>
-                <div className={`w-2 h-2 rounded-full mt-2 ${
-                  recommendation.priority === 'high' ? 'bg-purple-400' :
-                  recommendation.priority === 'medium' ? 'bg-blue-400' : 'bg-green-400'
-                }`}></div>
-                <div>
-                  <p className="text-sm font-medium">{recommendation.title}</p>
-                  <p className="text-xs text-muted-foreground">{recommendation.description} ({recommendation.estimatedImpact})</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ),
-    },
   ];
 
-  // Grid wrapper with fallback
-  const GridWrapper = ({ panels }: { panels: DashboardPanelConfig[] }) => {
-    return <StaticDashboardGrid panels={panels} />;
-  };
-
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="border rounded-lg p-6 bg-card/50">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl border bg-background">
-              <Brain className="h-6 w-6 text-muted-foreground" />
+    <div className="space-y-6 p-6">
+      {/* Header with Grafana-style controls matching successful dashboards */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-purple-600/20 to-blue-600/20 rounded-lg border border-purple-500/20">
+              <Brain className="h-6 w-6 text-purple-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-semibold text-foreground">AI Intelligence Dashboard</h1>
-              <p className="text-sm text-muted-foreground">Advanced ML-powered insights • Last updated: {new Date().toLocaleTimeString()}</p>
+              <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                AI Intelligence Dashboard
+                <Badge variant="secondary" className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 text-purple-400 border-purple-500/20">
+                  Supreme-AI v3.0
+                </Badge>
+              </h1>
+              <p className="text-sm text-muted-foreground">Advanced ML-powered insights and analytics</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <select 
-              className="px-3 py-1 text-sm border rounded-md bg-background" 
-              value={timeRange} 
-              onChange={(e) => setTimeRange(e.target.value as any)}
-            >
-              <option value="24h">Last 24 hours</option>
-              <option value="7d">Last 7 days</option>
-              <option value="30d">Last 30 days</option>
-              <option value="all">All time</option>
-            </select>
-            <Badge variant="secondary" className="text-xs">Supreme-AI v3</Badge>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {/* Time Range Selector */}
+          <div className="flex items-center gap-1 bg-gray-800/50 border border-gray-700 rounded-lg p-1">
+            {(['24h', '7d', '30d', 'all'] as const).map((range) => (
+              <Button
+                key={range}
+                variant={timeRange === range ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setTimeRange(range)}
+                className={`h-7 px-3 text-xs ${
+                  timeRange === range 
+                    ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' 
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                {range}
+              </Button>
+            ))}
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={refreshInsights}
-            disabled={refreshing}
-            className="border-muted hover:bg-muted/20"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Refreshing' : 'Refresh'}
+          
+          <Button variant="ghost" size="sm" onClick={refreshInsights} disabled={refreshing}>
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          </Button>
+          
+          <Button variant="ghost" size="sm">
+            <Filter className="h-4 w-4" />
+          </Button>
+          
+          <Button variant="ghost" size="sm">
+            <Download className="h-4 w-4" />
+          </Button>
+          
+          <Button variant="ghost" size="sm">
+            <Settings className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      {/* KPI Grid */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="border">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Content Analyses</p>
-              <p className="text-2xl font-bold">{overview.counts.contentCount}</p>
-            </div>
-            <MessageSquare className="h-5 w-5 text-muted-foreground" />
-          </CardContent>
-        </Card>
-
-        <Card className="border">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Customer Segments</p>
-              <p className="text-2xl font-bold">{overview.counts.customerCount}</p>
-            </div>
-            <Users className="h-5 w-5 text-muted-foreground" />
-          </CardContent>
-        </Card>
-
-        <Card className="border">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Chat Sessions</p>
-              <p className="text-2xl font-bold">{overview.counts.chatCount}</p>
-            </div>
-            <Brain className="h-5 w-5 text-muted-foreground" />
-          </CardContent>
-        </Card>
-
-        <Card className="border">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">AI Tools</p>
-              <p className="text-2xl font-bold">{overview.counts.toolCount}</p>
-            </div>
-            <Sparkles className="h-5 w-5 text-muted-foreground" />
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Main Intelligence Dashboard */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="overview" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="content" className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
-            Content Intelligence
-          </TabsTrigger>
-          <TabsTrigger value="customers" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Customer Intelligence
-          </TabsTrigger>
-          <TabsTrigger value="chat" className="flex items-center gap-2">
-            <Brain className="h-4 w-4" />
-            Supreme-AI Chat
-          </TabsTrigger>
-          <TabsTrigger value="tools" className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4" />
-            AI Tools
-          </TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4 backdrop-blur-sm">
+          <TabsList className="grid w-full grid-cols-5 bg-gray-800/50 border border-gray-700/50">
+            <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-purple-600/20 data-[state=active]:text-purple-300">
+              <BarChart3 className="h-4 w-4" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="content" className="flex items-center gap-2 data-[state=active]:bg-purple-600/20 data-[state=active]:text-purple-300">
+              <MessageSquare className="h-4 w-4" />
+              Content Intelligence
+            </TabsTrigger>
+            <TabsTrigger value="customers" className="flex items-center gap-2 data-[state=active]:bg-purple-600/20 data-[state=active]:text-purple-300">
+              <Users className="h-4 w-4" />
+              Customer Intelligence
+            </TabsTrigger>
+            <TabsTrigger value="chat" className="flex items-center gap-2 data-[state=active]:bg-purple-600/20 data-[state=active]:text-purple-300">
+              <Brain className="h-4 w-4" />
+              Supreme-AI Chat
+            </TabsTrigger>
+            <TabsTrigger value="tools" className="flex items-center gap-2 data-[state=active]:bg-purple-600/20 data-[state=active]:text-purple-300">
+              <Sparkles className="h-4 w-4" />
+              AI Tools
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="overview" className="space-y-6">
-          <GridWrapper panels={overviewPanels} />
+        <TabsContent value="overview">
+          <StaticDashboardGrid panels={overviewPanels} />
         </TabsContent>
 
-        <TabsContent value="content" className="space-y-6">
-          <GridWrapper panels={contentPanels} />
+        <TabsContent value="content">
+          <StaticDashboardGrid panels={contentPanels} />
         </TabsContent>
 
-        <TabsContent value="customers" className="space-y-6">
+        <TabsContent value="customers">
           <SupremeCustomerPanel userId={"dashboard-user"} />
         </TabsContent>
 
-        <TabsContent value="chat" className="space-y-6">
+        <TabsContent value="chat">
           <Card className="h-[600px] flex flex-col">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -689,7 +578,7 @@ export default function AIIntelligencePage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="tools" className="space-y-6">
+        <TabsContent value="tools">
           <LocalAIWidget />
         </TabsContent>
       </Tabs>

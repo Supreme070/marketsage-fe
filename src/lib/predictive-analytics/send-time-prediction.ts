@@ -48,7 +48,7 @@ export interface GlobalSendTimeRecommendation {
  */
 export async function predictContactSendTime(
   contactId: string,
-  channelType: string = 'email'
+  channelType = 'email'
 ): Promise<TopSendTimePrediction> {
   try {
     logger.info(`Generating send time prediction for contact ${contactId} on ${channelType} channel`);
@@ -227,7 +227,7 @@ export async function predictContactSendTime(
 export async function getOptimalSendTimeForAudience(
   listId?: string,
   segmentId?: string,
-  channelType: string = 'email'
+  channelType = 'email'
 ): Promise<GlobalSendTimeRecommendation[]> {
   try {
     // Get contacts in the list or segment
@@ -327,7 +327,7 @@ export async function getOptimalSendTimeForAudience(
  */
 export async function getContactSendTimePredictions(
   contactId: string,
-  channelType: string = 'email'
+  channelType = 'email'
 ): Promise<SendTimePrediction[]> {
   try {
     const predictions = await prisma.optimalSendTime.findMany({
@@ -451,7 +451,7 @@ function runSendTimeModel(features: any, modelId: string): SendTimePrediction[] 
       }
       
       // Calculate confidence based on amount of data
-      let confidenceLevel = Math.min(0.9, 0.4 + (totalActivities * 0.02));
+      const confidenceLevel = Math.min(0.9, 0.4 + (totalActivities * 0.02));
       
       // Add prediction if probability is significant
       if (probability > 0) {
@@ -518,8 +518,8 @@ function generateDefaultTimePredictions(): SendTimePrediction[] {
   }
   
   // Add some weekend times with lower probabilities
-  for (let day of [0, 6]) { // Sunday and Saturday
-    for (let hour of [10, 11, 15, 16, 20]) {
+  for (const day of [0, 6]) { // Sunday and Saturday
+    for (const hour of [10, 11, 15, 16, 20]) {
       predictions.push({
         contactId: 'default',
         channelType: 'email',

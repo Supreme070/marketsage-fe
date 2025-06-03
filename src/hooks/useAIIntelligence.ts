@@ -66,14 +66,14 @@ export interface AITool {
 // Generic CRUD hook
 function useAICRUD<T>(
   type: 'content' | 'customer' | 'chat' | 'tool',
-  userId: string = 'default'
+  userId = 'default'
 ) {
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch records
-  const fetchData = useCallback(async (limit: number = 10) => {
+  const fetchData = useCallback(async (limit = 10) => {
     setLoading(true);
     setError(null);
     try {
@@ -335,7 +335,7 @@ export function useAITools(userId?: string) {
     description: string,
     category: string,
     config: Record<string, any> = {},
-    isPublic: boolean = false
+    isPublic = false
   ) => {
     return crud.create({
       name,

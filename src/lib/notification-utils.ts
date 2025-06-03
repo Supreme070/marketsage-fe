@@ -4,7 +4,7 @@
  * Helper functions to generate notifications for various events in the system
  */
 
-import { createNotification, NotificationType, NotificationCategory } from './notification-service';
+import { createNotification, type NotificationType, NotificationCategory } from './notification-service';
 
 /**
  * Generate a notification for a completed campaign

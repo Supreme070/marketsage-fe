@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient, type Prisma } from "@prisma/client";
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -21,8 +21,9 @@ const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 500;
 const CONNECTION_CHECK_INTERVAL = 60000; // 1 minute
 
-// Check if we're running in a Docker environment
-const isDocker = fs.existsSync('/.dockerenv') || (process.env.DOCKER_CONTAINER === 'true');
+// Check if we're running in a Docker environment (server-side only)
+const isDocker = typeof window === 'undefined' && 
+  (fs.existsSync('/.dockerenv') || (process.env.DOCKER_CONTAINER === 'true'));
 
 // Create a new PrismaClient instance
 const createPrismaClient = (): CustomPrismaClient => {

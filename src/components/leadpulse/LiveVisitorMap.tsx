@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Globe, MapPin, Activity, Thermometer, Layers, Box, Map } from 'lucide-react';
-import { VisitorLocation, getVisitorLocations } from '@/lib/leadpulse/dataProvider';
+import { type VisitorLocation, getVisitorLocations } from '@/lib/leadpulse/dataProvider';
 import TimelineSlider from './TimelineSlider';
 import HeatMapOverlay from './HeatMapOverlay';
 import GeoFilterBreadcrumb from './GeoFilterBreadcrumb';
@@ -218,33 +218,38 @@ export default function LiveVisitorMap({
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader className="pb-2">
+    <Card className="w-full h-full bg-gray-900/50 border-blue-500/20">
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
-            <CardTitle className="text-xl font-bold">Live Visitor Map</CardTitle>
-            <CardDescription>
-              Geographic visualization of visitor activity
+            <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
+              <div className="p-1.5 bg-gradient-to-br from-blue-600/20 to-purple-600/20 rounded-lg border border-blue-500/20">
+                <Globe className="h-4 w-4 text-blue-400" />
+              </div>
+              Live Visitor Map
+            </CardTitle>
+            <CardDescription className="text-gray-400">
+              Real-time geographic visualization
             </CardDescription>
           </div>
           <div className="flex gap-1">
-            <div className="mr-2 flex items-center bg-muted p-1 rounded-md">
+            <div className="mr-2 flex items-center bg-gray-800/50 p-1 rounded-md border border-gray-700/50">
               <Button 
                 variant={mapView === '2d' ? "default" : "ghost"} 
                 size="sm"
                 onClick={() => setMapView('2d')}
-                className="h-8"
+                className="h-7 text-xs bg-blue-600/20 hover:bg-blue-600/30 border-blue-500/30"
               >
-                <Map className="h-4 w-4 mr-1" />
+                <Map className="h-3 w-3 mr-1" />
                 2D
               </Button>
               <Button 
                 variant={mapView === '3d' ? "default" : "ghost"} 
                 size="sm"
                 onClick={() => setMapView('3d')}
-                className="h-8"
+                className="h-7 text-xs bg-purple-600/20 hover:bg-purple-600/30 border-purple-500/30"
               >
-                <Box className="h-4 w-4 mr-1" />
+                <Box className="h-3 w-3 mr-1" />
                 3D
               </Button>
             </div>
@@ -255,25 +260,28 @@ export default function LiveVisitorMap({
                   variant={mapMode === 'all' ? "default" : "outline"} 
                   size="sm"
                   onClick={() => setMapMode('all')}
+                  className="h-7 text-xs border-gray-600/50 bg-gray-800/30 hover:bg-gray-700/50"
                 >
-                  <Globe className="h-4 w-4 mr-1" />
-                  All Visitors
+                  <Globe className="h-3 w-3 mr-1" />
+                  All
                 </Button>
                 <Button 
                   variant={mapMode === 'active' ? "default" : "outline"} 
                   size="sm"
                   onClick={() => setMapMode('active')}
+                  className="h-7 text-xs border-green-600/50 bg-green-800/30 hover:bg-green-700/50"
                 >
-                  <Activity className="h-4 w-4 mr-1" />
-                  Active Now
+                  <Activity className="h-3 w-3 mr-1" />
+                  Active
                 </Button>
                 <Button 
                   variant={mapMode === 'heat' ? "default" : "outline"} 
                   size="sm"
                   onClick={() => setMapMode('heat')}
+                  className="h-7 text-xs border-orange-600/50 bg-orange-800/30 hover:bg-orange-700/50"
                 >
-                  <Thermometer className="h-4 w-4 mr-1" />
-                  Heat Map
+                  <Thermometer className="h-3 w-3 mr-1" />
+                  Heat
                 </Button>
               </>
             )}
@@ -292,10 +300,10 @@ export default function LiveVisitorMap({
           </AnimatePresence>
         )}
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-4">
         {loading ? (
           <div className="flex items-center justify-center h-[300px]">
-            <div className="animate-pulse">Loading visitor data...</div>
+            <div className="animate-pulse text-gray-400 text-sm">Loading visitor data...</div>
           </div>
         ) : (
           <>
@@ -305,57 +313,58 @@ export default function LiveVisitorMap({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="w-full h-[400px] flex justify-center"
+                className="w-full h-[300px] flex justify-center"
               >
                 <GlobeVisualization 
                   visitorData={filteredLocations}
                   onSelectLocation={handleLocationClick}
                   width={mapDimensions.width || 800}
-                  height={400}
+                  height={300}
                 />
               </motion.div>
             ) : (
               <>
-                {/* 2D World Map with visitors */}
-                <div className="relative h-[300px] w-full" ref={mapContainerRef}>
+                {/* 2D SVG Map Visualization */}
+                <div 
+                  ref={mapContainerRef}
+                  className="relative w-full h-[300px] bg-gray-800/30 rounded-lg border border-gray-700/30 overflow-hidden"
+                >
                   <svg 
-                    className="w-full h-full" 
-                    viewBox="0 0 100 60" 
-                    fill="none" 
-                    xmlns="http://www.w3.org/2000/svg"
+                    width="100%" 
+                    height="100%" 
+                    viewBox="0 0 1000 500" 
+                    className="absolute inset-0"
+                    preserveAspectRatio="xMidYMid meet"
+                    style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' }}
                   >
                     {/* World map background */}
-                    <motion.path
-                      d={getMapPath()}
-                      initial={{ pathLength: 0, opacity: 0 }}
-                      animate={{ pathLength: 1, opacity: 0.8 }}
-                      transition={{ duration: 1.5, ease: "easeInOut" }}
-                      fill="#e2e8f0"
-                      stroke="#94a3b8"
-                      strokeWidth="0.2"
+                    <defs>
+                      <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
+                        <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#374151" strokeWidth="0.2"/>
+                      </pattern>
+                      <linearGradient id="mapGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#1e293b" stopOpacity="1" />
+                        <stop offset="100%" stopColor="#0f172a" stopOpacity="1" />
+                      </linearGradient>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#grid)" opacity="0.2" />
+                    
+                    {/* Render world map path */}
+                    <path
+                      d={WORLD_MAP_PATH}
+                      fill="#374151"
+                      stroke="#4b5563"
+                      strokeWidth="0.5"
+                      opacity="0.8"
                     />
                     
-                    {/* Continent clickable areas (only shown on world map) */}
-                    {geoPath.length === 0 && Object.entries(CONTINENT_PATHS).map(([id, path]) => (
-                      <motion.path
-                        key={id}
-                        d={path}
-                        fill="transparent"
-                        stroke="transparent"
-                        strokeWidth="0"
-                        className="cursor-pointer hover:fill-primary/10"
-                        onClick={() => handleContinentClick(id)}
-                        whileHover={{ scale: 1.02 }}
-                        transition={{ duration: 0.2 }}
-                      />
-                    ))}
-                    
-                    {/* Location markers */}
+                    {/* Render filtered locations */}
                     {filteredLocations
                       .filter(loc => mapMode === 'heat' || mapMode === 'all' || (mapMode === 'active' && loc.isActive))
                       .map((location) => {
-                        const cityCoord = CITY_COORDINATES[location.city];
-                        if (!cityCoord) return null;
+                        // Convert lat/lng to SVG coordinates
+                        const x = ((location.longitude + 180) * (1000 / 360));
+                        const y = ((90 - location.latitude) * (500 / 180));
                         
                         return (
                           <g 
@@ -369,43 +378,54 @@ export default function LiveVisitorMap({
                             <motion.circle
                               initial={{ scale: 0 }}
                               animate={{ scale: 1 }}
-                              cx={cityCoord.x}
-                              cy={cityCoord.y}
-                              r={location.isActive ? 0.8 : 0.6}
-                              fill={location.isActive ? "#ef4444" : "#6366f1"}
+                              cx={x}
+                              cy={y}
+                              r={location.isActive ? 4 : 3}
+                              fill={location.isActive ? "#3b82f6" : "#6366f1"}
+                              stroke="white"
+                              strokeWidth="1"
+                              filter="drop-shadow(0 0 2px rgba(59, 130, 246, 0.5))"
                             />
                             
                             {/* Active pulse for active visitors */}
-                            {location.isActive && mapMode !== 'heat' && (
+                            {location.isActive && (
                               <motion.circle
-                                cx={cityCoord.x}
-                                cy={cityCoord.y}
-                                r={0.8}
-                                fill="#ef4444"
-                                initial={{ opacity: 0.7, scale: 1 }}
+                                cx={x}
+                                cy={y}
+                                r={4}
+                                fill="none"
+                                stroke="#3b82f6"
+                                strokeWidth="1"
+                                initial={{ r: 4, opacity: 0.8 }}
                                 animate={{ 
-                                  opacity: 0,
-                                  scale: 3,
+                                  r: 12,
+                                  opacity: 0
                                 }}
                                 transition={{
-                                  repeat: Infinity,
                                   duration: 2,
+                                  repeat: Number.POSITIVE_INFINITY,
                                   ease: "easeOut"
                                 }}
                               />
                             )}
                             
-                            {/* Tooltip */}
+                            {/* Hover tooltip */}
                             {hoveredLocation === location.id && (
-                              <foreignObject
-                                x={cityCoord.x - 15}
-                                y={cityCoord.y - 35}
-                                width="100"
-                                height="30"
+                              <foreignObject 
+                                x={x - 80} 
+                                y={y - 80} 
+                                width="160" 
+                                height="60"
                               >
-                                <div className="bg-white text-xs p-1 rounded shadow border text-center">
-                                  <div className="font-medium">{location.city}</div>
-                                  <div className="text-[10px] text-muted-foreground">{location.country}</div>
+                                <div 
+                                  className="bg-gray-900/95 text-white p-3 rounded-md shadow-lg text-sm border border-gray-600/50 backdrop-blur-sm"
+                                  style={{ pointerEvents: 'none' }}
+                                >
+                                  <div className="font-semibold text-blue-300">{location.city}</div>
+                                  <div className="text-gray-300">{location.country}</div>
+                                  <div className="text-green-400 text-xs mt-1">
+                                    {location.visitCount} visits • {location.isActive ? 'Active now' : location.lastActive}
+                                  </div>
                                 </div>
                               </foreignObject>
                             )}
@@ -413,7 +433,7 @@ export default function LiveVisitorMap({
                         );
                       })}
                     
-                    {/* Activity pulses (only in non-heat map mode) */}
+                    {/* Activity pulses */}
                     {mapMode !== 'heat' && (
                       <AnimatePresence>
                         {activityPulses.map(pulse => (
@@ -421,16 +441,16 @@ export default function LiveVisitorMap({
                             key={pulse.id}
                             cx={pulse.x}
                             cy={pulse.y}
-                            r={0.8}
-                            fill="#ef4444"
-                            initial={{ opacity: 0.7, scale: 1 }}
+                            r={3}
+                            fill="#3b82f6"
+                            initial={{ opacity: 0.8, scale: 1 }}
                             animate={{ 
                               opacity: 0,
                               scale: 4,
                             }}
                             exit={{ opacity: 0 }}
                             transition={{
-                              duration: 2,
+                              duration: 1.5,
                               ease: "easeOut"
                             }}
                           />
@@ -444,13 +464,13 @@ export default function LiveVisitorMap({
                     visitorData={filteredLocations}
                     showHeatMap={mapMode === 'heat'}
                     mapWidth={mapDimensions.width}
-                    mapHeight={mapDimensions.height}
+                    mapHeight={300}
                   />
                 </div>
               </>
             )}
             
-            {/* Timeline slider */}
+            {/* Timeline slider - compact version */}
             <div className="mt-4">
               <TimelineSlider
                 startTime={startTimeRef.current}
@@ -461,46 +481,26 @@ export default function LiveVisitorMap({
               />
             </div>
             
-            {/* Visitor location stats */}
-            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-              {filteredLocations
-                .filter(loc => mapMode === 'heat' || mapMode === 'all' || (mapMode === 'active' && loc.isActive))
-                .slice(0, 5)
-                .map(location => (
-                  <motion.div
-                    key={location.id}
-                    className="bg-muted rounded-lg p-2 text-sm cursor-pointer"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                    whileHover={{ y: -2 }}
-                    onClick={() => handleLocationClick(location.city)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="font-medium truncate">{location.city}</div>
-                      {location.isActive && (
-                        <motion.div
-                          animate={{ 
-                            scale: [1, 1.2, 1],
-                            opacity: [1, 0.8, 1] 
-                          }}
-                          transition={{ duration: 2, repeat: Infinity }}
-                          className="w-2 h-2 rounded-full bg-red-500"
-                        />
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground flex items-center mt-1">
-                      <Users className="h-3 w-3 mr-1" />
-                      <span>{location.visitCount}</span>
-                      <Badge 
-                        variant="outline" 
-                        className="ml-auto text-[10px] py-0 h-4"
-                      >
-                        {location.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </div>
-                  </motion.div>
-                ))}
+            {/* Visitor location stats - compact */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
+              <div className="bg-gray-800/30 rounded-md p-3 border border-gray-700/30">
+                <div className="text-xs text-gray-400">Total Locations</div>
+                <div className="text-xl font-bold text-white">{filteredLocations.length}</div>
+              </div>
+              <div className="bg-gray-800/30 rounded-md p-3 border border-gray-700/30">
+                <div className="text-xs text-gray-400">Active Now</div>
+                <div className="text-xl font-bold text-green-400">{filteredLocations.filter(l => l.isActive).length}</div>
+              </div>
+              <div className="bg-gray-800/30 rounded-md p-3 border border-gray-700/30">
+                <div className="text-xs text-gray-400">Top Location</div>
+                <div className="text-sm font-semibold text-blue-300 truncate">
+                  {filteredLocations.sort((a, b) => b.visitCount - a.visitCount)[0]?.city || 'N/A'}
+                </div>
+              </div>
+              <div className="bg-gray-800/30 rounded-md p-3 border border-gray-700/30">
+                <div className="text-xs text-gray-400">Coverage</div>
+                <div className="text-xl font-bold text-purple-400">{filteredLocations.length > 0 ? '12' : '0'} Countries</div>
+              </div>
             </div>
           </>
         )}

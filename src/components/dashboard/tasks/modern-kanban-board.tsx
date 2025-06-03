@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import {
   DndContext,
-  DragEndEvent,
+  type DragEndEvent,
   DragOverlay,
-  DragStartEvent,
+  type DragStartEvent,
   PointerSensor,
   useSensor,
   useSensors,
@@ -123,7 +123,7 @@ function TaskForm({
     
     const submitData = {
       ...formData,
-      revenue: formData.revenue ? parseInt(formData.revenue) : undefined,
+      revenue: formData.revenue ? Number.parseInt(formData.revenue) : undefined,
     };
     
     await onSubmit(submitData);

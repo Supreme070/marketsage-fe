@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { JourneyManagementDashboard } from "@/components/dashboard/journeys/journey-management-dashboard";
 

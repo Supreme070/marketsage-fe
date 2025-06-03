@@ -98,6 +98,9 @@ npx tsx ./src/scripts/seedUserPreferences.ts
 echo '📋 Seeding task management...'
 npx tsx ./src/scripts/seedTaskManagement.ts
 
+echo '🎯 Seeding LeadPulse data...'
+npx tsx ./src/scripts/seed-leadpulse.ts
+
 echo '🔗 Assigning contacts to current user...'
 npx tsx ./src/scripts/assignContactsToCurrentUser.ts
 

@@ -6,7 +6,7 @@
  * optimizing future communications.
  */
 
-import { ActivityType, EntityType } from '@prisma/client';
+import type { ActivityType, EntityType } from '@prisma/client';
 import prisma from '@/lib/db/prisma';
 import { logger } from '@/lib/logger';
 import { v4 as uuidv4 } from 'uuid';

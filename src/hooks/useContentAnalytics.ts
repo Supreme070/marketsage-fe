@@ -60,7 +60,7 @@ interface ContentAnalyticsData {
   }>;
 }
 
-export function useContentAnalytics(userId?: string, timeRange: string = '30d') {
+export function useContentAnalytics(userId?: string, timeRange = '30d') {
   const [data, setData] = useState<ContentAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

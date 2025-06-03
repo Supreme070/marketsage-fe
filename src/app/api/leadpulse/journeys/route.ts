@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/prisma';
-import { generateMockJourneyData, VisitorPath } from '@/app/api/leadpulse/_mockData';
+import { generateMockJourneyData, type VisitorPath } from '@/app/api/leadpulse/_mockData';
 
 // Define interfaces for Prisma types
 interface PrismaVisitor {

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, UserPlus, Download, Brain, Users, ArrowLeft } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Contact } from '@/lib/smart-segmentation';
+import type { Contact } from '@/lib/smart-segmentation';
 import {
   Table,
   TableBody,

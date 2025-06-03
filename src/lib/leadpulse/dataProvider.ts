@@ -6,12 +6,18 @@
  */
 
 import { cache } from 'react';
+import prisma from '@/lib/db/prisma';
+
+// Type definitions that match the Prisma schema
+export type LeadPulseTouchpointType = 'PAGEVIEW' | 'CLICK' | 'FORM_VIEW' | 'FORM_START' | 'FORM_SUBMIT' | 'CONVERSION';
+export type LeadPulseInsightType = 'BEHAVIOR' | 'PREDICTION' | 'OPPORTUNITY' | 'TREND';
+export type LeadPulseImportance = 'LOW' | 'MEDIUM' | 'HIGH';
 
 // Interfaces matching the component props
 export interface PulseDataPoint {
   timestamp: string;
   value: number;
-  type: 'pageview' | 'click' | 'form_interaction' | 'conversion';
+  type: LeadPulseTouchpointType;
   url?: string;
   title?: string;
 }
@@ -50,10 +56,10 @@ export interface VisitorPath {
 
 export interface InsightItem {
   id: string;
-  type: 'behavior' | 'prediction' | 'opportunity' | 'trend';
+  type: LeadPulseInsightType;
   title: string;
   description: string;
-  importance: 'low' | 'medium' | 'high';
+  importance: LeadPulseImportance;
   metric?: {
     label: string;
     value: number;
@@ -84,9 +90,115 @@ export interface VisitorLocation {
 }
 
 /**
+ * Fetch visitor locations with proper error handling and fallbacks
+ */
+export const getVisitorLocations = cache(async (timeRange = '24h'): Promise<VisitorLocation[]> => {
+  try {
+    // Calculate time cutoff
+    const now = new Date();
+    const cutoffTime = new Date(now.getTime() - getTimeRangeInMs(timeRange));
+    
+    // Fetch visitors with location data
+    const visitors = await prisma.leadPulseVisitor.findMany({
+      where: {
+        lastVisit: { gte: cutoffTime },
+        latitude: { not: null },
+        longitude: { not: null },
+        city: { not: null },
+        country: { not: null }
+      },
+      select: {
+        id: true,
+        city: true,
+        country: true,
+        isActive: true,
+        lastVisit: true,
+        totalVisits: true,
+        latitude: true,
+        longitude: true
+      }
+    });
+    
+    // Transform to VisitorLocation format
+    return visitors.map((visitor: any) => ({
+      id: visitor.id,
+      city: visitor.city!,
+      country: visitor.country!,
+      isActive: visitor.isActive,
+      lastActive: formatLastActive(visitor.lastVisit),
+      visitCount: visitor.totalVisits,
+      latitude: visitor.latitude!,
+      longitude: visitor.longitude!
+    }));
+  } catch (error) {
+    console.error('Error fetching visitor locations:', error);
+    return []; // Return empty array instead of mock data
+  }
+});
+
+/**
+ * Fetch visitor segments with proper error handling
+ */
+export const getVisitorSegments = cache(async (): Promise<VisitorSegment[]> => {
+  try {
+    // Fetch segments and their visitor counts
+    const segments = await prisma.leadPulseSegment.findMany({
+      include: {
+        _count: {
+          select: { visitors: true }
+        }
+      }
+    });
+    
+    // Get total visitor count
+    const totalVisitors = await prisma.leadPulseVisitor.count();
+    
+    // Transform to VisitorSegment format
+    return segments.map((segment: any) => ({
+      id: segment.id,
+      name: segment.name,
+      count: segment._count.visitors,
+      percentage: totalVisitors > 0 ? (segment._count.visitors / totalVisitors) * 100 : 0,
+      key: segment.id
+    }));
+  } catch (error) {
+    console.error('Error fetching visitor segments:', error);
+    return []; // Return empty array instead of mock data
+  }
+});
+
+/**
+ * Fetch visitor insights with proper error handling
+ */
+export const getVisitorInsights = cache(async (): Promise<InsightItem[]> => {
+  try {
+    // Fetch recent insights
+    const insights = await prisma.leadPulseInsight.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 10
+    });
+    
+    // Transform to InsightItem format
+    return insights.map((insight: any) => ({
+      id: insight.id,
+      type: insight.type as LeadPulseInsightType,
+      title: insight.title,
+      description: insight.description,
+      importance: insight.importance as LeadPulseImportance,
+      metric: insight.metric as any,
+      recommendation: insight.recommendation || undefined,
+      createdAt: insight.createdAt.toISOString()
+    }));
+  } catch (error) {
+    console.error('Error fetching visitor insights:', error);
+    return []; // Return empty array instead of mock data
+  }
+});
+
+/**
  * Fetch active visitors and their pulse data
  */
-export const getActiveVisitors = cache(async (timeRange: string = '24h'): Promise<VisitorJourney[]> => {
+export const getActiveVisitors = cache(async (timeRange = '24h'): Promise<VisitorJourney[]> => {
   try {
     // Call API endpoint to get visitors
     const response = await fetch(`/api/leadpulse/visitors?timeRange=${timeRange}`, {
@@ -143,90 +255,6 @@ export const getVisitorJourneys = cache(async (visitorId?: string): Promise<Visi
   }
 });
 
-/**
- * Fetch AI insights about visitors
- */
-export const getVisitorInsights = cache(async (): Promise<InsightItem[]> => {
-  try {
-    // Call API endpoint
-    const response = await fetch('/api/leadpulse/insights', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      throw new Error(`Error fetching insights: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data.insights || [];
-  } catch (error) {
-    console.error('Error fetching visitor insights:', error);
-    
-    // Return mock data for now
-    return generateMockInsightData();
-  }
-});
-
-/**
- * Fetch visitor segments
- */
-export const getVisitorSegments = cache(async (): Promise<VisitorSegment[]> => {
-  try {
-    // Call API endpoint
-    const response = await fetch('/api/leadpulse/segments', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      throw new Error(`Error fetching segments: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data.segments || [];
-  } catch (error) {
-    console.error('Error fetching visitor segments:', error);
-    
-    // Return mock data for now
-    return generateMockSegmentData();
-  }
-});
-
-/**
- * Fetch visitor locations
- */
-export const getVisitorLocations = cache(async (timeRange: string = '24h'): Promise<VisitorLocation[]> => {
-  try {
-    // Call API endpoint
-    const response = await fetch(`/api/leadpulse/locations?timeRange=${timeRange}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      throw new Error(`Error fetching locations: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data.locations || [];
-  } catch (error) {
-    console.error('Error fetching visitor locations:', error);
-    
-    // Return mock data for now
-    return generateMockLocationData();
-  }
-});
-
 // Mock data generators for development and fallbacks
 function generateMockVisitorData(): VisitorJourney[] {
   return [
@@ -240,11 +268,11 @@ function generateMockVisitorData(): VisitorJourney[] {
       engagementScore: 72,
       lastActive: '2 mins ago',
       pulseData: [
-        { timestamp: '2023-05-17T14:00:00Z', value: 1, type: 'pageview', url: '/home', title: 'Home Page' },
-        { timestamp: '2023-05-17T14:01:30Z', value: 2, type: 'click', url: '/products', title: 'Products Page' },
-        { timestamp: '2023-05-17T14:03:00Z', value: 1, type: 'pageview', url: '/products/1', title: 'Product Detail' },
-        { timestamp: '2023-05-17T14:05:00Z', value: 3, type: 'form_interaction', url: '/contact', title: 'Contact Form' },
-        { timestamp: '2023-05-17T14:07:00Z', value: 5, type: 'conversion', url: '/checkout', title: 'Checkout' }
+        { timestamp: '2023-05-17T14:00:00Z', value: 1, type: 'PAGEVIEW', url: '/home', title: 'Home Page' },
+        { timestamp: '2023-05-17T14:01:30Z', value: 2, type: 'CLICK', url: '/products', title: 'Products Page' },
+        { timestamp: '2023-05-17T14:03:00Z', value: 1, type: 'PAGEVIEW', url: '/products/1', title: 'Product Detail' },
+        { timestamp: '2023-05-17T14:05:00Z', value: 3, type: 'FORM_VIEW', url: '/contact', title: 'Contact Form' },
+        { timestamp: '2023-05-17T14:07:00Z', value: 5, type: 'CONVERSION', url: '/checkout', title: 'Checkout' }
       ]
     },
     {
@@ -257,10 +285,10 @@ function generateMockVisitorData(): VisitorJourney[] {
       engagementScore: 45,
       lastActive: '5 mins ago',
       pulseData: [
-        { timestamp: '2023-05-17T13:50:00Z', value: 1, type: 'pageview', url: '/home', title: 'Home Page' },
-        { timestamp: '2023-05-17T13:52:00Z', value: 1, type: 'pageview', url: '/about', title: 'About Us' },
-        { timestamp: '2023-05-17T13:55:00Z', value: 2, type: 'click', url: '/team', title: 'Our Team' },
-        { timestamp: '2023-05-17T13:59:00Z', value: 1, type: 'pageview', url: '/blog', title: 'Blog' }
+        { timestamp: '2023-05-17T13:50:00Z', value: 1, type: 'PAGEVIEW', url: '/home', title: 'Home Page' },
+        { timestamp: '2023-05-17T13:52:00Z', value: 1, type: 'PAGEVIEW', url: '/about', title: 'About Us' },
+        { timestamp: '2023-05-17T13:55:00Z', value: 2, type: 'CLICK', url: '/team', title: 'Our Team' },
+        { timestamp: '2023-05-17T13:59:00Z', value: 1, type: 'PAGEVIEW', url: '/blog', title: 'Blog' }
       ]
     },
     {
@@ -273,10 +301,10 @@ function generateMockVisitorData(): VisitorJourney[] {
       engagementScore: 63,
       lastActive: '12 mins ago',
       pulseData: [
-        { timestamp: '2023-05-17T13:40:00Z', value: 1, type: 'pageview', url: '/home', title: 'Home Page' },
-        { timestamp: '2023-05-17T13:42:00Z', value: 2, type: 'click', url: '/products', title: 'Products Page' },
-        { timestamp: '2023-05-17T13:44:00Z', value: 1, type: 'pageview', url: '/products/2', title: 'Product Detail' },
-        { timestamp: '2023-05-17T13:46:00Z', value: 3, type: 'form_interaction', url: '/contact', title: 'Contact Form' }
+        { timestamp: '2023-05-17T13:40:00Z', value: 1, type: 'PAGEVIEW', url: '/home', title: 'Home Page' },
+        { timestamp: '2023-05-17T13:42:00Z', value: 2, type: 'CLICK', url: '/products', title: 'Products Page' },
+        { timestamp: '2023-05-17T13:44:00Z', value: 1, type: 'PAGEVIEW', url: '/products/2', title: 'Product Detail' },
+        { timestamp: '2023-05-17T13:46:00Z', value: 3, type: 'FORM_VIEW', url: '/contact', title: 'Contact Form' }
       ]
     }
   ];
@@ -318,161 +346,35 @@ function generateMockJourneyData(visitorId?: string): VisitorPath[] {
   return journeys;
 }
 
-function generateMockInsightData(): InsightItem[] {
-  return [
-    {
-      id: 'i1',
-      type: 'behavior',
-      title: 'High bounce rate on pricing page',
-      description: 'Visitors are leaving the pricing page without taking action. Consider simplifying the pricing structure or adding more clear calls-to-action.',
-      importance: 'high',
-      metric: {
-        label: 'Bounce Rate',
-        value: 68.5,
-        format: 'percentage',
-        change: 12.3
-      },
-      recommendation: 'Add testimonials or case studies near pricing to build confidence.',
-      createdAt: '2023-05-16T12:00:00Z'
-    },
-    {
-      id: 'i2',
-      type: 'opportunity',
-      title: 'Form conversion opportunity',
-      description: 'Your contact form has a higher than average view-to-submission ratio. This represents a good opportunity to capture more leads.',
-      importance: 'medium',
-      metric: {
-        label: 'Form Conversion',
-        value: 18.2,
-        format: 'percentage',
-        change: 3.5
-      },
-      recommendation: 'Simplify the form by reducing required fields to essential information only.',
-      createdAt: '2023-05-16T10:30:00Z'
-    },
-    {
-      id: 'i3',
-      type: 'prediction',
-      title: 'Revenue forecast increase',
-      description: 'Based on current visitor engagement patterns, we predict a significant increase in conversion value for the next period.',
-      importance: 'medium',
-      metric: {
-        label: 'Predicted Revenue',
-        value: 12500,
-        format: 'currency',
-        change: 8.2
-      },
-      createdAt: '2023-05-15T16:45:00Z'
-    },
-    {
-      id: 'i4',
-      type: 'trend',
-      title: 'Mobile traffic growth',
-      description: 'Mobile visitors have increased significantly over the past month, now representing the majority of your traffic.',
-      importance: 'low',
-      metric: {
-        label: 'Mobile Traffic',
-        value: 62.8,
-        format: 'percentage',
-        change: 15.4
-      },
-      recommendation: 'Ensure all critical pages and forms are optimized for mobile devices.',
-      createdAt: '2023-05-14T09:15:00Z'
-    }
-  ];
+// Helper function to format last active time
+function formatLastActive(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+  
+  return date.toLocaleDateString();
 }
 
-function generateMockSegmentData(): VisitorSegment[] {
-  return [
-    {
-      id: 's1',
-      name: 'High-Value Prospects',
-      count: 124,
-      percentage: 28.5,
-      key: 'high_value'
-    },
-    {
-      id: 's2',
-      name: 'First-Time Visitors',
-      count: 215,
-      percentage: 49.4,
-      key: 'first_time'
-    },
-    {
-      id: 's3',
-      name: 'Repeat Visitors',
-      count: 87,
-      percentage: 20.0,
-      key: 'repeat'
-    },
-    {
-      id: 's4',
-      name: 'Cart Abandoners',
-      count: 42,
-      percentage: 9.7,
-      key: 'cart_abandon'
-    },
-    {
-      id: 's5',
-      name: 'Newsletter Subscribers',
-      count: 156,
-      percentage: 35.9,
-      key: 'newsletter'
-    }
-  ];
-}
-
-function generateMockLocationData(): VisitorLocation[] {
-  return [
-    {
-      id: 'loc_1',
-      city: 'New York',
-      country: 'USA',
-      isActive: true,
-      lastActive: 'just now',
-      visitCount: 145,
-      latitude: 40.7128,
-      longitude: -74.0060
-    },
-    {
-      id: 'loc_2',
-      city: 'London',
-      country: 'UK',
-      isActive: true,
-      lastActive: '2 mins ago',
-      visitCount: 87,
-      latitude: 51.5074,
-      longitude: -0.1278
-    },
-    {
-      id: 'loc_3',
-      city: 'Lagos',
-      country: 'Nigeria',
-      isActive: true,
-      lastActive: '5 mins ago',
-      visitCount: 62,
-      latitude: 6.5244,
-      longitude: 3.3792
-    },
-    {
-      id: 'loc_4',
-      city: 'Tokyo',
-      country: 'Japan',
-      isActive: false,
-      lastActive: '15 mins ago',
-      visitCount: 43,
-      latitude: 35.6762,
-      longitude: 139.6503
-    },
-    {
-      id: 'loc_5',
-      city: 'Sydney',
-      country: 'Australia',
-      isActive: false,
-      lastActive: '32 mins ago',
-      visitCount: 28,
-      latitude: -33.8688,
-      longitude: 151.2093
-    }
-  ];
+// Helper function to convert time range to milliseconds
+function getTimeRangeInMs(timeRange: string): number {
+  const hour = 60 * 60 * 1000;
+  const day = 24 * hour;
+  
+  switch (timeRange) {
+    case '1h': return hour;
+    case '6h': return 6 * hour;
+    case '12h': return 12 * hour;
+    case '7d': return 7 * day;
+    case '30d': return 30 * day;
+    default: return day; // 24h default
+  }
 } 

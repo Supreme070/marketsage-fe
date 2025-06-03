@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from 'react';
-import { Handle, Position, NodeProps } from 'reactflow';
+import { Handle, Position, type NodeProps } from 'reactflow';
 import { motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { CheckCircle, XCircle } from 'lucide-react';
@@ -84,7 +84,7 @@ function ConditionNode({ data, isConnectable }: NodeProps) {
           }}
           transition={{ 
             duration: 2, 
-            repeat: Infinity,
+            repeat: Number.POSITIVE_INFINITY,
             repeatType: "loop",
             ease: "linear"
           }}

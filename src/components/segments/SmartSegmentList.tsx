@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Users, Brain, RefreshCw } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { SegmentPreview } from '@/lib/smart-segmentation';
+import type { SegmentPreview } from '@/lib/smart-segmentation';
 
 interface SmartSegmentListProps {
   onSelectSegment?: (segmentId: string) => void;

@@ -1,8 +1,8 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { useSession } from 'next-auth/react';
-import { NotificationType, NotificationCategory } from '@/lib/notification-service';
+import type { NotificationType, NotificationCategory } from '@/lib/notification-service';
 
 export interface Notification {
   id: string;

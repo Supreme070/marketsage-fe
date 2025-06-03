@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { ActivityType, EntityType } from "@prisma/client";
 import { trackConversion, ConversionTypes } from "@/lib/conversions";
 import { recordSubjectTestOpen, recordSubjectTestClick } from "@/lib/email-ab-testing";

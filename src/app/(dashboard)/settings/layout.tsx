@@ -1,6 +1,6 @@
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { CreditCard, Database, LucideIcon, Server, Settings, Shield, Users } from "lucide-react";
+import { CreditCard, Database, type LucideIcon, Server, Settings, Shield, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";

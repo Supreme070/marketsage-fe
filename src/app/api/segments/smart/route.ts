@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { generateSmartSegments, getContactsInSegment } from '@/lib/smart-segmentation';
 import { initializeAIFeatures } from '@/lib/ai-features-init';
 import { logger } from '@/lib/logger';
@@ -26,10 +26,10 @@ export async function GET(request: NextRequest) {
     // Get query parameters
     const searchParams = new URL(request.url).searchParams;
     const minEngagementScore = searchParams.get('minEngagementScore') 
-      ? parseFloat(searchParams.get('minEngagementScore')!) 
+      ? Number.parseFloat(searchParams.get('minEngagementScore')!) 
       : undefined;
     const maxInactivityDays = searchParams.get('maxInactivityDays') 
-      ? parseInt(searchParams.get('maxInactivityDays')!) 
+      ? Number.parseInt(searchParams.get('maxInactivityDays')!) 
       : undefined;
     
     // Generate smart segments

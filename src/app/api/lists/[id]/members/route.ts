@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
@@ -53,8 +53,8 @@ export async function GET(
 
     // Get members with pagination
     const url = new URL(request.url);
-    const page = parseInt(url.searchParams.get("page") || "1");
-    const limit = parseInt(url.searchParams.get("limit") || "50");
+    const page = Number.parseInt(url.searchParams.get("page") || "1");
+    const limit = Number.parseInt(url.searchParams.get("limit") || "50");
     const skip = (page - 1) * limit;
 
     // Get total count first

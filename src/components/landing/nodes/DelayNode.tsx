@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useState, useEffect } from 'react';
-import { Handle, Position, NodeProps } from 'reactflow';
+import { Handle, Position, type NodeProps } from 'reactflow';
 import { motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { Circle } from 'lucide-react';

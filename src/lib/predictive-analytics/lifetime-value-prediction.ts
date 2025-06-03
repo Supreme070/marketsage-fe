@@ -32,7 +32,7 @@ export interface ValueSegment {
  */
 export async function predictContactLTV(
   contactId: string, 
-  timeframeMonths: number = 12
+  timeframeMonths = 12
 ): Promise<LTVPredictionResult> {
   try {
     logger.info(`Generating LTV prediction for contact ${contactId} over ${timeframeMonths} months`);
@@ -140,7 +140,7 @@ export async function predictContactLTV(
  */
 export async function batchPredictLTV(
   segmentId?: string, 
-  timeframeMonths: number = 12
+  timeframeMonths = 12
 ): Promise<{ count: number; totalValue: number; averageValue: number }> {
   try {
     // Get contacts to process, using segment if provided

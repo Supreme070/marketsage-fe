@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { generateVisitorFingerprint, trackAnonymousVisitor } from '@/lib/leadpulse/visitorTracking';
 import { logger } from '@/lib/logger';
 import prisma from '@/lib/db/prisma';

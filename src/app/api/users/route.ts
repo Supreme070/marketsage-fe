@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { hash } from "bcrypt";
 import prisma from "@/lib/db/prisma";
-import { DockerSafeUserCreate } from "@/lib/types/prisma";
+import type { DockerSafeUserCreate } from "@/lib/types/prisma";
 import { 
   handleApiError, 
   unauthorized, 

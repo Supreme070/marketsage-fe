@@ -1,7 +1,7 @@
 "use client";
 
 import React, { forwardRef } from "react";
-import { VariantProps, cva } from "class-variance-authority";
+import { type VariantProps, cva } from "class-variance-authority";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -96,7 +96,7 @@ const Shimmer = () => (
       }}
       transition={{
         duration: 1.5,
-        repeat: Infinity,
+        repeat: Number.POSITIVE_INFINITY,
         repeatDelay: 5,
         ease: "easeInOut",
       }}

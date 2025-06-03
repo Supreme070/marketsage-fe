@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { processFormSubmission } from '@/lib/leadpulse/formBuilder';
 import { convertVisitorToContact, updateVisitorEngagement } from '@/lib/leadpulse/visitorTracking';
 import { logger } from '@/lib/logger';

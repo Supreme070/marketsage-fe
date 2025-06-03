@@ -123,7 +123,7 @@ export default function AutomatedOrchestrationPage() {
               {/* Central Decision Hub */}
               <motion.div
                 animate={{ rotate: [0, 360] }}
-                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                transition={{ duration: 20, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
                 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 bg-gradient-to-br from-emerald-500 to-blue-500 rounded-full flex items-center justify-center opacity-60"
               >
                 <Cpu className="h-6 w-6 text-white" />
@@ -146,7 +146,7 @@ export default function AutomatedOrchestrationPage() {
                     transform: 'translate(-50%,-50%)'
                   }}
                   animate={{ scale: [0.6, 1.2, 0.6], opacity: [0.5, 1, 0.5] }}
-                  transition={{ repeat: Infinity, duration: 3, delay: idx * 0.3, ease: "easeInOut" }}
+                  transition={{ repeat: Number.POSITIVE_INFINITY, duration: 3, delay: idx * 0.3, ease: "easeInOut" }}
                 />
               ))}
             </div>
@@ -250,7 +250,7 @@ export default function AutomatedOrchestrationPage() {
                         }}
                         transition={{ 
                           duration: 6, 
-                          repeat: Infinity,
+                          repeat: Number.POSITIVE_INFINITY,
                           ease: "easeInOut"
                         }}
                         className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-blue-500 rounded-full opacity-60 flex items-center justify-center"
@@ -282,7 +282,7 @@ export default function AutomatedOrchestrationPage() {
                         }}
                         transition={{
                           duration: 3,
-                          repeat: Infinity,
+                          repeat: Number.POSITIVE_INFINITY,
                           delay: index * 0.5,
                         }}
                       >
@@ -318,7 +318,7 @@ export default function AutomatedOrchestrationPage() {
                             animate={{ pathLength: 1 }}
                             transition={{ 
                               duration: 2, 
-                              repeat: Infinity,
+                              repeat: Number.POSITIVE_INFINITY,
                               delay: index * 0.3
                             }}
                           />

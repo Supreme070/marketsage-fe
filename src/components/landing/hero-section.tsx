@@ -159,7 +159,7 @@ export function HeroSection() {
                     className="without-text font-bold"
                     initial={{ opacity: 0.7 }}
                     animate={{ opacity: isHighlightGlowing ? [0.7, 1, 0.7] : 0.7 }}
-                    transition={{ duration: 2, repeat: Infinity, repeatType: "reverse" }}
+                    transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, repeatType: "reverse" }}
                   >
                     {highlightedText.without}
                   </motion.span>
@@ -168,7 +168,7 @@ export function HeroSection() {
                     className="code-text font-bold"
                     initial={{ opacity: 0.7 }}
                     animate={{ opacity: isHighlightGlowing ? [0.7, 1, 0.7] : 0.7 }}
-                    transition={{ duration: 2, repeat: Infinity, repeatType: "reverse", delay: 0.5 }}
+                    transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, repeatType: "reverse", delay: 0.5 }}
                   >
                     {highlightedText.code}
                   </motion.span>
@@ -276,7 +276,7 @@ export function HeroSection() {
                         opacity: [0.7, 1, 0.7]
                       }}
                       transition={{ 
-                        repeat: Infinity, 
+                        repeat: Number.POSITIVE_INFINITY, 
                         repeatType: "reverse", 
                         duration: 1.5
                       }}
@@ -524,7 +524,7 @@ export function HeroSection() {
                         scale: [0.8, 1.2, 0.8]
                       }}
                       transition={{ 
-                        repeat: Infinity, 
+                        repeat: Number.POSITIVE_INFINITY, 
                         duration: 1.5, 
                         repeatDelay: 3,
                         ease: "easeInOut"
@@ -539,7 +539,7 @@ export function HeroSection() {
                         scale: [0.8, 1.2, 0.8]
                       }}
                       transition={{ 
-                        repeat: Infinity, 
+                        repeat: Number.POSITIVE_INFINITY, 
                         duration: 1.5, 
                         repeatDelay: 3,
                         delay: 1.5,
@@ -557,7 +557,7 @@ export function HeroSection() {
                         scale: [0.8, 1.2, 0.8]
                       }}
                       transition={{ 
-                        repeat: Infinity, 
+                        repeat: Number.POSITIVE_INFINITY, 
                         duration: 1.2, 
                         repeatDelay: 2.5, 
                         delay: 1,
@@ -573,7 +573,7 @@ export function HeroSection() {
                         scale: [0.8, 1.2, 0.8]
                       }}
                       transition={{ 
-                        repeat: Infinity, 
+                        repeat: Number.POSITIVE_INFINITY, 
                         duration: 1.2, 
                         repeatDelay: 2.5, 
                         delay: 2.2,
@@ -591,7 +591,7 @@ export function HeroSection() {
                         scale: [0.8, 1.2, 0.8]
                       }}
                       transition={{ 
-                        repeat: Infinity, 
+                        repeat: Number.POSITIVE_INFINITY, 
                         duration: 1.2, 
                         repeatDelay: 3.5, 
                         delay: 1.5,
@@ -609,7 +609,7 @@ export function HeroSection() {
                         scale: [0.8, 1.2, 0.8]
                       }}
                       transition={{ 
-                        repeat: Infinity, 
+                        repeat: Number.POSITIVE_INFINITY, 
                         duration: 1.3, 
                         repeatDelay: 4, 
                         delay: 1.7,
@@ -627,7 +627,7 @@ export function HeroSection() {
                         scale: [0.8, 1.2, 0.8]
                       }}
                       transition={{ 
-                        repeat: Infinity, 
+                        repeat: Number.POSITIVE_INFINITY, 
                         duration: 1.3, 
                         repeatDelay: 4, 
                         delay: 2.8,
@@ -648,7 +648,7 @@ export function HeroSection() {
                       }}
                       transition={{
                         duration: 2,
-                        repeat: Infinity,
+                        repeat: Number.POSITIVE_INFINITY,
                         repeatType: "reverse",
                         ease: "easeInOut"
                       }}
@@ -661,7 +661,7 @@ export function HeroSection() {
                       }}
                       transition={{
                         duration: 2,
-                        repeat: Infinity,
+                        repeat: Number.POSITIVE_INFINITY,
                         repeatType: "reverse",
                         ease: "easeInOut",
                         delay: 0.5
@@ -675,7 +675,7 @@ export function HeroSection() {
                       }}
                       transition={{
                         duration: 2,
-                        repeat: Infinity,
+                        repeat: Number.POSITIVE_INFINITY,
                         repeatType: "reverse",
                         ease: "easeInOut",
                         delay: 1
@@ -689,7 +689,7 @@ export function HeroSection() {
                       }}
                       transition={{
                         duration: 2,
-                        repeat: Infinity,
+                        repeat: Number.POSITIVE_INFINITY,
                         repeatType: "reverse",
                         ease: "easeInOut",
                         delay: 1.5

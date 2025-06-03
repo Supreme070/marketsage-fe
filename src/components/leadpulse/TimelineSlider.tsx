@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { PlayCircle, PauseCircle, StepForward, StepBack, Clock } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { motion } from 'framer-motion';
 
 interface TimelineSliderProps {
@@ -22,12 +22,31 @@ export default function TimelineSlider({
 }: TimelineSliderProps) {
   const [currentValue, setCurrentValue] = useState(100); // 100 means current time
   const [currentTime, setCurrentTime] = useState<Date>(endTime);
+  const [liveMode, setLiveMode] = useState(true); // Track if we're in live mode
   const totalDuration = endTime.getTime() - startTime.getTime();
+  
+  // Update end time in live mode
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (liveMode) {
+      interval = setInterval(() => {
+        const now = new Date();
+        setCurrentTime(now);
+        onTimeChange(now);
+      }, 1000); // Update every second in live mode
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [liveMode, onTimeChange]);
   
   // Handle slider change
   const handleSliderChange = (value: number[]) => {
     const newValue = value[0];
     setCurrentValue(newValue);
+    setLiveMode(newValue === 100); // Live mode when slider is at 100
     
     // Calculate the corresponding time
     const timeOffset = (newValue / 100) * totalDuration;
@@ -44,6 +63,7 @@ export default function TimelineSlider({
       interval = setInterval(() => {
         const newValue = Math.min(currentValue + 1, 100);
         setCurrentValue(newValue);
+        setLiveMode(newValue === 100);
         
         const timeOffset = (newValue / 100) * totalDuration;
         const newTime = new Date(startTime.getTime() + timeOffset);
@@ -66,6 +86,7 @@ export default function TimelineSlider({
   const handleStepBack = () => {
     const newValue = Math.max(currentValue - 15, 0);
     setCurrentValue(newValue);
+    setLiveMode(false);
     
     const timeOffset = (newValue / 100) * totalDuration;
     const newTime = new Date(startTime.getTime() + timeOffset);
@@ -77,6 +98,7 @@ export default function TimelineSlider({
   const handleStepForward = () => {
     const newValue = Math.min(currentValue + 15, 100);
     setCurrentValue(newValue);
+    setLiveMode(newValue === 100);
     
     const timeOffset = (newValue / 100) * totalDuration;
     const newTime = new Date(startTime.getTime() + timeOffset);
@@ -86,11 +108,15 @@ export default function TimelineSlider({
   
   // Format the displayed time
   const formatTimeDisplay = (time: Date) => {
+    if (liveMode) {
+      return 'Live';
+    }
+    
     const now = new Date();
     const isToday = time.toDateString() === now.toDateString();
     
     if (isToday) {
-      return format(time, "h:mm a");
+      return formatDistanceToNow(time, { addSuffix: true });
     }
     return format(time, "MMM d, h:mm a");
   };
@@ -99,12 +125,12 @@ export default function TimelineSlider({
     <div className="w-full">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center">
-          <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
+          <Clock className={`h-4 w-4 mr-1 ${liveMode ? 'text-green-500 animate-pulse' : 'text-muted-foreground'}`} />
           <motion.span
             key={currentTime.getTime()}
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-sm font-medium"
+            className={`text-sm font-medium ${liveMode ? 'text-green-500' : ''}`}
           >
             {formatTimeDisplay(currentTime)}
           </motion.span>
@@ -126,6 +152,7 @@ export default function TimelineSlider({
             size="icon" 
             className="h-8 w-8"
             onClick={onPlayToggle}
+            disabled={liveMode}
           >
             {isPlaying ? (
               <PauseCircle className="h-5 w-5" />
@@ -156,11 +183,12 @@ export default function TimelineSlider({
           max={100}
           step={1}
           onValueChange={handleSliderChange}
+          className={liveMode ? 'slider-live' : ''}
         />
         
         <div className="flex justify-between text-xs text-muted-foreground mt-1">
-          <span>{format(startTime, "MMM d")}</span>
-          <span>{format(endTime, "MMM d")}</span>
+          <span>{format(startTime, "MMM d, h:mm a")}</span>
+          <span>{liveMode ? 'Now' : format(endTime, "MMM d, h:mm a")}</span>
         </div>
       </div>
     </div>

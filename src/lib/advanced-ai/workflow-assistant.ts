@@ -8,7 +8,7 @@
 
 import prisma from '@/lib/db/prisma';
 import { logger } from '@/lib/logger';
-import { Node, Edge } from 'reactflow';
+import type { Node, Edge } from 'reactflow';
 
 /**
  * Types of workflow nodes

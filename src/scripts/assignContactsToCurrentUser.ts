@@ -36,7 +36,7 @@ async function promptForUser(): Promise<string> {
   
   return new Promise((resolve) => {
     rl.question("Enter the number of the user (1-4): ", (answer) => {
-      const choice = parseInt(answer, 10);
+      const choice = Number.parseInt(answer, 10);
       if (isNaN(choice) || choice < 1 || choice > availableUsers.length) {
         console.log("Invalid choice. Using default (anita@marketsage.africa).");
         resolve("anita@marketsage.africa");

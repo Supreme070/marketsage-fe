@@ -194,7 +194,7 @@ export function ComparisonSection() {
 
   const isLight = currentTheme === "light";
 
-  const renderCheckmark = (value: boolean | string, isMarketSage: boolean = false) => {
+  const renderCheckmark = (value: boolean | string, isMarketSage = false) => {
     if (value === true) {
       return (
         <div className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${

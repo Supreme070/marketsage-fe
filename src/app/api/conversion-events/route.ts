@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/db/prisma";
@@ -7,7 +7,7 @@ import { z } from "zod";
 import { 
   createConversionEvent, 
   getConversionEvents, 
-  ConversionEventData 
+  type ConversionEventData 
 } from "@/lib/enhanced-conversions";
 import { 
   handleApiError, 

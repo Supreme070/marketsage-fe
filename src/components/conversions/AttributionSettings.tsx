@@ -107,7 +107,7 @@ export default function AttributionSettings() {
   };
 
   const handleCustomWeightChange = (position: 'first' | 'middle' | 'last', value: string) => {
-    const numValue = parseFloat(value);
+    const numValue = Number.parseFloat(value);
     
     if (isNaN(numValue) || numValue < 0 || numValue > 1) {
       return;

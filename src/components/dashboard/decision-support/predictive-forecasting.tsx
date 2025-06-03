@@ -39,16 +39,16 @@ export function PredictiveForecasting() {
     setIsLoading(true);
     
     const generateForecastData = () => {
-      const days = parseInt(timeframe);
+      const days = Number.parseInt(timeframe);
       const data: ForecastData[] = [];
       const startDate = new Date();
       
       // Base values
-      let baseEngagement = 65;
-      let baseRevenue = 485000;
-      let baseAudience = 12500;
-      let baseOpenRate = 22.5;
-      let baseConversion = 1.8;
+      const baseEngagement = 65;
+      const baseRevenue = 485000;
+      const baseAudience = 12500;
+      const baseOpenRate = 22.5;
+      const baseConversion = 1.8;
 
       // Trends and seasonality
       const weeklyPattern = [1.1, 1.2, 1.15, 1.0, 0.95, 0.85, 0.9]; // Mon-Sun multipliers
@@ -129,7 +129,7 @@ export function PredictiveForecasting() {
       action: "Schedule important campaigns on high-engagement days."
     });
 
-    if (parseInt(timeframe) > 30) {
+    if (Number.parseInt(timeframe) > 30) {
       insights.push({
         type: "negative",
         importance: "medium",

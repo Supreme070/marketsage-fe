@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { handleApiError, unauthorized } from "@/lib/errors";
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     
     // Get query parameters
     const searchParams = request.nextUrl.searchParams;
-    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 50;
+    const limit = searchParams.get('limit') ? Number.parseInt(searchParams.get('limit')!) : 50;
     const includeRead = searchParams.get('includeRead') === 'true';
     const category = searchParams.get('category') || undefined;
     const type = searchParams.get('type') || undefined;

@@ -296,10 +296,10 @@ export default function CommandCenterDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{dashboardData.livePulse.activeVisitors}</div>
-            <p className="text-xs text-muted-foreground flex items-center mt-1">
+            <div className="text-xs text-muted-foreground flex items-center mt-1">
               <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
               Live count
-            </p>
+            </div>
           </CardContent>
         </Card>
 

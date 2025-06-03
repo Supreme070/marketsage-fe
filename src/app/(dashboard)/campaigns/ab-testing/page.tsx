@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Beaker, Mail, MessageSquare, MessageCircle, PlusCircle, Loader2, AlertCircle } from "lucide-react";
-import { ABTest, getABTests } from "@/lib/ab-testing-service";
+import { type ABTest, getABTests } from "@/lib/ab-testing-service";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";

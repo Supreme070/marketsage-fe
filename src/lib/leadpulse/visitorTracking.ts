@@ -159,7 +159,7 @@ export async function recordTouchpoint(
 export async function updateVisitorEngagement(
   visitorId: string,
   action: 'PAGE_VIEW' | 'FORM_VIEW' | 'FORM_START' | 'FORM_SUBMIT' | 'CTA_CLICK' | 'RETURN_VISIT' | 'TIME_ON_PAGE' | 'SCROLL_DEPTH',
-  weight: number = 1
+  weight = 1
 ) {
   // Define base scores for different actions
   const actionScores: Record<string, number> = {

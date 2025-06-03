@@ -108,7 +108,7 @@ function getEmailProvider(): EmailProvider {
     case 'smtp':
       return new SmtpEmailProvider({
         host: process.env.SMTP_HOST || 'localhost',
-        port: parseInt(process.env.SMTP_PORT || '25'),
+        port: Number.parseInt(process.env.SMTP_PORT || '25'),
         secure: process.env.SMTP_SECURE === 'true',
         auth: {
           user: process.env.SMTP_USER,
@@ -175,7 +175,7 @@ export async function sendTrackedEmail(
     
     // Personalize the content
     let personalizedHtml = personalizeContent(options.html, contact);
-    let personalizedText = options.text ? personalizeContent(options.text, contact) : undefined;
+    const personalizedText = options.text ? personalizeContent(options.text, contact) : undefined;
     
     // Add tracking pixel for open tracking
     personalizedHtml = addTrackingPixel(personalizedHtml, contact.id, campaignId);

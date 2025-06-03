@@ -11,7 +11,7 @@
  * 🎯 Error handling
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { SupremeAIv3, type SupremeAIv3Task } from '@/lib/ai/supreme-ai-v3-engine';
 import { logger } from '@/lib/logger';
 

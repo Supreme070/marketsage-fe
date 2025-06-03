@@ -1,4 +1,4 @@
-import { PrismaClient, ContactStatus } from "@prisma/client";
+import { PrismaClient, type ContactStatus } from "@prisma/client";
 import * as dotenv from "dotenv";
 import { randomUUID } from "crypto";
 

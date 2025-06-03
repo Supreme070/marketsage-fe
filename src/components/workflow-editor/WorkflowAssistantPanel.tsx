@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useReactFlow, Node, Edge } from "reactflow";
+import { useReactFlow, type Node, type Edge } from "reactflow";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -36,7 +36,7 @@ import {
   Zap,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { getWorkflowRecommendations, suggestWorkflowTemplate, WorkflowRecommendation, WorkflowGoal } from "@/lib/advanced-ai/workflow-assistant";
+import { getWorkflowRecommendations, suggestWorkflowTemplate, type WorkflowRecommendation, type WorkflowGoal } from "@/lib/advanced-ai/workflow-assistant";
 
 interface WorkflowAssistantPanelProps {
   isOpen?: boolean;

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { ActivityType, EntityType } from '@prisma/client';
 import prisma from '@/lib/db/prisma';
 import { logger } from '@/lib/logger';

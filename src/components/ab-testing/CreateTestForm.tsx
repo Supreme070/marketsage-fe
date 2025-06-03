@@ -21,7 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { createABTest, ABTestFormData, ABTestVariantFormData } from "@/lib/ab-testing-service";
+import { createABTest, type ABTestFormData, type ABTestVariantFormData } from "@/lib/ab-testing-service";
 import { Loader2, Plus, X, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -313,7 +313,7 @@ export function CreateTestForm({
                 step={5}
                 value={Math.round(formData.distributionPercent * 100)}
                 onChange={(e) => {
-                  const value = parseInt(e.target.value, 10);
+                  const value = Number.parseInt(e.target.value, 10);
                   if (value >= 10 && value <= 100) {
                     handleChange("distributionPercent", value / 100);
                   }

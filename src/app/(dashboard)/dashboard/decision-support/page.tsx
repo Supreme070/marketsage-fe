@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import { DecisionSupportDashboard } from "@/components/dashboard/decision-support/decision-support-dashboard";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 

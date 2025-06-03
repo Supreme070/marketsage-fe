@@ -7,7 +7,7 @@
 
 import prisma from '@/lib/db/prisma';
 import { logger } from '@/lib/logger';
-import { ActivityType } from '@prisma/client';
+import type { ActivityType } from '@prisma/client';
 
 // Types for segmentation module
 export interface SegmentRule {
@@ -199,7 +199,7 @@ async function estimateSegmentSize(rules: SegmentDefinition): Promise<number> {
           // Parse value like "30 days"
           const dayMatch = String(rule.value).match(/(\d+)\s*days/);
           if (dayMatch) {
-            const days = parseInt(dayMatch[1]);
+            const days = Number.parseInt(dayMatch[1]);
             whereConditions.push(`
               (SELECT MAX("timestamp") FROM "EmailActivity" 
                WHERE "EmailActivity"."contactId" = "Contact"."id")
@@ -211,7 +211,7 @@ async function estimateSegmentSize(rules: SegmentDefinition): Promise<number> {
         case 'signup_date':
           const signupDayMatch = String(rule.value).match(/(\d+)\s*days/);
           if (signupDayMatch) {
-            const days = parseInt(signupDayMatch[1]);
+            const days = Number.parseInt(signupDayMatch[1]);
             whereConditions.push(`
               "Contact"."createdAt" ${getOperatorSQL(rule.operator)} NOW() - INTERVAL '${days} days'
             `);
@@ -274,8 +274,8 @@ function getOperatorSQL(operator: string): string {
  */
 export async function getContactsInSegment(
   segmentId: string,
-  limit: number = 100,
-  offset: number = 0
+  limit = 100,
+  offset = 0
 ): Promise<Contact[]> {
   try {
     // Get segment definition
@@ -314,7 +314,7 @@ export async function getContactsInSegment(
           // Parse value like "30 days"
           const dayMatch = String(rule.value).match(/(\d+)\s*days/);
           if (dayMatch) {
-            const days = parseInt(dayMatch[1]);
+            const days = Number.parseInt(dayMatch[1]);
             whereConditions.push(`
               (SELECT MAX("timestamp") FROM "EmailActivity" 
                WHERE "EmailActivity"."contactId" = "Contact"."id")
@@ -326,7 +326,7 @@ export async function getContactsInSegment(
         case 'signup_date':
           const signupDayMatch = String(rule.value).match(/(\d+)\s*days/);
           if (signupDayMatch) {
-            const days = parseInt(signupDayMatch[1]);
+            const days = Number.parseInt(signupDayMatch[1]);
             whereConditions.push(`
               "Contact"."createdAt" ${getOperatorSQL(rule.operator)} NOW() - INTERVAL '${days} days'
             `);

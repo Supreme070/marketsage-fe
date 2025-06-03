@@ -708,7 +708,7 @@ export default function NewWorkflowPage() {
         };
       } else if (template && template.id !== 'blank') {
         // For other templates or backup, add a simple trigger node
-        let triggerNode = {
+        const triggerNode = {
           id: 'trigger-1',
           type: 'triggerNode',
           position: { x: 250, y: 100 },

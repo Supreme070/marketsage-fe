@@ -230,7 +230,7 @@ export default function LeadPulseIntelligencePage() {
                           strokeDasharray="2,2"
                           initial={{ pathLength: 0 }}
                           animate={{ pathLength: 1 }}
-                          transition={{ duration: 2, repeat: Infinity }}
+                          transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
                         />
                       ))}
                     </svg>

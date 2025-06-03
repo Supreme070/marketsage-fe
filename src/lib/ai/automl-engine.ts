@@ -37,12 +37,12 @@ export class AutoMLEngine {
     
     const m = features.length;
     const n = features[0].length;
-    let weights = Array(n).fill(0);
+    const weights = Array(n).fill(0);
     let bias = 0;
     let totalLoss = 0;
     
     for (let iter = 0; iter < iterations; iter++) {
-      let weightGradients = Array(n).fill(0);
+      const weightGradients = Array(n).fill(0);
       let biasGradient = 0;
       totalLoss = 0;
       
@@ -76,7 +76,7 @@ export class AutoMLEngine {
         return { value: avg, isLeaf: true };
       }
       
-      let bestSplit = { feature: 0, threshold: 0, gain: -Infinity };
+      let bestSplit = { feature: 0, threshold: 0, gain: Number.NEGATIVE_INFINITY };
       
       for (let featureIdx = 0; featureIdx < features[0].length; featureIdx++) {
         const values = indices.map(i => features[i][featureIdx]).sort((a, b) => a - b);
@@ -104,7 +104,7 @@ export class AutoMLEngine {
         }
       }
       
-      if (bestSplit.gain === -Infinity) {
+      if (bestSplit.gain === Number.NEGATIVE_INFINITY) {
         const avg = indices.reduce((sum, i) => sum + targets[i], 0) / indices.length;
         return { value: avg, isLeaf: true };
       }

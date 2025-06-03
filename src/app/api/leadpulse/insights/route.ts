@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 
 interface InsightItem {
   id: string;
@@ -157,7 +157,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type'); // Filter by insight type
     const importance = searchParams.get('importance'); // Filter by importance
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const limit = Number.parseInt(searchParams.get('limit') || '10');
     
     let filteredInsights = [...insightsDB];
     

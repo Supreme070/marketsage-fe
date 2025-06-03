@@ -5,7 +5,7 @@
  * with emails, SMS, WhatsApp messages, and other content.
  */
 
-import { ActivityType, EntityType } from '@prisma/client';
+import type { ActivityType, EntityType } from '@prisma/client';
 
 /**
  * Get a tracking URL for email links

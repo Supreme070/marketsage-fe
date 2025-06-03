@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from 'react';
-import { Handle, Position, NodeProps } from 'reactflow';
+import { Handle, Position, type NodeProps } from 'reactflow';
 import { motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
 
@@ -58,7 +58,7 @@ function ActionNode({ data, isConnectable }: NodeProps) {
           animate={{ width: "100%" }}
           transition={{ 
             duration: 1.5, 
-            repeat: Infinity, 
+            repeat: Number.POSITIVE_INFINITY, 
             repeatType: "reverse",
             ease: "easeInOut"
           }}

@@ -123,7 +123,7 @@ export default function RevenueIntelligencePage() {
               {/* Hidden Revenue */}
               <motion.div
                 animate={{ scale: [1, 1.1, 1], opacity: [0.8, 1, 0.8] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
                 className="w-28 h-6 bg-gradient-to-r from-red-500 to-orange-500 rounded-t-full flex items-center justify-center opacity-60"
               >
                 <span className="text-[10px] text-white font-bold">Hidden</span>
@@ -131,7 +131,7 @@ export default function RevenueIntelligencePage() {
               {/* Detection */}
               <motion.div
                 animate={{ rotate: [0, 6, -6, 0], scale: [0.9, 1.1, 0.9] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
+                transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut", delay: 0.3 }}
                 className="w-20 h-6 bg-gradient-to-r from-orange-500 to-yellow-500 flex items-center justify-center opacity-70"
               >
                 <Eye className="h-3 w-3 text-white" />
@@ -139,7 +139,7 @@ export default function RevenueIntelligencePage() {
               {/* Recovered */}
               <motion.div
                 animate={{ scale: [1, 1.2, 1], opacity: [0.6, 1, 0.6] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.6 }}
+                transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut", delay: 0.6 }}
                 className="w-14 h-6 bg-gradient-to-r from-yellow-500 to-green-500 rounded-b-full flex items-center justify-center opacity-80"
               >
                 <span className="text-[10px] text-white font-bold">Recovered</span>
@@ -247,7 +247,7 @@ export default function RevenueIntelligencePage() {
                         }}
                         transition={{ 
                           duration: 3, 
-                          repeat: Infinity,
+                          repeat: Number.POSITIVE_INFINITY,
                           ease: "easeInOut"
                         }}
                         className="w-32 h-8 bg-gradient-to-r from-red-500 to-orange-500 rounded-t-full opacity-60 flex items-center justify-center mb-4"
@@ -263,7 +263,7 @@ export default function RevenueIntelligencePage() {
                         }}
                         transition={{ 
                           duration: 4, 
-                          repeat: Infinity,
+                          repeat: Number.POSITIVE_INFINITY,
                           ease: "easeInOut",
                           delay: 0.5
                         }}
@@ -280,7 +280,7 @@ export default function RevenueIntelligencePage() {
                         }}
                         transition={{ 
                           duration: 3, 
-                          repeat: Infinity,
+                          repeat: Number.POSITIVE_INFINITY,
                           ease: "easeInOut",
                           delay: 1
                         }}
@@ -306,7 +306,7 @@ export default function RevenueIntelligencePage() {
                           transition={{ 
                             duration: 0.8, 
                             delay: index * 0.2,
-                            y: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                            y: { duration: 2, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }
                           }}
                           className="absolute"
                           style={{

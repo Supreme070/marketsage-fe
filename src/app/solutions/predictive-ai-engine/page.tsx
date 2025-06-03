@@ -124,7 +124,7 @@ export default function PredictiveAIEnginePage() {
               {/* Central AI node */}
               <motion.div
                 animate={{ rotate: [0, 360], scale: [1, 1.1, 1] }}
-                transition={{ repeat: Infinity, duration: 6, ease: "linear" }}
+                transition={{ repeat: Number.POSITIVE_INFINITY, duration: 6, ease: "linear" }}
                 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center opacity-60"
               >
                 <Brain className="h-6 w-6 text-white" />
@@ -136,7 +136,7 @@ export default function PredictiveAIEnginePage() {
                   className="absolute w-2.5 h-2.5 bg-purple-400 rounded-full"
                   style={{ left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%` }}
                   animate={{ scale: [0.6, 1.2, 0.6], opacity: [0.4, 1, 0.4] }}
-                  transition={{ repeat: Infinity, duration: 3, delay: i * 0.2, ease: "easeInOut" }}
+                  transition={{ repeat: Number.POSITIVE_INFINITY, duration: 3, delay: i * 0.2, ease: "easeInOut" }}
                 />
               ))}
             </div>
@@ -240,7 +240,7 @@ export default function PredictiveAIEnginePage() {
                         }}
                         transition={{ 
                           duration: 4, 
-                          repeat: Infinity,
+                          repeat: Number.POSITIVE_INFINITY,
                           ease: "easeInOut"
                         }}
                         className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full opacity-50 flex items-center justify-center"
@@ -264,7 +264,7 @@ export default function PredictiveAIEnginePage() {
                         }}
                         transition={{
                           duration: 2,
-                          repeat: Infinity,
+                          repeat: Number.POSITIVE_INFINITY,
                           delay: index * 0.25,
                         }}
                       >

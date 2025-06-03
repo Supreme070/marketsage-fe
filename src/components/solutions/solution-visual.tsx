@@ -45,20 +45,20 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
               className="absolute top-[30%] left-[25%] w-20 h-16 rounded-tl-xl rounded-tr-xl rounded-br-xl bg-blue-500/80"
               initial={{ opacity: 0, scale: 0.8, x: -20 }}
               animate={{ opacity: 1, scale: 1, x: 0 }}
-              transition={{ duration: 1.2, repeat: Infinity, repeatType: "reverse" }}
+              transition={{ duration: 1.2, repeat: Number.POSITIVE_INFINITY, repeatType: "reverse" }}
             >
               <div className="p-3">
                 <motion.div 
                   className="w-full h-2 bg-white/80 rounded-full mb-2"
                   initial={{ width: "30%" }}
                   animate={{ width: "80%" }}
-                  transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse" }}
+                  transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, repeatType: "reverse" }}
                 />
                 <motion.div 
                   className="w-full h-2 bg-white/80 rounded-full"
                   initial={{ width: "60%" }}
                   animate={{ width: "40%" }}
-                  transition={{ duration: 2, repeat: Infinity, repeatType: "reverse" }}
+                  transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, repeatType: "reverse" }}
                 />
               </div>
             </motion.div>
@@ -68,7 +68,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
               className="absolute top-[20%] right-[20%] w-24 h-16 bg-white/90 rounded-md shadow-lg"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse", delay: 0.3 }}
+              transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, repeatType: "reverse", delay: 0.3 }}
             >
               <div className="p-2">
                 <div className="h-2 bg-blue-400 rounded-full mb-1.5" />
@@ -86,20 +86,20 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
               className="absolute bottom-[25%] left-[35%] w-16 h-14 rounded-tl-xl rounded-tr-xl rounded-bl-xl bg-green-500/80"
               initial={{ opacity: 0, scale: 0.8, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 1.8, repeat: Infinity, repeatType: "reverse", delay: 0.6 }}
+              transition={{ duration: 1.8, repeat: Number.POSITIVE_INFINITY, repeatType: "reverse", delay: 0.6 }}
             >
               <div className="p-2">
                 <motion.div 
                   className="w-full h-1.5 bg-white/80 rounded-full mb-1.5"
                   initial={{ width: "60%" }}
                   animate={{ width: "80%" }}
-                  transition={{ duration: 2, repeat: Infinity, repeatType: "reverse" }}
+                  transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, repeatType: "reverse" }}
                 />
                 <motion.div 
                   className="w-full h-1.5 bg-white/80 rounded-full"
                   initial={{ width: "40%" }}
                   animate={{ width: "60%" }}
-                  transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse" }}
+                  transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, repeatType: "reverse" }}
                 />
               </div>
             </motion.div>
@@ -109,7 +109,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
               className="w-24 h-24 rounded-full flex items-center justify-center relative"
               initial={{ rotate: 0 }}
               animate={{ rotate: 360 }}
-              transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+              transition={{ duration: 20, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
               style={{ backgroundColor: `${color}20` }}
             >
               <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: `${color}40` }}>
@@ -123,7 +123,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                   x: [0, 10, 0, -10, 0],
                   y: [0, -10, 0, 10, 0]
                 }}
-                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                transition={{ duration: 5, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
               >
                 <Mail className="w-3 h-3" />
               </motion.div>
@@ -134,7 +134,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                   x: [0, 10, 0, -10, 0],
                   y: [0, 10, 0, -10, 0]
                 }}
-                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                transition={{ duration: 6, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut", delay: 0.5 }}
               >
                 <MessageSquare className="w-3 h-3" />
               </motion.div>
@@ -145,7 +145,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                   x: [0, -10, 0, 10, 0],
                   y: [0, 10, 0, -10, 0]
                 }}
-                transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                transition={{ duration: 5.5, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut", delay: 1 }}
               >
                 <Phone className="w-3 h-3" />
               </motion.div>
@@ -161,7 +161,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                 fill="none"
                 initial={{ pathLength: 0, opacity: 0 }}
                 animate={{ pathLength: 1, opacity: 0.5 }}
-                transition={{ duration: 2, repeat: Infinity, repeatType: "loop" }}
+                transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, repeatType: "loop" }}
               />
               <motion.path 
                 d="M200,150 C220,170 240,160 280,130"
@@ -171,7 +171,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                 fill="none"
                 initial={{ pathLength: 0, opacity: 0 }}
                 animate={{ pathLength: 1, opacity: 0.5 }}
-                transition={{ duration: 2, delay: 0.3, repeat: Infinity, repeatType: "loop" }}
+                transition={{ duration: 2, delay: 0.3, repeat: Number.POSITIVE_INFINITY, repeatType: "loop" }}
               />
               <motion.path 
                 d="M200,150 C190,180 180,190 140,195"
@@ -181,7 +181,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                 fill="none"
                 initial={{ pathLength: 0, opacity: 0 }}
                 animate={{ pathLength: 1, opacity: 0.5 }}
-                transition={{ duration: 2, delay: 0.6, repeat: Infinity, repeatType: "loop" }}
+                transition={{ duration: 2, delay: 0.6, repeat: Number.POSITIVE_INFINITY, repeatType: "loop" }}
               />
             </svg>
           </div>
@@ -220,7 +220,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                   `0 0 0 0px ${color}20`
                 ]
               }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
             >
               <Workflow className="w-10 h-10" style={{ color }} />
             </motion.div>
@@ -232,7 +232,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                 className="absolute top-[20%] left-[30%] w-14 h-14 bg-purple-600/90 rounded-lg shadow-lg flex items-center justify-center text-white"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 1.2, repeat: Infinity, repeatType: "reverse" }}
+                transition={{ duration: 1.2, repeat: Number.POSITIVE_INFINITY, repeatType: "reverse" }}
               >
                 <Mail className="w-6 h-6" />
               </motion.div>
@@ -242,7 +242,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                 className="absolute top-[30%] right-[25%] w-14 h-14 bg-blue-500/90 rounded-lg shadow-lg flex items-center justify-center text-white"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 1.2, delay: 0.4, repeat: Infinity, repeatType: "reverse" }}
+                transition={{ duration: 1.2, delay: 0.4, repeat: Number.POSITIVE_INFINITY, repeatType: "reverse" }}
               >
                 <Users className="w-6 h-6" />
               </motion.div>
@@ -252,7 +252,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                 className="absolute bottom-[25%] left-[25%] w-14 h-14 bg-green-500/90 rounded-lg shadow-lg flex items-center justify-center text-white"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 1.2, delay: 0.8, repeat: Infinity, repeatType: "reverse" }}
+                transition={{ duration: 1.2, delay: 0.8, repeat: Number.POSITIVE_INFINITY, repeatType: "reverse" }}
               >
                 <MessageSquare className="w-6 h-6" />
               </motion.div>
@@ -262,7 +262,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                 className="absolute bottom-[35%] right-[30%] w-14 h-14 bg-amber-500/90 rounded-lg shadow-lg flex items-center justify-center text-white"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 1.2, delay: 1.2, repeat: Infinity, repeatType: "reverse" }}
+                transition={{ duration: 1.2, delay: 1.2, repeat: Number.POSITIVE_INFINITY, repeatType: "reverse" }}
               >
                 <BarChart3 className="w-6 h-6" />
               </motion.div>
@@ -278,7 +278,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                   fill="none"
                   initial={{ pathLength: 0, opacity: 0 }}
                   animate={{ pathLength: 1, opacity: 0.7 }}
-                  transition={{ duration: 1.5, repeat: Infinity }}
+                  transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY }}
                 />
                 <motion.path 
                   d="M275,105 C250,120 225,135 200,150"
@@ -288,7 +288,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                   fill="none"
                   initial={{ pathLength: 0, opacity: 0 }}
                   animate={{ pathLength: 1, opacity: 0.7 }}
-                  transition={{ duration: 1.5, delay: 0.3, repeat: Infinity }}
+                  transition={{ duration: 1.5, delay: 0.3, repeat: Number.POSITIVE_INFINITY }}
                 />
                 <motion.path 
                   d="M125,210 C150,190 175,170 200,150"
@@ -298,7 +298,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                   fill="none"
                   initial={{ pathLength: 0, opacity: 0 }}
                   animate={{ pathLength: 1, opacity: 0.7 }}
-                  transition={{ duration: 1.5, delay: 0.6, repeat: Infinity }}
+                  transition={{ duration: 1.5, delay: 0.6, repeat: Number.POSITIVE_INFINITY }}
                 />
                 <motion.path 
                   d="M275,195 C250,180 225,165 200,150"
@@ -308,7 +308,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                   fill="none"
                   initial={{ pathLength: 0, opacity: 0 }}
                   animate={{ pathLength: 1, opacity: 0.7 }}
-                  transition={{ duration: 1.5, delay: 0.9, repeat: Infinity }}
+                  transition={{ duration: 1.5, delay: 0.9, repeat: Number.POSITIVE_INFINITY }}
                 />
                 
                 {/* Animated dots along paths to show data flow */}
@@ -318,7 +318,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                     cx: [125, 150, 175, 200],
                     cy: [90, 110, 130, 150],
                   }}
-                  transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+                  transition={{ duration: 1.2, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
                 />
                 <motion.circle
                   cx="0" cy="0" r="3" fill={color}
@@ -326,7 +326,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                     cx: [275, 250, 225, 200],
                     cy: [105, 120, 135, 150],
                   }}
-                  transition={{ duration: 1.2, delay: 0.3, repeat: Infinity, ease: "easeInOut" }}
+                  transition={{ duration: 1.2, delay: 0.3, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
                 />
                 <motion.circle
                   cx="0" cy="0" r="3" fill={color}
@@ -334,7 +334,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                     cx: [125, 150, 175, 200],
                     cy: [210, 190, 170, 150],
                   }}
-                  transition={{ duration: 1.2, delay: 0.6, repeat: Infinity, ease: "easeInOut" }}
+                  transition={{ duration: 1.2, delay: 0.6, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
                 />
                 <motion.circle
                   cx="0" cy="0" r="3" fill={color}
@@ -342,7 +342,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                     cx: [275, 250, 225, 200],
                     cy: [195, 180, 165, 150],
                   }}
-                  transition={{ duration: 1.2, delay: 0.9, repeat: Infinity, ease: "easeInOut" }}
+                  transition={{ duration: 1.2, delay: 0.9, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
                 />
               </svg>
             </div>
@@ -366,7 +366,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                       height: `${Math.random() * 100}%`
                     }}
                     animate={{ height: [`${20 + Math.random() * 80}%`, `${20 + Math.random() * 80}%`] }}
-                    transition={{ duration: 2, repeat: Infinity, repeatType: "reverse", delay: i * 0.1 }}
+                    transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, repeatType: "reverse", delay: i * 0.1 }}
                   ></motion.div>
                 ))}
               </div>
@@ -381,26 +381,26 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                 className="w-24 h-4 rounded-md"
                 style={{ backgroundColor: `${color}60` }}
                 animate={{ opacity: [0.6, 1, 0.6] }}
-                transition={{ duration: 2, repeat: Infinity }}
+                transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
               />
               <div className="flex space-x-2">
                 <motion.div 
                   className="w-4 h-4 rounded-full"
                   style={{ backgroundColor: "#10b981" }}
                   animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+                  transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, delay: 0.5 }}
                 />
                 <motion.div 
                   className="w-4 h-4 rounded-full"
                   style={{ backgroundColor: "#3b82f6" }}
                   animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ duration: 2, repeat: Infinity, delay: 0.7 }}
+                  transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, delay: 0.7 }}
                 />
                 <motion.div 
                   className="w-4 h-4 rounded-full"
                   style={{ backgroundColor: "#f59e0b" }}
                   animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ duration: 2, repeat: Infinity, delay: 0.9 }}
+                  transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, delay: 0.9 }}
                 />
               </div>
             </div>
@@ -494,7 +494,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                 y: [0, -10, 0],
                 x: [0, 5, 0]
               }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
             >
               <PieChart className="w-4 h-4 text-white" />
             </motion.div>
@@ -505,7 +505,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                 y: [0, 8, 0],
                 x: [0, -5, 0]
               }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+              transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut", delay: 1 }}
             >
               <BarChart3 className="w-3 h-3 text-white" />
             </motion.div>
@@ -566,7 +566,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                       }}
                       transition={{ 
                         duration: 3, 
-                        repeat: Infinity, 
+                        repeat: Number.POSITIVE_INFINITY, 
                         repeatType: "reverse", 
                         delay: i * 0.2
                       }}
@@ -695,7 +695,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                     cx: [200, 160, 120],
                     cy: [150, 120, 90],
                   }}
-                  transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
+                  transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, repeatDelay: 2 }}
                 />
                 
                 <motion.circle
@@ -704,7 +704,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                     cx: [200, 240, 280],
                     cy: [150, 120, 90],
                   }}
-                  transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2, delay: 0.5 }}
+                  transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, repeatDelay: 2, delay: 0.5 }}
                 />
                 
                 <motion.circle
@@ -713,7 +713,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                     cx: [200, 160, 120],
                     cy: [150, 180, 210],
                   }}
-                  transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2, delay: 1 }}
+                  transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, repeatDelay: 2, delay: 1 }}
                 />
                 
                 <motion.circle
@@ -722,7 +722,7 @@ export function SolutionVisual({ type, color }: SolutionVisualProps) {
                     cx: [200, 240, 280],
                     cy: [150, 180, 210],
                   }}
-                  transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2, delay: 1.5 }}
+                  transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, repeatDelay: 2, delay: 1.5 }}
                 />
               </svg>
               

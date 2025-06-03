@@ -3,11 +3,11 @@
 import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { VisitorLocation } from '@/lib/leadpulse/dataProvider';
+import type { VisitorLocation } from '@/lib/leadpulse/dataProvider';
 import { AnimatePresence, motion } from 'framer-motion';
 import { 
   GEO_HIERARCHY, 
-  GeoRegion, 
+  type GeoRegion, 
   getGeoRegionById, 
   getChildRegions,
   getCameraPositionForRegion,

@@ -86,7 +86,7 @@ class NeuralNetworkPredictor {
 class EnsemblePredictor {
   private models: NeuralNetworkPredictor[];
   
-  constructor(modelCount: number = 5) {
+  constructor(modelCount = 5) {
     this.models = Array(modelCount).fill(null).map(() => 
       new NeuralNetworkPredictor(10, 20, 5)
     );

@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient, WorkflowStatus } from "@prisma/client";
+import { type NextRequest, NextResponse } from "next/server";
+import { PrismaClient, type WorkflowStatus } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
@@ -99,7 +99,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    let body = await request.json();
+    const body = await request.json();
     
     // If the body contains nodes and edges, convert to definition
     if (body.nodes || body.edges) {

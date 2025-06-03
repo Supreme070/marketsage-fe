@@ -242,167 +242,97 @@ export default function VisitorPulseVisualization({
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-xl font-bold">Visitor Pulse</CardTitle>
-            <CardDescription>
-              Real-time visualization of visitor engagement
-            </CardDescription>
-          </div>
-          <div className="flex gap-1">
-            <Button 
-              variant={timeWindow === '1h' ? "default" : "outline"} 
-              size="sm"
-              onClick={() => setTimeWindow('1h')}
-            >
-              1h
-            </Button>
-            <Button 
-              variant={timeWindow === '24h' ? "default" : "outline"} 
-              size="sm"
-              onClick={() => setTimeWindow('24h')}
-            >
-              24h
-            </Button>
-            <Button 
-              variant={timeWindow === '7d' ? "default" : "outline"} 
-              size="sm"
-              onClick={() => setTimeWindow('7d')}
-            >
-              7d
-            </Button>
-            <Button 
-              variant={timeWindow === '30d' ? "default" : "outline"} 
-              size="sm"
-              onClick={() => setTimeWindow('30d')}
-            >
-              30d
-            </Button>
-          </div>
+    <div className="w-full h-full">
+      {isLoading ? (
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-pulse text-gray-400">Loading visitor data...</div>
         </div>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="flex items-center justify-center h-40">
-            <div className="animate-pulse">Loading visitor data...</div>
+      ) : (
+        <>
+          {/* Time Window Controls */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-sm text-gray-400">
+              Showing activity for {timeWindow}
+            </div>
+            <div className="flex gap-1">
+              {(['1h', '24h', '7d', '30d'] as const).map((window) => (
+                <Button 
+                  key={window}
+                  variant={timeWindow === window ? "secondary" : "ghost"} 
+                  size="sm"
+                  onClick={() => setTimeWindow(window)}
+                  className={`h-7 px-3 text-xs ${
+                    timeWindow === window 
+                      ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' 
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {window}
+                </Button>
+              ))}
+            </div>
           </div>
-        ) : (
-          <>
-            {/* Visitor selector */}
-            {data.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 mb-4">
-                {data.slice(0, 4).map((visitor, index) => (
-                  <motion.div
-                    key={visitor.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1, duration: 0.3 }}
-                    className={`p-3 rounded-md cursor-pointer transition-colors ${
-                      selectedVisitor === visitor.id 
-                        ? "bg-primary text-primary-foreground" 
-                        : "bg-secondary hover:bg-secondary/80"
-                    }`}
-                    onClick={() => {
-                      setSelectedVisitor(visitor.id);
-                      if (onSelectVisitor) onSelectVisitor(visitor.id);
-                    }}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      <div className="text-sm font-medium truncate">
-                        {visitor.fingerprint.substring(0, 8)}...
-                      </div>
-                      <Badge variant="outline" className="ml-auto">
-                        {visitor.engagementScore}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center text-xs mt-1">
-                      <Clock className="h-3 w-3 mr-1" />
-                      <span>{visitor.lastActive}</span>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
 
-            {/* Main stats */}
-            {visitorData ? (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <motion.div 
-                    className="bg-muted rounded-lg p-3"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <div className="flex items-center text-sm font-medium text-muted-foreground mb-1">
-                      <Activity className="mr-2 h-4 w-4" />
-                      Engagement Score
+          {/* Visitor selector */}
+          {data.length > 0 && (
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              {data.slice(0, 4).map((visitor, index) => (
+                <motion.div
+                  key={visitor.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1, duration: 0.3 }}
+                  className={`p-3 rounded-md cursor-pointer transition-colors border ${
+                    selectedVisitor === visitor.id 
+                      ? "bg-blue-600/20 border-blue-500/30 text-blue-300" 
+                      : "bg-gray-800/30 border-gray-700/30 hover:bg-gray-700/30 text-gray-300"
+                  }`}
+                  onClick={() => {
+                    setSelectedVisitor(visitor.id);
+                    if (onSelectVisitor) onSelectVisitor(visitor.id);
+                  }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    <div className="text-sm font-medium truncate">
+                      {visitor.fingerprint.substring(0, 8)}...
                     </div>
-                    <div className="text-2xl font-bold">
-                      {visitorData.engagementScore.toFixed(1)}
-                    </div>
-                  </motion.div>
-                  
-                  <motion.div 
-                    className="bg-muted rounded-lg p-3"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.3, delay: 0.1 }}
-                  >
-                    <div className="flex items-center text-sm font-medium text-muted-foreground mb-1">
-                      <TrendingUp className="mr-2 h-4 w-4" />
-                      Activity Count
-                    </div>
-                    <div className="text-2xl font-bold">
-                      {visitorData.pulseData.length}
-                    </div>
-                  </motion.div>
-                  
-                  <motion.div 
-                    className="bg-muted rounded-lg p-3"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.3, delay: 0.2 }}
-                  >
-                    <div className="flex items-center text-sm font-medium text-muted-foreground mb-1">
-                      <Clock className="mr-2 h-4 w-4" />
-                      Last Active
-                    </div>
-                    <motion.div 
-                      className="text-2xl font-bold"
-                      animate={visitorData.lastActive.includes('mins') || visitorData.lastActive.includes('just') ? {
-                        scale: [1, 1.02, 1],
-                        color: ['#000', '#4f46e5', '#000']
-                      } : {}}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        repeatType: "reverse"
-                      }}
+                    <Badge 
+                      variant="outline" 
+                      className={`ml-auto text-xs ${
+                        selectedVisitor === visitor.id 
+                          ? 'border-blue-400/50 text-blue-300' 
+                          : 'border-gray-600/50 text-gray-400'
+                      }`}
                     >
-                      {visitorData.lastActive}
-                    </motion.div>
-                  </motion.div>
-                </div>
+                      {visitor.engagementScore}%
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {visitor.location || 'Unknown'} • {visitor.lastActive}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
 
-                {/* Pulse visualization */}
-                {renderPulseGraph(visitorData.pulseData)}
-              </>
+          {/* Pulse visualization */}
+          <div className="h-[200px] relative">
+            {visitorData ? (
+              renderPulseGraph(visitorData.pulseData)
             ) : (
-              <div className="flex items-center justify-center h-40 text-muted-foreground">
-                {data.length === 0 
-                  ? "No visitor data available" 
-                  : "Select a visitor to view their activity pulse"}
+              <div className="flex items-center justify-center h-full border border-gray-700/30 rounded-lg bg-gray-800/20">
+                <div className="text-center text-gray-400">
+                  <Activity className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>Select a visitor to view their activity pulse</p>
+                </div>
               </div>
             )}
-          </>
-        )}
-      </CardContent>
-    </Card>
+          </div>
+        </>
+      )}
+    </div>
   );
 } 

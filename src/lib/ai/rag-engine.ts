@@ -5,7 +5,7 @@
  * Provides intelligent, context-aware responses about MarketSage features
  */
 
-import { vectorStore, Document } from './vector-store';
+import { vectorStore, type Document } from './vector-store';
 import { searchKnowledge } from './marketsage-knowledge-base';
 import { logger } from '@/lib/logger';
 
@@ -32,7 +32,7 @@ export interface RAGResult {
   confidence: number;
 }
 
-export async function ragQuery(question: string, maxDocs: number = 4): Promise<RAGResult> {
+export async function ragQuery(question: string, maxDocs = 4): Promise<RAGResult> {
   try {
     // Initialize vector store with MarketSage knowledge
     await vectorStore.initialize();

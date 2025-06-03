@@ -1,4 +1,4 @@
-import { useEffect, useRef, MutableRefObject } from 'react';
+import { useEffect, useRef, type MutableRefObject } from 'react';
 
 // Performance optimization for animations - checks device capability
 export const getPerformanceProfile = () => {
@@ -29,8 +29,8 @@ export const getPerformanceProfile = () => {
 
 // Creates modified animation settings based on performance profile
 export const getOptimizedSettings = (
-  defaultDuration: number = 1,
-  defaultStagger: number = 0.1
+  defaultDuration = 1,
+  defaultStagger = 0.1
 ) => {
   const profile = getPerformanceProfile();
   
@@ -90,7 +90,7 @@ export const useSmoothScrolling = () => {
 export const useScrollAnimation = (
   ref: MutableRefObject<HTMLElement | null>,
   onInView: Function,
-  threshold: number = 0.2
+  threshold = 0.2
 ) => {
   useEffect(() => {
     if (typeof window === 'undefined' || !ref.current) return;

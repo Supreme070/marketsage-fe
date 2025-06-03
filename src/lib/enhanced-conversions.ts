@@ -7,9 +7,9 @@
 
 import {
   AttributionModel,
-  ConversionCategory,
-  ConversionValueType,
-  EntityType,
+  type ConversionCategory,
+  type ConversionValueType,
+  type EntityType,
 } from '@prisma/client';
 import prisma from '@/lib/db/prisma';
 import { logger } from '@/lib/logger';

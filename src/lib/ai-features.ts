@@ -9,7 +9,7 @@
  */
 
 import prisma from '@/lib/db/prisma';
-import { ActivityType, EntityType } from '@prisma/client';
+import type { ActivityType, EntityType } from '@prisma/client';
 import { logger } from '@/lib/logger';
 
 // Enum to match the one in schema.prisma

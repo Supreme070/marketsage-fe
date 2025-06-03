@@ -6,7 +6,7 @@
  * winner selection.
  */
 
-import { ABTestMetric, ABTestStatus, ABTestType, EntityType } from '@prisma/client';
+import { ABTestMetric, ABTestStatus, type ABTestType, type EntityType } from '@prisma/client';
 import prisma from '@/lib/db/prisma';
 import { logger } from '@/lib/logger';
 import { randomUUID } from 'crypto';
@@ -337,7 +337,7 @@ export async function assignContactToVariant(
     // Using the contactId as a consistent seed for randomization
     // This ensures the same contact always gets the same variant
     const hash = await hashString(contactId + testId);
-    const hashValue = parseInt(hash.substring(0, 8), 16) / 0xFFFFFFFF; // Normalize to 0-1
+    const hashValue = Number.parseInt(hash.substring(0, 8), 16) / 0xFFFFFFFF; // Normalize to 0-1
     
     // First decide if contact is in test group based on distribution percent
     if (hashValue > test.distributionPercent) {
@@ -346,7 +346,7 @@ export async function assignContactToVariant(
     
     // Now assign to a specific variant based on traffic distribution
     let cumulativeProbability = 0;
-    const normalizedHash = (parseInt(hash.substring(8, 16), 16) / 0xFFFFFFFF); // Another 0-1 value
+    const normalizedHash = (Number.parseInt(hash.substring(8, 16), 16) / 0xFFFFFFFF); // Another 0-1 value
     
     for (const variant of test.variants) {
       cumulativeProbability += variant.trafficPercent;

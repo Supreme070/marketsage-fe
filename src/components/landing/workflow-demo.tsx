@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import type React from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import ReactFlow, {
   ReactFlowProvider,
@@ -8,9 +9,9 @@ import ReactFlow, {
   Controls,
   MiniMap,
   addEdge,
-  Connection,
-  Edge,
-  Node,
+  type Connection,
+  type Edge,
+  type Node,
   useNodesState,
   useEdgesState,
   useReactFlow,
@@ -18,7 +19,7 @@ import ReactFlow, {
   MarkerType,
   Handle,
   Position,
-  NodeProps,
+  type NodeProps,
 } from 'reactflow';
 import { motion } from 'framer-motion';
 import { Zap, Mail, MessageSquare, Users, BellRing, Check, Plus, ChevronRight, X, Circle, CheckCircle, XCircle } from 'lucide-react';
@@ -169,7 +170,7 @@ const ActionNode = ({ data, isConnectable }: NodeProps) => {
           animate={{ width: "100%" }}
           transition={{ 
             duration: 1.5, 
-            repeat: Infinity, 
+            repeat: Number.POSITIVE_INFINITY, 
             repeatType: "reverse",
             ease: "easeInOut"
           }}
@@ -290,7 +291,7 @@ const ConditionNode = ({ data, isConnectable }: NodeProps) => {
           }}
           transition={{ 
             duration: 2, 
-            repeat: Infinity,
+            repeat: Number.POSITIVE_INFINITY,
             repeatType: "loop",
             ease: "linear"
           }}
@@ -483,7 +484,7 @@ const EndNode = ({ data, isConnectable }: NodeProps) => {
         }}
         transition={{
           duration: 2,
-          repeat: Infinity,
+          repeat: Number.POSITIVE_INFINITY,
           repeatType: "loop",
           ease: "easeInOut",
           times: [0, 0.5, 1]
@@ -974,7 +975,7 @@ export function WorkflowDemo() {
       }}
       transition={{ 
         duration: 4,
-        repeat: Infinity,
+        repeat: Number.POSITIVE_INFINITY,
         repeatType: "reverse",
         ease: "easeInOut"
       }}

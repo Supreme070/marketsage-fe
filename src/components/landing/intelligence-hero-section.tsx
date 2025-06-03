@@ -159,7 +159,7 @@ export function IntelligenceHeroSection() {
                     "0 0 10px rgba(20, 184, 166, 0.5)"
                   ]
                 }}
-                transition={{ duration: 2, repeat: Infinity }}
+                transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
                 className="text-teal-400"
               >
                 Invisible
@@ -174,7 +174,7 @@ export function IntelligenceHeroSection() {
                     "0 0 10px rgba(251, 191, 36, 0.5)"
                   ]
                 }}
-                transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+                transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, delay: 0.5 }}
                 className="text-amber-400"
               >
                 Revenue
@@ -239,7 +239,7 @@ export function IntelligenceHeroSection() {
                   <Link href="/dashboard" className="flex items-center gap-2">
                     <motion.div
                       animate={{ rotate: [0, 360] }}
-                      transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                      transition={{ duration: 8, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
                     >
                       <Eye className="h-5 w-5" />
                     </motion.div>
@@ -248,7 +248,7 @@ export function IntelligenceHeroSection() {
                     </span>
                     <motion.div
                       animate={{ x: [0, 3, 0] }}
-                      transition={{ duration: 2, repeat: Infinity }}
+                      transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
                     >
                       <ArrowRight className="h-5 w-5" />
                     </motion.div>
@@ -278,7 +278,7 @@ export function IntelligenceHeroSection() {
                 >
                   <motion.div
                     animate={{ scale: [1, 1.1, 1] }}
-                    transition={{ duration: 3, repeat: Infinity }}
+                    transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY }}
                   >
                     <Target className="mr-2 h-5 w-5" />
                   </motion.div>
@@ -364,13 +364,13 @@ export function IntelligenceHeroSection() {
                           scale: [1, 1.02, 1],
                           boxShadow: ["0 4px 6px -1px rgba(59, 130, 246, 0.1)", "0 8px 25px -5px rgba(59, 130, 246, 0.3)", "0 4px 6px -1px rgba(59, 130, 246, 0.1)"]
                         }}
-                        transition={{ duration: 3, repeat: Infinity }}
+                        transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY }}
                         className={`text-center p-3 rounded-lg border backdrop-blur-md ${isLight ? 'bg-slate-50/80 border-slate-200' : 'bg-slate-800/60 border-slate-700/30'}`}
                       >
                         <div className="flex items-center justify-center gap-1 mb-1">
                           <motion.div 
                             animate={{ scale: [1, 1.2, 1] }}
-                            transition={{ duration: 2, repeat: Infinity }}
+                            transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
                             className="h-2 w-2 bg-green-400 rounded-full animate-pulse" 
                           />
                           <span className={`text-xs ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Active</span>
@@ -392,7 +392,7 @@ export function IntelligenceHeroSection() {
                           scale: [1, 1.02, 1],
                           boxShadow: ["0 4px 6px -1px rgba(59, 130, 246, 0.1)", "0 8px 25px -5px rgba(59, 130, 246, 0.3)", "0 4px 6px -1px rgba(59, 130, 246, 0.1)"]
                         }}
-                        transition={{ duration: 3, repeat: Infinity, delay: 0.5 }}
+                        transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, delay: 0.5 }}
                         className={`text-center p-3 rounded-lg border backdrop-blur-md ${isLight ? 'bg-slate-50/80 border-slate-200' : 'bg-slate-800/60 border-slate-700/30'}`}
                       >
                         <div className="flex items-center justify-center gap-1 mb-1">
@@ -416,7 +416,7 @@ export function IntelligenceHeroSection() {
                           scale: [1, 1.02, 1],
                           boxShadow: ["0 4px 6px -1px rgba(139, 92, 246, 0.1)", "0 8px 25px -5px rgba(139, 92, 246, 0.3)", "0 4px 6px -1px rgba(139, 92, 246, 0.1)"]
                         }}
-                        transition={{ duration: 3, repeat: Infinity, delay: 1 }}
+                        transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, delay: 1 }}
                         className={`text-center p-3 rounded-lg border backdrop-blur-md ${isLight ? 'bg-slate-50/80 border-slate-200' : 'bg-slate-800/60 border-slate-700/30'}`}
                       >
                         <div className="flex items-center justify-center gap-1 mb-1">
@@ -432,7 +432,7 @@ export function IntelligenceHeroSection() {
                           scale: [1, 1.02, 1],
                           boxShadow: ["0 4px 6px -1px rgba(16, 185, 129, 0.1)", "0 8px 25px -5px rgba(16, 185, 129, 0.3)", "0 4px 6px -1px rgba(16, 185, 129, 0.1)"]
                         }}
-                        transition={{ duration: 3, repeat: Infinity, delay: 1.5 }}
+                        transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, delay: 1.5 }}
                         className={`text-center p-3 rounded-lg border backdrop-blur-md ${isLight ? 'bg-slate-50/80 border-slate-200' : 'bg-slate-800/60 border-slate-700/30'}`}
                       >
                         <div className="flex items-center justify-center gap-1 mb-1">
@@ -506,7 +506,7 @@ export function IntelligenceHeroSection() {
                             >
                               <motion.div
                                 animate={{ scale: [1, 1.2, 1] }}
-                                transition={{ duration: 2, repeat: Infinity }}
+                                transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
                                 className="h-2 w-2 bg-orange-400 rounded-full mt-1 flex-shrink-0"
                               />
                               <div className="min-w-0">
@@ -611,7 +611,7 @@ export function IntelligenceHeroSection() {
             {/* Floating elements */}
             <motion.div
               animate={{ y: [0, -10, 0] }}
-              transition={{ duration: 3, repeat: Infinity }}
+              transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY }}
               className="absolute -top-4 -right-4 bg-green-500 text-white p-3 rounded-full shadow-lg"
             >
               <Zap className="h-6 w-6" />

@@ -101,7 +101,7 @@ export default function SMSTemplateDetailPage() {
   // Replace template variables with styled placeholders
   const renderTemplateContent = (content: string) => {
     return content.replace(/\{\{(\d+)\}\}/g, (match, num) => {
-      const varIndex = parseInt(num, 10) - 1;
+      const varIndex = Number.parseInt(num, 10) - 1;
       const varName = variables[varIndex] || `Variable ${num}`;
       return `<span class="inline-block px-1.5 py-0.5 text-xs font-medium bg-primary/10 text-primary rounded">${varName}</span>`;
     });

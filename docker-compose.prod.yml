@@ -167,6 +167,9 @@ services:
         echo '📋 Seeding task management...' &&
         npx tsx /app/src/scripts/seedTaskManagement.ts &&
         
+        echo '🎯 Seeding LeadPulse data...' &&
+        npx tsx /app/src/scripts/seed-leadpulse.ts &&
+        
         echo '🔗 Assigning contacts to current user...' &&
         npx tsx /app/src/scripts/assignContactsDocker.ts &&
         
