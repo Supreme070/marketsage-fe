@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { 
   MessageSquare, Brain, Send, User, Bot, Sparkles, 
-  Clock, TrendingUp, Users, Mail, Zap
+  Clock, TrendingUp, Users, Mail, Zap, Lightbulb,
+  CheckCircle, AlertCircle, ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -64,26 +65,7 @@ export default function AIChatPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg p-6">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-xl">
-            <MessageSquare className="h-8 w-8 text-blue-400" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              AI Chat Assistant
-              <Badge variant="secondary" className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-blue-400 border-blue-500/20">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></div>
-                Online
-              </Badge>
-            </h1>
-            <p className="text-muted-foreground">Chat with Supreme-AI about your MarketSage data • Get insights • Ask questions • Receive recommendations</p>
-          </div>
-        </div>
-      </div>
-
+    <div className="container mx-auto p-6">
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Chat Interface */}
         <div className="lg:col-span-2">
@@ -92,9 +74,10 @@ export default function AIChatPage() {
               <CardTitle className="flex items-center gap-2">
                 <Bot className="h-5 w-5 text-blue-400" />
                 Supreme-AI Assistant
+                <Badge variant="secondary" className="ml-2">v3.0</Badge>
               </CardTitle>
               <CardDescription>
-                Ask me anything about your MarketSage data and campaigns
+                Your intelligent partner for MarketSage optimization
               </CardDescription>
             </CardHeader>
             
@@ -120,7 +103,58 @@ export default function AIChatPage() {
                           ? 'bg-blue-500/20 text-blue-100 border border-blue-500/30' 
                           : 'bg-gray-800/50 text-gray-100 border border-gray-700/50'
                       }`}>
+                        {/* Message Content */}
                         <p className="text-sm leading-relaxed">{message.content}</p>
+
+                        {/* Thought Process */}
+                        {message.thoughts && message.thoughts.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-gray-700/50">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Lightbulb className="h-4 w-4 text-yellow-400" />
+                              <span className="text-xs font-medium text-yellow-400">Thought Process</span>
+                            </div>
+                            {message.thoughts.map((thought: any, i: number) => (
+                              <div key={i} className="mb-2">
+                                <div className="flex items-center gap-2 text-xs text-gray-300">
+                                  <span className="font-medium">{thought.type}</span>
+                                  <span className="text-gray-500">•</span>
+                                  <span className="text-gray-400">{Math.round(thought.confidence * 100)}% confidence</span>
+                                </div>
+                                <ul className="mt-1 space-y-1">
+                                  {thought.steps.map((step: string, j: number) => (
+                                    <li key={j} className="flex items-center gap-2 text-xs text-gray-400">
+                                      <ArrowRight className="h-3 w-3" />
+                                      {step}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Actions */}
+                        {message.actions && message.actions.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-gray-700/50">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Zap className="h-4 w-4 text-green-400" />
+                              <span className="text-xs font-medium text-green-400">Suggested Actions</span>
+                            </div>
+                            <div className="space-y-2">
+                              {message.actions.map((action: any, i: number) => (
+                                <div key={i} className="flex items-center gap-2 text-xs">
+                                  {action.type === 'suggestion' ? (
+                                    <CheckCircle className="h-3 w-3 text-green-400" />
+                                  ) : (
+                                    <AlertCircle className="h-3 w-3 text-yellow-400" />
+                                  )}
+                                  <span className="text-gray-300">{action.details.content || action.details.action}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         <p className="text-xs text-muted-foreground mt-2">
                           {new Date().toLocaleTimeString()}
                         </p>
@@ -137,7 +171,7 @@ export default function AIChatPage() {
                   <div className="text-center py-12">
                     <Brain className="h-16 w-16 text-blue-400 mx-auto mb-4 opacity-50" />
                     <h3 className="text-lg font-medium text-white mb-2">Start a conversation with Supreme-AI</h3>
-                    <p className="text-muted-foreground mb-6">Ask me about your campaigns, customers, or any MarketSage feature.</p>
+                    <p className="text-muted-foreground mb-6">I can help optimize your marketing strategies and improve campaign performance.</p>
                   </div>
                 )}
               </AnimatePresence>
@@ -153,7 +187,11 @@ export default function AIChatPage() {
                     <Bot className="h-4 w-4 text-blue-400" />
                   </div>
                   <div className="bg-gray-800/50 border border-gray-700/50 p-3 rounded-lg">
-                    <div className="flex gap-1">
+                    <div className="flex items-center gap-2">
+                      <Brain className="h-4 w-4 text-blue-400 animate-pulse" />
+                      <span className="text-sm text-gray-400">Thinking...</span>
+                    </div>
+                    <div className="flex gap-1 mt-2">
                       <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
                       <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                       <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
@@ -166,20 +204,19 @@ export default function AIChatPage() {
             </CardContent>
             
             {/* Input */}
-            <div className="p-4 border-t border-gray-700/50">
+            <div className="p-4 border-t border-gray-800">
               <div className="flex gap-2">
                 <Input
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Ask Supreme-AI about your campaigns, customers, or get recommendations..."
+                  placeholder="Ask me anything..."
                   className="flex-1"
-                  disabled={chat.loading}
+                  disabled={isTyping || chat.loading}
                 />
                 <Button 
                   onClick={handleSendMessage}
-                  disabled={!inputMessage.trim() || chat.loading}
-                  className="bg-blue-500 hover:bg-blue-600"
+                  disabled={isTyping || chat.loading || !inputMessage.trim()}
                 >
                   <Send className="h-4 w-4" />
                 </Button>
@@ -188,89 +225,71 @@ export default function AIChatPage() {
           </Card>
         </div>
 
-        {/* Quick Actions & Info */}
-        <div className="space-y-6">
-          {/* Quick Questions */}
+        {/* Quick Access Panel */}
+        <div className="lg:col-span-1">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-yellow-400" />
                 Quick Questions
               </CardTitle>
+              <CardDescription>
+                Common queries to get you started
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 {quickQuestions.map((question, index) => (
                   <Button
                     key={index}
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start text-left h-auto py-2 px-3 text-xs whitespace-normal"
+                    variant="outline"
+                    className="w-full justify-start text-left"
                     onClick={() => handleQuickQuestion(question)}
                   >
-                    {question}
+                    <span className="truncate">{question}</span>
                   </Button>
                 ))}
               </div>
             </CardContent>
           </Card>
 
-          {/* Chat Stats */}
-          <Card>
+          {/* Feature Highlights */}
+          <Card className="mt-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Chat Statistics
+                <TrendingUp className="h-5 w-5 text-green-400" />
+                AI Capabilities
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Messages Today</span>
-                  <span className="font-medium">{chat.messages?.length || 0}</span>
+                <div className="flex items-center gap-3">
+                  <Brain className="h-5 w-5 text-blue-400" />
+                  <div>
+                    <h4 className="text-sm font-medium">Dynamic Thinking</h4>
+                    <p className="text-xs text-gray-400">Advanced problem-solving with context awareness</p>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Avg Response Time</span>
-                  <span className="font-medium">1.2s</span>
+                <div className="flex items-center gap-3">
+                  <Users className="h-5 w-5 text-purple-400" />
+                  <div>
+                    <h4 className="text-sm font-medium">Behavioral Analysis</h4>
+                    <p className="text-xs text-gray-400">Customer patterns and predictions</p>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">AI Accuracy</span>
-                  <span className="font-medium text-green-400">94%</span>
+                <div className="flex items-center gap-3">
+                  <Mail className="h-5 w-5 text-red-400" />
+                  <div>
+                    <h4 className="text-sm font-medium">Campaign Optimization</h4>
+                    <p className="text-xs text-gray-400">Data-driven marketing improvements</p>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Total Conversations</span>
-                  <span className="font-medium">147</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* AI Capabilities */}
-          <Card>
-            <CardHeader>
-              <CardTitle>What Supreme-AI Can Help With</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-green-400" />
-                  <span className="text-sm">Campaign Performance Analysis</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-blue-400" />
-                  <span className="text-sm">Customer Segmentation Insights</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-purple-400" />
-                  <span className="text-sm">Content Optimization Tips</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-yellow-400" />
-                  <span className="text-sm">Workflow Automation Setup</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Brain className="h-4 w-4 text-red-400" />
-                  <span className="text-sm">Predictive Analytics</span>
+                <div className="flex items-center gap-3">
+                  <Clock className="h-5 w-5 text-yellow-400" />
+                  <div>
+                    <h4 className="text-sm font-medium">Predictive Analytics</h4>
+                    <p className="text-xs text-gray-400">Future trends and opportunities</p>
+                  </div>
                 </div>
               </div>
             </CardContent>

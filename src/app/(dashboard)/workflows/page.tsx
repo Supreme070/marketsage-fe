@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -40,7 +42,6 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -55,6 +56,7 @@ interface WorkflowData {
 }
 
 export default function WorkflowsPage() {
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [workflows, setWorkflows] = useState<WorkflowData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,13 +64,30 @@ export default function WorkflowsPage() {
 
   // Fetch workflows
   useEffect(() => {
+    if (status === "loading") {
+      return; // Wait for session to load
+    }
+
+    if (status === "unauthenticated") {
+      setError("Please log in to view workflows");
+      setLoading(false);
+      return;
+    }
+
     const fetchWorkflows = async () => {
       setLoading(true);
       try {
         const response = await fetch("/api/workflows");
         
+        if (response.status === 401) {
+          setError("Authentication required. Please log in again.");
+          router.push("/login");
+          return;
+        }
+        
         if (!response.ok) {
-          throw new Error("Failed to fetch workflows");
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || "Failed to fetch workflows");
         }
         
         const data = await response.json();
@@ -76,14 +95,16 @@ export default function WorkflowsPage() {
         setError(null);
       } catch (error) {
         console.error("Error fetching workflows:", error);
-        setError("Failed to load workflows");
+        setError(error instanceof Error ? error.message : "Failed to load workflows");
       } finally {
         setLoading(false);
       }
     };
     
-    fetchWorkflows();
-  }, []);
+    if (status === "authenticated") {
+      fetchWorkflows();
+    }
+  }, [status, router]);
 
   const handleCreateWorkflow = () => {
     router.push(`/workflows/new-workflow`);

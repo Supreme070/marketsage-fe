@@ -1,6 +1,6 @@
 generator client {
   provider      = "prisma-client-js"
-  output        = "./node_modules/.prisma/client"
+  output        = "../node_modules/.prisma/client"
   binaryTargets = ["native", "linux-musl", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x", "darwin", "darwin-arm64"]
 }
 
@@ -43,6 +43,12 @@ model Organization {
   address        String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+  subscriptions  Subscription[]
+  paymentMethods PaymentMethod[]
+  billingEmail   String?
+  billingName    String?
+  billingAddress String?
+  vatNumber      String?
 
   // Relations
   users          User[]
@@ -87,7 +93,6 @@ model User {
   contentRecommendations ContentRecommendation[] @relation("ContentRecommendationUser")
   subjectLineTests SubjectLineTest[]  @relation("SubjectLineTestCreator")
   journeys         Journey[]          @relation("JourneyCreator")
-  notifications    Notification[]     // Add relation to notifications
   
   // Task management relations
   createdTasks     Task[]             @relation("TaskCreator")
@@ -99,6 +104,25 @@ model User {
   aiCustomerSegments AI_CustomerSegment[] @relation("UserToCustomerSegment")
   aiChatHistory    AI_ChatHistory[]     @relation("UserToChatHistory")
   aiTools          AI_Tool[]            @relation("UserToAITool")
+
+  // New relations
+  activities     UserActivity[]
+  notifications  Notification[]
+  preferences    UserPreference?
+
+  @@index([email])
+}
+
+// User Preferences model
+model UserPreference {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  preferences String   // JSON string
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // NextAuth.js required models
@@ -127,6 +151,19 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserSession {
+  id              String    @id @default(cuid())
+  activityId      String
+  startTime       DateTime  @default(now())
+  endTime         DateTime?
+  duration        Int?        // in seconds
+  
+  // Relations
+  activity        UserActivity @relation(fields: [activityId], references: [id])
+
+  @@index([activityId])
 }
 
 model VerificationToken {
@@ -174,10 +211,10 @@ model IntegrationSyncHistory {
 // Core application models
 model Contact {
   id              String    @id @default(cuid())
-  email           String?
-  phone           String?
+  email           String    @unique
   firstName       String?
   lastName        String?
+  phone           String?
   company         String?
   jobTitle        String?
   address         String?
@@ -186,21 +223,29 @@ model Contact {
   country         String?
   postalCode      String?
   notes           String?
-  tagsString      String?   // Stored as JSON string
+  tagsString      String?   // JSON array stored as string
   source          String?
+  customFields    String?   // JSON object
   status          ContactStatus @default(ACTIVE)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  lastEngaged     DateTime?
+  emailVerified   Boolean   @default(false)
+  phoneVerified   Boolean   @default(false)
   createdById     String
 
   // Relations
   createdBy       User      @relation("CreatedBy", fields: [createdById], references: [id])
   listMembers     ListMember[]
+  segmentMembers  SegmentMember[]
   emailActivities EmailActivity[]
   smsActivities   SMSActivity[]
   waActivities    WhatsAppActivity[]
-  conversions     ConversionTracking[]
+  workflowExecutions WorkflowExecution[]
+  workflowEvents  WorkflowEvent[]
   contactJourneys ContactJourney[]
+  conversionEvents ConversionEvent[]
+  conversionTrackings ConversionTracking[]
 }
 
 model List {
@@ -233,6 +278,19 @@ model ListMember {
   @@unique([listId, contactId])
 }
 
+model SegmentMember {
+  id              String    @id @default(cuid())
+  segmentId       String
+  contactId       String
+  addedAt         DateTime  @default(now())
+
+  // Relations
+  segment         Segment   @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  contact         Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([segmentId, contactId])
+}
+
 model Segment {
   id              String    @id @default(cuid())
   name            String
@@ -244,6 +302,7 @@ model Segment {
 
   // Relations
   createdBy       User      @relation("SegmentCreator", fields: [createdById], references: [id])
+  members         SegmentMember[]
   emailCampaigns  EmailCampaign[] @relation("CampaignSegments")
   smsCampaigns    SMSCampaign[]   @relation("SMSCampaignSegments")
   waCampaigns     WhatsAppCampaign[] @relation("WACampaignSegments")
@@ -504,6 +563,8 @@ model Workflow {
   createdBy       User      @relation("WorkflowCreator", fields: [createdById], references: [id])
   nodes           WorkflowNode[]
   triggers        WorkflowTrigger[]
+  executions      WorkflowExecution[]
+  events          WorkflowEvent[]
 }
 
 model WorkflowNode {
@@ -542,6 +603,68 @@ model WorkflowTrigger {
 
   // Relations
   workflow        Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+}
+
+// Workflow Execution Models
+model WorkflowExecution {
+  id              String    @id @default(cuid())
+  workflowId      String
+  contactId       String
+  status          WorkflowExecutionStatus @default(RUNNING)
+  currentStepId   String?
+  context         String    // JSON string with execution context
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+  lastExecutedAt  DateTime?
+  errorMessage    String?
+  retryCount      Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  workflow        Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  contact         Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  steps           WorkflowExecutionStep[]
+
+  @@unique([workflowId, contactId])
+  @@index([status, lastExecutedAt])
+}
+
+model WorkflowExecutionStep {
+  id              String    @id @default(cuid())
+  executionId     String
+  stepId          String    // Node ID from workflow definition
+  stepType        String    // Node type
+  status          StepExecutionStatus @default(PENDING)
+  startedAt       DateTime?
+  completedAt     DateTime?
+  scheduledFor    DateTime?
+  output          String?   // JSON string with step output
+  errorMessage    String?
+  retryCount      Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  execution       WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@index([status, scheduledFor])
+}
+
+model WorkflowEvent {
+  id              String    @id @default(cuid())
+  workflowId      String?
+  contactId       String?
+  eventType       String    // trigger type
+  eventData       String    // JSON string
+  processed       Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+
+  // Relations
+  workflow        Workflow? @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  contact         Contact?  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([eventType, processed, createdAt])
 }
 
 // Analytics models
@@ -753,6 +876,7 @@ model ConversionEvent {
   // Relations
   createdBy       User      @relation("ConversionEventCreator", fields: [createdById], references: [id])
   trackings       ConversionTracking[]
+  contacts        Contact[]
 }
 
 model ConversionTracking {
@@ -944,6 +1068,7 @@ model PredictionModel {
   
   // Relations
   predictions     Prediction[]
+  behavioralPredictions BehavioralPrediction[]
 }
 
 model Prediction {
@@ -1382,9 +1507,53 @@ model LeadPulseVisitor {
   @@index([isActive])
 }
 
+model AnonymousVisitor {
+  id              String    @id @default(cuid())
+  fingerprint     String    @unique
+  ipAddress       String?
+  userAgent       String?
+  referrer        String?
+  contactId       String?
+  firstVisit      DateTime  @default(now())
+  lastVisit       DateTime  @updatedAt
+  totalVisits     Int       @default(1)
+  isActive        Boolean   @default(true)
+  engagementScore Int       @default(0)
+  score           Int       @default(0)
+  
+  // Relations
+  LeadPulseTouchpoint LeadPulseTouchpoint[]
+  LeadPulseJourney   LeadPulseJourney[]
+  
+  @@index([fingerprint])
+  @@index([lastVisit])
+}
+
+model LeadPulseJourney {
+  id             String    @id @default(cuid())
+  visitorId      String
+  startDate      DateTime
+  lastUpdate     DateTime  @updatedAt
+  stage          String
+  completionDate DateTime?
+  score          Int       @default(0)
+  isCompleted    Boolean   @default(false)
+  source         String?
+  
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  
+  // Relations
+  visitor        AnonymousVisitor @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  
+  @@index([visitorId])
+  @@index([stage])
+}
+
 model LeadPulseTouchpoint {
   id              String    @id @default(cuid())
-  visitorId       String
+  visitorId       String?
+  anonymousVisitorId String?
   timestamp       DateTime  @default(now())
   type            LeadPulseTouchpointType
   url             String?
@@ -1397,9 +1566,11 @@ model LeadPulseTouchpoint {
   updatedAt       DateTime  @updatedAt
   
   // Relations
-  visitor         LeadPulseVisitor @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  visitor         LeadPulseVisitor? @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  anonymousVisitor AnonymousVisitor? @relation(fields: [anonymousVisitorId], references: [id], onDelete: Cascade)
   
   @@index([visitorId, timestamp])
+  @@index([anonymousVisitorId, timestamp])
   @@index([type])
 }
 
@@ -1444,4 +1615,192 @@ enum LeadPulseImportance {
   LOW
   MEDIUM
   HIGH
+}
+
+// Subscription Plans
+model SubscriptionPlan {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  currency    String   @default("NGN")
+  interval    String   @default("monthly") // monthly, annually
+  features    String   // JSON string of features
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  paystackPlanId String? // Paystack plan ID
+
+  // Relations
+  subscriptions Subscription[]
+}
+
+// Subscription model
+model Subscription {
+  id          String   @id @default(cuid())
+  organizationId String
+  planId      String
+  status      SubscriptionStatus @default(ACTIVE)
+  startDate   DateTime @default(now())
+  endDate     DateTime?
+  canceledAt  DateTime?
+  paystackSubscriptionId String?
+  paystackCustomerId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id])
+  plan        SubscriptionPlan @relation(fields: [planId], references: [id])
+  transactions Transaction[]
+}
+
+// Transaction model
+model Transaction {
+  id          String   @id @default(cuid())
+  subscriptionId String
+  amount      Float
+  currency    String
+  status      TransactionStatus @default(PENDING)
+  paystackReference String @unique
+  paystackTransactionId String?
+  metadata    String?  // JSON string for additional data
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+}
+
+// Payment Method model
+model PaymentMethod {
+  id          String   @id @default(cuid())
+  organizationId String
+  type        PaymentMethodType
+  last4       String?
+  expMonth    Int?
+  expYear     Int?
+  brand       String?
+  isDefault   Boolean  @default(false)
+  paystackAuthorizationCode String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id])
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
+  TRIALING
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethodType {
+  CARD
+  BANK
+  USSD
+  BANK_TRANSFER
+  QR
+  MOBILE_MONEY
+}
+
+enum WorkflowExecutionStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+  PAUSED
+  CANCELLED
+}
+
+enum StepExecutionStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  SKIPPED
+  SCHEDULED
+}
+
+model UserActivity {
+  id              String    @id @default(cuid())
+  userId          String
+  type            String    // PAGE_VIEW, CLICK, PURCHASE, etc.
+  channel         String    // EMAIL, SMS, WHATSAPP, WEB
+  timestamp       DateTime  @default(now())
+  metadata        Json?       // Additional activity details
+  sentiment       String?     // positive, negative, neutral
+
+  // Relations
+  user            User        @relation(fields: [userId], references: [id])
+  purchases       Purchase[]
+  sessions        UserSession[]
+  interactions    Interaction[]
+
+  @@index([userId, timestamp])
+  @@index([type])
+}
+
+model Purchase {
+  id              String    @id @default(cuid())
+  activityId      String
+  amount          Float
+  productId       String
+  timestamp       DateTime  @default(now())
+  
+  // Relations
+  activity        UserActivity @relation(fields: [activityId], references: [id])
+
+  @@index([activityId])
+}
+
+model Interaction {
+  id              String    @id @default(cuid())
+  activityId      String
+  type            String    // click, scroll, form_submit, etc.
+  timestamp       DateTime  @default(now())
+  metadata        Json?       // Additional interaction details
+  
+  // Relations
+  activity        UserActivity @relation(fields: [activityId], references: [id])
+
+  @@index([activityId])
+}
+
+model BehavioralPrediction {
+  id              String    @id @default(cuid())
+  userId          String
+  modelId         String
+  predictions     String    @db.Text  // JSON string with all predictions
+  segments        String    @db.Text  // JSON array of segments
+  confidenceScores String   @db.Text  // JSON object with confidence scores
+  explanatoryFactors String @db.Text  // JSON array of factors
+  features        String    @db.Text  // JSON object with input features
+  createdAt       DateTime  @default(now())
+  
+  // Relations
+  model           PredictionModel @relation(fields: [modelId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([modelId])
+}
+
+model BehavioralSegment {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  criteria        String    @db.Text  // JSON object with segmentation criteria
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@unique([name])
 }

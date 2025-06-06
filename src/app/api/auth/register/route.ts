@@ -15,6 +15,7 @@ const registrationSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   email: z.string().email({ message: "Please enter a valid email address" }),
   password: z.string().min(8, { message: "Password must be at least 8 characters" }),
+  company: z.string().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -24,13 +25,10 @@ export async function POST(request: NextRequest) {
     // Validate request body against schema
     const validation = registrationSchema.safeParse(body);
     if (!validation.success) {
-      return NextResponse.json(
-        { message: validation.error.errors[0].message },
-        { status: 400 }
-      );
+      return validationError(validation.error.errors[0].message);
     }
 
-    const { name, email, password } = validation.data;
+    const { name, email, password, company } = validation.data;
 
     // Check if email exists
     const existingUser = await prisma.user.findUnique({
@@ -38,36 +36,52 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingUser) {
-      return NextResponse.json(
-        { message: "Email already exists" },
-        { status: 400 }
-      );
+      return validationError("Email already exists");
     }
 
-    // Hash password
-    const hashedPassword = await hash(password, 10);
+    // Hash password (use higher rounds in production)
+    const saltRounds = process.env.NODE_ENV === 'production' ? 12 : 10;
+    const hashedPassword = await hash(password, saltRounds);
 
-    // Create user
+    // Create user with company if provided
     const newUser = await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
+        company,
+        role: 'USER', // Default role
+        isActive: true,
+        emailVerified: null, // Will be set after email verification
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        company: true,
+        createdAt: true,
       }
     });
 
-    // Remove password from response
-    const { password: _, ...userWithoutPassword } = newUser;
+    // Create default user preferences
+    await prisma.userPreference.create({
+      data: {
+        userId: newUser.id,
+        preferences: JSON.stringify({
+          theme: 'light',
+          notifications: true,
+          emailNotifications: true,
+        })
+      }
+    });
 
     return NextResponse.json({
       message: "User registered successfully",
-      user: userWithoutPassword
+      user: newUser
     }, { status: 201 });
   } catch (error) {
     console.error("Registration error:", error);
-    return NextResponse.json(
-      { message: "An error occurred during registration" },
-      { status: 500 }
-    );
+    return handleApiError(error, "An error occurred during registration");
   }
 }

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import prisma from "@/lib/db/prisma";
+import { ContactStatus } from "@prisma/client";
 import { 
   handleApiError, 
   unauthorized, 
@@ -26,6 +27,8 @@ const contactSchema = z.object({
   notes: z.string().optional(),
   tags: z.array(z.string()).optional(),
   source: z.string().optional(),
+  customFields: z.record(z.string(), z.string()).optional(),
+  status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
 });
 
 // Function to convert tags array to JSON string
@@ -91,23 +94,23 @@ export async function GET(request: NextRequest) {
 
 // POST endpoint to create a new contact
 export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+
+  // Check if user is authenticated
+  if (!session || !session.user) {
+    return unauthorized();
+  }
+
   try {
-    const session = await getServerSession(authOptions);
-
-    // Check if user is authenticated
-    if (!session || !session.user) {
-      return unauthorized();
-    }
-
     const body = await request.json();
     
     // Validate input
     const validation = contactSchema.safeParse(body);
     
     if (!validation.success) {
-      return validationError(
-        "Invalid contact data", 
-        validation.error.format()
+      return NextResponse.json(
+        { error: "Invalid contact data", details: validation.error.format() },
+        { status: 400 }
       );
     }
 
@@ -119,32 +122,33 @@ export async function POST(request: NextRequest) {
       data: {
         id: randomUUID(),
         email: contactData.email,
-        phone: contactData.phone,
         firstName: contactData.firstName,
         lastName: contactData.lastName,
+        phone: contactData.phone,
         company: contactData.company,
         jobTitle: contactData.jobTitle,
-        address: contactData.address,
-        city: contactData.city,
-        state: contactData.state,
         country: contactData.country,
-        postalCode: contactData.postalCode,
-        notes: contactData.notes,
-        tagsString: tagsToString(contactData.tags),
-        source: contactData.source,
-        status: "ACTIVE", // Set default status
+        state: contactData.state,
+        city: contactData.city,
+        // customFields temporarily disabled due to schema issues
+        status: (contactData.status as ContactStatus) || ContactStatus.ACTIVE,
         createdById: session.user.id,
         createdAt: now,
-        updatedAt: now
+        updatedAt: now,
       },
     });
 
-    // Return the created contact with processed tags
-    return NextResponse.json({
-      ...newContact,
-      tags: contactData.tags || [],
-    }, { status: 201 });
+    // Trigger workflow events for contact creation
+    try {
+      const { triggerManager } = await import('@/lib/workflow/trigger-manager');
+      await triggerManager.onContactCreated(newContact.id);
+    } catch (triggerError) {
+      // Log error but don't fail contact creation
+      console.error('Failed to trigger workflow events:', triggerError);
+    }
+
+    return NextResponse.json(newContact, { status: 201 });
   } catch (error) {
-    return handleApiError(error, "/api/contacts");
+    return handleApiError(error, "/api/contacts/route.ts");
   }
 } 

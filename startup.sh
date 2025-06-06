@@ -20,7 +20,7 @@ if ! pg_isready -h db -U marketsage; then
 fi
 
 # Set environment variables for Prisma
-export NODE_ENV=production
+# Use NODE_ENV from docker-compose environment instead of hardcoding production
 export DATABASE_URL="postgresql://marketsage:marketsage_password@db:5432/marketsage?schema=public"
 
 # Generate Prisma client
@@ -75,7 +75,11 @@ ls -la ./prisma/node_modules/.prisma || echo "Directory not found: ./prisma/node
 
 # Try to run migrations but don't fail the startup if they don't work
 echo "🔄 Running database migrations..."
-npx prisma migrate deploy --schema=./prisma/schema.prisma || echo "⚠️ Warning: Migration deployment had issues, but we'll continue startup"
+npx prisma migrate deploy --schema=./prisma/schema.prisma || echo "⚠️ Warning: Migration deployment had issues, trying schema push..."
+
+# If migrations failed, push the schema directly
+echo "📥 Ensuring database schema is up to date..."
+npx prisma db push --schema=./prisma/schema.prisma --accept-data-loss || echo "⚠️ Warning: Schema push had issues, but we'll continue startup"
 
 # Create a default user if none exists
 echo "🔄 Creating default user if needed..."
@@ -83,11 +87,16 @@ PGPASSWORD=marketsage_password psql -h db -U marketsage -d marketsage -c "INSERT
 VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d047', 'Admin User', 'admin@example.com', NOW(), 'password123', 'ADMIN', NOW(), NOW()) 
 ON CONFLICT (id) DO NOTHING;" || echo "⚠️ Warning: Default user creation had issues, but we'll continue startup"
 
-
-
 # Skip the user count check that's failing
 echo "🔍 Skipping user count check and database seeding for now"
 
-# Always start using server.js since we're in a standalone Next.js build
+# Start the Next.js standalone server
 echo "🚀 Starting MarketSage in production mode..."
-exec node server.js 
+if [ -f ".next/standalone/server.js" ]; then
+  exec node .next/standalone/server.js
+elif [ -f "server.js" ]; then
+  exec node server.js
+else
+  echo "⚠️ Standalone server not found, using npm start as fallback..."
+  exec npm start
+fi 

@@ -254,21 +254,19 @@ async function seedAIIntelligence() {
   console.log('🌱 Seeding AI Intelligence data...');
   
   try {
-    // Get or create a demo user
-    let demoUser = await prisma.user.findFirst({
-      where: { email: 'demo@marketsage.ai' }
+    // Use existing admin user instead of creating a new one
+    const adminUser = await prisma.user.findFirst({
+      where: { 
+        OR: [
+          { email: 'admin@example.com' },
+          { email: 'supreme@marketsage.africa' },
+          { role: 'ADMIN' }
+        ]
+      }
     });
     
-    if (!demoUser) {
-      demoUser = await prisma.user.create({
-        data: {
-          id: 'demo-user-ai-intelligence',
-          email: 'demo@marketsage.ai',
-          name: 'AI Intelligence Demo User',
-          role: 'USER',
-          isActive: true
-        }
-      });
+    if (!adminUser) {
+      throw new Error('No admin user found. Please run the main seeding script first.');
     }
 
     // 1. Create realistic customer contacts
@@ -286,8 +284,8 @@ async function seedAIIntelligence() {
           company: customer.company,
           city: customer.city,
           country: customer.country,
-          createdById: demoUser.id,
           source: 'AI_DEMO_DATA',
+          createdById: adminUser.id,
           updatedAt: new Date()
         }
       });

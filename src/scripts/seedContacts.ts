@@ -92,7 +92,8 @@ function getRandomSubset<T>(array: T[], count: number): T[] {
 function generateNigerianPersonContact() {
   const firstName = getRandomElement(nigerianFirstNames);
   const lastName = getRandomElement(nigerianLastNames);
-  const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${Math.floor(Math.random() * 999)}@example.com`;
+  const uniqueId = Math.floor(Math.random() * 999999) + Date.now() % 100000; // Much larger range + timestamp component
+  const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${uniqueId}@example.com`;
   const phone = `+234 ${Math.floor(Math.random() * 900) + 100} ${Math.floor(Math.random() * 9000) + 1000}`;
   const city = getRandomElement(nigerianCities);
   
@@ -119,7 +120,8 @@ function generateNigerianPersonContact() {
 function generateOtherAfricanPersonContact() {
   const firstName = getRandomElement(otherAfricanFirstNames);
   const lastName = getRandomElement(otherAfricanLastNames);
-  const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${Math.floor(Math.random() * 999)}@example.com`;
+  const uniqueId = Math.floor(Math.random() * 999999) + Date.now() % 100000; // Much larger range + timestamp component
+  const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${uniqueId}@example.com`;
   const phone = `+${getRandomElement(["20", "27", "254", "251", "212", "233", "225", "260", "255", "221"])} ${Math.floor(Math.random() * 900) + 100} ${Math.floor(Math.random() * 9000) + 1000}`;
   const city = getRandomElement(otherAfricanCities);
   
@@ -187,8 +189,9 @@ function generateCompanyContact() {
   };
   
   const country = isNigerian ? "Nigeria" : (countryMap[city] || "Unknown");
-  const email = `info@${company.toLowerCase().replace(/\s+/g, '')}.${isNigerian ? 'com.ng' : 'com'}`;
-  const phone = isNigerian ? 
+  const uniqueId = Math.floor(Math.random() * 9999) + Date.now() % 10000; // Unique component for company emails
+  const email = `info${uniqueId}@${company.toLowerCase().replace(/\s+/g, '')}.${isNigerian ? 'com.ng' : 'com'}`;
+  const phone = isNigerian ?
     `+234 ${Math.floor(Math.random() * 900) + 100} ${Math.floor(Math.random() * 9000) + 1000}` : 
     `+${getRandomElement(["20", "27", "254", "251", "212", "233", "225", "260", "255", "221"])} ${Math.floor(Math.random() * 900) + 100} ${Math.floor(Math.random() * 9000) + 1000}`;
   
@@ -295,8 +298,8 @@ async function seedContacts() {
           country: contact.country,
           postalCode: contact.postalCode,
           notes: contact.notes,
-          tagsString: tagsToString(contact.tags),
           source: contact.source,
+          tagsString: tagsToString(contact.tags),
           status: contact.status,
           createdById: adminUser.id,
           createdAt: now,

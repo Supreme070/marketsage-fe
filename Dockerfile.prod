@@ -8,15 +8,21 @@ WORKDIR /app
 # Copy package files
 COPY package.json package-lock.json* ./
 
-# Install dependencies with improved reliability for Alpine packages
+# Install dependencies with proper glibc support for ARM64
 RUN apk update && \
     apk add --no-cache --virtual .build-deps libc6-compat python3 make g++ && \
     apk add --no-cache postgresql-client && \
+    # Add glibc for ARM64 compatibility
+    wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub && \
+    wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.35-r1/glibc-2.35-r1.apk && \
+    wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.35-r1/glibc-bin-2.35-r1.apk && \
+    apk add --no-cache glibc-2.35-r1.apk glibc-bin-2.35-r1.apk || true && \
+    rm -f glibc-*.apk && \
     npm config set fetch-timeout 600000 && \
     npm config set fetch-retry-mintimeout 20000 && \
     npm config set fetch-retry-maxtimeout 120000 && \
     npm config set fetch-retries 5 && \
-    npm install && \
+    npm ci --only=production && \
     apk del .build-deps
 
 # Rebuild the source code only when needed
@@ -28,28 +34,27 @@ COPY . .
 # Debugging: list the files to verify src/scripts exists
 RUN ls -la ./src/ && ls -la ./src/scripts || echo "Scripts directory not found in source"
 
-# Remove the problematic bcrypt binary and rebuild for the current architecture
-RUN rm -rf node_modules/bcrypt/lib/binding/napi-v3 && \
-    apk add --no-cache --virtual .build-deps python3 make g++ && \
-    npm config set fetch-timeout 600000 && \
-    npm config set fetch-retry-mintimeout 20000 && \
-    npm config set fetch-retry-maxtimeout 120000 && \
-    npm config set fetch-retries 5 && \
-    npm config set registry https://registry.npmjs.org/ && \
-    (npm rebuild bcrypt --build-from-source || \
-     (echo "bcrypt rebuild failed, trying alternative approach..." && \
-      npm uninstall bcrypt && \
-      npm install bcrypt@5.1.1 --save)) && \
-    apk del .build-deps
-
 # Make startup script executable
 RUN chmod +x startup.sh
 
 # Ensure public directory exists
 RUN mkdir -p ./public
 
-# Generate Prisma client
-RUN npx prisma generate
+# Set environment variables for Prisma generation
+ARG DATABASE_URL
+ENV DATABASE_URL=${DATABASE_URL}
+
+# Reinstall and generate Prisma client before bcrypt rebuild
+RUN npm install @prisma/client prisma --save && \
+    npx prisma generate
+
+# Rebuild native binaries for Alpine Linux and handle ONNX gracefully
+RUN rm -rf node_modules/bcrypt/lib/binding/napi-v3 && \
+    apk add --no-cache --virtual .rebuild-deps python3 make g++ && \
+    npm rebuild bcrypt --build-from-source && \
+    # Try to rebuild ONNX runtime, but don't fail if it doesn't work
+    (npm rebuild onnxruntime-node --build-from-source || echo "ONNX runtime rebuild failed - using fallback AI features") && \
+    apk del .rebuild-deps
 
 # Build application
 RUN npm run build
@@ -58,7 +63,10 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
+# Accept NODE_ENV as build argument and runtime environment variable
+ARG NODE_ENV=production
+ENV NODE_ENV=$NODE_ENV
+ENV DOCKER_CONTAINER=true
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -94,6 +102,7 @@ RUN ls -la ./src/scripts || echo "src/scripts directory empty" && ls -la ./scrip
 COPY --from=builder --chown=nextjs:nodejs /app/next.config.js ./next.config.js
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 COPY --from=builder --chown=nextjs:nodejs /app/tsconfig.json ./tsconfig.json
+COPY --from=builder --chown=nextjs:nodejs /app/prisma/schema.prisma ./schema.prisma
 
 USER nextjs
 

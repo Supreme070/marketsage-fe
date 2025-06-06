@@ -107,10 +107,10 @@ async function seedSMSCampaigns() {
           createdAt: now,
           updatedAt: now,
           createdById: adminUser.id,
-          List: {
+          lists: {
             connect: [{ id: lists[0].id }]
           },
-          Segment: {
+          segments: {
             connect: [{ id: segments[0].id }]
           },
         },

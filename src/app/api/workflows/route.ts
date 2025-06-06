@@ -23,14 +23,14 @@ const workflowSchema = z.object({
 
 // GET endpoint to fetch workflows
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-
-  // Check if user is authenticated
-  if (!session || !session.user) {
-    return unauthorized();
-  }
-
   try {
+    const session = await getServerSession(authOptions);
+
+    // Check if user is authenticated
+    if (!session || !session.user) {
+      return unauthorized();
+    }
+
     // Different filters based on user role
     const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN";
     
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
         { description: { contains: searchQuery, mode: 'insensitive' } },
       ];
     }
-    
+
     const workflows = await prisma.workflow.findMany({
       where: whereClause,
       orderBy: {

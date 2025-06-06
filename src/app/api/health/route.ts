@@ -9,6 +9,12 @@ import {
 } from "@/lib/errors";
 
 export async function GET() {
-  // Return a simple 200 OK response
-  return NextResponse.json({ status: 'OK', timestamp: new Date().toISOString() });
+  return NextResponse.json(
+    { 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      service: 'marketsage'
+    }, 
+    { status: 200 }
+  );
 }

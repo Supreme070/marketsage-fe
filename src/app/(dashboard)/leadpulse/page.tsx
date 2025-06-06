@@ -21,11 +21,11 @@ import {
   getVisitorInsights, 
   getVisitorSegments,
   getVisitorLocations,
-  VisitorJourney,
-  VisitorPath,
-  InsightItem,
-  VisitorSegment,
-  VisitorLocation
+  type VisitorJourney,
+  type VisitorPath,
+  type InsightItem,
+  type VisitorSegment,
+  type VisitorLocation
 } from '@/lib/leadpulse/dataProvider';
 
 export default function LeadPulseDashboard() {
@@ -895,7 +895,7 @@ export default function LeadPulseDashboard() {
                         <Button variant="outline" size="sm">Apply</Button>
                       </div>
                       <div className="text-sm text-muted-foreground mt-2">
-                        Currently set to {identifiedRetention === '-1' ? 'Forever' : `${Math.floor(parseInt(identifiedRetention) / 365)} year(s)`}
+                        Currently set to {identifiedRetention === '-1' ? 'Forever' : `${Math.floor(Number.parseInt(identifiedRetention) / 365)} year(s)`}
                       </div>
                     </div>
                   </div>

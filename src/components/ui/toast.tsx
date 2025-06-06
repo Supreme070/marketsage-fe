@@ -4,6 +4,7 @@ import * as React from "react"
 import * as ToastPrimitives from "@radix-ui/react-toast"
 import { cva, type VariantProps } from "class-variance-authority"
 import { X } from "lucide-react"
+import { toast, Toaster as Sonner } from "sonner"
 
 import { cn } from "@/lib/utils"
 
@@ -115,6 +116,35 @@ ToastDescription.displayName = ToastPrimitives.Description.displayName
 type ToastProps = React.ComponentPropsWithoutRef<typeof Toast>
 
 type ToastActionElement = React.ReactElement<typeof ToastAction>
+
+type ToasterProps = React.ComponentProps<typeof Sonner>
+
+export function Toaster({ ...props }: ToasterProps) {
+  return (
+    <Sonner
+      className={cn(
+        "toaster group",
+        "[&_div[role=status]]:rounded-lg",
+        "[&_div[role=status]]:border",
+        "[&_div[role=status]]:border-border",
+        "[&_div[role=status]]:bg-background",
+        "[&_div[role=status]]:text-foreground",
+        "[&_div[role=status]]:shadow-lg",
+        "[&_div[role=status]]:dark:bg-slate-950",
+        "[&_div[role=status]]:dark:border-slate-800",
+        "[&_div[role=status]_div[data-icon]]:text-primary",
+        "[&_div[role=status]_div[data-icon]]:dark:text-primary",
+        "[&_div[role=status]_div[data-title]]:font-semibold",
+        "[&_div[role=status]_div[data-title]]:text-foreground",
+        "[&_div[role=status]_div[data-description]]:text-muted-foreground",
+        "[&_div[role=status]_button]:text-muted-foreground",
+        "[&_div[role=status]_button]:hover:text-foreground",
+        "[&_div[role=status]_button]:focus:ring-ring",
+      )}
+      {...props}
+    />
+  )
+}
 
 export {
   type ToastProps,

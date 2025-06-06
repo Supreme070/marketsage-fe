@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import Link from "next/link";
+import { toast } from 'sonner';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -20,261 +20,316 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { Toaster } from "@/components/ui/toast";
 
-// Form validation schema
-const formSchema = z
-  .object({
-    name: z.string().min(2, { message: "Name must be at least 2 characters" }),
-    email: z.string().email({ message: "Please enter a valid email address" }),
-    password: z.string().min(8, { message: "Password must be at least 8 characters" }),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
+// Step 1: Initial Registration
+const initialFormSchema = z.object({
+  name: z.string().min(2, { message: "Name must be at least 2 characters" }),
+  email: z.string().email({ message: "Please enter a valid email address" }),
+});
 
-type FormValues = z.infer<typeof formSchema>;
+// Step 2: PIN Verification
+const pinFormSchema = z.object({
+  pin: z.string().length(6, { message: "PIN must be 6 digits" }),
+});
+
+// Step 3: Password Setup
+const passwordFormSchema = z.object({
+  password: z.string().min(8, { message: "Password must be at least 8 characters" }),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+type InitialFormValues = z.infer<typeof initialFormSchema>;
+type PinFormValues = z.infer<typeof pinFormSchema>;
+type PasswordFormValues = z.infer<typeof passwordFormSchema>;
 
 export default function RegisterPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [step, setStep] = useState<'initial' | 'verify' | 'password'>('initial');
+  const [registrationData, setRegistrationData] = useState<{
+    email?: string;
+    name?: string;
+    registrationId?: string;
+  }>({});
 
-  // Initialize form
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-    },
+  // Initial registration form
+  const initialForm = useForm<InitialFormValues>({
+    resolver: zodResolver(initialFormSchema),
+    defaultValues: { name: "", email: "" },
   });
 
-  // Handle form submission
-  const onSubmit = async (data: FormValues) => {
+  // PIN verification form
+  const pinForm = useForm<PinFormValues>({
+    resolver: zodResolver(pinFormSchema),
+    defaultValues: { pin: "" },
+  });
+
+  // Password setup form
+  const passwordForm = useForm<PasswordFormValues>({
+    resolver: zodResolver(passwordFormSchema),
+    defaultValues: { password: "", confirmPassword: "" },
+  });
+
+  // Handle initial registration
+  const onInitialSubmit = async (data: InitialFormValues) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch("/api/auth/register/initial", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to start registration");
+      }
+
+      setRegistrationData({
+        email: data.email,
+        name: data.name,
+        registrationId: result.registrationId,
+      });
+      
+      toast.success("Verification PIN sent to your email");
+      setStep('verify');
+    } catch (err: any) {
+      toast.error(err.message || "Failed to start registration");
+      setError(err.message || "An error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle PIN verification
+  const onPinSubmit = async (data: PinFormValues) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Register user (API call)
-      const response = await fetch("/api/auth/register", {
+      const response = await fetch("/api/auth/register/verify", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: data.name,
-          email: data.email,
-          password: data.password,
+          pin: data.pin,
+          registrationId: registrationData.registrationId,
         }),
       });
 
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || "Failed to register");
+        throw new Error(result.message || "Invalid PIN");
       }
 
-      // Sign in the user after successful registration
-      await signIn("credentials", {
-        email: data.email,
-        password: data.password,
-        redirect: false,
+      toast.success("Email verified successfully");
+      setStep('password');
+    } catch (err: any) {
+      toast.error(err.message || "Failed to verify PIN");
+      setError(err.message || "An error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle password setup
+  const onPasswordSubmit = async (data: PasswordFormValues) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/auth/register/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          password: data.password,
+          registrationId: registrationData.registrationId,
+        }),
       });
 
-      router.push("/dashboard");
-      router.refresh();
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to complete registration");
+      }
+
+      toast.success("Registration completed successfully!");
+      router.push("/login");
     } catch (err: any) {
-      setError(err.message || "An error occurred during registration");
+      toast.error(err.message || "Failed to complete registration");
+      setError(err.message || "An error occurred");
+    } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 dark:bg-slate-900 p-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">Create an Account</CardTitle>
-          <CardDescription>
-            Sign up for MarketSage to get started
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {error && (
-                <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-                  {error}
-                </div>
-              )}
+    <>
+      <div className="flex min-h-screen items-center justify-center bg-slate-100 dark:bg-slate-900 p-4">
+        <Card className="w-full max-w-md shadow-lg">
+          <CardHeader className="space-y-1 text-center">
+            <CardTitle className="text-2xl font-bold">Create an Account</CardTitle>
+            <CardDescription>
+              {step === 'initial' && "Sign up for MarketSage to get started"}
+              {step === 'verify' && "Enter the verification PIN sent to your email"}
+              {step === 'password' && "Set up your password"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {error && (
+              <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive mb-4">
+                {error}
+              </div>
+            )}
 
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="John Doe"
-                        autoComplete="name"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {step === 'initial' && (
+              <Form {...initialForm}>
+                <form onSubmit={initialForm.handleSubmit(onInitialSubmit)} className="space-y-4">
+                  <FormField
+                    control={initialForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Full Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="John Doe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={initialForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input placeholder="name@company.com" type="email" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending verification PIN...
+                      </>
+                    ) : (
+                      "Continue"
+                    )}
+                  </Button>
+                </form>
+              </Form>
+            )}
 
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="name@company.com"
-                        type="email"
-                        autoComplete="email"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {step === 'verify' && (
+              <Form {...pinForm}>
+                <form onSubmit={pinForm.handleSubmit(onPinSubmit)} className="space-y-4">
+                  <FormField
+                    control={pinForm.control}
+                    name="pin"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Verification PIN</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Enter 6-digit PIN" 
+                            maxLength={6}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Verifying...
+                      </>
+                    ) : (
+                      "Verify PIN"
+                    )}
+                  </Button>
+                </form>
+              </Form>
+            )}
 
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          placeholder="••••••••"
-                          type={showPassword ? "text" : "password"}
-                          autoComplete="new-password"
-                          {...field}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
-                          {showPassword ? (
-                            <EyeOff className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <Eye className="h-4 w-4 text-muted-foreground" />
-                          )}
-                          <span className="sr-only">
-                            {showPassword ? "Hide password" : "Show password"}
-                          </span>
-                        </Button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Confirm Password</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          placeholder="••••••••"
-                          type={showConfirmPassword ? "text" : "password"}
-                          autoComplete="new-password"
-                          {...field}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        >
-                          {showConfirmPassword ? (
-                            <EyeOff className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <Eye className="h-4 w-4 text-muted-foreground" />
-                          )}
-                          <span className="sr-only">
-                            {showConfirmPassword ? "Hide password" : "Show password"}
-                          </span>
-                        </Button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating account...
-                  </>
-                ) : (
-                  "Create account"
-                )}
-              </Button>
-            </form>
-          </Form>
-
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <Separator className="w-full" />
+            {step === 'password' && (
+              <Form {...passwordForm}>
+                <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
+                  <FormField
+                    control={passwordForm.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="password"
+                            placeholder="Create a strong password"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={passwordForm.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Confirm Password</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="password"
+                            placeholder="Confirm your password"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating account...
+                      </>
+                    ) : (
+                      "Complete Registration"
+                    )}
+                  </Button>
+                </form>
+              </Form>
+            )}
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
+            <div className="text-center text-sm">
+              Already have an account?{" "}
+              <Link href="/login" className="text-primary hover:underline">
+                Log in
+              </Link>
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Or continue with
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-2">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
-              disabled={isLoading}
-            >
-              <svg className="mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
-                <path d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z" />
-              </svg>
-              Continue with Google
-            </Button>
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col space-y-4">
-          <div className="text-center text-sm">
-            Already have an account?{" "}
-            <Link href="/login" className="text-primary hover:underline">
-              Log in
-            </Link>
-          </div>
-        </CardFooter>
-      </Card>
-    </div>
+          </CardFooter>
+        </Card>
+      </div>
+      <Toaster />
+    </>
   );
 }

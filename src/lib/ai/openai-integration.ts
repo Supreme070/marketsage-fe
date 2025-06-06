@@ -20,16 +20,21 @@ interface OpenAIResponse {
 
 export class OpenAIIntegration {
   private apiKey: string;
-  private baseURL = 'https://api.openai.com/v1';
+  private baseURL: string = 'https://api.openai.com/v1';
 
-  constructor(apiKey?: string) {
-    this.apiKey = apiKey || process.env.OPENAI_API_KEY || '';
+  constructor() {
+    this.apiKey = process.env.OPENAI_API_KEY || '';
   }
 
   async generateResponse(
     question: string, 
     context?: string,
-    conversationHistory: OpenAIMessage[] = []
+    conversationHistory: OpenAIMessage[] = [],
+    options: {
+      temperature?: number;
+      maxTokens?: number;
+      model?: string;
+    } = {}
   ): Promise<OpenAIResponse> {
     if (!this.apiKey) {
       throw new Error('OpenAI API key not configured');
@@ -51,10 +56,10 @@ export class OpenAIIntegration {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini', // Cost-effective but powerful
+          model: options.model || 'gpt-4',
           messages,
-          max_tokens: 1000,
-          temperature: 0.7,
+          max_tokens: options.maxTokens || 1000,
+          temperature: options.temperature || 0.7,
           presence_penalty: 0.1,
           frequency_penalty: 0.1,
         }),
@@ -80,38 +85,116 @@ export class OpenAIIntegration {
   private buildSystemPrompt(context?: string): string {
     return `You are Supreme-AI, the intelligent assistant for MarketSage - a comprehensive marketing automation platform designed specifically for African fintech markets.
 
-**About MarketSage:**
-- Specialized for cross-border payments, remittances, and fintech in Africa
-- Serves markets like Nigeria, Ghana, Kenya, and diaspora communities
-- Features: Email marketing, WhatsApp automation, customer intelligence, workflow builder
-- Key modules: LeadPulse visitor tracking, AI Intelligence Center, Business Analytics
+**Core Capabilities:**
+- Deep understanding of African fintech markets
+- Advanced behavioral prediction and analysis
+- Dynamic problem-solving and creative thinking
+- Contextual awareness and memory retention
+- Continuous learning and adaptation
 
-**Your Communication Style:**
-- Be conversational, helpful, and knowledgeable
-- Ask clarifying questions when you need more information
-- Provide specific, actionable advice rather than generic suggestions
-- Reference MarketSage features naturally in your responses
-- Understand African market context (WAT timezone, local currencies, cultural considerations)
+**Communication Style:**
+- Professional yet approachable
+- Clear and concise explanations
+- Proactive problem identification
+- Data-driven insights
+- Culturally aware and sensitive
 
-**Key Capabilities:**
-- Email campaign optimization for African markets
-- WhatsApp automation and compliance
-- Customer segmentation and churn analysis
-- Workflow automation setup
-- Analytics and performance insights
-- Integration guidance
-- Compliance and regulatory advice
+**Domain Expertise:**
+- African fintech landscape
+- Marketing automation
+- Customer behavior analysis
+- Regulatory compliance
+- Market trends and patterns
 
-**African Market Expertise:**
-- Best send times: 9-11 AM and 3-5 PM WAT
-- Preferred communication: WhatsApp-first approach
-- Trust signals: CBN licensing, SSL security, local partnerships
-- Cultural context: Family-oriented messaging, community trust, mobile-first
-- Currencies: ₦ (Naira), GHS (Cedi), KSh (Shilling)
+**Problem-Solving Approach:**
+1. Analyze context and historical data
+2. Generate multiple solution paths
+3. Evaluate feasibility and impact
+4. Recommend optimal approach
+5. Plan follow-up actions
 
-${context ? `\n**Additional Context:**\n${context}` : ''}
+${context ? `\n**Current Context:**\n${context}` : ''}
 
-Respond naturally and be genuinely helpful. If you don't know something specific about MarketSage, say so and suggest how the user can find the information.`;
+Remember to:
+- Think through problems systematically
+- Consider multiple perspectives
+- Provide actionable recommendations
+- Maintain context awareness
+- Learn from interactions`;
+  }
+
+  async analyzeIntent(text: string): Promise<{
+    intent: string;
+    confidence: number;
+    entities: string[];
+  }> {
+    const response = await this.generateResponse(
+      text,
+      'Analyze the intent and entities in this text. Return a JSON object with intent, confidence, and entities.',
+      [],
+      { temperature: 0.3 }
+    );
+
+    try {
+      const analysis = JSON.parse(response.answer);
+      return {
+        intent: analysis.intent || 'unknown',
+        confidence: analysis.confidence || 0.5,
+        entities: analysis.entities || []
+      };
+    } catch {
+      return {
+        intent: 'unknown',
+        confidence: 0.5,
+        entities: []
+      };
+    }
+  }
+
+  async generateCreativeSolutions(
+    problem: string,
+    constraints: string[]
+  ): Promise<string[]> {
+    const response = await this.generateResponse(
+      `Generate creative solutions for this problem: ${problem}\nConstraints: ${constraints.join(', ')}`,
+      'You are a creative problem solver. Think outside the box while respecting the constraints.',
+      [],
+      { temperature: 0.9 }
+    );
+
+    try {
+      return response.answer.split('\n').filter(line => line.trim());
+    } catch {
+      return ['No solutions generated'];
+    }
+  }
+
+  async evaluateApproach(
+    approach: string,
+    criteria: string[]
+  ): Promise<{
+    score: number;
+    feedback: string[];
+  }> {
+    const response = await this.generateResponse(
+      `Evaluate this approach: ${approach}\nCriteria: ${criteria.join(', ')}`,
+      'You are an expert evaluator. Provide a detailed assessment.',
+      [],
+      { temperature: 0.3 }
+    );
+
+    try {
+      const evaluation = JSON.parse(response.answer);
+      return {
+        score: evaluation.score || 0.5,
+        feedback: evaluation.feedback || []
+      };
+    } catch {
+      return {
+        score: 0.5,
+        feedback: ['Evaluation failed']
+      };
+    }
   }
 }
 

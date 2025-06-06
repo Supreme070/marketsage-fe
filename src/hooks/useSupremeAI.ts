@@ -15,6 +15,10 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { SupremeAIv3Task, SupremeAIv3Response } from '@/lib/ai/supreme-ai-v3-engine';
+import { SupremeAIBrain } from '@/lib/ai/supreme-ai-brain';
+import { useChatHistory } from './useAIIntelligence';
+import { useSession } from 'next-auth/react';
+import { v4 as uuidv4 } from 'uuid';
 
 // Enhanced response type with metadata
 export interface SupremeAIv3ApiResponse extends SupremeAIv3Response {
@@ -227,67 +231,87 @@ export function useSupremeAI(options: UseSupremeAIOptions = {}): UseSupremeAISta
  */
 
 // Question/Answer Hook
-export function useSupremeChat(userId?: string) {
-  const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string; timestamp: Date }>>([]);
-  const { ask, loading, result, error, clear: clearAI } = useSupremeAI({ userId });
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  thoughts?: any[];
+  actions?: any[];
+}
 
-  const ask2 = useCallback(async (question: string) => {
-    // Add user message immediately
-    const userMessage = {
-      role: 'user' as const,
-      content: question,
-      timestamp: new Date()
-    };
-    setChatMessages(prev => [...prev, userMessage]);
+export function useSupremeChat(contextId?: string) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { data: session } = useSession();
+  const chatHistory = useChatHistory(session?.user?.id);
+  const brain = new SupremeAIBrain();
 
+  const ask = useCallback(async (question: string) => {
+    if (!question.trim() || !session?.user?.id) return;
+
+    setLoading(true);
     try {
-      const result = await ask(question);
-      
-      // Add AI response
-      if (result && result.success && result.data && result.data.answer) {
-        const aiMessage = {
-          role: 'assistant' as const,
-          content: result.data.answer,
-          timestamp: new Date()
-        };
-        setChatMessages(prev => [...prev, aiMessage]);
-      } else {
-        // Handle case where API returns success but no answer
-        const errorMessage = {
-          role: 'assistant' as const,
-          content: "I apologize, but I didn't receive a proper response. Could you please try rephrasing your question?",
-          timestamp: new Date()
-        };
-        setChatMessages(prev => [...prev, errorMessage]);
-      }
-      
-      return result;
-    } catch (error) {
-      // Add error message with helpful context
-      const errorMessage = {
-        role: 'assistant' as const,
-        content: error instanceof Error && error.message.includes('OpenAI') 
-          ? "I'm having trouble connecting to the AI service right now. I can still help you with basic questions about MarketSage. What would you like to know?"
-          : `I encountered an issue: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again, and if the problem persists, you can find help in the MarketSage documentation.`,
+      // Add user message
+      const userMessage: ChatMessage = {
+        role: 'user',
+        content: question,
         timestamp: new Date()
       };
-      setChatMessages(prev => [...prev, errorMessage]);
-      throw error;
+      setMessages(prev => [...prev, userMessage]);
+
+      // Get brain's response
+      const response = await brain.think(question, {
+        userId: session.user.id,
+        sessionId: contextId || uuidv4(),
+        userProfile: session.user
+      });
+
+      // Add AI response
+      const aiMessage: ChatMessage = {
+        role: 'assistant',
+        content: response.response,
+        timestamp: new Date(),
+        thoughts: response.thoughts,
+        actions: response.actions
+      };
+      setMessages(prev => [...prev, aiMessage]);
+
+      // Save to chat history
+      await chatHistory.saveChat(
+        question,
+        response.response,
+        {
+          thoughts: response.thoughts,
+          actions: response.actions,
+          sessionId: contextId
+        },
+        response.thoughts[0]?.confidence || 0.8
+      );
+
+      return response;
+    } catch (error) {
+      console.error('Supreme-AI chat error:', error);
+      // Add error message
+      const errorMessage: ChatMessage = {
+        role: 'assistant',
+        content: 'I apologize, but I encountered an error while processing your request. Please try again.',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setLoading(false);
     }
-  }, [ask]);
+  }, [brain, session, contextId, chatHistory]);
 
   const clear = useCallback(() => {
-    setChatMessages([]);
-    clearAI();
-  }, [clearAI]);
+    setMessages([]);
+  }, []);
 
   return {
-    ask: ask2,
+    messages,
     loading,
-    error,
-    messages: chatMessages,
-    clear,
-    lastAnswer: result?.taskType === 'question' ? result.data?.answer : null
+    ask,
+    clear
   };
 }
 

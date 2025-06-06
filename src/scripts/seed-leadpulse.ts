@@ -11,6 +11,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { randomUUID } from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -174,20 +175,21 @@ function generateVisitorJourney(startTime: Date, visitorType: 'explorer' | 'focu
 async function main() {
   console.log('🌱 Starting LeadPulse seed data generation...');
 
-  // Skip the model checking since we'll use raw SQL
+  // Clear existing data using Prisma client instead of raw SQL
   console.log('🗑️ Clearing existing LeadPulse data...');
   
   try {
-    await prisma.$executeRaw`DELETE FROM "LeadPulseTouchpoint"`;
-    await prisma.$executeRaw`DELETE FROM "LeadPulseInsight"`;
-    await prisma.$executeRaw`DELETE FROM "LeadPulseSegment"`;
-    await prisma.$executeRaw`DELETE FROM "LeadPulseVisitor"`;
+    // Clear in correct order due to foreign key constraints
+    await prisma.leadPulseTouchpoint.deleteMany({});
+    await prisma.leadPulseInsight.deleteMany({});
+    await prisma.leadPulseSegment.deleteMany({});
+    await prisma.leadPulseVisitor.deleteMany({});
     console.log('✅ Cleared existing data');
   } catch (error) {
-    console.log('ℹ️ No existing data to clear or tables don\'t exist yet');
+    console.log('ℹ️ No existing data to clear');
   }
 
-  // Create visitor segments using raw SQL
+  // Create visitor segments using Prisma client
   console.log('📊 Creating visitor segments...');
   const segmentData = [
     {
@@ -212,11 +214,15 @@ async function main() {
     }
   ];
 
+  // Create segments using Prisma client
   for (const segment of segmentData) {
-    await prisma.$executeRaw`
-      INSERT INTO "LeadPulseSegment" (id, name, description, criteria, "createdAt", "updatedAt")
-      VALUES (${generateId()}, ${segment.name}, ${segment.description}, ${JSON.stringify(segment.criteria)}, NOW(), NOW())
-    `;
+    await prisma.leadPulseSegment.create({
+      data: {
+        name: segment.name,
+        description: segment.description,
+        criteria: segment.criteria
+      }
+    });
   }
 
   // Generate visitors with realistic data
@@ -241,32 +247,38 @@ async function main() {
     // Determine if visitor is currently active (within last 30 minutes)
     const isActive = Math.random() < 0.15 && (now.getTime() - lastVisit.getTime()) < 30 * 60 * 1000;
     
-    const visitorId = generateId();
     const fingerprint = generateFingerprint();
     const ipAddress = `${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
     const userAgent = generateUserAgent(deviceInfo.device, deviceInfo.browser, deviceInfo.os);
     const region = location.country === 'Nigeria' ? (location.city === 'Lagos' ? 'Lagos State' : 'FCT') : 'Unknown';
     const engagementLevel = engagementScore > 70 ? 'High' : engagementScore > 40 ? 'Medium' : 'Low';
 
-    // Insert visitor using raw SQL
-    await prisma.$executeRaw`
-      INSERT INTO "LeadPulseVisitor" (
-        id, fingerprint, "ipAddress", "userAgent", device, browser, os,
-        city, country, region, latitude, longitude,
-        "firstVisit", "lastVisit", "totalVisits", "isActive", 
-        "engagementScore", "engagementLevel", score, "createdAt", "updatedAt"
-      ) VALUES (
-        ${visitorId}, ${fingerprint}, ${ipAddress}, ${userAgent},
-        ${deviceInfo.device}, ${deviceInfo.browser}, ${deviceInfo.os},
-        ${location.city}, ${location.country}, ${region}, ${location.latitude}, ${location.longitude},
-        ${sessionStart}, ${lastVisit}, ${Math.floor(Math.random() * 5) + 1}, ${isActive},
-        ${engagementScore}, ${engagementLevel}, ${engagementScore}, NOW(), NOW()
-      )
-    `;
+    // Create visitor using Prisma client
+    const visitor = await prisma.leadPulseVisitor.create({
+      data: {
+        fingerprint,
+        ipAddress,
+        userAgent,
+        device: deviceInfo.device,
+        browser: deviceInfo.browser,
+        os: deviceInfo.os,
+        city: location.city,
+        country: location.country,
+        region,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        firstVisit: sessionStart,
+        lastVisit,
+        totalVisits: Math.floor(Math.random() * 5) + 1,
+        isActive,
+        engagementScore,
+        engagementLevel,
+        score: engagementScore
+      }
+    });
 
     // Create touchpoints for this visitor
-    for (const touchpoint of journey) {
-      const touchpointId = generateId();
+    const touchpointPromises = journey.map(touchpoint => {
       const metadata = {
         sessionId: generateFingerprint().slice(0, 8),
         referrer: i === 0 ? 'direct' : 'google.com',
@@ -275,18 +287,21 @@ async function main() {
         pageTitle: touchpoint.pageTitle
       };
 
-      await prisma.$executeRaw`
-        INSERT INTO "LeadPulseTouchpoint" (
-          id, "visitorId", timestamp, type, url, score, duration, metadata, "createdAt", "updatedAt"
-        ) VALUES (
-          ${touchpointId}, ${visitorId}, ${touchpoint.timestamp}, ${touchpoint.type}::"LeadPulseTouchpointType",
-          ${touchpoint.url}, ${touchpoint.score}, ${touchpoint.duration},
-          ${JSON.stringify(metadata)}, NOW(), NOW()
-        )
-      `;
-    }
+      return prisma.leadPulseTouchpoint.create({
+        data: {
+          visitorId: visitor.id,
+          timestamp: touchpoint.timestamp,
+          type: touchpoint.type,
+          url: touchpoint.url,
+          score: touchpoint.score,
+          duration: touchpoint.duration,
+          metadata
+        }
+      });
+    });
 
-    visitors.push({ id: visitorId, engagementScore, journey });
+    await Promise.all(touchpointPromises);
+    visitors.push({ id: visitor.id, engagementScore, journey });
   }
 
   // Create AI-generated insights
@@ -346,31 +361,26 @@ async function main() {
     }
   ];
 
-  for (const insight of insights) {
-    const insightId = generateId();
-    await prisma.$executeRaw`
-      INSERT INTO "LeadPulseInsight" (
-        id, type, title, description, importance, metric, recommendation, "createdAt", "updatedAt"
-      ) VALUES (
-        ${insightId}, ${insight.type}::"LeadPulseInsightType", ${insight.title}, ${insight.description},
-        ${insight.importance}::"LeadPulseImportance", ${JSON.stringify(insight.metric)}, ${insight.recommendation},
-        NOW(), NOW()
-      )
-    `;
-  }
+  const insightPromises = insights.map(insight => {
+    return prisma.leadPulseInsight.create({
+      data: {
+        type: insight.type as any,
+        title: insight.title,
+        description: insight.description,
+        importance: insight.importance as any,
+        metric: insight.metric,
+        recommendation: insight.recommendation
+      }
+    });
+  });
+
+  await Promise.all(insightPromises);
 
   console.log('✅ LeadPulse seed data created successfully!');
   console.log(`📊 Created ${visitors.length} visitors with realistic touchpoint journeys`);
   console.log(`🎯 Created ${segmentData.length} visitor segments`);
   console.log(`🧠 Created ${insights.length} AI insights`);
   console.log('\n🚀 Your LeadPulse dashboard is now populated with realistic data!');
-}
-
-// Helper function to generate ID
-function generateId(): string {
-  return 'clxxxxxxxxxxxxx'.replace(/[x]/g, () => {
-    return (Math.random() * 36 | 0).toString(36);
-  });
 }
 
 main()
