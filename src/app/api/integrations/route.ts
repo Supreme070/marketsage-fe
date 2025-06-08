@@ -21,12 +21,13 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Use IntegrationConnection model instead of Integration
-    const integrations = await prisma.integrationConnection.findMany({
+    // Use Integration model (not IntegrationConnection)
+    const integrations = await prisma.integration.findMany({
       select: {
         id: true,
         type: true,
         name: true,
+        description: true,
         status: true,
         createdAt: true,
         updatedAt: true,
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { type, name, credentials } = body;
+    const { type, name, description, credentials } = body;
 
     if (!type || !name || !credentials) {
       return NextResponse.json(
@@ -66,19 +67,22 @@ export async function POST(request: NextRequest) {
 
     // Encrypt credentials before storing
     // In a real app, you'd use encryption here
-    const configData = JSON.stringify(credentials);
+    const credentialsData = JSON.stringify(credentials);
     
     // Generate a random UUID for the ID
     const id = randomUUID();
 
-    // Create the integration using IntegrationConnection
-    const integration = await prisma.integrationConnection.create({
+    // Create the integration using the correct Integration model
+    const integration = await prisma.integration.create({
       data: {
         id,
         name,
         type,
-        config: configData,
-        status: "INACTIVE", // Start as inactive until verified
+        description: description || null,
+        credentials: credentialsData,
+        status: "PENDING", // Start as pending until verified
+        organizationId: (session.user as any).organizationId || "default-org", // Fallback to default
+        createdBy: session.user.id,
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -129,8 +133,8 @@ async function verifyIntegrationConnection(
         isValid = Object.values(credentials).every(val => !!val);
     }
     
-    // Update the integration status using IntegrationConnection
-    await prisma.integrationConnection.update({
+    // Update the integration status using the correct Integration model
+    await prisma.integration.update({
       where: { id: integrationId },
       data: {
         status: isValid ? "ACTIVE" : "ERROR",
@@ -149,7 +153,7 @@ async function verifyIntegrationConnection(
     
     // Update the integration status to ERROR
     try {
-      await prisma.integrationConnection.update({
+      await prisma.integration.update({
         where: { id: integrationId },
         data: {
           status: "ERROR",

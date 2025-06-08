@@ -12,6 +12,16 @@ type VisitorLocation = {
   longitude: number;
 };
 
+type VisitorData = {
+  id: string;
+  city: string | null;
+  country: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  lastVisit: Date;
+  visitCount: number;
+};
+
 export async function GET(request: Request) {
   try {
     // Get query parameters
@@ -53,7 +63,10 @@ export async function GET(request: Request) {
         },
         select: {
           id: true,
-          geo: true,
+          city: true,
+          country: true,
+          latitude: true,
+          longitude: true,
           lastVisit: true,
           visitCount: true
         }
@@ -63,11 +76,10 @@ export async function GET(request: Request) {
         // Group visitors by city and aggregate data
         const locationMap = new Map<string, VisitorLocation>();
 
-        visitors.forEach(visitor => {
-          const geo = visitor.geo as any;
-          if (!geo || !geo.city || !geo.country) return;
+        visitors.forEach((visitor) => {
+          if (!visitor.city || !visitor.country) return;
 
-          const cityKey = `${geo.city}, ${geo.country}`;
+          const cityKey = `${visitor.city}, ${visitor.country}`;
           const isActive = visitor.lastVisit.getTime() > (now.getTime() - 30 * 60 * 60 * 1000);
           
           if (locationMap.has(cityKey)) {
@@ -75,18 +87,15 @@ export async function GET(request: Request) {
             existing.visitCount += visitor.visitCount || 1;
             if (isActive) existing.isActive = true;
           } else {
-            // Get coordinates for the city (you might want to have a more comprehensive mapping)
-            const coordinates = getCityCoordinates(geo.city);
-            
             locationMap.set(cityKey, {
-              id: `loc_${geo.city.toLowerCase().replace(/\s/g, '_')}`,
-              city: geo.city,
-              country: geo.country,
+              id: `loc_${visitor.city.toLowerCase().replace(/\s/g, '_')}`,
+              city: visitor.city,
+              country: visitor.country,
               isActive,
               lastActive: isActive ? 'just now' : formatLastActive(visitor.lastVisit),
               visitCount: visitor.visitCount || 1,
-              latitude: coordinates.lat,
-              longitude: coordinates.lng
+              latitude: visitor.latitude || 0,
+              longitude: visitor.longitude || 0
             });
           }
         });

@@ -8,25 +8,16 @@ interface PrismaVisitor {
   score: number;
   contactId?: string | null;
   lastVisit: Date;
-  LeadPulseTouchpoint: PrismaTouchpoint[];
-  LeadPulseJourney: PrismaJourney[];
+  touchpoints: PrismaTouchpoint[];
 }
 
 interface PrismaTouchpoint {
   id: string;
   timestamp: Date;
-  url?: string | null;
   type: string;
+  url?: string | null;
   duration?: number | null;
   metadata?: any;
-  score: number;
-}
-
-interface PrismaJourney {
-  id: string;
-  stage: string;
-  isCompleted: boolean;
-  completionDate?: Date | null;
 }
 
 /**
@@ -40,41 +31,47 @@ export async function GET(request: NextRequest) {
     const visitorId = searchParams.get('visitorId');
     
     console.log('Journeys API - visitorId:', visitorId);
+    console.log('Journeys API - Request URL:', request.url);
     
-    // Attempt to fetch real data
+    // Log total visitor count for debugging - check both tables
+    const totalVisitorsLead = await prisma.leadPulseVisitor.count();
+    const totalVisitorsAnon = await prisma.anonymousVisitor.count();
+    console.log('Journeys API - Total LeadPulseVisitors in DB:', totalVisitorsLead);
+    console.log('Journeys API - Total AnonymousVisitors in DB:', totalVisitorsAnon);
+    
+    // Attempt to fetch real data from LeadPulseVisitor table (primary)
     try {
       // If visitor ID is provided, fetch that specific journey
       if (visitorId) {
-        const visitor = await prisma.anonymousVisitor.findUnique({
+        const visitor = await prisma.leadPulseVisitor.findUnique({
           where: {
             id: visitorId
           },
           include: {
-            LeadPulseTouchpoint: {
+            touchpoints: {
               orderBy: {
                 timestamp: 'asc'
               }
-            },
-            LeadPulseJourney: true
+            }
           }
         });
         
-        console.log('Journeys API - Found visitor:', !!visitor, visitor?.id);
+        console.log('Journeys API - Found LeadPulseVisitor:', !!visitor, visitor?.id);
         
         if (visitor) {
           // Convert to journey format
           const typedVisitor = visitor as unknown as PrismaVisitor;
-          const touchpoints = typedVisitor.LeadPulseTouchpoint.map((tp: PrismaTouchpoint) => {
+          const touchpoints = typedVisitor.touchpoints.map((tp: PrismaTouchpoint) => {
             // Determine type based on data
             let type: 'pageview' | 'click' | 'form_view' | 'form_start' | 'form_submit' | 'conversion' = 'pageview';
             
-            if (tp.type === 'click') {
+            if (tp.type === 'CLICK') {
               type = 'click';
-            } else if (tp.type === 'form_view') {
+            } else if (tp.type === 'FORM_VIEW') {
               type = 'form_view';
-            } else if (tp.type === 'form_submit') {
+            } else if (tp.type === 'FORM_SUBMIT') {
               type = 'form_submit';
-            } else if (tp.type === 'conversion') {
+            } else if (tp.type === 'CONVERSION') {
               type = 'conversion';
             }
             
@@ -85,8 +82,8 @@ export async function GET(request: NextRequest) {
               url: tp.url || '/',
               title: `Page ${tp.id.slice(-8)}`,
               duration: tp.duration || undefined,
-              formId: tp.type.includes('form') ? 'form_contact' : undefined,
-              formName: tp.type.includes('form') ? 'Contact Form' : undefined,
+              formId: tp.type.includes('FORM') ? 'form_contact' : undefined,
+              formName: tp.type.includes('FORM') ? 'Contact Form' : undefined,
               conversionValue: type === 'conversion' ? 99.99 : undefined
             };
           });
@@ -104,12 +101,6 @@ export async function GET(request: NextRequest) {
             status = 'lost';
           }
           
-          // Check if journey is completed
-          const journey = typedVisitor.LeadPulseJourney[0];
-          if (journey && journey.isCompleted) {
-            status = 'converted';
-          }
-          
           const journeyPath: VisitorPath = {
             visitorId: typedVisitor.id,
             touchpoints,
@@ -118,42 +109,41 @@ export async function GET(request: NextRequest) {
             status
           };
           
+          console.log('Journeys API - Returning specific visitor with', touchpoints.length, 'touchpoints');
           return NextResponse.json({ 
             journeys: [journeyPath]
           });
-        }
-      } else {
-        // Fetch multiple journeys
-        const visitors = await prisma.anonymousVisitor.findMany({
-          take: 10,
-          orderBy: {
-            lastVisit: 'desc'
-          },
-          include: {
-            LeadPulseTouchpoint: {
-              orderBy: {
-                timestamp: 'asc'
-              }
+        } else {
+          // Visitor not found in LeadPulseVisitor - try AnonymousVisitor as fallback
+          console.log(`Journeys API - Visitor ${visitorId} not found in LeadPulseVisitor, checking AnonymousVisitor...`);
+          
+          const anonVisitor = await prisma.anonymousVisitor.findUnique({
+            where: {
+              id: visitorId
             },
-            LeadPulseJourney: true
-          }
-        });
-        
-        if (visitors && visitors.length > 0) {
-          const journeys = visitors.map((visitor: unknown) => {
-            const typedVisitor = visitor as PrismaVisitor;
-            // Convert to journey format (similar to above)
-            const touchpoints = typedVisitor.LeadPulseTouchpoint.map((tp: PrismaTouchpoint) => {
-              // Determine type based on data
+            include: {
+              LeadPulseTouchpoint: {
+                orderBy: {
+                  timestamp: 'asc'
+                }
+              },
+              LeadPulseJourney: true
+            }
+          });
+          
+          if (anonVisitor) {
+            console.log('Journeys API - Found in AnonymousVisitor, using that data');
+            // Process anonymous visitor (existing logic)
+            const touchpoints = anonVisitor.LeadPulseTouchpoint.map((tp: any) => {
               let type: 'pageview' | 'click' | 'form_view' | 'form_start' | 'form_submit' | 'conversion' = 'pageview';
               
-              if (tp.type === 'click') {
+              if (tp.type === 'CLICK') {
                 type = 'click';
-              } else if (tp.type === 'form_view') {
+              } else if (tp.type === 'FORM_VIEW') {
                 type = 'form_view';
-              } else if (tp.type === 'form_submit') {
+              } else if (tp.type === 'FORM_SUBMIT') {
                 type = 'form_submit';
-              } else if (tp.type === 'conversion') {
+              } else if (tp.type === 'CONVERSION') {
                 type = 'conversion';
               }
               
@@ -164,8 +154,147 @@ export async function GET(request: NextRequest) {
                 url: tp.url || '/',
                 title: `Page ${tp.id.slice(-8)}`,
                 duration: tp.duration || undefined,
-                formId: tp.type.includes('form') ? 'form_contact' : undefined,
-                formName: tp.type.includes('form') ? 'Contact Form' : undefined,
+                formId: tp.type.includes('FORM') ? 'form_contact' : undefined,
+                formName: tp.type.includes('FORM') ? 'Contact Form' : undefined,
+                conversionValue: type === 'conversion' ? 99.99 : undefined
+              };
+            });
+            
+            const engagementScore = anonVisitor.score || 0;
+            const probability = Math.min(engagementScore / 100, 0.95);
+            const predictedValue = probability * 199.99;
+            let status: 'active' | 'converted' | 'lost' = 'active';
+            
+            if (anonVisitor.contactId) {
+              status = 'converted';
+            } else if (anonVisitor.lastVisit.getTime() < (Date.now() - 7 * 24 * 60 * 60 * 1000)) {
+              status = 'lost';
+            }
+            
+            const journeyPath: VisitorPath = {
+              visitorId: anonVisitor.id,
+              touchpoints,
+              probability,
+              predictedValue,
+              status
+            };
+            
+            console.log('Journeys API - Returning AnonymousVisitor with', touchpoints.length, 'touchpoints');
+            return NextResponse.json({ 
+              journeys: [journeyPath]
+            });
+          }
+          
+          // Neither table has the visitor - return first available visitor from LeadPulseVisitor
+          console.log(`Journeys API - Visitor ${visitorId} not found in either table, looking for first available...`);
+          
+          const firstVisitor = await prisma.leadPulseVisitor.findFirst({
+            include: {
+              touchpoints: {
+                orderBy: { timestamp: 'asc' }
+              }
+            }
+          });
+          
+          console.log('Journeys API - First LeadPulseVisitor query result:', !!firstVisitor, firstVisitor?.id);
+          
+          if (firstVisitor) {
+            console.log('Journeys API - Using first available LeadPulseVisitor:', firstVisitor.id);
+            
+            // Process firstVisitor the same way
+            const typedVisitor = firstVisitor as unknown as PrismaVisitor;
+            const touchpoints = typedVisitor.touchpoints.map((tp: PrismaTouchpoint) => {
+              let type: 'pageview' | 'click' | 'form_view' | 'form_start' | 'form_submit' | 'conversion' = 'pageview';
+              
+              if (tp.type === 'CLICK') {
+                type = 'click';
+              } else if (tp.type === 'FORM_VIEW') {
+                type = 'form_view';
+              } else if (tp.type === 'FORM_SUBMIT') {
+                type = 'form_submit';
+              } else if (tp.type === 'CONVERSION') {
+                type = 'conversion';
+              }
+              
+              return {
+                id: tp.id,
+                timestamp: tp.timestamp.toISOString(),
+                type,
+                url: tp.url || '/',
+                title: `Page ${tp.id.slice(-8)}`,
+                duration: tp.duration || undefined,
+                formId: tp.type.includes('FORM') ? 'form_contact' : undefined,
+                formName: tp.type.includes('FORM') ? 'Contact Form' : undefined,
+                conversionValue: type === 'conversion' ? 99.99 : undefined
+              };
+            });
+            
+            const engagementScore = typedVisitor.score || 0;
+            const probability = Math.min(engagementScore / 100, 0.95);
+            const predictedValue = probability * 199.99;
+            let status: 'active' | 'converted' | 'lost' = 'active';
+            
+            const journeyPath: VisitorPath = {
+              visitorId: typedVisitor.id,
+              touchpoints,
+              probability,
+              predictedValue,
+              status
+            };
+            
+            console.log('Journeys API - Returning fallback LeadPulseVisitor with', touchpoints.length, 'touchpoints');
+            return NextResponse.json({ 
+              journeys: [journeyPath]
+            });
+          } else {
+            console.log('Journeys API - No visitors found in LeadPulseVisitor table either');
+          }
+        }
+      } else {
+        // Fetch multiple journeys from LeadPulseVisitor
+        const visitors = await prisma.leadPulseVisitor.findMany({
+          take: 10,
+          orderBy: {
+            lastVisit: 'desc'
+          },
+          include: {
+            touchpoints: {
+              orderBy: {
+                timestamp: 'asc'
+              }
+            }
+          }
+        });
+        
+        console.log('Journeys API - Found', visitors.length, 'LeadPulseVisitors for multiple journeys');
+        
+        if (visitors && visitors.length > 0) {
+          const journeys = visitors.map((visitor: unknown) => {
+            const typedVisitor = visitor as PrismaVisitor;
+            // Convert to journey format (similar to above)
+            const touchpoints = typedVisitor.touchpoints.map((tp: PrismaTouchpoint) => {
+              // Determine type based on data
+              let type: 'pageview' | 'click' | 'form_view' | 'form_start' | 'form_submit' | 'conversion' = 'pageview';
+              
+              if (tp.type === 'CLICK') {
+                type = 'click';
+              } else if (tp.type === 'FORM_VIEW') {
+                type = 'form_view';
+              } else if (tp.type === 'FORM_SUBMIT') {
+                type = 'form_submit';
+              } else if (tp.type === 'CONVERSION') {
+                type = 'conversion';
+              }
+              
+              return {
+                id: tp.id,
+                timestamp: tp.timestamp.toISOString(),
+                type,
+                url: tp.url || '/',
+                title: `Page ${tp.id.slice(-8)}`,
+                duration: tp.duration || undefined,
+                formId: tp.type.includes('FORM') ? 'form_contact' : undefined,
+                formName: tp.type.includes('FORM') ? 'Contact Form' : undefined,
                 conversionValue: type === 'conversion' ? 99.99 : undefined
               };
             });
@@ -176,16 +305,8 @@ export async function GET(request: NextRequest) {
             const predictedValue = probability * 199.99;
             let status: 'active' | 'converted' | 'lost' = 'active';
             
-            if (typedVisitor.contactId) {
-              status = 'converted';
-            } else if (typedVisitor.lastVisit.getTime() < (Date.now() - 7 * 24 * 60 * 60 * 1000)) {
+            if (typedVisitor.lastVisit.getTime() < (Date.now() - 7 * 24 * 60 * 60 * 1000)) {
               status = 'lost';
-            }
-            
-            // Check if journey is completed
-            const journey = typedVisitor.LeadPulseJourney[0];
-            if (journey && journey.isCompleted) {
-              status = 'converted';
             }
             
             return {
@@ -207,6 +328,7 @@ export async function GET(request: NextRequest) {
     
     // Return mock data as fallback
     const mockJourneys = generateMockJourneyData(visitorId || undefined);
+    console.log('Journeys API - Falling back to mock data');
     return NextResponse.json({ journeys: mockJourneys });
     
   } catch (error) {

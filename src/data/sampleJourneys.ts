@@ -116,7 +116,6 @@ export async function seedSampleJourneys(userId: string): Promise<boolean> {
       // Create the visitor
       const visitor = await prisma.anonymousVisitor.create({
         data: {
-          id: randomUUID(),
           fingerprint: template.fingerprint,
           ipAddress: template.ipAddress,
           userAgent: template.userAgent,
@@ -124,11 +123,11 @@ export async function seedSampleJourneys(userId: string): Promise<boolean> {
           firstVisit: template.touchpoints[0].timestamp,
           lastVisit: template.touchpoints[template.touchpoints.length - 1].timestamp,
           visitCount: template.visitCount,
-          isIdentified: false,
           score: template.score,
-          engagementLevel: template.engagementLevel,
-          geo: template.geo,
-          device: template.device
+          engagementScore: template.score,
+          city: template.geo.city,
+          country: template.geo.country,
+          region: template.geo.region
         }
       });
       

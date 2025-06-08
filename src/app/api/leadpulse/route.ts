@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const timeRange = searchParams.get('timeRange') || '24h';
     
-    // Calculate time cutoff
+    // Calculate time cutoff based on timeRange
     const now = new Date();
     let cutoffTime: Date;
     
@@ -31,16 +31,7 @@ export async function GET(request: NextRequest) {
         cutoffTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     }
 
-    // Get active visitors (visited in last 30 minutes)
-    const activeVisitors = await prisma.leadPulseVisitor.count({
-      where: {
-        lastVisit: {
-          gte: new Date(now.getTime() - 30 * 60 * 1000)
-        }
-      }
-    });
-
-    // Get total visitors for the time range
+    // Get visitor stats for the time period
     const totalVisitors = await prisma.leadPulseVisitor.count({
       where: {
         lastVisit: {
@@ -49,7 +40,16 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Get average engagement score
+    // Get active visitors (last 30 minutes)
+    const activeVisitors = await prisma.leadPulseVisitor.count({
+      where: {
+        lastVisit: {
+          gte: new Date(now.getTime() - 30 * 60 * 1000)
+        }
+      }
+    });
+
+    // Get engagement stats
     const engagementStats = await prisma.leadPulseVisitor.aggregate({
       where: {
         lastVisit: {
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Get touchpoint stats
+    // Get touchpoint stats for the time period
     const touchpointStats = await prisma.leadPulseTouchpoint.groupBy({
       by: ['type'],
       where: {
@@ -72,9 +72,32 @@ export async function GET(request: NextRequest) {
       _count: true
     });
 
-    // Calculate conversion rate
-    const conversions = touchpointStats.find(stat => stat.type === 'CONVERSION')?._count || 0;
-    const conversionRate = totalVisitors > 0 ? (conversions / totalVisitors) * 100 : 0;
+    // Calculate conversion rate - count unique visitors with conversion touchpoints
+    const visitorsWithConversions = await prisma.leadPulseVisitor.count({
+      where: {
+        lastVisit: {
+          gte: cutoffTime
+        },
+        touchpoints: {
+          some: {
+            type: 'CONVERSION',
+            timestamp: {
+              gte: cutoffTime
+            }
+          }
+        }
+      }
+    });
+
+    const conversionRate = totalVisitors > 0 ? (visitorsWithConversions / totalVisitors) * 100 : 0;
+
+    console.log('LeadPulse Overview API - Conversion Calculation:', {
+      totalVisitors,
+      visitorsWithConversions,
+      conversionRate,
+      timeRange,
+      cutoffTime
+    });
 
     // Get top locations
     const topLocations = await prisma.leadPulseVisitor.groupBy({
@@ -89,7 +112,7 @@ export async function GET(request: NextRequest) {
       _count: true,
       orderBy: {
         _count: {
-          _all: 'desc'
+          city: 'desc'
         }
       },
       take: 5
@@ -140,9 +163,9 @@ export async function GET(request: NextRequest) {
       }))
     });
   } catch (error) {
-    console.error('Error fetching dashboard data:', error);
+    console.error('Error in LeadPulse overview API:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch dashboard data' },
+      { error: 'Failed to fetch LeadPulse overview data' },
       { status: 500 }
     );
   }

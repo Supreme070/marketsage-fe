@@ -31,6 +31,12 @@ services:
       - PAYMENT_SUCCESS_URL=http://localhost:3030/dashboard/billing/success
       - PAYMENT_CANCEL_URL=http://localhost:3030/dashboard/billing/cancel
       
+      # AI Configuration
+      - OPENAI_API_KEY=your-openai-api-key-here
+      - AI_FALLBACK_MODE=true
+      - DISABLE_ONNX=true
+      - SUPREME_AI_MODE=fallback
+      
       # Mailtrap Email Configuration - SANDBOX (Testing)
       - MAILTRAP_TEST_USER=efcf22ec32c771
       - MAILTRAP_TEST_PASS=f9ff6e5afc0589

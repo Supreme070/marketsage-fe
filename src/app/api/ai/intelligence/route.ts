@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    logger.error('AI Intelligence API error:', error);
+    logger.error('AI Intelligence API error:', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { 
         success: false, 
@@ -456,37 +456,58 @@ export async function POST(req: Request) {
     let result;
     switch (type) {
       case 'content':
-        result = await prisma.contentAnalysis.create({
+        result = await prisma.aI_ContentAnalysis.create({
           data: {
-            ...data,
-            userId
+            title: data.title || 'Content Analysis',
+            content: data.content || '',
+            supremeScore: data.supremeScore || 0,
+            sentiment: data.sentiment,
+            readability: data.readability,
+            engagement: data.engagement,
+            analysis: data.analysis ? JSON.stringify(data.analysis) : null,
+            tags: data.tags || [],
+            createdById: userId
           }
         });
         break;
 
       case 'customer':
-        result = await prisma.customerSegment.create({
+        result = await prisma.aI_CustomerSegment.create({
           data: {
-            ...data,
-            userId
+            name: data.name || 'Customer Segment',
+            description: data.description,
+            criteria: data.criteria ? JSON.stringify(data.criteria) : null,
+            customerCount: data.customerCount || 0,
+            churnRisk: data.churnRisk || 0,
+            lifetimeValue: data.lifetimeValue || 0,
+            tags: data.tags || [],
+            createdById: userId
           }
         });
         break;
 
       case 'chat':
-        result = await prisma.chatHistory.create({
+        result = await prisma.aI_ChatHistory.create({
           data: {
-            ...data,
+            question: data.question || '',
+            answer: data.answer || '',
+            context: data.context ? JSON.stringify(data.context) : null,
+            confidence: data.confidence || 0,
             userId
           }
         });
         break;
 
       case 'tool':
-        result = await prisma.aiTool.create({
+        result = await prisma.aI_Tool.create({
           data: {
-            ...data,
-            userId
+            name: data.name || 'AI Tool',
+            description: data.description,
+            category: data.category || 'general',
+            config: data.config ? JSON.stringify(data.config) : null,
+            usage: data.usage ? JSON.stringify(data.usage) : null,
+            isPublic: data.isPublic || false,
+            createdById: userId
           }
         });
         break;
@@ -535,7 +556,7 @@ export async function PUT(req: Request) {
     let result;
     switch (type) {
       case 'content':
-        result = await prisma.contentAnalysis.update({
+        result = await prisma.aI_ContentAnalysis.update({
           where: { id },
           data: {
             ...data,
@@ -545,7 +566,7 @@ export async function PUT(req: Request) {
         break;
 
       case 'customer':
-        result = await prisma.customerSegment.update({
+        result = await prisma.aI_CustomerSegment.update({
           where: { id },
           data: {
             ...data,
@@ -555,7 +576,7 @@ export async function PUT(req: Request) {
         break;
 
       case 'chat':
-        result = await prisma.chatHistory.update({
+        result = await prisma.aI_ChatHistory.update({
           where: { id },
           data: {
             ...data,
@@ -565,7 +586,7 @@ export async function PUT(req: Request) {
         break;
 
       case 'tool':
-        result = await prisma.aiTool.update({
+        result = await prisma.aI_Tool.update({
           where: { id },
           data: {
             ...data,
@@ -627,25 +648,25 @@ export async function DELETE(req: Request) {
     let result;
     switch (type) {
       case 'content':
-        result = await prisma.contentAnalysis.delete({
+        result = await prisma.aI_ContentAnalysis.delete({
           where: { id }
         });
         break;
 
       case 'customer':
-        result = await prisma.customerSegment.delete({
+        result = await prisma.aI_CustomerSegment.delete({
           where: { id }
         });
         break;
 
       case 'chat':
-        result = await prisma.chatHistory.delete({
+        result = await prisma.aI_ChatHistory.delete({
           where: { id }
         });
         break;
 
       case 'tool':
-        result = await prisma.aiTool.delete({
+        result = await prisma.aI_Tool.delete({
           where: { id }
         });
         break;

@@ -49,9 +49,15 @@ export interface SupremeAIv3Response {
 
 class SupremeAIV3Core {
   private async ensureMemoryReady() {
-    // Initialize memory engine lazily (safe to call multiple times)
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    await supremeMemory.initialize().catch(() => {});
+    try {
+      if (process.env.AI_FALLBACK_MODE === 'true' || process.env.SUPREME_AI_MODE === 'fallback') {
+        // Skip memory initialization in fallback mode
+        return;
+      }
+      await supremeMemory.initialize();
+    } catch (error) {
+      logger.warn('Memory engine initialization failed, continuing in fallback mode', { error: error instanceof Error ? error.message : String(error) });
+    }
   }
 
   async process(task: SupremeAIv3Task): Promise<SupremeAIv3Response> {
@@ -80,8 +86,51 @@ class SupremeAIV3Core {
     try {
       const { userId, question } = task;
 
+      // Check for fallback mode
+      const isFallbackMode = process.env.AI_FALLBACK_MODE === 'true' || process.env.SUPREME_AI_MODE === 'fallback';
+      
+      if (isFallbackMode) {
+        // Use simple fallback response without complex dependencies
+        const fallbackAI = new (await import('@/lib/ai/openai-integration')).FallbackAI();
+        const response = await fallbackAI.generateResponse(question);
+        
+        return {
+          success: true,
+          timestamp: new Date(),
+          taskType: 'question',
+          data: {
+            answer: response.answer,
+            sources: [],
+            memoryContext: '',
+            marketSageContext: this.buildMarketSageContext(question)
+          },
+          confidence: 0.75,
+          debug: { mode: 'fallback', reason: 'AI_FALLBACK_MODE enabled' }
+        };
+      }
+
       // Fetch context from memory for conversation history
-      const contextPack = await supremeMemory.getContextForResponse(userId, question);
+      let contextPack;
+      try {
+        if (!isFallbackMode) {
+          contextPack = await supremeMemory.getContextForResponse(userId, question);
+        } else {
+          contextPack = {
+            relevantMemories: [],
+            conversationHistory: null,
+            customerInsights: null,
+            contextSummary: ''
+          };
+        }
+      } catch (memoryError) {
+        logger.warn('Memory context retrieval failed, using empty context', { error: memoryError instanceof Error ? memoryError.message : String(memoryError) });
+        contextPack = {
+          relevantMemories: [],
+          conversationHistory: null,
+          customerInsights: null,
+          contextSummary: ''
+        };
+      }
       
       // Get AI instance (OpenAI if available, fallback otherwise)
       const aiInstance = getAIInstance();
@@ -110,12 +159,14 @@ class SupremeAIV3Core {
       // Try RAG first for specific MarketSage documentation
       let ragContext = '';
       try {
-        const ragResult = await ragQuery(question, 2);
-        if (ragResult.confidence > 0.6) {
-          ragContext = `\n\nRelevant MarketSage Documentation:\n${ragResult.contextDocs.map((doc: any) => doc.content || doc.title || 'No content').join('\n')}`;
+        if (!process.env.DISABLE_ONNX) {
+          const ragResult = await ragQuery(question, 2);
+          if (ragResult.confidence > 0.6) {
+            ragContext = `\n\nRelevant MarketSage Documentation:\n${ragResult.contextDocs.map((doc: any) => doc.content || doc.title || 'No content').join('\n')}`;
+          }
         }
       } catch (error) {
-        logger.warn('RAG query failed, proceeding without documentation context', error);
+        logger.warn('RAG query failed, proceeding without documentation context', { error: error instanceof Error ? error.message : String(error) });
       }
 
       // Generate intelligent response using AI
@@ -127,19 +178,25 @@ class SupremeAIV3Core {
         conversationHistory
       );
 
-      // Store Q&A in memory for future context
-      await supremeMemory.storeMemory({
-        type: 'insight',
-        userId,
-        content: `Q: ${question} | A: ${aiResponse.answer}`,
-        metadata: { 
-          platform: 'marketsage',
-          aiModel: process.env.OPENAI_API_KEY ? 'openai' : 'fallback',
-          usage: aiResponse.usage 
-        },
-        importance: 0.8, // High importance for Q&A
-        tags: ['qa', 'chat', 'marketsage-help']
-      });
+      // Store Q&A in memory for future context (only if not in fallback mode)
+      try {
+        if (!isFallbackMode) {
+          await supremeMemory.storeMemory({
+            type: 'insight',
+            userId,
+            content: `Q: ${question} | A: ${aiResponse.answer}`,
+            metadata: { 
+              platform: 'marketsage',
+              aiModel: process.env.OPENAI_API_KEY ? 'openai' : 'fallback',
+              usage: aiResponse.usage 
+            },
+            importance: 0.8, // High importance for Q&A
+            tags: ['qa', 'chat', 'marketsage-help']
+          });
+        }
+      } catch (memoryError) {
+        logger.warn('Failed to store memory, continuing without it', { error: memoryError instanceof Error ? memoryError.message : String(memoryError) });
+      }
 
       return {
         success: true,
@@ -160,7 +217,7 @@ class SupremeAIV3Core {
         }
       };
     } catch (error) {
-      logger.error('Supreme-AI v3 question handler failed', error);
+      logger.error('Supreme-AI v3 question handler failed', { error: error instanceof Error ? error.message : String(error) });
       
       // Fallback to basic helpful response
       return {
@@ -227,7 +284,7 @@ class SupremeAIV3Core {
         ]
       };
     } catch (error) {
-      logger.error('Supreme-AI v3 predict handler failed', error);
+      logger.error('Supreme-AI v3 predict handler failed', { error: error instanceof Error ? error.message : String(error) });
       throw error;
     }
   }

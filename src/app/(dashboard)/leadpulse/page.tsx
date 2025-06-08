@@ -70,17 +70,19 @@ export default function LeadPulseDashboard() {
       setLoading(true);
       try {
         // Fetch all data in parallel
-        const [visitors, journeys, insights, segments, locations] = await Promise.all([
+        const [visitors, journeys, insights, segments, locations, overview] = await Promise.all([
           getActiveVisitors(selectedTimeRange),
           getVisitorJourneys(selectedVisitorId),
           getVisitorInsights(),
           getVisitorSegments(),
-          getVisitorLocations(selectedTimeRange)
+          getVisitorLocations(selectedTimeRange),
+          fetch(`/api/leadpulse?timeRange=${selectedTimeRange}`).then(res => res.json())
         ]);
         
         console.log('LeadPulse fetchData:', {
           visitors: visitors.length,
           journeys: journeys.length,
+          overview: overview.overview,
           selectedVisitorId,
           firstVisitor: visitors[0],
           firstJourney: journeys[0]
@@ -92,16 +94,23 @@ export default function LeadPulseDashboard() {
         setSegmentData(segments);
         setLocationData(locations);
         
-        // Calculate summary metrics
-        setActiveVisitors(visitors.filter(v => v.lastActive.includes('min') || v.lastActive.includes('just')).length);
-        setTotalVisitors(visitors.length);
-        
-        // Calculate conversion rate from journey data
-        const convertedJourneys = journeys.filter(j => j.status === 'converted');
-        const convRate = journeys.length > 0 
-          ? (convertedJourneys.length / journeys.length) * 100 
-          : 0;
-        setConversionRate(convRate);
+        // Use metrics from overview API instead of calculating manually
+        if (overview.overview) {
+          setActiveVisitors(overview.overview.activeVisitors);
+          setTotalVisitors(overview.overview.totalVisitors);
+          setConversionRate(overview.overview.conversionRate);
+        } else {
+          // Fallback to manual calculation if API fails
+          setActiveVisitors(visitors.filter(v => v.lastActive.includes('min') || v.lastActive.includes('just')).length);
+          setTotalVisitors(visitors.length);
+          
+          // Calculate conversion rate from journey data
+          const convertedJourneys = journeys.filter(j => j.status === 'converted');
+          const convRate = journeys.length > 0 
+            ? (convertedJourneys.length / journeys.length) * 100 
+            : 0;
+          setConversionRate(convRate);
+        }
       } catch (error) {
         console.error('Error fetching LeadPulse data:', error);
       } finally {

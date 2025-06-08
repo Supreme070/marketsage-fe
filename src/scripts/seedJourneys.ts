@@ -145,7 +145,6 @@ async function main() {
       // Create the visitor
       visitor = await prisma.anonymousVisitor.create({
         data: {
-          id: randomUUID(),
           fingerprint: template.fingerprint,
           ipAddress: template.ipAddress,
           userAgent: template.userAgent,
@@ -153,8 +152,13 @@ async function main() {
           firstVisit: template.touchpoints[0].timestamp,
           lastVisit: template.touchpoints[template.touchpoints.length - 1].timestamp,
           totalVisits: template.visitCount,
-          isActive: true,
+          visitCount: template.visitCount,
           engagementScore: template.score,
+          score: template.score,
+          isActive: true,
+          city: template.geo.city,
+          country: template.geo.country,
+          region: template.geo.region
         }
       });
       
@@ -166,15 +170,14 @@ async function main() {
         await prisma.leadPulseTouchpoint.create({
           data: {
             id: randomUUID(),
-            anonymousVisitor: {
-              connect: { id: visitor.id }
-            },
+            anonymousVisitorId: visitor.id,
             type: tp.type,
             url: tp.url,
             timestamp: tp.timestamp,
             duration: tp.duration,
-            metadata: tp.metadata || {},
-            score: Math.floor(Math.random() * 100)
+            value: 1,
+            score: Math.floor(Math.random() * 100),
+            metadata: tp.metadata || null,
           }
         });
         touchpointCount++;

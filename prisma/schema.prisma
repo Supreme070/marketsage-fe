@@ -1517,9 +1517,17 @@ model AnonymousVisitor {
   firstVisit      DateTime  @default(now())
   lastVisit       DateTime  @updatedAt
   totalVisits     Int       @default(1)
+  visitCount      Int       @default(1)
   isActive        Boolean   @default(true)
   engagementScore Int       @default(0)
   score           Int       @default(0)
+  
+  // Location data
+  city            String?
+  country         String?
+  region          String?
+  latitude        Float?
+  longitude       Float?
   
   // Relations
   LeadPulseTouchpoint LeadPulseTouchpoint[]

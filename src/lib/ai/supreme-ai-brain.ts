@@ -3,7 +3,7 @@
  * Implements dynamic thinking, reasoning, and problem-solving capabilities
  */
 
-import { OpenAIIntegration } from './openai-integration';
+import { OpenAIIntegration, getAIInstance } from './openai-integration';
 import { MemoryEngine } from './memory-engine';
 import { BehavioralPredictor } from './behavioral-predictor';
 import { logger } from '@/lib/logger';
@@ -36,12 +36,12 @@ interface ThinkingResult {
 }
 
 export class SupremeAIBrain {
-  private openai: OpenAIIntegration;
+  private openai: OpenAIIntegration | any; // Can be OpenAIIntegration or FallbackAI
   private memory: MemoryEngine;
   private behavioralPredictor: BehavioralPredictor;
 
   constructor() {
-    this.openai = new OpenAIIntegration();
+    this.openai = getAIInstance(); // Use the proper AI instance selection
     this.memory = new MemoryEngine();
     this.behavioralPredictor = new BehavioralPredictor();
   }
@@ -51,13 +51,13 @@ export class SupremeAIBrain {
    */
   async think(input: string, context: BrainContext): Promise<ThinkingResult> {
     try {
-      // 1. Gather and analyze context
+      // 1. Gather and analyze context (with fallback if DB fails)
       const contextualUnderstanding = await this.analyzeContext(input, context);
       
       // 2. Generate thought processes
       const thoughts = await this.generateThoughts(input, contextualUnderstanding);
       
-      // 3. Make predictions and assess patterns
+      // 3. Make predictions and assess patterns (with fallback)
       const predictions = await this.predictAndAssess(context.userId, input);
       
       // 4. Formulate response strategy
@@ -69,7 +69,7 @@ export class SupremeAIBrain {
       // 6. Plan follow-up actions
       const followUp = this.planFollowUp(strategy, context);
       
-      // 7. Store the interaction in memory
+      // 7. Store the interaction in memory (with fallback)
       await this.storeInMemory(input, response, context);
       
       return {
@@ -79,8 +79,38 @@ export class SupremeAIBrain {
         followUp
       };
     } catch (error) {
-      logger.error('SupremeAIBrain thinking error:', error);
-      throw error;
+      logger.error('SupremeAIBrain thinking error:', { 
+        error: error instanceof Error ? error.message : String(error),
+        userId: context.userId
+      });
+      
+      // Provide intelligent fallback response when system fails
+      return {
+        thoughts: [{
+          type: 'problem-solving',
+          steps: [
+            'Identify user needs from input',
+            'Generate helpful response without full context',
+            'Provide actionable guidance'
+          ],
+          conclusion: 'Providing helpful assistance despite system limitations',
+          confidence: 0.7
+        }],
+        response: `I'm here to help you with MarketSage! While I'm experiencing some technical difficulties accessing all my features right now, I can still assist you with:
+
+🔧 **Campaign Management** - Create and optimize email, SMS, and WhatsApp campaigns
+📊 **Analytics & Insights** - Understand your customer behavior and campaign performance  
+🎯 **Customer Segmentation** - Identify and target your most valuable customers
+🚀 **Automation** - Set up workflows to engage customers automatically
+
+What specific aspect of MarketSage would you like help with today?`,
+        actions: [],
+        followUp: [
+          'What type of campaign are you looking to create?',
+          'Are you having issues with a specific feature?',
+          'Would you like help with customer segmentation?'
+        ]
+      };
     }
   }
 
@@ -88,37 +118,44 @@ export class SupremeAIBrain {
    * Analyze input context and gather relevant information
    */
   private async analyzeContext(input: string, context: BrainContext) {
-    const userProfile = await prisma.user.findUnique({
-      where: { id: context.userId },
-      include: {
-        organization: true,
-        notifications: {
-          take: 5,
-          orderBy: { timestamp: 'desc' }
+    try {
+      // Try to get user data from database
+      const userProfile = await prisma.user.findUnique({
+        where: { id: context.userId }
+      });
+
+      const recentActivities = await prisma.userActivity.findMany({
+        where: { userId: context.userId },
+        take: 10,
+        orderBy: { timestamp: 'desc' }
+      }).catch(() => []); // Fallback to empty array if UserActivity doesn't exist
+
+      return {
+        userProfile,
+        recentActivities,
+        input: {
+          intent: this.classifyIntent(input),
+          entities: this.extractEntities(input),
+          sentiment: this.analyzeSentiment(input)
         }
-      }
-    });
-
-    const recentActivities = await prisma.userActivity.findMany({
-      where: { userId: context.userId },
-      take: 10,
-      orderBy: { timestamp: 'desc' },
-      include: {
-        purchases: true,
-        sessions: true,
-        interactions: true
-      }
-    });
-
-    return {
-      userProfile,
-      recentActivities,
-      input: {
-        intent: this.classifyIntent(input),
-        entities: this.extractEntities(input),
-        sentiment: this.analyzeSentiment(input)
-      }
-    };
+      };
+    } catch (error) {
+      logger.error('Database access failed in analyzeContext, using fallback:', { 
+        error: error instanceof Error ? error.message : String(error),
+        userId: context.userId
+      });
+      
+      // Return fallback context when database is unavailable
+      return {
+        userProfile: null,
+        recentActivities: [],
+        input: {
+          intent: this.classifyIntent(input),
+          entities: this.extractEntities(input),
+          sentiment: this.analyzeSentiment(input)
+        }
+      };
+    }
   }
 
   /**
@@ -170,14 +207,33 @@ export class SupremeAIBrain {
    * Make predictions and assess patterns using behavioral predictor
    */
   private async predictAndAssess(userId: string, input: string) {
-    const behavioralPrediction = await this.behavioralPredictor.predictBehavior(userId);
-    
-    return {
-      nextAction: behavioralPrediction.predictions.nextBestAction,
-      churnRisk: behavioralPrediction.predictions.churnRisk,
-      segments: behavioralPrediction.segments,
-      confidence: behavioralPrediction.confidenceScores
-    };
+    try {
+      const behavioralPrediction = await this.behavioralPredictor.predictBehavior(userId);
+      
+      return {
+        nextAction: behavioralPrediction.predictions.nextBestAction,
+        churnRisk: behavioralPrediction.predictions.churnRisk,
+        segments: behavioralPrediction.segments,
+        confidence: behavioralPrediction.confidenceScores
+      };
+    } catch (error) {
+      logger.error('Behavioral prediction failed, using fallback:', { 
+        error: error instanceof Error ? error.message : String(error),
+        userId
+      });
+      
+      // Return fallback predictions when behavioral predictor fails
+      return {
+        nextAction: 'ENGAGE_USER', // Safe default action
+        churnRisk: 0.3, // Moderate risk assumption
+        segments: ['ACTIVE_USER'], // Basic segment
+        confidence: {
+          nextAction: 0.5,
+          churnRisk: 0.5,
+          segments: 0.5
+        }
+      };
+    }
   }
 
   /**
@@ -196,16 +252,35 @@ export class SupremeAIBrain {
    * Generate dynamic response based on strategy
    */
   private async generateResponse(strategy: any, context: BrainContext) {
-    const responseTemplate = await this.openai.generateResponse(
-      strategy.primaryApproach.description,
-      JSON.stringify(context),
-      []
-    );
+    try {
+      const responseTemplate = await this.openai.generateResponse(
+        strategy.primaryApproach.description,
+        JSON.stringify(context),
+        []
+      );
 
-    return {
-      content: responseTemplate.answer,
-      actions: this.determineActions(strategy, context)
-    };
+      return {
+        content: responseTemplate.answer,
+        actions: this.determineActions(strategy, context)
+      };
+    } catch (error) {
+      logger.error('AI response generation failed, using fallback:', { 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+      
+      // Provide intelligent fallback response
+      return {
+        content: `I'm here to help you with MarketSage! I can assist you with:
+
+🔧 **Campaign Management** - Create and optimize email, SMS, and WhatsApp campaigns
+📊 **Analytics & Insights** - Understand your customer behavior and campaign performance  
+🎯 **Customer Segmentation** - Identify and target your most valuable customers
+🚀 **Automation** - Set up workflows to engage customers automatically
+
+What would you like to work on today?`,
+        actions: this.determineActions(strategy, context)
+      };
+    }
   }
 
   /**
@@ -223,18 +298,26 @@ export class SupremeAIBrain {
    * Store interaction in memory for future reference
    */
   private async storeInMemory(input: string, response: any, context: BrainContext) {
-    await this.memory.storeMemory({
-      type: 'interaction',
-      userId: context.userId,
-      content: `User: ${input}\nAI: ${response.content}`,
-      metadata: {
-        sessionId: context.sessionId,
-        timestamp: new Date(),
-        context: context
-      },
-      importance: 0.8,
-      tags: ['conversation', 'support', 'interaction']
-    });
+    try {
+      await this.memory.storeMemory({
+        type: 'conversation',
+        userId: context.userId,
+        content: `User: ${input}\nAI: ${response.content}`,
+        metadata: {
+          sessionId: context.sessionId,
+          timestamp: new Date(),
+          context: context
+        },
+        importance: 0.8,
+        tags: ['conversation', 'support', 'interaction']
+      });
+    } catch (error) {
+      // Don't fail the entire chat if memory storage fails
+      logger.error('Memory storage failed, continuing without storage:', { 
+        error: error instanceof Error ? error.message : String(error),
+        userId: context.userId
+      });
+    }
   }
 
   /**

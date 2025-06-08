@@ -91,27 +91,40 @@ export async function trackAnonymousVisitor(
   });
   
   if (existingVisitor) {
-    // Update existing visitor
+    // Update existing visitor with correct field names
     return prisma.anonymousVisitor.update({
       where: { id: existingVisitor.id },
       data: {
-        lastVisitedAt: new Date(),
-        visits: { increment: 1 },
+        lastVisit: new Date(),
+        totalVisits: { increment: 1 },
+        visitCount: { increment: 1 },
         ipAddress,
-        ...metadata
+        userAgent: metadata.userAgent,
+        referrer: metadata.referrer,
+        city: metadata.city,
+        country: metadata.country,
+        region: metadata.region,
       }
     });
   } else {
-    // Create new visitor
+    // Create new visitor with correct field names
     return prisma.anonymousVisitor.create({
       data: {
         id: randomUUID(),
         fingerprint,
         ipAddress,
-        conversionStatus: ConversionStatus.ANONYMOUS,
+        userAgent: metadata.userAgent,
+        referrer: metadata.referrer,
+        firstVisit: new Date(),
+        lastVisit: new Date(),
+        totalVisits: 1,
+        visitCount: 1,
+        isActive: true,
         engagementScore: 0,
-        ...metadata,
-        metadata: metadata
+        score: 0,
+        city: metadata.city,
+        country: metadata.country,
+        region: metadata.region,
       }
     });
   }
@@ -123,6 +136,7 @@ export async function trackAnonymousVisitor(
  * @param visitorId - Anonymous visitor ID
  * @param pageUrl - URL of the page
  * @param touchpointData - Additional data about the interaction
+ * @param touchpointType - Type of touchpoint
  * @returns The created touchpoint record
  */
 export async function recordTouchpoint(
@@ -134,16 +148,22 @@ export async function recordTouchpoint(
     clickData?: Record<string, any>;
     scrollDepth?: number;
     exitIntent?: boolean;
+    formId?: string;
     [key: string]: any;
-  } = {}
+  } = {},
+  touchpointType: 'PAGEVIEW' | 'CLICK' | 'FORM_VIEW' | 'FORM_START' | 'FORM_SUBMIT' | 'CONVERSION' = 'PAGEVIEW'
 ) {
   return prisma.leadPulseTouchpoint.create({
     data: {
       id: randomUUID(),
-      visitorId,
-      pageUrl,
+      anonymousVisitorId: visitorId, // Use correct field name
+      url: pageUrl, // Use correct field name
+      type: touchpointType, // Add required type field
       timestamp: new Date(),
-      ...touchpointData
+      duration: touchpointData.duration,
+      value: 1,
+      score: 1,
+      metadata: touchpointData,
     }
   });
 }
@@ -176,17 +196,17 @@ export async function updateVisitorEngagement(
   // Calculate score increment
   const scoreIncrement = actionScores[action] * weight;
   
-  // Update visitor engagement score
+  // Update visitor engagement score with correct field names
   return prisma.anonymousVisitor.update({
     where: { id: visitorId },
     data: {
       engagementScore: {
         increment: scoreIncrement
       },
-      // If score is high enough, update conversion status
-      ...(scoreIncrement >= 5 && {
-        conversionStatus: ConversionStatus.ENGAGED
-      })
+      score: {
+        increment: scoreIncrement
+      },
+      lastVisit: new Date(), // Update last visit time
     }
   });
 }
@@ -223,7 +243,7 @@ export async function convertVisitorToContact(
   const contact = await prisma.contact.create({
     data: {
       id: contactId,
-      email: contactData.email,
+      email: contactData.email || '',
       phone: contactData.phone,
       firstName: contactData.firstName,
       lastName: contactData.lastName,
@@ -236,13 +256,12 @@ export async function convertVisitorToContact(
     }
   });
   
-  // Update visitor with contact ID and conversion status
+  // Update visitor with contact ID (removed conversionStatus and convertedAt)
   const updatedVisitor = await prisma.anonymousVisitor.update({
     where: { id: visitorId },
     data: {
       contactId: contact.id,
-      conversionStatus: ConversionStatus.CONVERTED,
-      convertedAt: new Date()
+      lastVisit: new Date(),
     }
   });
   
@@ -268,9 +287,9 @@ export async function getVisitorJourney(visitorId: string) {
     throw new Error(`Visitor not found: ${visitorId}`);
   }
   
-  // Get all touchpoints for this visitor
+  // Get all touchpoints for this visitor (use correct field name)
   const touchpoints = await prisma.leadPulseTouchpoint.findMany({
-    where: { visitorId },
+    where: { anonymousVisitorId: visitorId },
     orderBy: { timestamp: 'asc' }
   });
   
@@ -301,14 +320,14 @@ export async function predictVisitorConversion(visitorId: string): Promise<numbe
   
   // Base factors that influence conversion
   const engagementFactor = Math.min(visitor.engagementScore / 100, 0.5);
-  const visitCountFactor = Math.min(visitor.visits / 10, 0.2);
+  const visitCountFactor = Math.min(visitor.totalVisits / 10, 0.2);
   
   // Touchpoint analysis
   const touchpointCount = touchpoints.length;
   const touchpointFactor = Math.min(touchpointCount / 20, 0.15);
   
-  // Time-based factors
-  const daysSinceFirstVisit = Math.max(0, (Date.now() - visitor.firstVisitedAt.getTime()) / (1000 * 60 * 60 * 24));
+  // Time-based factors (use correct field name)
+  const daysSinceFirstVisit = Math.max(0, (Date.now() - visitor.firstVisit.getTime()) / (1000 * 60 * 60 * 24));
   const recencyFactor = Math.min(1 / (daysSinceFirstVisit + 1), 0.15);
   
   // Combine factors for final prediction

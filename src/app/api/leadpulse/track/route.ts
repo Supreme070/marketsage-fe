@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
         // Record page view touchpoint
         await recordTouchpoint(visitor.id, body.url, {
           pageTitle: body.title
-        });
+        }, 'PAGEVIEW');
         
         // Update engagement score
         await updateVisitorEngagement(visitor.id, 'PAGE_VIEW');
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
         await recordTouchpoint(visitor.id, body.url, {
           pageTitle: body.title,
           clickData: body.element
-        });
+        }, 'CLICK');
         
         // Check if this is a CTA click
         const isCTA = body.element && (
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
         await recordTouchpoint(visitor.id, body.url, {
           pageTitle: body.title,
           formId: body.formId
-        });
+        }, 'FORM_VIEW');
         
         // Update engagement score
         await updateVisitorEngagement(visitor.id, 'FORM_VIEW');
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
           formId: body.formId,
           fieldName: body.fieldName,
           fieldType: body.fieldType
-        });
+        }, 'FORM_START');
         
         // Update engagement score
         await updateVisitorEngagement(visitor.id, 'FORM_START');
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
         await recordTouchpoint(visitor.id, body.url, {
           pageTitle: body.title,
           formId: body.formId
-        });
+        }, 'FORM_SUBMIT');
         
         // Update engagement score for form submission (high value)
         await updateVisitorEngagement(visitor.id, 'FORM_SUBMIT');
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
         await recordTouchpoint(visitor.id, body.url, {
           pageTitle: body.title,
           scrollDepth: body.depth
-        });
+        }, 'PAGEVIEW');
         
         // Update engagement based on scroll depth
         if (body.depth && typeof body.depth === 'number') {
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
         await recordTouchpoint(visitor.id, body.url, {
           pageTitle: body.title,
           exitIntent: true
-        });
+        }, 'PAGEVIEW');
         break;
         
       case 'time_spent':
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
           pageTitle: body.title,
           event: body.event,
           ...body
-        });
+        }, 'PAGEVIEW');
         break;
     }
     
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    logger.error('Error processing LeadPulse event', error);
+    logger.error('Error processing LeadPulse event', error as Error);
     
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -198,7 +198,7 @@ export async function GET(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    logger.error('Error in LeadPulse GET', error);
+    logger.error('Error in LeadPulse GET', error as Error);
     
     return NextResponse.json(
       { error: 'Internal server error' },

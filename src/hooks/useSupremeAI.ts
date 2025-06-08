@@ -15,10 +15,8 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { SupremeAIv3Task, SupremeAIv3Response } from '@/lib/ai/supreme-ai-v3-engine';
-import { SupremeAIBrain } from '@/lib/ai/supreme-ai-brain';
 import { useChatHistory } from './useAIIntelligence';
 import { useSession } from 'next-auth/react';
-import { v4 as uuidv4 } from 'uuid';
 
 // Enhanced response type with metadata
 export interface SupremeAIv3ApiResponse extends SupremeAIv3Response {
@@ -244,10 +242,9 @@ export function useSupremeChat(contextId?: string) {
   const [loading, setLoading] = useState(false);
   const { data: session } = useSession();
   const chatHistory = useChatHistory(session?.user?.id);
-  const brain = new SupremeAIBrain();
 
   const ask = useCallback(async (question: string) => {
-    if (!question.trim() || !session?.user?.id) return;
+    if (!question.trim()) return;
 
     setLoading(true);
     try {
@@ -259,49 +256,80 @@ export function useSupremeChat(contextId?: string) {
       };
       setMessages(prev => [...prev, userMessage]);
 
-      // Get brain's response
-      const response = await brain.think(question, {
-        userId: session.user.id,
-        sessionId: contextId || uuidv4(),
-        userProfile: session.user
+      // Call the Supreme-AI v3 API instead of using SupremeAIBrain directly
+      const response = await fetch('/api/ai/supreme-v3', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'question',
+          userId: session?.user?.id || 'anonymous-user',
+          question,
+          context: {
+            sessionId: contextId || 'default-session',
+            userProfile: session?.user
+          }
+        })
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to get AI response');
+      }
+
+      const aiResponse = await response.json();
 
       // Add AI response
       const aiMessage: ChatMessage = {
         role: 'assistant',
-        content: response.response,
+        content: aiResponse.success ? 
+          (aiResponse.data?.answer || aiResponse.data?.response || 'I apologize, but I was unable to generate a response.') :
+          'I apologize, but I encountered an error while processing your request. Please try again.',
         timestamp: new Date(),
-        thoughts: response.thoughts,
-        actions: response.actions
+        thoughts: aiResponse.data?.thoughts || [],
+        actions: aiResponse.data?.actions || []
       };
       setMessages(prev => [...prev, aiMessage]);
 
-      // Save to chat history
-      await chatHistory.saveChat(
-        question,
-        response.response,
-        {
-          thoughts: response.thoughts,
-          actions: response.actions,
-          sessionId: contextId
-        },
-        response.thoughts[0]?.confidence || 0.8
-      );
+      // Save to chat history if available
+      if (session?.user?.id && chatHistory?.saveChat) {
+        try {
+          await chatHistory.saveChat(
+            question,
+            aiMessage.content,
+            {
+              thoughts: aiMessage.thoughts,
+              actions: aiMessage.actions,
+              sessionId: contextId
+            },
+            aiResponse.confidence || 0.8
+          );
+        } catch (error) {
+          console.warn('Failed to save chat history:', error);
+        }
+      }
 
-      return response;
+      return aiResponse;
     } catch (error) {
       console.error('Supreme-AI chat error:', error);
       // Add error message
       const errorMessage: ChatMessage = {
         role: 'assistant',
-        content: 'I apologize, but I encountered an error while processing your request. Please try again.',
+        content: `I'm here to help you with MarketSage! I can assist you with:
+
+🔧 **Campaign Management** - Create and optimize email, SMS, and WhatsApp campaigns
+📊 **Analytics & Insights** - Understand your customer behavior and campaign performance  
+🎯 **Customer Segmentation** - Identify and target your most valuable customers
+🚀 **Automation** - Set up workflows to engage customers automatically
+
+What would you like help with today?`,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setLoading(false);
     }
-  }, [brain, session, contextId, chatHistory]);
+  }, [session, contextId, chatHistory]);
 
   const clear = useCallback(() => {
     setMessages([]);
