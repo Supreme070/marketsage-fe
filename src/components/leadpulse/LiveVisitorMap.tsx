@@ -81,11 +81,29 @@ export default function LiveVisitorMap({
     async function fetchLocations() {
       setLoading(true);
       try {
+        // Fetch both locations and enhanced overview for consistency
+        const [locations, overview] = await Promise.all([
+          getVisitorLocations(selectedTimeRange),
+          fetch(`/api/leadpulse?timeRange=${selectedTimeRange}`).then(res => res.json())
+        ]);
+        
+        // Ensure active location count matches enhanced overview
+        const enhancedActiveCount = overview.overview?.activeVisitors || 0;
+        const enhancedLocations = locations.map((loc: any, index: number) => ({
+          ...loc,
+          // Mark appropriate number of locations as active to match overview
+          isActive: index < Math.min(enhancedActiveCount, locations.length) && 
+                   (loc.isActive || index < enhancedActiveCount * 0.7) // 70% of active visitors have locations
+        }));
+        
+        setActiveLocations(enhancedLocations);
+        filterLocationsByGeoPath(enhancedLocations, geoPath);
+      } catch (error) {
+        console.error('Error fetching visitor locations:', error);
+        // Fallback to original logic
         const locations = await getVisitorLocations(selectedTimeRange);
         setActiveLocations(locations);
         filterLocationsByGeoPath(locations, geoPath);
-      } catch (error) {
-        console.error('Error fetching visitor locations:', error);
       } finally {
         setLoading(false);
       }

@@ -30,9 +30,38 @@ interface DashboardOverview {
   }>;
 }
 
+// Function to get synced visitor data from LeadPulse API
+async function getSyncedVisitorData() {
+  try {
+    const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/leadpulse?timeRange=24h`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        activeVisitors: data.overview?.activeVisitors || 50,
+        conversionsToday: Math.floor((data.overview?.conversionRate || 15) / 100 * (data.overview?.activeVisitors || 50)),
+        engagementTrend: 85 + Math.random() * 10,
+      };
+    }
+  } catch (error) {
+    console.log('Could not sync with LeadPulse API, using fallback');
+  }
+  
+  // Fallback to original logic if API fails
+  return {
+    activeVisitors: 45 + Math.floor(Math.random() * 25),
+    conversionsToday: 6 + Math.floor(Math.random() * 4),
+    engagementTrend: 85 + Math.random() * 10,
+  };
+}
+
 // Simulated data aggregation
-function generateOverviewData(): DashboardOverview {
+async function generateOverviewData(): Promise<DashboardOverview> {
   const now = new Date();
+  const livePulseData = await getSyncedVisitorData();
   
   return {
     kpis: {
@@ -41,11 +70,7 @@ function generateOverviewData(): DashboardOverview {
       activeJourneys: 15 + Math.floor(Math.random() * 8), // 15-23
       runningAutomations: 22 + Math.floor(Math.random() * 6), // 22-28
     },
-    livePulse: {
-      activeVisitors: 45 + Math.floor(Math.random() * 25), // 45-70
-      conversionsToday: 6 + Math.floor(Math.random() * 4), // 6-10
-      engagementTrend: 85 + Math.random() * 10, // 85-95%
-    },
+    livePulse: livePulseData,
     modules: {
       workflows: { 
         count: 24 + Math.floor(Math.random() * 6), 
@@ -171,7 +196,7 @@ export async function GET(request: NextRequest) {
     // - Live visitors from LeadPulse
     // - Recent activity from activity logs
     
-    const overviewData = generateOverviewData();
+    const overviewData = await generateOverviewData();
     
     return NextResponse.json({
       success: true,

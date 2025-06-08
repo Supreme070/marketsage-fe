@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Copy, Check, RefreshCw, Code, Globe, SmartphoneNfc } from 'lucide-react';
+import { ArrowLeft, Copy, Check, RefreshCw, Code, Globe, SmartphoneNfc, Smartphone } from 'lucide-react';
 
 export default function LeadPulseSetupPage() {
   const router = useRouter();
@@ -17,6 +17,9 @@ export default function LeadPulseSetupPage() {
   const [pixelId, setPixelId] = useState('lp_2g3h4j2k3h4kj23h4'); // Would be fetched from API
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [copied, setCopied] = useState(false);
+  const [mobileCopied, setMobileCopied] = useState('');
+  const [selectedMobilePlatform, setSelectedMobilePlatform] = useState('react-native');
+  const [appId, setAppId] = useState('your-app-id');
   const [qrCode, setQrCode] = useState({
     name: 'WhatsApp Lead Form',
     number: '+2348012345678',
@@ -102,10 +105,419 @@ export default function LeadPulseSetupPage() {
 <!-- End LeadPulse Tracking Code -->
 `.trim();
 
+  // Generate mobile tracking codes for different platforms
+  const getMobileTrackingCode = (platform: string) => {
+    const baseConfig = {
+      apiEndpoint: 'https://marketsage.africa',
+      appId: appId,
+      pixelId: pixelId,
+      debug: false
+    };
+
+    switch (platform) {
+      case 'react-native':
+        return `// React Native Integration
+// 1. Install dependencies
+npm install react-native-device-info @react-native-async-storage/async-storage
+
+// 2. Add to your App.js or main component
+import { LeadPulseReactNative } from './lib/leadpulse-mobile-sdk';
+
+const tracker = new LeadPulseReactNative({
+  apiEndpoint: '${baseConfig.apiEndpoint}',
+  appId: '${baseConfig.appId}',
+  debug: __DEV__
+});
+
+// 3. Initialize in your App component
+useEffect(() => {
+  const initializeTracking = async () => {
+    try {
+      await tracker.initializeWithDeviceInfo();
+      console.log('LeadPulse tracking initialized');
+    } catch (error) {
+      console.error('Failed to initialize tracking:', error);
+    }
+  };
+  
+  initializeTracking();
+}, []);
+
+// 4. Track screen views
+const trackScreen = (screenName) => {
+  tracker.trackScreenView(screenName);
+};
+
+// 5. Track interactions
+const trackInteraction = (buttonId, data = {}) => {
+  tracker.trackInteraction(buttonId, data);
+};
+
+// 6. Track conversions
+const trackConversion = (type, value, data = {}) => {
+  tracker.trackConversion(type, value, data);
+};
+
+// Example usage:
+// trackScreen('HomeScreen');
+// trackInteraction('login_button', { source: 'homepage' });
+// trackConversion('purchase', 1000, { product: 'premium_plan' });`;
+
+      case 'ios-swift':
+        return `// iOS Swift Integration
+// 1. Add to your ViewController or App Delegate
+
+import Foundation
+
+class LeadPulseTracker {
+    private let apiEndpoint = "${baseConfig.apiEndpoint}"
+    private let appId = "${baseConfig.appId}"
+    private var deviceId: String = ""
+    private var visitorId: String?
+    
+    init() {
+        self.deviceId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+        initialize()
+    }
+    
+    private func initialize() {
+        let deviceData: [String: Any] = [
+            "deviceId": deviceId,
+            "appId": appId,
+            "platform": "ios",
+            "appVersion": Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
+            "deviceModel": UIDevice.current.model,
+            "osVersion": UIDevice.current.systemVersion,
+            "locale": Locale.current.identifier,
+            "timezone": TimeZone.current.identifier
+        ]
+        
+        let url = URL(string: "\\(apiEndpoint)/api/leadpulse/mobile/identify")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: [
+                "deviceId": deviceId,
+                "deviceData": deviceData
+            ])
+            request.httpBody = jsonData
+            
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                if let data = data,
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let visitorId = json["visitorId"] as? String {
+                    self.visitorId = visitorId
+                    UserDefaults.standard.set(visitorId, forKey: "leadpulse_visitor_id")
+                    self.trackEvent("app_open", properties: [:])
+                }
+            }.resume()
+        } catch {
+            print("LeadPulse initialization failed: \\(error)")
+        }
+    }
+    
+    func trackScreen(_ screenName: String, properties: [String: Any] = [:]) {
+        trackEvent("screen_view", properties: ["screenName": screenName] + properties)
+    }
+    
+    func trackInteraction(_ elementId: String, properties: [String: Any] = [:]) {
+        trackEvent("button_tap", properties: ["elementId": elementId] + properties)
+    }
+    
+    func trackConversion(_ type: String, value: Double? = nil, properties: [String: Any] = [:]) {
+        var props = properties
+        props["conversionType"] = type
+        if let value = value { props["value"] = value }
+        trackEvent("conversion", properties: props)
+    }
+    
+    private func trackEvent(_ eventType: String, properties: [String: Any]) {
+        guard let visitorId = visitorId else { return }
+        
+        let eventData: [String: Any] = [
+            "visitorId": visitorId,
+            "deviceId": deviceId,
+            "appId": appId,
+            "eventType": eventType,
+            "properties": properties,
+            "timestamp": ISO8601DateFormatter().string(from: Date())
+        ]
+        
+        let url = URL(string: "\\(apiEndpoint)/api/leadpulse/mobile/track")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: eventData)
+            URLSession.shared.dataTask(with: request).resume()
+        } catch {
+            print("Failed to track event: \\(error)")
+        }
+    }
+}
+
+// Usage:
+let tracker = LeadPulseTracker()
+tracker.trackScreen("HomeViewController")
+tracker.trackInteraction("login_button", properties: ["source": "home"])
+tracker.trackConversion("purchase", value: 99.99, properties: ["product": "premium"])`;
+
+      case 'android-kotlin':
+        return `// Android Kotlin Integration
+// 1. Add to your MainActivity or Application class
+
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
+import java.util.*
+import java.util.concurrent.TimeUnit
+
+class LeadPulseTracker(private val context: Context) {
+    private val apiEndpoint = "${baseConfig.apiEndpoint}"
+    private val appId = "${baseConfig.appId}"
+    private val deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+    private var visitorId: String? = null
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .build()
+    
+    init {
+        initialize()
+    }
+    
+    private fun initialize() {
+        val deviceData = JSONObject().apply {
+            put("deviceId", deviceId)
+            put("appId", appId)
+            put("platform", "android")
+            put("appVersion", getAppVersion())
+            put("deviceModel", Build.MODEL)
+            put("osVersion", Build.VERSION.RELEASE)
+            put("locale", Locale.getDefault().toString())
+            put("timezone", TimeZone.getDefault().id)
+        }
+        
+        val requestBody = JSONObject().apply {
+            put("deviceId", deviceId)
+            put("deviceData", deviceData)
+        }
+        
+        val request = Request.Builder()
+            .url("\$apiEndpoint/api/leadpulse/mobile/identify")
+            .post(requestBody.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+        
+        client.newCall(request).enqueue(object : Callback {
+            override fun onResponse(call: Call, response: Response) {
+                response.body?.string()?.let { responseBody ->
+                    val json = JSONObject(responseBody)
+                    visitorId = json.optString("visitorId")
+                    context.getSharedPreferences("leadpulse", Context.MODE_PRIVATE)
+                        .edit()
+                        .putString("visitor_id", visitorId)
+                        .apply()
+                    trackEvent("app_open", JSONObject())
+                }
+            }
+            
+            override fun onFailure(call: Call, e: IOException) {
+                e.printStackTrace()
+            }
+        })
+    }
+    
+    fun trackScreen(screenName: String, properties: JSONObject = JSONObject()) {
+        properties.put("screenName", screenName)
+        trackEvent("screen_view", properties)
+    }
+    
+    fun trackInteraction(elementId: String, properties: JSONObject = JSONObject()) {
+        properties.put("elementId", elementId)
+        trackEvent("button_tap", properties)
+    }
+    
+    fun trackConversion(type: String, value: Double? = null, properties: JSONObject = JSONObject()) {
+        properties.put("conversionType", type)
+        value?.let { properties.put("value", it) }
+        trackEvent("conversion", properties)
+    }
+    
+    private fun trackEvent(eventType: String, properties: JSONObject) {
+        val visitorId = this.visitorId ?: return
+        
+        val eventData = JSONObject().apply {
+            put("visitorId", visitorId)
+            put("deviceId", deviceId)
+            put("appId", appId)
+            put("eventType", eventType)
+            put("properties", properties)
+            put("timestamp", Date().toInstant().toString())
+        }
+        
+        val request = Request.Builder()
+            .url("\$apiEndpoint/api/leadpulse/mobile/track")
+            .post(eventData.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+        
+        client.newCall(request).enqueue(object : Callback {
+            override fun onResponse(call: Call, response: Response) {
+                // Event tracked successfully
+            }
+            
+            override fun onFailure(call: Call, e: IOException) {
+                e.printStackTrace()
+            }
+        })
+    }
+    
+    private fun getAppVersion(): String {
+        return try {
+            val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            packageInfo.versionName
+        } catch (e: Exception) {
+            "1.0.0"
+        }
+    }
+}
+
+// Usage:
+val tracker = LeadPulseTracker(this)
+tracker.trackScreen("MainActivity")
+tracker.trackInteraction("login_button", JSONObject().put("source", "home"))
+tracker.trackConversion("purchase", 99.99, JSONObject().put("product", "premium"))`;
+
+      case 'flutter':
+        return `// Flutter Integration
+// 1. Add to pubspec.yaml dependencies:
+// device_info_plus: ^9.1.0
+// shared_preferences: ^2.2.0
+// http: ^1.1.0
+
+// 2. Create leadpulse_tracker.dart
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class LeadPulseTracker {
+  static const String _apiEndpoint = '${baseConfig.apiEndpoint}';
+  static const String _appId = '${baseConfig.appId}';
+  
+  String? _deviceId;
+  String? _visitorId;
+  
+  Future<void> initialize() async {
+    final deviceInfo = DeviceInfoPlugin();
+    
+    if (Platform.isAndroid) {
+      final androidInfo = await deviceInfo.androidInfo;
+      _deviceId = androidInfo.id;
+    } else if (Platform.isIOS) {
+      final iosInfo = await deviceInfo.iosInfo;
+      _deviceId = iosInfo.identifierForVendor;
+    }
+    
+    final prefs = await SharedPreferences.getInstance();
+    _visitorId = prefs.getString('leadpulse_visitor_id');
+    
+    final deviceData = {
+      'deviceId': _deviceId,
+      'appId': _appId,
+      'platform': Platform.isAndroid ? 'android' : 'ios',
+      'appVersion': '1.0.0', // Get from package_info_plus
+      'locale': Platform.localeName,
+    };
+    
+    try {
+      final response = await http.post(
+        Uri.parse('\$_apiEndpoint/api/leadpulse/mobile/identify'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'deviceId': _deviceId,
+          'deviceData': deviceData,
+        }),
+      );
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        _visitorId = data['visitorId'];
+        await prefs.setString('leadpulse_visitor_id', _visitorId!);
+        await trackEvent('app_open', {});
+      }
+    } catch (e) {
+      print('LeadPulse initialization failed: \$e');
+    }
+  }
+  
+  Future<void> trackScreen(String screenName, [Map<String, dynamic>? properties]) async {
+    final props = properties ?? {};
+    props['screenName'] = screenName;
+    await trackEvent('screen_view', props);
+  }
+  
+  Future<void> trackInteraction(String elementId, [Map<String, dynamic>? properties]) async {
+    final props = properties ?? {};
+    props['elementId'] = elementId;
+    await trackEvent('button_tap', props);
+  }
+  
+  Future<void> trackConversion(String type, {double? value, Map<String, dynamic>? properties}) async {
+    final props = properties ?? {};
+    props['conversionType'] = type;
+    if (value != null) props['value'] = value;
+    await trackEvent('conversion', props);
+  }
+  
+  Future<void> trackEvent(String eventType, Map<String, dynamic> properties) async {
+    if (_visitorId == null) return;
+    
+    final eventData = {
+      'visitorId': _visitorId,
+      'deviceId': _deviceId,
+      'appId': _appId,
+      'eventType': eventType,
+      'properties': properties,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+    
+    try {
+      await http.post(
+        Uri.parse('\$_apiEndpoint/api/leadpulse/mobile/track'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(eventData),
+      );
+    } catch (e) {
+      print('Failed to track event: \$e');
+    }
+  }
+}
+
+// Usage:
+final tracker = LeadPulseTracker();
+await tracker.initialize();
+tracker.trackScreen('HomePage');
+tracker.trackInteraction('login_button', {'source': 'home'});
+tracker.trackConversion('purchase', value: 99.99, properties: {'product': 'premium'});`;
+
+      default:
+        return 'Select a platform to see the integration code.';
+    }
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const copyMobileCode = (platform: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setMobileCopied(platform);
+    setTimeout(() => setMobileCopied(''), 2000);
   };
   
   // Save website settings
@@ -142,10 +554,14 @@ export default function LeadPulseSetupPage() {
       </div>
       
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="tracking">
             <Code className="h-4 w-4 mr-2" />
-            Tracking Code
+            Web Tracking
+          </TabsTrigger>
+          <TabsTrigger value="mobile">
+            <Smartphone className="h-4 w-4 mr-2" />
+            Mobile Apps
           </TabsTrigger>
           <TabsTrigger value="website">
             <Globe className="h-4 w-4 mr-2" />
@@ -250,6 +666,249 @@ export default function LeadPulseSetupPage() {
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Check Installation
               </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="mobile" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Mobile App Tracking Integration</CardTitle>
+              <CardDescription>
+                Get tracking code for your mobile apps (React Native, iOS, Android, Flutter)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>App ID</Label>
+                  <div className="flex items-center mt-1">
+                    <Input 
+                      value={appId}
+                      onChange={(e) => setAppId(e.target.value)}
+                      placeholder="your-app-id"
+                      className="w-64"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Unique identifier for your mobile app
+                  </p>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <Label>Select Platform</Label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {['react-native', 'ios-swift', 'android-kotlin', 'flutter'].map((platform) => (
+                    <Button
+                      key={platform}
+                      variant={selectedMobilePlatform === platform ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSelectedMobilePlatform(platform)}
+                      className="justify-start"
+                    >
+                      {platform === 'react-native' && '⚛️ React Native'}
+                      {platform === 'ios-swift' && '🍎 iOS Swift'}
+                      {platform === 'android-kotlin' && '🤖 Android Kotlin'}
+                      {platform === 'flutter' && '🐦 Flutter'}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>
+                    {selectedMobilePlatform === 'react-native' && 'React Native Integration Code'}
+                    {selectedMobilePlatform === 'ios-swift' && 'iOS Swift Integration Code'}
+                    {selectedMobilePlatform === 'android-kotlin' && 'Android Kotlin Integration Code'}
+                    {selectedMobilePlatform === 'flutter' && 'Flutter Integration Code'}
+                  </Label>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => copyMobileCode(selectedMobilePlatform, getMobileTrackingCode(selectedMobilePlatform))}
+                  >
+                    {mobileCopied === selectedMobilePlatform ? (
+                      <>
+                        <Check className="h-4 w-4 mr-2" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copy Code
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <div className="relative">
+                  <Textarea 
+                    value={getMobileTrackingCode(selectedMobilePlatform)}
+                    readOnly
+                    className="font-mono text-xs h-96 overflow-auto"
+                  />
+                </div>
+              </div>
+              
+                              <div className="space-y-4">
+                <Label>Mobile Tracking Setup Options</Label>
+                
+                {/* Tracking Mode Selection */}
+                <div className="border rounded-md p-4 space-y-3">
+                  <h4 className="text-sm font-medium text-center">Choose Your Tracking Approach</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="border rounded-md p-3 space-y-2 bg-green-50 dark:bg-green-950/30">
+                      <div className="flex items-center gap-2">
+                        <span className="text-green-600">🤖</span>
+                        <h5 className="text-sm font-medium text-green-900 dark:text-green-100">Automatic Tracking</h5>
+                        <Badge variant="outline" className="text-green-700 border-green-300">Recommended</Badge>
+                      </div>
+                      <div className="text-xs text-green-800 dark:text-green-200 space-y-1">
+                        <p><strong>Setup:</strong> Initialize ONCE in your app</p>
+                        <p><strong>Tracking:</strong> Everything happens automatically</p>
+                        <p><strong>Screens:</strong> Auto-detects all screen views</p>
+                        <p><strong>Interactions:</strong> Auto-tracks all button taps</p>
+                        <p><strong>Heatmaps:</strong> Touch coordinate tracking</p>
+                      </div>
+                    </div>
+                    
+                    <div className="border rounded-md p-3 space-y-2 bg-blue-50 dark:bg-blue-950/30">
+                      <div className="flex items-center gap-2">
+                        <span className="text-blue-600">⚙️</span>
+                        <h5 className="text-sm font-medium text-blue-900 dark:text-blue-100">Manual Tracking</h5>
+                        <Badge variant="outline" className="text-blue-700 border-blue-300">Advanced</Badge>
+                      </div>
+                      <div className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
+                        <p><strong>Setup:</strong> Add tracking to each screen</p>
+                        <p><strong>Tracking:</strong> Full control over what's tracked</p>
+                        <p><strong>Screens:</strong> Manual trackScreenView() calls</p>
+                        <p><strong>Interactions:</strong> Selective button tracking</p>
+                        <p><strong>Heatmaps:</strong> Custom touch event tracking</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Feature Comparison */}
+                <div className="space-y-2">
+                  <Label>Feature Comparison</Label>
+                  <div className="border rounded-md p-4">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left py-2 px-2">Feature</th>
+                            <th className="text-center py-2 px-2">🌐 Web Tracking</th>
+                            <th className="text-center py-2 px-2">🤖 Auto Mobile</th>
+                            <th className="text-center py-2 px-2">⚙️ Manual Mobile</th>
+                          </tr>
+                        </thead>
+                        <tbody className="text-muted-foreground">
+                          <tr className="border-b">
+                            <td className="py-2 px-2">Setup Complexity</td>
+                            <td className="text-center py-2 px-2">✅ One-time paste</td>
+                            <td className="text-center py-2 px-2">✅ One-time init</td>
+                            <td className="text-center py-2 px-2">⚠️ Per-screen setup</td>
+                          </tr>
+                          <tr className="border-b">
+                            <td className="py-2 px-2">Screen/Page Views</td>
+                            <td className="text-center py-2 px-2">✅ Automatic</td>
+                            <td className="text-center py-2 px-2">✅ Automatic</td>
+                            <td className="text-center py-2 px-2">❌ Manual calls</td>
+                          </tr>
+                          <tr className="border-b">
+                            <td className="py-2 px-2">Click/Tap Tracking</td>
+                            <td className="text-center py-2 px-2">✅ All elements</td>
+                            <td className="text-center py-2 px-2">✅ All buttons</td>
+                            <td className="text-center py-2 px-2">⚙️ Selective</td>
+                          </tr>
+                          <tr className="border-b">
+                            <td className="py-2 px-2">Heatmaps</td>
+                            <td className="text-center py-2 px-2">✅ Mouse tracking</td>
+                            <td className="text-center py-2 px-2">✅ Touch tracking</td>
+                            <td className="text-center py-2 px-2">⚙️ Custom events</td>
+                          </tr>
+                          <tr className="border-b">
+                            <td className="py-2 px-2">Form Tracking</td>
+                            <td className="text-center py-2 px-2">✅ All forms</td>
+                            <td className="text-center py-2 px-2">✅ All inputs</td>
+                            <td className="text-center py-2 px-2">⚙️ Tagged forms</td>
+                          </tr>
+                          <tr>
+                            <td className="py-2 px-2">Performance Impact</td>
+                            <td className="text-center py-2 px-2">⚡ Minimal</td>
+                            <td className="text-center py-2 px-2">⚡ Optimized</td>
+                            <td className="text-center py-2 px-2">🚀 Minimal</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Mobile Tracking Features */}
+                <div className="space-y-2">
+                  <Label>Mobile Tracking Capabilities</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="border rounded-md p-3 space-y-2">
+                      <h4 className="text-sm font-medium">📱 App Analytics</h4>
+                      <ul className="text-xs text-muted-foreground space-y-1">
+                        <li>• Screen view tracking (automatic/manual)</li>
+                        <li>• Button tap analytics with coordinates</li>
+                        <li>• App session tracking & duration</li>
+                        <li>• User engagement scoring</li>
+                        <li>• Touch heatmaps & interaction zones</li>
+                      </ul>
+                    </div>
+                    
+                    <div className="border rounded-md p-3 space-y-2">
+                      <h4 className="text-sm font-medium">🔗 Cross-Platform</h4>
+                      <ul className="text-xs text-muted-foreground space-y-1">
+                        <li>• Unified web + mobile dashboard</li>
+                        <li>• Cross-device user journeys</li>
+                        <li>• Real-time synchronization</li>
+                        <li>• Consistent visitor IDs</li>
+                        <li>• Platform-specific insights</li>
+                      </ul>
+                    </div>
+                    
+                    <div className="border rounded-md p-3 space-y-2">
+                      <h4 className="text-sm font-medium">💰 E-commerce</h4>
+                      <ul className="text-xs text-muted-foreground space-y-1">
+                        <li>• In-app purchase tracking</li>
+                        <li>• Conversion attribution</li>
+                        <li>• Revenue analytics</li>
+                        <li>• Funnel optimization</li>
+                        <li>• Cart abandonment recovery</li>
+                      </ul>
+                    </div>
+                    
+                    <div className="border rounded-md p-3 space-y-2">
+                      <h4 className="text-sm font-medium">🔔 Push Notifications</h4>
+                      <ul className="text-xs text-muted-foreground space-y-1">
+                        <li>• Push token management</li>
+                        <li>• Notification engagement</li>
+                        <li>• Segmented campaigns</li>
+                        <li>• Behavior-triggered messaging</li>
+                        <li>• Deep link attribution</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md p-4">
+                <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+                  🚀 GTBank Mobile Banking Example
+                </h4>
+                <div className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
+                  <p><strong>Screen Tracking:</strong> Track user flow from login → balance check → transfer</p>
+                  <p><strong>Conversion Events:</strong> Money transfers, bill payments, investment purchases</p>
+                  <p><strong>Engagement:</strong> Time spent in different banking sections</p>
+                  <p><strong>Security:</strong> Secure device fingerprinting and session management</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
