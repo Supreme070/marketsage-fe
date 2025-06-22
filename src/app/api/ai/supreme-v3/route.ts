@@ -14,6 +14,9 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { SupremeAIv3, type SupremeAIv3Task } from '@/lib/ai/supreme-ai-v3-engine';
 import { logger } from '@/lib/logger';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import prisma from '@/lib/db/prisma';
 
 // Rate limiting (simple in-memory store)
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -138,6 +141,45 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate user authentication and authorization
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Verify the user exists and get their current role
+    const user = await prisma.user.findUnique({
+      where: { id: body.userId || session.user.id },
+      select: { id: true, role: true, isActive: true }
+    });
+
+    if (!user || !user.isActive) {
+      return NextResponse.json(
+        { success: false, error: 'User not found or inactive' },
+        { status: 403 }
+      );
+    }
+
+    // Check if user has admin privileges for task execution
+    const hasAdminPrivileges = ['SUPER_ADMIN', 'ADMIN', 'IT_ADMIN'].includes(user.role);
+
+    // Override task execution if user doesn't have privileges
+    if (body.enableTaskExecution === true && !hasAdminPrivileges) {
+      logger.warn('Task execution denied - insufficient privileges', {
+        userId: user.id,
+        userRole: user.role,
+        requiredRoles: ['SUPER_ADMIN', 'ADMIN', 'IT_ADMIN']
+      });
+      
+      body.enableTaskExecution = false; // Disable task execution
+    }
+
+    // Update userId to use verified user ID
+    body.userId = user.id;
+
     // Force Supreme-AI processing if localOnly is true (ignore OpenAI settings)
     const forceLocal = body.localOnly === true;
     const enableTaskExecution = body.enableTaskExecution === true;
@@ -145,6 +187,8 @@ export async function POST(request: NextRequest) {
     logger.info('Supreme-AI v3 API request received', {
       taskType: body.type || body.taskType,
       userId: body.userId,
+      userRole: user.role,
+      hasAdminPrivileges,
       forceLocal,
       enableTaskExecution,
       mode: forceLocal ? 'local-forced' : 'auto-detect'

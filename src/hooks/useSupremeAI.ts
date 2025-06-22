@@ -8,6 +8,7 @@
 
 import { useState, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
+import { useSession } from 'next-auth/react';
 
 interface ChatMessage {
   id: string;
@@ -39,6 +40,7 @@ export const useSupremeAI = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { data: session } = useSession();
 
   // Intelligent task type detection
   const detectTaskType = useCallback((content: string): { type: string; taskType?: string } => {
@@ -91,14 +93,21 @@ export const useSupremeAI = () => {
     setError(null);
 
     try {
+      // Check if user has admin privileges for task execution
+      const hasAdminPrivileges = session?.user?.role === 'SUPER_ADMIN' || session?.user?.role === 'ADMIN' || session?.user?.role === 'IT_ADMIN';
+      
+      if (!session?.user) {
+        throw new Error('Please log in to use AI task execution');
+      }
+      
       // Detect the appropriate task type
       const { type, taskType } = detectTaskType(content.trim());
       
       const requestBody: any = {
         type,
         question: content.trim(),
-        userId: 'default-user',
-        enableTaskExecution: true, // 🚀 Enable actual task creation and execution
+        userId: session.user.id,
+        enableTaskExecution: hasAdminPrivileges, // Only enable for users with admin privileges
         forceLocal: false, // Allow OpenAI + Supreme-AI hybrid mode
       };
       
@@ -107,7 +116,12 @@ export const useSupremeAI = () => {
         requestBody.taskType = taskType;
       }
       
-      console.log('🔍 Detected task type:', { type, taskType, content: content.trim() });
+      console.log('🔍 Detected task type:', { type, taskType, content: content.trim(), hasAdminPrivileges, userRole: session?.user?.role });
+      
+      // Show user feedback about task execution capabilities
+      if (type === 'task' && !hasAdminPrivileges) {
+        toast.error('Task execution requires ADMIN, IT_ADMIN, or SUPER_ADMIN privileges');
+      }
 
       const response = await fetch('/api/ai/supreme-v3', {
         method: 'POST',

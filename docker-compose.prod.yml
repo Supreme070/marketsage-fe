@@ -31,12 +31,12 @@ services:
       - PAYMENT_SUCCESS_URL=http://localhost:3030/dashboard/billing/success
       - PAYMENT_CANCEL_URL=http://localhost:3030/dashboard/billing/cancel
       
-      # AI Configuration - OpenAI Only
+      # AI Configuration - Enable Local Task Execution
       - OPENAI_API_KEY=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
       - AI_FALLBACK_MODE=false
       - DISABLE_ONNX=true
-      - SUPREME_AI_MODE=disabled
-      - USE_OPENAI_ONLY=true
+      - SUPREME_AI_MODE=enabled
+      - USE_OPENAI_ONLY=false
       - OPENAI_MODEL=gpt-4o-mini
       
       # Mailtrap Email Configuration - SANDBOX (Testing)

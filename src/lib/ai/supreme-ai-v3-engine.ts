@@ -19,6 +19,7 @@ import { supremeMemory } from '@/lib/ai/memory-engine';
 import { getAIInstance } from '@/lib/ai/openai-integration';
 import { logger } from '@/lib/logger';
 import prisma from '@/lib/db/prisma';
+import { recordTaskExecution } from '@/lib/ai/task-execution-monitor';
 
 // -----------------------------
 // Request / Response Typings
@@ -241,6 +242,7 @@ ${taskExecutionResult ? `\n🚀 **TASK EXECUTION COMPLETED**: ${taskExecutionRes
   // 2. Task Execution Handler
   private async handleTaskExecution(task: Extract<SupremeAIv3Task, { type: 'task' }>): Promise<SupremeAIv3Response> {
     const { userId, question, taskType } = task;
+    const startTime = Date.now();
     
     logger.info('Supreme-AI v3 handling task execution', { 
       userId, 
@@ -249,16 +251,40 @@ ${taskExecutionResult ? `\n🚀 **TASK EXECUTION COMPLETED**: ${taskExecutionRes
       mode: 'task-execution'
     });
 
+    // Get user role for monitoring
+    let userRole = 'UNKNOWN';
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { role: true }
+      });
+      userRole = user?.role || 'UNKNOWN';
+    } catch (error) {
+      logger.warn('Failed to get user role for monitoring', { userId, error: error instanceof Error ? error.message : String(error) });
+    }
+
     try {
       // Force task execution mode
       const taskExecutionResult = await this.detectAndExecuteTask(question, userId);
       
       if (taskExecutionResult) {
+        const executionTime = Date.now() - startTime;
+        
         logger.info('Task execution successful', { 
           userId, 
           taskType: taskExecutionResult.summary,
-          details: taskExecutionResult.details 
+          details: taskExecutionResult.details,
+          executionTime
         });
+
+        // Record successful execution
+        recordTaskExecution(
+          taskType || 'unknown',
+          userId,
+          userRole,
+          true,
+          executionTime
+        );
 
         return {
           success: true,
@@ -274,10 +300,22 @@ ${taskExecutionResult ? `\n🚀 **TASK EXECUTION COMPLETED**: ${taskExecutionRes
           debug: { 
             taskExecuted: true,
             executionMode: 'supreme-ai-local',
-            taskDetails: taskExecutionResult.details
+            taskDetails: taskExecutionResult.details,
+            executionTime
           }
         };
       } else {
+        const executionTime = Date.now() - startTime;
+        
+        // Record no task detected (not a failure, just no executable task found)
+        recordTaskExecution(
+          'no_task_detected',
+          userId,
+          userRole,
+          true, // This is "successful" in that it worked correctly, just no task was found
+          executionTime
+        );
+
         // No specific task detected, provide guidance
         return {
           success: true,
@@ -296,12 +334,33 @@ ${taskExecutionResult ? `\n🚀 **TASK EXECUTION COMPLETED**: ${taskExecutionRes
           confidence: 0.7,
           debug: { 
             taskDetected: false,
-            mode: 'advisory'
+            mode: 'advisory',
+            executionTime
           }
         };
       }
     } catch (error) {
-      logger.error('Task execution failed', { error: error instanceof Error ? error.message : String(error) });
+      const executionTime = Date.now() - startTime;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      logger.error('Task execution failed', { 
+        error: errorMessage,
+        userId,
+        taskType,
+        executionTime,
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      
+      // Record failed execution
+      recordTaskExecution(
+        taskType || 'unknown',
+        userId,
+        userRole,
+        false,
+        executionTime,
+        'execution_error',
+        errorMessage
+      );
       
       return {
         success: false,
@@ -309,13 +368,14 @@ ${taskExecutionResult ? `\n🚀 **TASK EXECUTION COMPLETED**: ${taskExecutionRes
         taskType: 'task',
         data: {
           answer: `❌ **Task Execution Failed**\n\nI encountered an error while trying to execute your task. This might be due to:\n\n• Database connectivity issues\n• Missing permissions\n• Invalid task parameters\n\nPlease try again or contact support if the issue persists.`,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: errorMessage,
           executionMode: 'error'
         },
         confidence: 0.1,
         debug: { 
-          error: error instanceof Error ? error.message : 'Unknown error',
-          mode: 'error'
+          error: errorMessage,
+          mode: 'error',
+          executionTime
         }
       };
     }
@@ -736,8 +796,28 @@ Deliver professional, efficient automation solutions that drive business growth 
 
       return null;
     } catch (error) {
-      logger.error('Task execution failed', { error: error instanceof Error ? error.message : String(error), question });
-      return null;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      
+      logger.error('Task execution failed', { 
+        error: errorMessage,
+        question,
+        userId,
+        stack: errorStack,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Return detailed error information for debugging
+      return {
+        summary: 'Task execution encountered an error',
+        details: {
+          error: errorMessage,
+          type: 'execution_error',
+          question,
+          suggestion: 'Please try rephrasing your request or contact support if the issue persists.',
+          userFriendlyMessage: 'I encountered an issue while trying to execute your task. Please try again with a more specific request.'
+        }
+      };
     }
   }
 
@@ -1461,62 +1541,130 @@ Deliver professional, efficient automation solutions that drive business growth 
 
   // Create and assign team tasks with African fintech context
   private async createAndAssignTeamTask(intent: any, entities: any, userId: string): Promise<any> {
-    const taskType = intent.task || entities.task || 'general_task';
-    const priority = intent.priority || entities.priority || 'MEDIUM';
-    const assigneeRole = intent.assignee || entities.assignee || 'ADMIN';
-
-    // Find appropriate team member
-    const assignee = await prisma.user.findFirst({
-      where: {
-        role: assigneeRole as any,
-        isActive: true
+    try {
+      // Validate input parameters
+      if (!userId) {
+        throw new Error('User ID is required for task creation');
       }
-    });
 
-    if (!assignee) {
+      // Verify the creator exists and is active
+      const creator = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, role: true, isActive: true, name: true }
+      });
+
+      if (!creator || !creator.isActive) {
+        throw new Error('Creator user not found or inactive');
+      }
+
+      const taskType = intent.task || entities.task || 'general_task';
+      const priority = intent.priority || entities.priority || 'MEDIUM';
+      const assigneeRole = intent.assignee || entities.assignee || 'ADMIN';
+
+      // Validate priority value
+      const validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
+      const normalizedPriority = validPriorities.includes(priority.toUpperCase()) ? priority.toUpperCase() : 'MEDIUM';
+
+      // Find appropriate team member with more specific criteria
+      const assignee = await prisma.user.findFirst({
+        where: {
+          role: { in: ['ADMIN', 'IT_ADMIN', 'SUPER_ADMIN'] }, // Only admin roles can be assigned tasks
+          isActive: true,
+          id: { not: userId } // Don't assign to creator unless no other option
+        },
+        orderBy: {
+          lastLogin: 'desc' // Prefer recently active users
+        }
+      });
+
+      if (!assignee) {
+        // Fallback: allow self-assignment if no other admin is available
+        const selfAssignee = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { id: true, name: true, role: true }
+        });
+
+        if (!selfAssignee || !['ADMIN', 'IT_ADMIN', 'SUPER_ADMIN'].includes(selfAssignee.role)) {
+          return {
+            success: false,
+            message: `No active admin team members available for task assignment. Current user (${creator.role}) does not have assignment privileges.`,
+            suggestion: 'Please contact an administrator to assign this task, or upgrade your role permissions.',
+            details: {
+              userRole: creator.role,
+              requiredRoles: ['ADMIN', 'IT_ADMIN', 'SUPER_ADMIN'],
+              availableActions: ['Contact admin', 'Request role upgrade']
+            }
+          };
+        }
+      }
+
+      const finalAssignee = assignee || creator;
+
+      // Create contextual task with African fintech wisdom
+      const task = await prisma.task.create({
+        data: {
+          title: this.generateAfricanFintechTaskTitle(taskType, intent),
+          description: this.generateAfricanFintechTaskDescription(taskType, intent, entities),
+          status: 'TODO',
+          priority: normalizedPriority,
+          creatorId: userId,
+          assigneeId: finalAssignee.id,
+          dueDate: new Date(Date.now() + this.calculateTaskDuration(taskType) * 24 * 60 * 60 * 1000)
+        }
+      });
+
+      // Create task comment with AI guidance (with error handling)
+      try {
+        await prisma.taskComment.create({
+          data: {
+            taskId: task.id,
+            createdById: userId,
+            content: `🤖 **AI Guidance**: ${this.generateTaskGuidance(taskType, intent)}`
+          }
+        });
+      } catch (commentError) {
+        // Log the error but don't fail the task creation
+        logger.warn('Failed to create task comment, but task was created successfully', { 
+          taskId: task.id, 
+          error: commentError instanceof Error ? commentError.message : String(commentError) 
+        });
+      }
+
+      return {
+        success: true,
+        taskId: task.id,
+        message: `✅ Task assigned successfully! I have created "${task.title}" and assigned it to ${finalAssignee.name}.`,
+        details: {
+          taskTitle: task.title,
+          assigneeName: finalAssignee.name,
+          assigneeRole: finalAssignee.role,
+          priority: task.priority,
+          dueDate: task.dueDate,
+          guidance: this.generateTaskGuidance(taskType, intent),
+          estimatedDuration: this.calculateTaskDuration(taskType),
+          selfAssigned: finalAssignee.id === userId
+        }
+      };
+    } catch (error) {
+      logger.error('Failed to create and assign team task', { 
+        error: error instanceof Error ? error.message : String(error),
+        userId,
+        taskType: intent.task || entities.task,
+        stack: error instanceof Error ? error.stack : undefined
+      });
+
       return {
         success: false,
-        message: `No active team member found with role ${assigneeRole}. Please check your team setup.`,
-        suggestion: 'Review your team members and their roles in the settings.'
+        message: 'Failed to create task due to a system error.',
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        suggestion: 'Please try again. If the problem persists, contact system administrator.',
+        details: {
+          errorType: 'database_error',
+          userId,
+          timestamp: new Date().toISOString()
+        }
       };
     }
-
-    // Create contextual task with African fintech wisdom
-    const task = await prisma.task.create({
-      data: {
-        title: this.generateAfricanFintechTaskTitle(taskType, intent),
-        description: this.generateAfricanFintechTaskDescription(taskType, intent, entities),
-        status: 'TODO',
-        priority: priority as any,
-        creatorId: userId,
-        assigneeId: assignee.id,
-        dueDate: new Date(Date.now() + this.calculateTaskDuration(taskType) * 24 * 60 * 60 * 1000)
-      }
-    });
-
-    // Create task comment with AI guidance
-    await prisma.taskComment.create({
-      data: {
-        taskId: task.id,
-        userId: userId,
-        comment: `🤖 **AI Guidance**: ${this.generateTaskGuidance(taskType, intent)}`
-      }
-    });
-
-    return {
-      success: true,
-      taskId: task.id,
-      message: `✅ Task assigned successfully! I have created "${task.title}" and assigned it to ${assignee.name}.`,
-      details: {
-        taskTitle: task.title,
-        assigneeName: assignee.name,
-        assigneeRole: assignee.role,
-        priority: task.priority,
-        dueDate: task.dueDate,
-        guidance: this.generateTaskGuidance(taskType, intent),
-        estimatedDuration: this.calculateTaskDuration(taskType)
-      }
-    };
   }
 
   // Helper methods for task creation
