@@ -8,7 +8,7 @@ import sentiment from 'sentiment';
 import nlp from 'compromise';
 import { logger, LogContext } from '@/lib/logger';
 import prisma from '@/lib/db/prisma';
-import { ContentType, SentimentAnalysisResult, ContentScoreResult } from '@/lib/content-intelligence';
+import { type ContentType, SentimentAnalysisResult, type ContentScoreResult } from '@/lib/content-intelligence';
 import { PorterStemmer, SentimentAnalyzer as NaturalSentiment, LogisticRegressionClassifier } from 'natural';
 import { distance as levenshtein } from 'natural/lib/natural/distance/levenshtein_distance';
 import { NGrams, WordTokenizer, BayesClassifier } from 'natural';
@@ -1460,33 +1460,4 @@ function getCategoryDocuments(category: string): string[] {
   return categoryDocs[category] || [];
 }
 
-function calculateSubcategoryConfidence(features: any, subcategory: string): number {
-  // Simple confidence calculation based on term frequency
-  const relevantTerms = _getRelevantTermsInternal(subcategory);
-  const termMatches = features.tokens.filter((token: string) => 
-    relevantTerms.some(term => token.toLowerCase().includes(term))
-  ).length;
-  
-  return Math.min(1, termMatches / Math.max(1, features.tokens.length));
-}
-
-function _getRelevantTermsInternal(subcategory: string): string[] {
-  // Define relevant terms for each subcategory
-  const termMap: Record<string, string[]> = {
-    'social-media': ['social', 'media', 'post', 'engagement', 'followers'],
-    'email': ['email', 'newsletter', 'campaign', 'open', 'click'],
-    'content': ['content', 'blog', 'article', 'video', 'post'],
-    // Add more subcategories and terms as needed
-  };
-  
-  return termMap[subcategory] || [];
-}
-
-// Duplicate definitions renamed to avoid conflicts
-function calculateSubcategoryConfidenceDup(features: any, subcategory: string): number {
-  return calculateSubcategoryConfidence(features, subcategory);
-}
-
-function _getRelevantTermsInternalDup(subcategory: string): string[] {
-  return _getRelevantTermsInternal(subcategory);
-} 
+ 

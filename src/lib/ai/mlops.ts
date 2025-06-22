@@ -7,7 +7,7 @@
 
 import { logger } from '@/lib/logger';
 import { aiModelCache, CachedModel } from './model-cache';
-import { autoTrainer, TrainingResult } from './auto-training';
+import { autoTrainer, type TrainingResult } from './auto-training';
 import { featureEngineer } from './feature-engineering';
 import { modelInterpreter } from './model-interpretability';
 import { batchPredictor } from './batch-predictor';

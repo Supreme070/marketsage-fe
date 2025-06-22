@@ -35,6 +35,8 @@ interface GlobeVisualizationProps {
   visitorData: VisitorLocation[];
   onSelectLocation?: (location: string) => void;
   selectedPath?: string[];
+  onRegionClick?: (regionId: string) => void;
+  displayRegions?: any[];
   width?: number;
   height?: number;
 }
@@ -43,6 +45,8 @@ export default function GlobeVisualization({
   visitorData,
   onSelectLocation,
   selectedPath = [],
+  onRegionClick,
+  displayRegions = [],
   width = 800,
   height = 500
 }: GlobeVisualizationProps) {
@@ -140,10 +144,17 @@ export default function GlobeVisualization({
 
   // Handle click
   const handleClick = useCallback(() => {
-    if (hoveredLocation && onSelectLocation) {
-      onSelectLocation(hoveredLocation);
+    if (hoveredLocation) {
+      // Check if it's a region click (for drill-down) or a city click
+      const isRegion = displayRegions.some(region => region.id === hoveredLocation);
+      
+      if (isRegion && onRegionClick) {
+        onRegionClick(hoveredLocation);
+      } else if (onSelectLocation) {
+        onSelectLocation(hoveredLocation);
+      }
     }
-  }, [hoveredLocation, onSelectLocation]);
+  }, [hoveredLocation, onSelectLocation, onRegionClick, displayRegions]);
 
   // Initialize the 3D scene ONCE (camera, earth, lights, controls)
   useEffect(() => {

@@ -199,7 +199,7 @@ export const getActiveVisitors = cache(async (timeRange = '24h'): Promise<Visito
     const targetActiveCount = overviewData.overview?.activeVisitors || 0;
 
     // Enhance visitor data with realistic activity patterns
-    let enhancedVisitors = (data.visitors || []).map((visitor: any, index: number) => {
+    const enhancedVisitors = (data.visitors || []).map((visitor: any, index: number) => {
       const now = new Date();
       const currentHour = now.getHours();
       
@@ -314,6 +314,13 @@ export const getEnhancedOverview = cache(async (timeRange = '24h'): Promise<{
   activeVisitors: number;
   totalVisitors: number;
   conversionRate: number;
+  platformBreakdown?: {
+    web: { count: number; percentage: number };
+    mobile: { count: number; percentage: number };
+    reactNative: { count: number; percentage: number };
+    nativeApps: { count: number; percentage: number };
+    hybrid: { count: number; percentage: number };
+  };
   metadata?: any;
 }> => {
   try {
@@ -335,6 +342,7 @@ export const getEnhancedOverview = cache(async (timeRange = '24h'): Promise<{
       activeVisitors: data.overview?.activeVisitors || 0,
       totalVisitors: data.overview?.totalVisitors || 0,
       conversionRate: data.overview?.conversionRate || 0,
+      platformBreakdown: data.platformBreakdown,
       metadata: data.metadata
     };
   } catch (error) {

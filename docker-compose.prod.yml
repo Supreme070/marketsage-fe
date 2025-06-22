@@ -31,11 +31,13 @@ services:
       - PAYMENT_SUCCESS_URL=http://localhost:3030/dashboard/billing/success
       - PAYMENT_CANCEL_URL=http://localhost:3030/dashboard/billing/cancel
       
-      # AI Configuration
-      - OPENAI_API_KEY=your-openai-api-key-here
-      - AI_FALLBACK_MODE=true
+      # AI Configuration - OpenAI Only
+      - OPENAI_API_KEY=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
+      - AI_FALLBACK_MODE=false
       - DISABLE_ONNX=true
-      - SUPREME_AI_MODE=fallback
+      - SUPREME_AI_MODE=disabled
+      - USE_OPENAI_ONLY=true
+      - OPENAI_MODEL=gpt-4o-mini
       
       # Mailtrap Email Configuration - SANDBOX (Testing)
       - MAILTRAP_TEST_USER=efcf22ec32c771
@@ -54,7 +56,7 @@ services:
       - REDIS_PASSWORD=""
       
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -237,16 +239,16 @@ services:
       "
 
   redis:
-    image: redis:7-alpine
-    container_name: marketsage-redis
+    image: valkey/valkey:8-alpine
+    container_name: marketsage-valkey
     restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+    command: valkey-server --appendonly yes
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "valkey-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -254,10 +256,40 @@ services:
     networks:
       - marketsage
 
+  # LocalAI - Commented Out (Using OpenAI instead)
+  # localai:
+  #   image: localai/localai:latest-aio-cpu
+  #   container_name: marketsage-localai
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     - THREADS=2
+  #     - CONTEXT_SIZE=1024
+  #     - DEBUG=false
+  #     - BUILD_TYPE=cpu
+  #     - DISABLE_GALLERY=true
+  #     - PRELOAD_MODELS=""
+  #     - AUTOLOAD_GALLERY=false
+  #     - SINGLE_ACTIVE_BACKEND=true
+  #   volumes:
+  #     - ./localai/models:/models
+  #     - ./localai/config:/config
+  #   healthcheck:
+  #     test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/readyz"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 30s
+  #   networks:
+  #     - marketsage
+
 volumes:
   postgres-data:
     driver: local
   redis_data:
+  localai_models:
+    driver: local
 
 networks:
   marketsage:

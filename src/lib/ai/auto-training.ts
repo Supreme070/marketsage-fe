@@ -6,7 +6,7 @@
  */
 
 import { logger } from '@/lib/logger';
-import { aiModelCache, CachedModel } from './model-cache';
+import { aiModelCache, type CachedModel } from './model-cache';
 import { featureEngineer } from './feature-engineering';
 import { modelInterpreter } from './model-interpretability';
 
@@ -130,7 +130,7 @@ export class AutoTrainer {
    */
   private scheduleTraining(config: TrainingConfig): void {
     const now = new Date();
-    let nextRun = new Date();
+    const nextRun = new Date();
     
     switch (config.schedule.frequency) {
       case 'hourly':
@@ -139,7 +139,7 @@ export class AutoTrainer {
       case 'daily':
         if (config.schedule.startTime) {
           const [hours, minutes] = config.schedule.startTime.split(':');
-          nextRun.setHours(parseInt(hours), parseInt(minutes));
+          nextRun.setHours(Number.parseInt(hours), Number.parseInt(minutes));
           if (nextRun <= now) {
             nextRun.setDate(nextRun.getDate() + 1);
           }
@@ -156,7 +156,7 @@ export class AutoTrainer {
         }
         if (config.schedule.startTime) {
           const [hours, minutes] = config.schedule.startTime.split(':');
-          nextRun.setHours(parseInt(hours), parseInt(minutes));
+          nextRun.setHours(Number.parseInt(hours), Number.parseInt(minutes));
         }
         break;
     }

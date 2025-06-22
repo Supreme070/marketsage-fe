@@ -3,7 +3,7 @@
  * Implements dynamic thinking, reasoning, and problem-solving capabilities
  */
 
-import { OpenAIIntegration, getAIInstance } from './openai-integration';
+import { type OpenAIIntegration, getAIInstance } from './openai-integration';
 import { MemoryEngine } from './memory-engine';
 import { BehavioralPredictor } from './behavioral-predictor';
 import { logger } from '@/lib/logger';

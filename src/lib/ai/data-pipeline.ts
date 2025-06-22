@@ -219,8 +219,8 @@ export class AIDataPipeline {
    */
   private normalizeFeatures(features: number[][]): number[][] {
     const numFeatures = features[0].length;
-    const mins = new Array(numFeatures).fill(Infinity);
-    const maxs = new Array(numFeatures).fill(-Infinity);
+    const mins = new Array(numFeatures).fill(Number.POSITIVE_INFINITY);
+    const maxs = new Array(numFeatures).fill(Number.NEGATIVE_INFINITY);
     
     // Find min/max for each feature
     features.forEach(row => {

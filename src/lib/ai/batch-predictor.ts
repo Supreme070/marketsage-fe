@@ -6,7 +6,7 @@
  */
 
 import { logger } from '@/lib/logger';
-import { aiModelCache, CachedModel } from './model-cache';
+import { aiModelCache, type CachedModel } from './model-cache';
 import { aiWorkerManager } from './worker-manager';
 
 export interface BatchPredictionRequest {

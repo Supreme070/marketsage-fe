@@ -5,9 +5,9 @@
 
 import { logger } from '@/lib/logger';
 import { errorBoundary } from '../utils/error-boundary';
-import { NeuralNetworkPredictor, NetworkConfig } from '../supreme-ai-engine';
-import { ModelRegistry } from './model-registry';
-import { PerformanceMonitor } from './performance-monitor';
+import { NeuralNetworkPredictor, type NetworkConfig } from '../supreme-ai-engine';
+import type { ModelRegistry } from './model-registry';
+import type { PerformanceMonitor } from './performance-monitor';
 import prisma from '@/lib/db/prisma';
 
 interface BehavioralFeatures {

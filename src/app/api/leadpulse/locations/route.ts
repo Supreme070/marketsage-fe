@@ -116,21 +116,22 @@ export async function GET(request: Request) {
     }
 
     // Get enhanced overview to ensure location count matches active visitors
-    let enhancedActiveCount = 8; // Default fallback
+    let enhancedActiveCount = 12;
     try {
       const overviewResponse = await fetch(`${new URL(request.url).origin}/api/leadpulse?timeRange=${timeRange}`);
       if (overviewResponse.ok) {
         const overviewData = await overviewResponse.json();
-        enhancedActiveCount = Math.floor((overviewData.overview?.activeVisitors || 8) * 0.7); // 70% of active visitors have locations
+        enhancedActiveCount = Math.floor((overviewData.overview?.activeVisitors || 12) * 0.8); // 80% of active visitors have locations
       }
     } catch (e) {
       console.log('Could not fetch overview for location enhancement');
     }
 
-    // Enhanced fallback data that scales with active visitor count
-    const baseMockLocations: VisitorLocation[] = [
+    // Enhanced fallback data with comprehensive African representation
+    const enhancedMockLocations: VisitorLocation[] = [
+      // Major global cities
       {
-        id: 'loc_1',
+        id: 'loc_new_york',
         city: 'New York',
         country: 'USA',
         isActive: true,
@@ -140,7 +141,7 @@ export async function GET(request: Request) {
         longitude: -74.0060
       },
       {
-        id: 'loc_2',
+        id: 'loc_london',
         city: 'London',
         country: 'UK',
         isActive: true,
@@ -150,17 +151,7 @@ export async function GET(request: Request) {
         longitude: -0.1278
       },
       {
-        id: 'loc_3',
-        city: 'Lagos',
-        country: 'Nigeria',
-        isActive: true,
-        lastActive: '5 mins ago',
-        visitCount: 62,
-        latitude: 6.5244,
-        longitude: 3.3792
-      },
-      {
-        id: 'loc_4',
+        id: 'loc_tokyo',
         city: 'Tokyo',
         country: 'Japan',
         isActive: false,
@@ -170,7 +161,7 @@ export async function GET(request: Request) {
         longitude: 139.6503
       },
       {
-        id: 'loc_5',
+        id: 'loc_sydney',
         city: 'Sydney',
         country: 'Australia',
         isActive: false,
@@ -179,8 +170,138 @@ export async function GET(request: Request) {
         latitude: -33.8688,
         longitude: 151.2093
       },
+      
+      // Nigerian cities (enhanced for drill-down demo)
       {
-        id: 'loc_6',
+        id: 'loc_lagos',
+        city: 'Lagos',
+        country: 'Nigeria',
+        isActive: true,
+        lastActive: 'just now',
+        visitCount: 89,
+        latitude: 6.5244,
+        longitude: 3.3792
+      },
+      {
+        id: 'loc_abuja',
+        city: 'Abuja',
+        country: 'Nigeria',
+        isActive: true,
+        lastActive: '1 min ago',
+        visitCount: 45,
+        latitude: 9.0765,
+        longitude: 7.3986
+      },
+      {
+        id: 'loc_kano',
+        city: 'Kano',
+        country: 'Nigeria',
+        isActive: false,
+        lastActive: '18 mins ago',
+        visitCount: 32,
+        latitude: 11.5004,
+        longitude: 8.5200
+      },
+      {
+        id: 'loc_port_harcourt',
+        city: 'Port Harcourt',
+        country: 'Nigeria',
+        isActive: true,
+        lastActive: '5 mins ago',
+        visitCount: 28,
+        latitude: 4.7719,
+        longitude: 6.7593
+      },
+      
+      // Ghanaian cities
+      {
+        id: 'loc_accra',
+        city: 'Accra',
+        country: 'Ghana',
+        isActive: true,
+        lastActive: '3 mins ago',
+        visitCount: 41,
+        latitude: 5.6037,
+        longitude: -0.1870
+      },
+      {
+        id: 'loc_kumasi',
+        city: 'Kumasi',
+        country: 'Ghana',
+        isActive: false,
+        lastActive: '25 mins ago',
+        visitCount: 22,
+        latitude: 6.6885,
+        longitude: -1.6244
+      },
+      
+      // Kenyan cities
+      {
+        id: 'loc_nairobi',
+        city: 'Nairobi',
+        country: 'Kenya',
+        isActive: true,
+        lastActive: '4 mins ago',
+        visitCount: 56,
+        latitude: -1.2921,
+        longitude: 36.8219
+      },
+      {
+        id: 'loc_mombasa',
+        city: 'Mombasa',
+        country: 'Kenya',
+        isActive: false,
+        lastActive: '38 mins ago',
+        visitCount: 19,
+        latitude: -4.0435,
+        longitude: 39.6682
+      },
+      {
+        id: 'loc_kisumu',
+        city: 'Kisumu',
+        country: 'Kenya',
+        isActive: false,
+        lastActive: '42 mins ago',
+        visitCount: 14,
+        latitude: -0.1022,
+        longitude: 34.7617
+      },
+      
+      // South African cities
+      {
+        id: 'loc_cape_town',
+        city: 'Cape Town',
+        country: 'South Africa',
+        isActive: true,
+        lastActive: '6 mins ago',
+        visitCount: 38,
+        latitude: -33.9249,
+        longitude: 18.4241
+      },
+      {
+        id: 'loc_johannesburg',
+        city: 'Johannesburg',
+        country: 'South Africa',
+        isActive: true,
+        lastActive: '2 mins ago',
+        visitCount: 52,
+        latitude: -26.2041,
+        longitude: 28.0473
+      },
+      {
+        id: 'loc_durban',
+        city: 'Durban',
+        country: 'South Africa',
+        isActive: false,
+        lastActive: '29 mins ago',
+        visitCount: 21,
+        latitude: -29.8587,
+        longitude: 31.0218
+      },
+      
+      // Egyptian cities
+      {
+        id: 'loc_cairo',
         city: 'Cairo',
         country: 'Egypt',
         isActive: true,
@@ -190,17 +311,19 @@ export async function GET(request: Request) {
         longitude: 31.2357
       },
       {
-        id: 'loc_7',
-        city: 'Rio de Janeiro',
-        country: 'Brazil',
+        id: 'loc_alexandria',
+        city: 'Alexandria',
+        country: 'Egypt',
         isActive: false,
-        lastActive: '45 mins ago',
-        visitCount: 19,
-        latitude: -22.9068,
-        longitude: -43.1729
+        lastActive: '33 mins ago',
+        visitCount: 18,
+        latitude: 31.2001,
+        longitude: 29.9187
       },
+      
+      // Additional global cities for context
       {
-        id: 'loc_8',
+        id: 'loc_delhi',
         city: 'Delhi',
         country: 'India',
         isActive: true,
@@ -210,75 +333,50 @@ export async function GET(request: Request) {
         longitude: 77.1025
       },
       {
-        id: 'loc_9',
-        city: 'Abuja',
-        country: 'Nigeria',
-        isActive: true,
-        lastActive: '1 min ago',
-        visitCount: 41,
-        latitude: 9.0765,
-        longitude: 7.3986
+        id: 'loc_rio',
+        city: 'Rio de Janeiro',
+        country: 'Brazil',
+        isActive: false,
+        lastActive: '45 mins ago',
+        visitCount: 19,
+        latitude: -22.9068,
+        longitude: -43.1729
       },
       {
-        id: 'loc_10',
-        city: 'Accra',
-        country: 'Ghana',
+        id: 'loc_paris',
+        city: 'Paris',
+        country: 'France',
         isActive: false,
-        lastActive: '25 mins ago',
-        visitCount: 27,
-        latitude: 5.6037,
-        longitude: -0.1870
+        lastActive: '51 mins ago',
+        visitCount: 31,
+        latitude: 48.8566,
+        longitude: 2.3522
       }
     ];
 
     // Ensure we have enough active locations to match the enhanced visitor count
-    let finalLocations = [...baseMockLocations];
+    const finalLocations = [...enhancedMockLocations];
     const currentActiveCount = finalLocations.filter(loc => loc.isActive).length;
     
     if (currentActiveCount < enhancedActiveCount) {
-      // Add more active locations from Nigerian cities
-      const additionalCities = [
-        { city: 'Kano', country: 'Nigeria', lat: 12.0022, lng: 8.5920 },
-        { city: 'Port Harcourt', country: 'Nigeria', lat: 4.8156, lng: 7.0498 },
-        { city: 'Ibadan', country: 'Nigeria', lat: 7.3775, lng: 3.9470 },
-        { city: 'Benin City', country: 'Nigeria', lat: 6.3350, lng: 5.6037 },
-        { city: 'Kaduna', country: 'Nigeria', lat: 10.5222, lng: 7.4383 },
-        { city: 'Jos', country: 'Nigeria', lat: 9.8965, lng: 8.8583 },
-        { city: 'Enugu', country: 'Nigeria', lat: 6.5244, lng: 7.5086 },
-        { city: 'Owerri', country: 'Nigeria', lat: 5.4840, lng: 7.0351 },
-        { city: 'Ilorin', country: 'Nigeria', lat: 8.5000, lng: 4.5500 },
-        { city: 'Warri', country: 'Nigeria', lat: 5.5160, lng: 5.7500 }
-      ];
-
-      const neededAdditional = enhancedActiveCount - currentActiveCount;
+      // Make some inactive locations active to match the count
+      const inactiveLocations = finalLocations.filter(loc => !loc.isActive);
+      const neededActive = enhancedActiveCount - currentActiveCount;
       
-      for (let i = 0; i < Math.min(neededAdditional, additionalCities.length); i++) {
-        const city = additionalCities[i];
-        finalLocations.push({
-          id: `loc_enhanced_${i + 11}`,
-          city: city.city,
-          country: city.country,
-          isActive: true,
-          lastActive: i < 3 ? 'just now' : `${Math.floor(Math.random() * 10) + 1} min ago`,
-          visitCount: Math.floor(Math.random() * 30) + 15,
-          latitude: city.lat,
-          longitude: city.lng
-        });
+      for (let i = 0; i < Math.min(neededActive, inactiveLocations.length); i++) {
+        inactiveLocations[i].isActive = true;
+        inactiveLocations[i].lastActive = 'just now';
+      }
+    } else if (currentActiveCount > enhancedActiveCount) {
+      // Make some active locations inactive to match the count
+      const activeLocations = finalLocations.filter(loc => loc.isActive);
+      const excessActive = currentActiveCount - enhancedActiveCount;
+      
+      for (let i = 0; i < Math.min(excessActive, activeLocations.length); i++) {
+        activeLocations[i].isActive = false;
+        activeLocations[i].lastActive = `${Math.floor(Math.random() * 50) + 10} mins ago`;
       }
     }
-
-    // Apply realistic time-based activity patterns
-    finalLocations = finalLocations.map((loc: VisitorLocation) => {
-      const currentHour = new Date().getHours();
-      const businessHours = currentHour >= 9 && currentHour <= 17;
-      
-      // Adjust activity based on business hours
-      if (businessHours && Math.random() < 0.3) {
-        return { ...loc, isActive: true, lastActive: 'just now' };
-      }
-      
-      return loc;
-    });
 
     return NextResponse.json({ 
       success: true,
@@ -312,20 +410,20 @@ function getCityCoordinates(city: string): { lat: number; lng: number } {
   return cityCoords[city] || { lat: 0, lng: 0 };
 }
 
-function formatLastActive(date: Date): string {
+function formatLastActive(lastVisit: Date): string {
   const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
+  const diffMs = now.getTime() - lastVisit.getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
   
-  if (diffMins < 1) {
-    return 'just now';
-  } else if (diffMins < 60) {
-    return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
-  } else if (diffHours < 24) {
-    return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-  } else {
-    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-  }
+  if (diffMins < 1) return 'just now';
+  if (diffMins === 1) return '1 min ago';
+  if (diffMins < 60) return `${diffMins} mins ago`;
+  
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours === 1) return '1 hour ago';
+  if (diffHours < 24) return `${diffHours} hours ago`;
+  
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return '1 day ago';
+  return `${diffDays} days ago`;
 } 

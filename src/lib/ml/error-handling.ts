@@ -326,7 +326,7 @@ export class InputValidator {
     });
   }
 
-  static validateEmail(value: unknown, fieldName: string = 'email'): string {
+  static validateEmail(value: unknown, fieldName = 'email'): string {
     const email = this.validateString(value, fieldName, {
       required: true,
       pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -337,7 +337,7 @@ export class InputValidator {
   static validateFeatureVector(
     value: unknown,
     expectedLength: number,
-    fieldName: string = 'features'
+    fieldName = 'features'
   ): number[] {
     const features = this.validateArray(
       value,
@@ -376,8 +376,8 @@ export class SafeExecutor {
 
   static executeWithRetry<T>(
     fn: () => T,
-    maxRetries: number = 3,
-    delay: number = 1000
+    maxRetries = 3,
+    delay = 1000
   ): Promise<T> {
     return new Promise((resolve, reject) => {
       let attempts = 0;

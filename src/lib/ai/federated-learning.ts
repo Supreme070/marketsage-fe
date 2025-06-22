@@ -137,8 +137,8 @@ export class FederatedLearningManager {
   private tenants: Map<string, TenantConfig>;
   private privacyEngine: DifferentialPrivacy;
   private aggregator: SecureAggregation;
-  private roundInProgress: boolean = false;
-  private currentRound: number = 0;
+  private roundInProgress = false;
+  private currentRound = 0;
   private updateBuffer: FederatedModelUpdate[] = [];
 
   constructor(

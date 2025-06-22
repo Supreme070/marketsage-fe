@@ -260,7 +260,7 @@ class MetricsCalculator {
 
 class LearningRateScheduler {
   private config: LearningRateConfig;
-  private currentEpoch: number = 0;
+  private currentEpoch = 0;
   
   constructor(config: LearningRateConfig) {
     this.config = config;
@@ -305,7 +305,7 @@ class LearningRateScheduler {
 class AdamOptimizer {
   private m: number[][] = [];
   private v: number[][] = [];
-  private t: number = 0;
+  private t = 0;
   private config: OptimizerConfig;
 
   constructor(config: OptimizerConfig, layerSizes: number[][]) {
@@ -382,7 +382,7 @@ class BatchNormalization {
   private gamma: number[] = [];
   private beta: number[] = [];
   private config: BatchNormConfig;
-  private isTraining: boolean = true;
+  private isTraining = true;
 
   constructor(size: number, config: BatchNormConfig) {
     this.config = config;
@@ -436,7 +436,7 @@ class CrossValidator {
       const foldMetrics: ModelMetrics[] = [];
 
       // Shuffle data if requested
-      let indices = Array.from({ length: inputs.length }, (_, i) => i);
+      const indices = Array.from({ length: inputs.length }, (_, i) => i);
       if (config.shuffle) {
         for (let i = indices.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
@@ -497,7 +497,7 @@ class CrossValidator {
 class AdvancedEnsemble {
   private models: NeuralNetworkPredictor[] = [];
   private weights: number[] = [];
-  private diversity: number = 0;
+  private diversity = 0;
 
   constructor(modelConfigs: NetworkConfig[], ensembleWeights?: number[]) {
     this.models = modelConfigs.map(config => new NeuralNetworkPredictor(config));
@@ -734,7 +734,7 @@ export class NeuralNetworkPredictor {
       outputDelta[i] = error * outputActivation(this.layerInputs[outputLayer][i]);
     }
     
-    let deltas = [outputDelta];
+    const deltas = [outputDelta];
     
     // Backpropagate error
     for (let layer = this.weights.length - 1; layer >= 0; layer--) {
@@ -908,7 +908,7 @@ export class NeuralNetworkPredictor {
     inputs: number[][],
     targets: number[][],
     epochs: number,
-    validationSplit: number = 0.2
+    validationSplit = 0.2
   ): Promise<TrainingMetrics[]> {
     try {
       // Split data into training and validation sets
@@ -1200,7 +1200,7 @@ class ModelDriftDetector {
     return distance / minLength;
   }
 
-  private createHistogram(data: number[], bins: number = 10): number[] {
+  private createHistogram(data: number[], bins = 10): number[] {
     const min = Math.min(...data);
     const max = Math.max(...data);
     const binWidth = (max - min) / bins;
@@ -1337,7 +1337,7 @@ class ContinuousLearningEngine {
   private model: NeuralNetworkPredictor;
   private config: ContinuousLearningConfig;
   private incomingBatches: { inputs: number[][], targets: number[][] }[] = [];
-  private isLearning: boolean = false;
+  private isLearning = false;
   private learningInterval?: NodeJS.Timeout;
 
   constructor(model: NeuralNetworkPredictor, config: ContinuousLearningConfig) {
@@ -1525,7 +1525,7 @@ class RealTimeMonitor {
     };
   }
 
-  getMetricsHistory(hours: number = 24): MonitoringMetrics[] {
+  getMetricsHistory(hours = 24): MonitoringMetrics[] {
     const cutoffTime = new Date(Date.now() - hours * 60 * 60 * 1000);
     return this.metrics.filter(m => m.timestamp >= cutoffTime);
   }

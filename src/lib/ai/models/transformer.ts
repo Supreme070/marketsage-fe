@@ -160,7 +160,7 @@ export class TransformerModel {
       if (mask) {
         for (let i = 0; i < seqLen; i++) {
           for (let j = 0; j < seqLen; j++) {
-            if (!mask[i][j]) scores[i][j] = -Infinity;
+            if (!mask[i][j]) scores[i][j] = Number.NEGATIVE_INFINITY;
           }
         }
       }
@@ -273,7 +273,7 @@ export class TransformerModel {
     inputs: number[][][],
     targets: number[][],
     epochs: number,
-    learningRate: number = 0.001
+    learningRate = 0.001
   ): Promise<void> {
     // Training implementation would go here
     // Would include backpropagation through time and gradient updates

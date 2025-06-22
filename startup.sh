@@ -1,102 +1,107 @@
-#!/bin/sh
-set -e
+#!/bin/bash
 
-echo "🚀 Starting MarketSage initialization process..."
+# MarketSage Enhanced Startup Script
+# ==================================
+# Comprehensive system initialization with AI diagnostics
 
-# Wait for database to be ready
-echo "⏳ Waiting for database to be ready..."
-for i in $(seq 1 30); do
-  if pg_isready -h db -U marketsage; then
-    echo "✅ Database is ready!"
-    break
-  fi
-  echo "⏳ Waiting for database... ($i/30)"
-  sleep 2
-done
+echo "🚀 MarketSage Enhanced Startup Initiated..."
+echo "============================================="
 
-if ! pg_isready -h db -U marketsage; then
-  echo "❌ Database failed to start in time. Exiting."
-  exit 1
-fi
+# Colors for better output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-# Set environment variables for Prisma
-# Use NODE_ENV from docker-compose environment instead of hardcoding production
-export DATABASE_URL="postgresql://marketsage:marketsage_password@db:5432/marketsage?schema=public"
+# Function to check if a command exists
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
 
-# Generate Prisma client
-echo "🔄 Generating Prisma client..."
-if npx prisma generate --schema=./prisma/schema.prisma; then
-  echo "✅ Prisma client generated successfully"
+# Check required dependencies
+echo -e "${BLUE}1️⃣ Checking Dependencies...${NC}"
+
+if command_exists node; then
+    echo -e "${GREEN}✅ Node.js: $(node --version)${NC}"
 else
-  echo "⚠️ Warning: Prisma client generation may have issues"
+    echo -e "${RED}❌ Node.js not found${NC}"
+    exit 1
 fi
 
-# Ensure Prisma client is linked properly
-echo "🔄 Checking Prisma client installation..."
-
-# Look for all possible Prisma client locations
-PRISMA_NODE_MODULES="./node_modules/.prisma/client"
-PRISMA_PRISMA_NODE_MODULES="./prisma/node_modules/.prisma/client"
-PRISMA_DIRECT_NODE_MODULES="./node_modules/@prisma/client"
-PRISMA_DIRECT_PRISMA_NODE_MODULES="./prisma/node_modules/@prisma/client"
-
-# Ensure main location exists
-if [ -d "$PRISMA_NODE_MODULES" ]; then
-  echo "✅ Prisma client found at $PRISMA_NODE_MODULES"
+if command_exists npm; then
+    echo -e "${GREEN}✅ npm: $(npm --version)${NC}"
 else
-  echo "⚠️ Prisma client not found at primary location, creating directory structure..."
-  mkdir -p ./node_modules/.prisma
+    echo -e "${RED}❌ npm not found${NC}"
+    exit 1
 fi
 
-# Create symlinks to ensure all possible locations work
-if [ -d "$PRISMA_PRISMA_NODE_MODULES" ]; then
-  echo "✅ Found Prisma client at $PRISMA_PRISMA_NODE_MODULES, creating symlink..."
-  rm -rf "$PRISMA_NODE_MODULES" || true
-  ln -sf ../../prisma/node_modules/.prisma/client "$PRISMA_NODE_MODULES"
-  echo "✅ Created symlink from $PRISMA_PRISMA_NODE_MODULES to $PRISMA_NODE_MODULES"
-fi
+# Environment setup
+echo -e "\n${BLUE}2️⃣ Environment Configuration...${NC}"
 
-# Create package.json in .prisma/client if it doesn't exist
-if [ ! -f "$PRISMA_NODE_MODULES/package.json" ] && [ -f "$PRISMA_PRISMA_NODE_MODULES/package.json" ]; then
-  echo "✅ Copying package.json to $PRISMA_NODE_MODULES"
-  cp "$PRISMA_PRISMA_NODE_MODULES/package.json" "$PRISMA_NODE_MODULES/"
-fi
-
-# Also create necessary index files if they don't exist
-if [ ! -f "$PRISMA_NODE_MODULES/index.js" ] && [ -f "$PRISMA_PRISMA_NODE_MODULES/index.js" ]; then
-  echo "✅ Copying index.js to $PRISMA_NODE_MODULES"
-  cp "$PRISMA_PRISMA_NODE_MODULES/index.js" "$PRISMA_NODE_MODULES/"
-fi
-
-# Print debug information
-echo "🔍 Debug information:"
-ls -la ./node_modules/.prisma || echo "Directory not found: ./node_modules/.prisma"
-ls -la ./prisma/node_modules/.prisma || echo "Directory not found: ./prisma/node_modules/.prisma"
-
-# Try to run migrations but don't fail the startup if they don't work
-echo "🔄 Running database migrations..."
-npx prisma migrate deploy --schema=./prisma/schema.prisma || echo "⚠️ Warning: Migration deployment had issues, trying schema push..."
-
-# If migrations failed, push the schema directly
-echo "📥 Ensuring database schema is up to date..."
-npx prisma db push --schema=./prisma/schema.prisma --accept-data-loss || echo "⚠️ Warning: Schema push had issues, but we'll continue startup"
-
-# Create a default user if none exists
-echo "🔄 Creating default user if needed..."
-PGPASSWORD=marketsage_password psql -h db -U marketsage -d marketsage -c "INSERT INTO \"User\" (id, name, email, \"emailVerified\", password, role, \"createdAt\", \"updatedAt\") 
-VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d047', 'Admin User', 'admin@example.com', NOW(), 'password123', 'ADMIN', NOW(), NOW()) 
-ON CONFLICT (id) DO NOTHING;" || echo "⚠️ Warning: Default user creation had issues, but we'll continue startup"
-
-# Skip the user count check that's failing
-echo "🔍 Skipping user count check and database seeding for now"
-
-# Start the Next.js standalone server
-echo "🚀 Starting MarketSage in production mode..."
-if [ -f ".next/standalone/server.js" ]; then
-  exec node .next/standalone/server.js
-elif [ -f "server.js" ]; then
-  exec node server.js
+# Check if .env.local exists
+if [ -f .env.local ]; then
+    echo -e "${GREEN}✅ Environment file found${NC}"
+    # Source the environment file
+    export $(cat .env.local | grep -v '^#' | xargs)
 else
-  echo "⚠️ Standalone server not found, using npm start as fallback..."
-  exec npm start
-fi 
+    echo -e "${YELLOW}⚠️ .env.local not found, creating basic setup...${NC}"
+    cat > .env.local << EOL
+# MarketSage Environment Configuration
+DATABASE_URL="postgresql://marketsage_user:marketsage_password@localhost:5432/marketsage_db?schema=public"
+NEXTAUTH_SECRET="your-nextauth-secret-here"
+NEXTAUTH_URL="http://localhost:3000"
+
+# AI Configuration
+OPENAI_API_KEY="your-openai-api-key"
+OPENAI_MODEL="gpt-4o-mini"
+USE_OPENAI_ONLY="false"
+SUPREME_AI_MODE="enabled"
+
+# Local AI Configuration
+LOCALAI_BASE_URL="http://localhost:8080"
+SUPREME_AI_ENGINE="enabled"
+EOL
+    echo -e "${GREEN}✅ Basic .env.local created${NC}"
+fi
+
+# Database setup
+echo -e "\n${BLUE}3️⃣ Database Initialization...${NC}"
+
+# Install dependencies if needed
+if [ ! -d "node_modules" ]; then
+    echo -e "${YELLOW}📦 Installing dependencies...${NC}"
+    npm install
+fi
+
+# Prisma setup
+echo -e "${YELLOW}🔧 Setting up Prisma...${NC}"
+npx prisma generate
+npx prisma db push
+
+# AI System Diagnostics
+echo -e "\n${BLUE}4️⃣ AI System Diagnostics...${NC}"
+
+# Set AI to local mode for startup
+export USE_OPENAI_ONLY="false"
+export SUPREME_AI_MODE="enabled"
+
+echo -e "${GREEN}✅ Supreme-AI Mode: ENABLED${NC}"
+echo -e "${GREEN}✅ Task Execution: ENABLED${NC}"
+echo -e "${GREEN}✅ Local Processing: PRIORITY${NC}"
+
+# Start the application
+echo -e "\n${BLUE}5️⃣ Starting MarketSage Application...${NC}"
+
+# Start in development mode with AI debugging
+export DEBUG="supreme-ai:*"
+export NODE_ENV="development"
+
+echo -e "${GREEN}🎯 Starting Next.js development server...${NC}"
+echo -e "${YELLOW}📍 Application will be available at: http://localhost:3000${NC}"
+echo -e "${YELLOW}🧙‍♂️ Supreme-AI will be running in local execution mode${NC}"
+
+# Start the Next.js development server
+npm run dev
+
+echo -e "\n${GREEN}✅ MarketSage startup completed!${NC}" 

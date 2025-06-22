@@ -5,7 +5,7 @@
 
 import { z } from 'zod'; // We'll use Zod for runtime type validation
 import { logger } from '@/lib/logger';
-import { featureEngineer, ScalingMethod, SelectionMethod } from './feature-engineering';
+import { featureEngineer, type ScalingMethod, type SelectionMethod } from './feature-engineering';
 
 // Core data types
 export interface RawDataPoint {

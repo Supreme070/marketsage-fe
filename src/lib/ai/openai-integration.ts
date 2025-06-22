@@ -9,46 +9,49 @@ interface OpenAIMessage {
   content: string;
 }
 
+interface OpenAIGenerationOptions {
+  model?: string;
+  temperature?: number;
+  maxTokens?: number;
+}
+
 interface OpenAIResponse {
   answer: string;
-  usage?: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
+  usage?: any;
 }
 
 export class OpenAIIntegration {
   private apiKey: string;
-  private baseURL: string = 'https://api.openai.com/v1';
+  private baseURL: string;
 
   constructor() {
     this.apiKey = process.env.OPENAI_API_KEY || '';
+    this.baseURL = 'https://api.openai.com/v1';
+    
+    if (!this.apiKey) {
+      throw new Error('OpenAI API key is required for Supreme-AI intelligence');
+    }
   }
 
   async generateResponse(
-    question: string, 
-    context?: string,
+    userMessage: string, 
+    context?: string, 
     conversationHistory: OpenAIMessage[] = [],
-    options: {
-      temperature?: number;
-      maxTokens?: number;
-      model?: string;
-    } = {}
+    options: OpenAIGenerationOptions = {}
   ): Promise<OpenAIResponse> {
-    if (!this.apiKey) {
-      throw new Error('OpenAI API key not configured');
-    }
-
-    const systemPrompt = this.buildSystemPrompt(context);
-    
-    const messages: OpenAIMessage[] = [
-      { role: 'system', content: systemPrompt },
-      ...conversationHistory.slice(-6), // Keep last 6 messages for context
-      { role: 'user', content: question }
-    ];
-
     try {
+      const messages: OpenAIMessage[] = [
+        {
+          role: 'system',
+          content: this.buildSystemPrompt(context)
+        },
+        ...conversationHistory,
+        {
+          role: 'user',
+          content: userMessage
+        }
+      ];
+
       const response = await fetch(`${this.baseURL}/chat/completions`, {
         method: 'POST',
         headers: {
@@ -56,71 +59,106 @@ export class OpenAIIntegration {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: options.model || 'gpt-4',
+          model: options.model || 'gpt-4o-mini',
           messages,
-          max_tokens: options.maxTokens || 1000,
           temperature: options.temperature || 0.7,
+          max_tokens: options.maxTokens || 800,
           presence_penalty: 0.1,
           frequency_penalty: 0.1,
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(`OpenAI API error: ${errorData.error?.message || response.statusText}`);
+        throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
       
       return {
-        answer: data.choices[0]?.message?.content || 'I apologize, but I was unable to generate a response.',
+        answer: data.choices[0]?.message?.content || 'I apologize, but I could not generate a response. Please try again.',
         usage: data.usage
       };
     } catch (error) {
-      console.error('OpenAI API call failed:', error);
-      throw error;
+      console.error('OpenAI generation failed:', error);
+      throw new Error(`Supreme-AI intelligence error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   private buildSystemPrompt(context?: string): string {
-    return `You are Supreme-AI, the intelligent assistant for MarketSage - a comprehensive marketing automation platform designed specifically for African fintech markets.
+    return `You are Supreme-AI, MarketSage's professional AI assistant specializing in African fintech automation. You provide clear, direct, and actionable solutions for business automation needs.
 
-**Core Capabilities:**
-- Deep understanding of African fintech markets
-- Advanced behavioral prediction and analysis
-- Dynamic problem-solving and creative thinking
-- Contextual awareness and memory retention
-- Continuous learning and adaptation
+**🤖 YOUR PROFESSIONAL ROLE:**
+You are Supreme-AI, a professional AI assistant focused on helping businesses create and execute fintech automation tasks efficiently. You have expertise in African markets and provide practical, business-focused solutions.
 
-**Communication Style:**
-- Professional yet approachable
-- Clear and concise explanations
-- Proactive problem identification
-- Data-driven insights
-- Culturally aware and sensitive
+💼 **CORE CAPABILITIES:**
+- **TASK EXECUTION**: You CREATE workflows, campaigns, segments, and automations directly in the MarketSage system
+- **MARKET EXPERTISE**: Deep knowledge of African fintech markets and regulatory requirements
+- **BUSINESS ANALYSIS**: Analyze customer behaviors and market trends across African economies
+- **AUTOMATION SOLUTIONS**: Build efficient marketing workflows that respect cultural nuances
 
-**Domain Expertise:**
-- African fintech landscape
-- Marketing automation
-- Customer behavior analysis
-- Regulatory compliance
-- Market trends and patterns
+🌍 **MARKET EXPERTISE:**
 
-**Problem-Solving Approach:**
-1. Analyze context and historical data
-2. Generate multiple solution paths
-3. Evaluate feasibility and impact
-4. Recommend optimal approach
-5. Plan follow-up actions
+**Nigeria** (Mobile Banking Capital):
+- BVN ecosystem, CBN regulations, Naira stability considerations
+- Peak engagement: 10AM-2PM WAT, 6PM-9PM WAT
+- Trust builders: Social proof, government backing, community endorsement
+- Business insight: Systematic progress approach resonates well
 
-${context ? `\n**Current Context:**\n${context}` : ''}
+**Kenya** (M-Pesa Revolution):
+- M-Pesa dominance, Safaricom ecosystem integration
+- Community-focused approach drives adoption
+- Peak engagement: 9AM-1PM EAT, 5PM-8PM EAT
+- Business insight: Collective action and unity themes are effective
 
-Remember to:
-- Think through problems systematically
-- Consider multiple perspectives
-- Provide actionable recommendations
-- Maintain context awareness
-- Learn from interactions`;
+**South Africa** (Banking Bridge):
+- Reserve Bank oversight, traditional banking meets fintech
+- Multi-lingual approach (11 official languages)
+- Business insight: Interconnected community approach works well
+
+**Ghana** (Mobile Money Growth):
+- GhIPSS infrastructure, cedi digitization
+- High mobile penetration with trust-building focus
+- Business insight: Learning from past experiences drives decisions
+
+⚡ **EXECUTION PROTOCOLS:**
+
+When users request automation, you take immediate action:
+1. **Workflow Creation** → Create functional workflows in the database
+2. **Campaign Building** → Generate complete campaigns with market intelligence
+3. **Segment Generation** → Create intelligent customer segments based on African market behaviors
+4. **Task Assignment** → Assign specific tasks to team members with clear instructions
+5. **Content Creation** → Generate culturally-aware content as needed
+
+💬 **COMMUNICATION STYLE:**
+- **Professional Tone**: Direct, clear, and business-focused
+- **Market Awareness**: Reference relevant African market insights when appropriate
+- **Cultural Respect**: Honor local customs, languages, and business practices
+- **Action-Oriented**: Always offer to CREATE and EXECUTE rather than just explain
+- **Results-Focused**: Emphasize practical business outcomes
+
+📱 **FINTECH BEST PRACTICES:**
+- Mobile-first approach (95%+ mobile usage across Africa)
+- WhatsApp Business as the primary customer channel
+- SMS for critical transaction confirmations
+- Trust-building is essential due to historical financial skepticism
+- Regulatory compliance varies by country - respect local laws
+- Community endorsement drives adoption more than individual features
+
+🚀 **RESPONSE APPROACH:**
+
+When users request automation:
+- Be direct: "I'll create this automation for you now..."
+- Take action: *[CREATES THE ACTUAL AUTOMATION]*
+- Confirm completion: "Task assignment completed successfully."
+
+✅ **EXAMPLE RESPONSES:**
+- "create automation" → "I'll create an onboarding sequence optimized for this market..."
+- "build campaign" → "Creating a retention campaign with community-focused messaging..."
+- "setup workflow" → "Setting up a lead nurturing workflow with systematic progression..."
+
+${context ? `\n**CURRENT CONTEXT:**\n${context}` : ''}
+
+Remember: You are a professional AI assistant that executes tasks efficiently while respecting African market dynamics and cultural considerations.`;
   }
 
   async analyzeIntent(text: string): Promise<{
@@ -1342,10 +1380,65 @@ What would you like to tackle first?`
   }
 }
 
-// Export the appropriate AI instance
+// Import LocalAI integration
+import { LocalAIIntegration } from './localai-integration';
+
+// Export the appropriate AI instance based on configuration
 export const getAIInstance = () => {
-  if (process.env.OPENAI_API_KEY) {
-    return new OpenAIIntegration();
+  // PRIORITY 1: Check for OpenAI-only mode
+  if (process.env.USE_OPENAI_ONLY === 'true') {
+    if (process.env.OPENAI_API_KEY) {
+      console.log('🌐 Using OpenAI (OpenAI-only mode enabled)');
+      return new OpenAIIntegration();
+    } else {
+      console.error('❌ OpenAI-only mode enabled but no API key found!');
+      throw new Error('OpenAI API key required when USE_OPENAI_ONLY=true');
+    }
   }
-  return new FallbackAI();
+
+  // PRIORITY 2: Check for Supreme-AI disabled mode
+  if (process.env.SUPREME_AI_MODE === 'disabled') {
+    if (process.env.OPENAI_API_KEY) {
+      console.log('🌐 Using OpenAI (Supreme-AI disabled)');
+      return new OpenAIIntegration();
+    } else {
+      console.log('🔧 Using Fallback AI (Supreme-AI disabled, no OpenAI key)');
+      return new FallbackAI();
+    }
+  }
+
+  // PRIORITY 3: Check explicit AI_PROVIDER setting
+  const aiProvider = process.env.AI_PROVIDER?.toLowerCase() || 'auto';
+  
+  switch (aiProvider) {
+    case 'localai':
+      console.log('🏠 Using LocalAI for AI processing');
+      return new LocalAIIntegration();
+    
+    case 'openai':
+      if (process.env.OPENAI_API_KEY) {
+        console.log('🌐 Using OpenAI for AI processing');
+        return new OpenAIIntegration();
+      } else {
+        console.warn('OpenAI provider selected but no API key found, falling back to FallbackAI');
+        return new FallbackAI();
+      }
+    
+    case 'fallback':
+      console.log('🔧 Using Fallback AI for AI processing');
+      return new FallbackAI();
+    
+    default: // 'auto' - intelligent selection
+      // Priority: OpenAI -> LocalAI -> Fallback (OpenAI first for better performance)
+      if (process.env.OPENAI_API_KEY) {
+        console.log('🌐 Auto-selected OpenAI for AI processing');
+        return new OpenAIIntegration();
+      } else if (process.env.LOCALAI_API_BASE_URL || process.env.ENABLE_LOCALAI === 'true') {
+        console.log('🏠 Auto-selected LocalAI for AI processing');
+        return new LocalAIIntegration();
+      } else {
+        console.log('🔧 Auto-selected Fallback AI for AI processing');
+        return new FallbackAI();
+      }
+  }
 }; 

@@ -21,6 +21,7 @@ import {
   AlertCircle,
   MailQuestion,
   BrainCircuit,
+  Brain,
   Beaker,
   MapPin,
   Eye,
@@ -57,27 +58,22 @@ const sidebarNavItems: NavItem[] = [
       {
         title: "Overview",
         href: "/ai-intelligence",
-        icon: BarChart4,
-      },
-      {
-        title: "Content Intelligence",
-        href: "/ai-intelligence/content",
-        icon: FileText,
-      },
-      {
-        title: "Customer Intelligence",
-        href: "/ai-intelligence/customers",
-        icon: Users,
-      },
-      {
-        title: "Predictive Analytics",
-        href: "/ai-intelligence/predict",
-        icon: LineChart,
+        icon: Brain,
       },
       {
         title: "AI Chat",
-        href: "/ai-intelligence/chat",
+        href: "/ai-chat",
         icon: MessageCircle,
+      },
+      {
+        title: "Automation Monitor",
+        href: "/ai-intelligence/automation-monitor",
+        icon: Zap,
+      },
+      {
+        title: "Performance Monitor",
+        href: "/ai-intelligence/performance-monitor",
+        icon: BarChart4,
       },
     ],
   },

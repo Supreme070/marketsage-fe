@@ -1,26 +1,33 @@
 /**
- * Supreme-AI v3 React Hooks
- * =========================
- * Beautiful, type-safe React integration for Supreme-AI v3
- * 
- * Features:
- * ⚡ Optimistic updates & caching
- * 🎯 Type-safe API calls
- * 🔄 Loading states & error handling
- * 💾 Local storage persistence
- * 🚀 Performance optimizations
+ * Supreme-AI v3 React Hooks - Enhanced Local Processing
+ * ====================================================
+ * Supreme-AI integration with task execution capabilities
  */
 
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
-import type { SupremeAIv3Task, SupremeAIv3Response } from '@/lib/ai/supreme-ai-v3-engine';
-import { useChatHistory } from './useAIIntelligence';
-import { useSession } from 'next-auth/react';
+import { useState, useCallback } from 'react';
+import { toast } from 'react-hot-toast';
 
-// Enhanced response type with metadata
-export interface SupremeAIv3ApiResponse extends SupremeAIv3Response {
-  meta: {
+interface ChatMessage {
+  id: string;
+  content: string;
+  role: 'user' | 'assistant';
+  timestamp: Date;
+}
+
+interface SupremeAIResponse {
+  success: boolean;
+  data: {
+    answer: string;
+    source?: string;
+    model?: string;
+    taskExecution?: any;
+  };
+  confidence?: number;
+  mode?: string;
+  processingTime?: number;
+  meta?: {
     processingTime: number;
     version: string;
     timestamp: string;
@@ -28,398 +35,135 @@ export interface SupremeAIv3ApiResponse extends SupremeAIv3Response {
   };
 }
 
-export interface UseSupremeAIState {
-  loading: boolean;
-  result: SupremeAIv3ApiResponse | null;
-  error: string | null;
-  history: SupremeAIv3ApiResponse[];
-}
+export const useSupremeAI = () => {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-export interface UseSupremeAIActions {
-  ask: (question: string) => Promise<SupremeAIv3ApiResponse>;
-  analyzeContent: (content: string) => Promise<SupremeAIv3ApiResponse>;
-  predict: (features: number[][], targets: number[]) => Promise<SupremeAIv3ApiResponse>;
-  analyzeCustomers: (customers: any[]) => Promise<SupremeAIv3ApiResponse>;
-  analyzeMarket: (marketData: any) => Promise<SupremeAIv3ApiResponse>;
-  adaptive: (data: any, context: string) => Promise<SupremeAIv3ApiResponse>;
-  clear: () => void;
-  retry: () => Promise<SupremeAIv3ApiResponse | null>;
-}
-
-export interface UseSupremeAIOptions {
-  userId?: string;
-  cacheResults?: boolean;
-  maxHistory?: number;
-  autoRetry?: boolean;
-  retryDelay?: number;
-}
-
-// Cache for results (in-memory)
-const resultCache = new Map<string, { result: SupremeAIv3ApiResponse; timestamp: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-// Generate cache key
-function getCacheKey(task: SupremeAIv3Task): string {
-  return `${task.type}-${JSON.stringify(task).slice(0, 100)}`;
-}
-
-// Check if cache entry is valid
-function isCacheValid(timestamp: number): boolean {
-  return Date.now() - timestamp < CACHE_TTL;
-}
-
-/**
- * Main Supreme-AI v3 Hook
- * =======================
- * Primary hook for all Supreme-AI v3 interactions
- */
-export function useSupremeAI(options: UseSupremeAIOptions = {}): UseSupremeAIState & UseSupremeAIActions {
-  const {
-    userId = 'default-user',
-    cacheResults = true,
-    maxHistory = 10,
-    autoRetry = true,
-    retryDelay = 1000
-  } = options;
-
-  // State management
-  const [state, setState] = useState<UseSupremeAIState>({
-    loading: false,
-    result: null,
-    error: null,
-    history: []
-  });
-
-  const lastTaskRef = useRef<SupremeAIv3Task | null>(null);
-  const retryCountRef = useRef(0);
-
-  // Generic API call function
-  const callAPI = useCallback(async (task: SupremeAIv3Task, retryCount = 0): Promise<SupremeAIv3ApiResponse> => {
-    setState(prev => ({ ...prev, loading: true, error: null }));
-    lastTaskRef.current = task;
-
-    try {
-      // Check cache first
-      if (cacheResults) {
-        const cacheKey = getCacheKey(task);
-        const cached = resultCache.get(cacheKey);
-        if (cached && isCacheValid(cached.timestamp)) {
-          setState(prev => ({ 
-            ...prev, 
-            loading: false, 
-            result: cached.result,
-            history: [cached.result, ...prev.history.slice(0, maxHistory - 1)]
-          }));
-          return cached.result;
+  // Intelligent task type detection
+  const detectTaskType = useCallback((content: string): { type: string; taskType?: string } => {
+    const lowerContent = content.toLowerCase();
+    
+    // Task assignment patterns
+    const taskPatterns = {
+      'assign_task': ['assign task', 'create task', 'task assignment', 'give task', 'assign to team', 'delegate task', 'assign urgent', 'create urgent task'],
+      'create_workflow': ['create workflow', 'build workflow', 'make workflow', 'set up workflow', 'workflow creation', 'automate process'],
+      'create_campaign': ['create campaign', 'build campaign', 'campaign creation', 'email campaign', 'marketing campaign', 'launch campaign'],
+      'create_segment': ['create segment', 'customer segment', 'segment customers', 'build segment', 'customer group'],
+      'generate_content': ['generate content', 'create content', 'write content', 'content creation', 'marketing content'],
+      'setup_automation': ['setup automation', 'create automation', 'build automation', 'automate', 'automated flow']
+    };
+    
+    // Check for task patterns
+    for (const [taskType, patterns] of Object.entries(taskPatterns)) {
+      for (const pattern of patterns) {
+        if (lowerContent.includes(pattern)) {
+          return { type: 'task', taskType };
         }
       }
-
-      // Make API call
-      const response = await fetch('/api/ai/supreme-v3', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(task)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Network error' }));
-        throw new Error(errorData.error || `HTTP ${response.status}`);
-      }
-
-      const result: SupremeAIv3ApiResponse = await response.json();
-
-      // Cache successful result
-      if (cacheResults && result.success) {
-        const cacheKey = getCacheKey(task);
-        resultCache.set(cacheKey, { result, timestamp: Date.now() });
-      }
-
-      // Update state
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        result,
-        error: null,
-        history: [result, ...prev.history.slice(0, maxHistory - 1)]
-      }));
-
-      retryCountRef.current = 0;
-      return result;
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      
-      // Auto-retry logic
-      if (autoRetry && retryCount < 2 && !errorMessage.includes('Rate limit')) {
-        retryCountRef.current = retryCount + 1;
-        await new Promise(resolve => setTimeout(resolve, retryDelay * (retryCount + 1)));
-        return callAPI(task, retryCount + 1);
-      }
-
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error: errorMessage
-      }));
-
-      throw error;
     }
-  }, [cacheResults, maxHistory, autoRetry, retryDelay]);
-
-  // Individual task methods
-  const ask = useCallback((question: string) => {
-    return callAPI({ type: 'question', userId, question });
-  }, [callAPI, userId]);
-
-  const analyzeContent = useCallback((content: string) => {
-    return callAPI({ type: 'content', userId, content });
-  }, [callAPI, userId]);
-
-  const predict = useCallback((features: number[][], targets: number[]) => {
-    return callAPI({ type: 'predict', userId, features, targets });
-  }, [callAPI, userId]);
-
-  const analyzeCustomers = useCallback((customers: any[]) => {
-    return callAPI({ type: 'customer', userId, customers });
-  }, [callAPI, userId]);
-
-  const analyzeMarket = useCallback((marketData: any) => {
-    return callAPI({ type: 'market', userId, marketData });
-  }, [callAPI, userId]);
-
-  const adaptive = useCallback((data: any, context: string) => {
-    return callAPI({ type: 'adaptive', userId, data, context });
-  }, [callAPI, userId]);
-
-  const clear = useCallback(() => {
-    setState({
-      loading: false,
-      result: null,
-      error: null,
-      history: []
-    });
-    lastTaskRef.current = null;
-    retryCountRef.current = 0;
+    
+    // Check for other action types
+    if (lowerContent.includes('analyze') || lowerContent.includes('analysis')) {
+      return { type: 'analyze' };
+    }
+    
+    if (lowerContent.includes('predict') || lowerContent.includes('forecast')) {
+      return { type: 'predict' };
+    }
+    
+    // Default to question for conversational queries
+    return { type: 'question' };
   }, []);
 
-  const retry = useCallback(async () => {
-    if (!lastTaskRef.current) return null;
-    return callAPI(lastTaskRef.current);
-  }, [callAPI]);
+  const sendMessage = useCallback(async (content: string) => {
+    if (!content.trim()) return;
 
-  return {
-    ...state,
-    ask,
-    analyzeContent,
-    predict,
-    analyzeCustomers,
-    analyzeMarket,
-    adaptive,
-    clear,
-    retry
-  };
-}
+    const userMessage: ChatMessage = {
+      id: `user-${Date.now()}`,
+      content: content.trim(),
+      role: 'user',
+      timestamp: new Date(),
+    };
 
-/**
- * Specialized Hooks
- * ================
- * Task-specific hooks for common use cases
- */
+    setMessages(prev => [...prev, userMessage]);
+    setIsLoading(true);
+    setError(null);
 
-// Question/Answer Hook
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-  thoughts?: any[];
-  actions?: any[];
-}
-
-export function useSupremeChat(contextId?: string) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [loading, setLoading] = useState(false);
-  const { data: session } = useSession();
-  const chatHistory = useChatHistory(session?.user?.id);
-
-  const ask = useCallback(async (question: string) => {
-    if (!question.trim()) return;
-
-    setLoading(true);
     try {
-      // Add user message
-      const userMessage: ChatMessage = {
-        role: 'user',
-        content: question,
-        timestamp: new Date()
+      // Detect the appropriate task type
+      const { type, taskType } = detectTaskType(content.trim());
+      
+      const requestBody: any = {
+        type,
+        question: content.trim(),
+        userId: 'default-user',
+        enableTaskExecution: true, // 🚀 Enable actual task creation and execution
+        forceLocal: false, // Allow OpenAI + Supreme-AI hybrid mode
       };
-      setMessages(prev => [...prev, userMessage]);
+      
+      // Add taskType if it's a task request
+      if (taskType) {
+        requestBody.taskType = taskType;
+      }
+      
+      console.log('🔍 Detected task type:', { type, taskType, content: content.trim() });
 
-      // Call the Supreme-AI v3 API instead of using SupremeAIBrain directly
       const response = await fetch('/api/ai/supreme-v3', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          type: 'question',
-          userId: session?.user?.id || 'anonymous-user',
-          question,
-          context: {
-            sessionId: contextId || 'default-session',
-            userProfile: session?.user
-          }
-        })
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get AI response');
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const aiResponse = await response.json();
+      const data: SupremeAIResponse = await response.json();
 
-      // Add AI response
-      const aiMessage: ChatMessage = {
+      if (!data.success) {
+        throw new Error('Supreme-AI request failed');
+      }
+
+      const assistantMessage: ChatMessage = {
+        id: `assistant-${Date.now()}`,
+        content: data.data.answer,
         role: 'assistant',
-        content: aiResponse.success ? 
-          (aiResponse.data?.answer || aiResponse.data?.response || 'I apologize, but I was unable to generate a response.') :
-          'I apologize, but I encountered an error while processing your request. Please try again.',
         timestamp: new Date(),
-        thoughts: aiResponse.data?.thoughts || [],
-        actions: aiResponse.data?.actions || []
       };
-      setMessages(prev => [...prev, aiMessage]);
 
-      // Save to chat history if available
-      if (session?.user?.id && chatHistory?.saveChat) {
-        try {
-          await chatHistory.saveChat(
-            question,
-            aiMessage.content,
-            {
-              thoughts: aiMessage.thoughts,
-              actions: aiMessage.actions,
-              sessionId: contextId
-            },
-            aiResponse.confidence || 0.8
-          );
-        } catch (error) {
-          console.warn('Failed to save chat history:', error);
+      setMessages(prev => [...prev, assistantMessage]);
+      
+      // Show task execution feedback if available
+      if (data.data.taskExecution) {
+        console.log('✅ Task execution result:', data.data.taskExecution);
+        if (data.data.taskExecution.success) {
+          toast.success('Task executed successfully!');
         }
       }
 
-      return aiResponse;
     } catch (error) {
-      console.error('Supreme-AI chat error:', error);
-      // Add error message
-      const errorMessage: ChatMessage = {
-        role: 'assistant',
-        content: `I'm here to help you with MarketSage! I can assist you with:
-
-🔧 **Campaign Management** - Create and optimize email, SMS, and WhatsApp campaigns
-📊 **Analytics & Insights** - Understand your customer behavior and campaign performance  
-🎯 **Customer Segmentation** - Identify and target your most valuable customers
-🚀 **Automation** - Set up workflows to engage customers automatically
-
-What would you like help with today?`,
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      console.error('Supreme-AI request failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get Supreme-AI response';
+      setError(errorMessage);
+      toast.error('Failed to process request - Supreme-AI error');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  }, [session, contextId, chatHistory]);
+  }, [detectTaskType]);
 
-  const clear = useCallback(() => {
+  const clearMessages = useCallback(() => {
     setMessages([]);
+    setError(null);
   }, []);
 
   return {
     messages,
-    loading,
-    ask,
-    clear
-  };
-}
-
-// Content Analysis Hook
-export function useContentAnalysis(userId?: string) {
-  const { analyzeContent, loading, result, error } = useSupremeAI({ userId });
-
-  const analyze = useCallback(async (content: string) => {
-    const result = await analyzeContent(content);
-    return result.data;
-  }, [analyzeContent]);
-
-  return {
-    analyze,
-    loading,
+    isLoading,
     error,
-    lastAnalysis: result?.taskType === 'content' ? result.data : null,
-    supremeScore: result?.supremeScore || 0
+    sendMessage,
+    clearMessages,
   };
-}
-
-// Customer Intelligence Hook
-export function useCustomerIntelligence(userId?: string) {
-  const { analyzeCustomers, loading, result, error } = useSupremeAI({ userId });
-
-  const segments = result?.taskType === 'customer' ? result.data.segments : [];
-  const distribution = result?.taskType === 'customer' ? result.data.segmentDistribution : [];
-
-  return {
-    analyze: analyzeCustomers,
-    loading,
-    error,
-    segments,
-    distribution,
-    averageChurnRisk: result?.data?.averageChurnRisk || 0,
-    totalLifetimeValue: result?.data?.totalLifetimeValue || 0
-  };
-}
-
-// Predictive Analytics Hook
-export function usePredictiveAnalytics(userId?: string) {
-  const { predict, loading, result, error } = useSupremeAI({ userId });
-
-  return {
-    predict,
-    loading,
-    error,
-    bestModel: result?.data?.bestModel,
-    allModels: result?.data?.allModels || [],
-    improvementPercent: result?.data?.improvementPercent || 0,
-    confidence: result?.confidence || 0
-  };
-}
-
-/**
- * Utility Hook for Performance Monitoring
- * =======================================
- */
-export function useSupremeAIMetrics() {
-  const [metrics, setMetrics] = useState({
-    totalRequests: 0,
-    averageResponseTime: 0,
-    successRate: 0,
-    cacheHitRate: 0
-  });
-
-  useEffect(() => {
-    // This could connect to a real metrics service
-    const interval = setInterval(() => {
-      setMetrics(prev => ({
-        ...prev,
-        totalRequests: prev.totalRequests + Math.floor(Math.random() * 3),
-        averageResponseTime: 300 + Math.random() * 200,
-        successRate: 0.95 + Math.random() * 0.05,
-        cacheHitRate: 0.6 + Math.random() * 0.3
-      }));
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  return metrics;
-} 
+}; 

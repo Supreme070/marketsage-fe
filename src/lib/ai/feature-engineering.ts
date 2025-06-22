@@ -121,7 +121,7 @@ export class FeatureEngineer {
    */
   private async transformNumeric(value: any, config: FeatureConfig): Promise<number> {
     if (typeof value !== 'number') {
-      value = parseFloat(value);
+      value = Number.parseFloat(value);
     }
     
     if (isNaN(value)) {

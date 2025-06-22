@@ -206,6 +206,73 @@ export async function GET(request: NextRequest) {
       take: 5
     });
 
+    // Get platform breakdown - analyze visitors by platform type
+    const visitorsWithMetadata = await prisma.leadPulseVisitor.findMany({
+      where: {
+        lastVisit: {
+          gte: cutoffTime
+        }
+      },
+      select: {
+        id: true,
+        metadata: true,
+        device: true,
+        touchpoints: {
+          select: {
+            url: true
+          },
+          take: 1,
+          orderBy: {
+            timestamp: 'desc'
+          }
+        }
+      }
+    });
+
+    // Categorize visitors by platform
+    let webVisitors = 0;
+    let mobileAppVisitors = 0;
+    let reactNativeVisitors = 0;
+    let nativeAppVisitors = 0;
+    let hybridVisitors = 0;
+
+    visitorsWithMetadata.forEach(visitor => {
+      const metadata = visitor.metadata as any;
+      const hasAppUrl = visitor.touchpoints.some(tp => tp.url?.startsWith('app://'));
+      
+      if (hasAppUrl || metadata?.platform) {
+        // This is a mobile visitor
+        mobileAppVisitors++;
+        
+        // Categorize mobile type
+        const platform = metadata?.platform || 'mobile';
+        if (platform === 'react-native') {
+          reactNativeVisitors++;
+        } else if (platform === 'ios' || platform === 'android') {
+          nativeAppVisitors++;
+        } else if (platform === 'hybrid' || platform === 'flutter') {
+          hybridVisitors++;
+        }
+      } else {
+        // This is a web visitor
+        webVisitors++;
+      }
+    });
+
+    // Ensure totals make sense
+    const totalCategorized = webVisitors + mobileAppVisitors;
+    const actualTotal = totalVisitors;
+    
+    // Apply scaling if needed to match enhanced totals
+    if (totalCategorized > 0 && totalCategorized !== actualTotal) {
+      const scaleFactor = actualTotal / totalCategorized;
+      webVisitors = Math.round(webVisitors * scaleFactor);
+      mobileAppVisitors = Math.round(mobileAppVisitors * scaleFactor);
+      reactNativeVisitors = Math.round(reactNativeVisitors * scaleFactor);
+      nativeAppVisitors = Math.round(nativeAppVisitors * scaleFactor);
+      hybridVisitors = Math.round(hybridVisitors * scaleFactor);
+    }
+
     // Get recent touchpoints for activity feed
     const recentActivity = await prisma.leadPulseTouchpoint.findMany({
       where: {
@@ -235,6 +302,28 @@ export async function GET(request: NextRequest) {
         avgEngagementScore: engagementStats._avg.engagementScore || 0,
         conversionRate
       },
+      platformBreakdown: {
+        web: {
+          count: webVisitors,
+          percentage: totalVisitors > 0 ? Math.round((webVisitors / totalVisitors) * 100) : 0
+        },
+        mobile: {
+          count: mobileAppVisitors,
+          percentage: totalVisitors > 0 ? Math.round((mobileAppVisitors / totalVisitors) * 100) : 0
+        },
+        reactNative: {
+          count: reactNativeVisitors,
+          percentage: totalVisitors > 0 ? Math.round((reactNativeVisitors / totalVisitors) * 100) : 0
+        },
+        nativeApps: {
+          count: nativeAppVisitors,
+          percentage: totalVisitors > 0 ? Math.round((nativeAppVisitors / totalVisitors) * 100) : 0
+        },
+        hybrid: {
+          count: hybridVisitors,
+          percentage: totalVisitors > 0 ? Math.round((hybridVisitors / totalVisitors) * 100) : 0
+        }
+      },
       touchpoints: touchpointsMap,
       topLocations: topLocations.map((loc: any) => ({
         location: `${loc.city}, ${loc.country}`,
@@ -257,7 +346,15 @@ export async function GET(request: NextRequest) {
         activeVisitorWindow: activeVisitorWindow.toISOString(),
         businessHours: now.getHours() >= 9 && now.getHours() <= 17,
         timeRange,
-        logic: 'Active=RealTime, Total=TimeRangeDependent'
+        logic: 'Active=RealTime, Total=TimeRangeDependent',
+        platformAnalysis: {
+          webVisitors,
+          mobileAppVisitors,
+          reactNativeVisitors,
+          nativeAppVisitors,
+          hybridVisitors,
+          totalCategorized: webVisitors + mobileAppVisitors
+        }
       }
     });
   } catch (error) {

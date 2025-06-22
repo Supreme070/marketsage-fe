@@ -40,7 +40,7 @@ export class AIWorkerManager {
     reject: (reason: any) => void;
   }> = new Map();
   
-  constructor(maxWorkers: number = 2) {
+  constructor(maxWorkers = 2) {
     // Check if we're in a browser environment before accessing navigator
     const hardwareConcurrency = typeof window !== 'undefined' && typeof navigator !== 'undefined' 
       ? navigator.hardwareConcurrency || 2 

@@ -5,7 +5,7 @@
 
 import { logger } from '@/lib/logger';
 import { errorBoundary } from '../utils/error-boundary';
-import { NeuralNetworkPredictor, NetworkConfig } from '../supreme-ai-engine';
+import type { NeuralNetworkPredictor, NetworkConfig } from '../supreme-ai-engine';
 import { createHash } from 'crypto';
 
 interface ModelVersion {

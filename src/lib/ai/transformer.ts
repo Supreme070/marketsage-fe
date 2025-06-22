@@ -177,7 +177,7 @@ export class TransformerModel {
     k: number[][],
     v: number[][],
     mask?: boolean[][],
-    scale: number = 1.0
+    scale = 1.0
   ): Promise<AttentionOutput> {
     // Calculate attention scores
     const scores = this.matmul(q, this.transpose(k));
@@ -192,7 +192,7 @@ export class TransformerModel {
       for (let i = 0; i < scaledScores.length; i++) {
         for (let j = 0; j < scaledScores[i].length; j++) {
           if (!mask[i][j]) {
-            scaledScores[i][j] = -Infinity;
+            scaledScores[i][j] = Number.NEGATIVE_INFINITY;
           }
         }
       }
@@ -234,7 +234,7 @@ export class TransformerModel {
   private layerNorm(
     x: number[][],
     layer: number,
-    epsilon: number = 1e-6
+    epsilon = 1e-6
   ): number[][] {
     const { gamma, beta } = this.weights.layerNormParams[layer];
     

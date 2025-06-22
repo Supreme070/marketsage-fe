@@ -5,9 +5,9 @@
 
 import { logger } from '@/lib/logger';
 import { errorBoundary } from '../utils/error-boundary';
-import { NeuralNetworkPredictor, NetworkConfig } from '../supreme-ai-engine';
-import { ModelRegistry } from './model-registry';
-import { PerformanceMonitor } from './performance-monitor';
+import { NeuralNetworkPredictor, type NetworkConfig } from '../supreme-ai-engine';
+import type { ModelRegistry } from './model-registry';
+import type { PerformanceMonitor } from './performance-monitor';
 
 interface TrainingConfig {
   modelId: string;
@@ -76,7 +76,7 @@ export class AutoTrainer {
     }
   }
 
-  async triggerTraining(modelId: string, force: boolean = false): Promise<TrainingResult> {
+  async triggerTraining(modelId: string, force = false): Promise<TrainingResult> {
     if (this.activeTraining.has(modelId) && !force) {
       throw new Error(`Training already in progress for model ${modelId}`);
     }

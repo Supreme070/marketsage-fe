@@ -4,7 +4,7 @@
  */
 
 import { logger } from '@/lib/logger';
-import { RawDataPoint, ProcessedDataPoint } from './data-pipeline';
+import type { RawDataPoint, ProcessedDataPoint } from './data-pipeline';
 
 export interface FeatureStats {
   mean: number;

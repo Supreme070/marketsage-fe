@@ -9,7 +9,7 @@ import { errorBoundary } from '../utils/error-boundary';
 export class AdvancedEnsemble {
   private models: any[];
   private weights: number[];
-  private diversity: number = 0;
+  private diversity = 0;
 
   constructor(models: any[], weights?: number[]) {
     this.models = models;

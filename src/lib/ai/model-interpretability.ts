@@ -6,8 +6,8 @@
  */
 
 import { logger } from '@/lib/logger';
-import { featureEngineer, FeatureStats } from './feature-engineering';
-import { aiModelCache, CachedModel } from './model-cache';
+import { featureEngineer, type FeatureStats } from './feature-engineering';
+import { aiModelCache, type CachedModel } from './model-cache';
 
 export interface ShapValue {
   feature: string;

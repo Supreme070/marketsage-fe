@@ -268,7 +268,7 @@ export async function GET(request: NextRequest) {
             const engagementScore = typedVisitor.score || 0;
             const probability = Math.min(engagementScore / 100, 0.95);
             const predictedValue = probability * 199.99;
-            let status: 'active' | 'converted' | 'lost' = 'active';
+            const status: 'active' | 'converted' | 'lost' = 'active';
             
             const journeyPath: VisitorPath = {
               visitorId: typedVisitor.id,

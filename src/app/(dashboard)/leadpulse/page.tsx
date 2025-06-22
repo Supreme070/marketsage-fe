@@ -34,6 +34,19 @@ export default function LeadPulseDashboard() {
   const [activeVisitors, setActiveVisitors] = useState(0);
   const [totalVisitors, setTotalVisitors] = useState(0);
   const [conversionRate, setConversionRate] = useState(0);
+  const [platformBreakdown, setPlatformBreakdown] = useState<{
+    web: { count: number; percentage: number };
+    mobile: { count: number; percentage: number };
+    reactNative: { count: number; percentage: number };
+    nativeApps: { count: number; percentage: number };
+    hybrid: { count: number; percentage: number };
+  }>({
+    web: { count: 0, percentage: 0 },
+    mobile: { count: 0, percentage: 0 },
+    reactNative: { count: 0, percentage: 0 },
+    nativeApps: { count: 0, percentage: 0 },
+    hybrid: { count: 0, percentage: 0 }
+  });
   const [loading, setLoading] = useState(true);
   const [selectedTimeRange, setSelectedTimeRange] = useState('24h');
   const [selectedVisitorId, setSelectedVisitorId] = useState<string | undefined>();
@@ -99,6 +112,11 @@ export default function LeadPulseDashboard() {
         setActiveVisitors(overview.activeVisitors);
         setTotalVisitors(overview.totalVisitors);
         setConversionRate(overview.conversionRate);
+        
+        // Set platform breakdown if available
+        if (overview.platformBreakdown) {
+          setPlatformBreakdown(overview.platformBreakdown);
+        }
       } catch (error) {
         console.error('Error fetching LeadPulse data:', error);
       } finally {
@@ -478,10 +496,10 @@ export default function LeadPulseDashboard() {
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-blue-900 dark:text-blue-100">Web Users</div>
                 <div className="text-lg font-bold text-blue-800 dark:text-blue-200">
-                  {Math.floor(activeVisitors * 0.65)}
+                  {platformBreakdown.web.count}
                 </div>
                 <div className="text-xs text-blue-600 dark:text-blue-300">
-                  {Math.round((Math.floor(activeVisitors * 0.65) / activeVisitors) * 100)}% of total
+                  {platformBreakdown.web.percentage}% of total
                 </div>
               </div>
             </div>
@@ -495,10 +513,10 @@ export default function LeadPulseDashboard() {
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-green-900 dark:text-green-100">Mobile Apps</div>
                 <div className="text-lg font-bold text-green-800 dark:text-green-200">
-                  {Math.floor(activeVisitors * 0.35)}
+                  {platformBreakdown.mobile.count}
                 </div>
                 <div className="text-xs text-green-600 dark:text-green-300">
-                  {Math.round((Math.floor(activeVisitors * 0.35) / activeVisitors) * 100)}% of total
+                  {platformBreakdown.mobile.percentage}% of total
                 </div>
               </div>
             </div>
@@ -512,10 +530,10 @@ export default function LeadPulseDashboard() {
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-purple-900 dark:text-purple-100">React Native</div>
                 <div className="text-lg font-bold text-purple-800 dark:text-purple-200">
-                  {Math.floor(activeVisitors * 0.2)}
+                  {platformBreakdown.reactNative.count}
                 </div>
                 <div className="text-xs text-purple-600 dark:text-purple-300">
-                  Mobile framework
+                  {platformBreakdown.reactNative.percentage}% mobile
                 </div>
               </div>
             </div>
@@ -529,10 +547,10 @@ export default function LeadPulseDashboard() {
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-orange-900 dark:text-orange-100">Native Apps</div>
                 <div className="text-lg font-bold text-orange-800 dark:text-orange-200">
-                  {Math.floor(activeVisitors * 0.15)}
+                  {platformBreakdown.nativeApps.count}
                 </div>
                 <div className="text-xs text-orange-600 dark:text-orange-300">
-                  iOS + Android
+                  {platformBreakdown.nativeApps.percentage}% iOS+Android
                 </div>
               </div>
             </div>
