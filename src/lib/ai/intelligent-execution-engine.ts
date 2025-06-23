@@ -5,7 +5,7 @@
  * Uses the intelligent intent analyzer to understand user requests
  */
 
-import { intelligentIntentAnalyzer, IntelligentIntent, ContactData, WorkflowData, CampaignData, TaskData, DataFetchRequest } from './intelligent-intent-analyzer';
+import { intelligentIntentAnalyzer, type IntelligentIntent, type ContactData, type WorkflowData, type CampaignData, type TaskData, type DataFetchRequest } from './intelligent-intent-analyzer';
 import { recordTaskExecution } from './task-execution-monitor';
 import { logger } from '@/lib/logger';
 import prisma from '@/lib/db/prisma';
@@ -1261,11 +1261,11 @@ class IntelligentExecutionEngine {
   private async getTaskStatistics() {
     const [total, completed, pending, overdue] = await Promise.all([
       prisma.task.count(),
-      prisma.task.count({ where: { status: 'COMPLETED' } }),
+      prisma.task.count({ where: { status: 'DONE' } }),
       prisma.task.count({ where: { status: 'TODO' } }),
       prisma.task.count({ 
         where: { 
-          status: { not: 'COMPLETED' },
+          status: { not: 'DONE' },
           dueDate: { lt: new Date() }
         } 
       })
@@ -1570,7 +1570,7 @@ class IntelligentExecutionEngine {
         return {
           success: false,
           message: 'I need a task ID or title to identify which task to update.',
-          suggestions: ['Try: "update task Campaign Review set status to COMPLETED"', 'Include task identifier']
+          suggestions: ['Try: "update task Campaign Review set status to DONE"', 'Include task identifier']
         };
       }
 
@@ -1596,7 +1596,7 @@ class IntelligentExecutionEngine {
       const updateFields: any = {};
       if (title && title !== task.title) updateFields.title = title;
       if (description) updateFields.description = description;
-      if (status && ['TODO', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].includes(status)) {
+      if (status && ['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'].includes(status)) {
         updateFields.status = status;
       }
       if (priority && ['LOW', 'MEDIUM', 'HIGH', 'URGENT'].includes(priority)) {
@@ -1639,7 +1639,7 @@ class IntelligentExecutionEngine {
         return {
           success: false,
           message: 'No valid updates provided. Please specify what to update.',
-          suggestions: ['Try: "update task set status to COMPLETED"', 'Specify title, description, status, priority, or assignee']
+          suggestions: ['Try: "update task set status to DONE"', 'Specify title, description, status, priority, or assignee']
         };
       }
 
@@ -2338,7 +2338,7 @@ class IntelligentExecutionEngine {
         const salesPerformance = await prisma.task.groupBy({
           by: ['assignedToId'],
           where: {
-            status: 'COMPLETED',
+            status: 'DONE',
             createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } // Last 30 days
           },
           _count: { id: true },
@@ -2383,7 +2383,7 @@ class IntelligentExecutionEngine {
               prisma.task.count({
                 where: {
                   assignedToId: user.id,
-                  status: 'COMPLETED',
+                  status: 'DONE',
                   createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
                 }
               }),
@@ -2536,7 +2536,7 @@ class IntelligentExecutionEngine {
       // Calculate team metrics
       const teamMetrics = teamMembers.map(member => {
         const memberTasks = taskPerformance.filter(task => task.assignedToId === member.id);
-        const completed = memberTasks.find(t => t.status === 'COMPLETED')?._count.id || 0;
+        const completed = memberTasks.find(t => t.status === 'DONE')?._count.id || 0;
         const inProgress = memberTasks.find(t => t.status === 'IN_PROGRESS')?._count.id || 0;
         const todo = memberTasks.find(t => t.status === 'TODO')?._count.id || 0;
         const total = completed + inProgress + todo;
@@ -2995,7 +2995,7 @@ class IntelligentExecutionEngine {
       });
 
       // Calculate sales metrics
-      const completedSalesTasks = salesTasks.filter(task => task.status === 'COMPLETED').length;
+      const completedSalesTasks = salesTasks.filter(task => task.status === 'DONE').length;
       const totalSalesTasks = salesTasks.length;
       const salesConversionRate = totalSalesTasks > 0 ? Math.round((completedSalesTasks / totalSalesTasks) * 100) : 0;
 
@@ -3012,7 +3012,7 @@ class IntelligentExecutionEngine {
             };
           }
           acc[key].total++;
-          if (task.status === 'COMPLETED') {
+          if (task.status === 'DONE') {
             acc[key].completed++;
           }
         }
