@@ -45,7 +45,7 @@ export class StatisticalUtils {
   /**
    * Calculate autocorrelation function
    */
-  static autocorrelation(data: number[], maxLag: number = 20): number[] {
+  static autocorrelation(data: number[], maxLag = 20): number[] {
     const n = data.length;
     const mean = data.reduce((sum, val) => sum + val, 0) / n;
     const variance = data.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / n;
@@ -70,7 +70,7 @@ export class StatisticalUtils {
   /**
    * Calculate partial autocorrelation function
    */
-  static partialAutocorrelation(data: number[], maxLag: number = 20): number[] {
+  static partialAutocorrelation(data: number[], maxLag = 20): number[] {
     const pacf: number[] = [1]; // PACF at lag 0 is always 1
     
     for (let k = 1; k <= maxLag; k++) {
@@ -163,7 +163,7 @@ export class StatisticalUtils {
   /**
    * Box-Pierce test for white noise
    */
-  static boxPierceTest(residuals: number[], lags: number = 10): { statistic: number; pValue: number } {
+  static boxPierceTest(residuals: number[], lags = 10): { statistic: number; pValue: number } {
     const n = residuals.length;
     const autocorr = this.autocorrelation(residuals, lags);
     
@@ -889,7 +889,7 @@ export class MarketSageTimeSeries {
   /**
    * Comprehensive time series analysis and forecasting
    */
-  static async analyzeAndForecast(data: TimeSeriesPoint[], forecastHorizon: number = 30): Promise<{
+  static async analyzeAndForecast(data: TimeSeriesPoint[], forecastHorizon = 30): Promise<{
     arima: ForecastResult;
     prophet: ForecastResult;
     ensemble: ForecastResult;
@@ -939,7 +939,7 @@ export class MarketSageTimeSeries {
     ];
     
     let bestModel: ARIMAModel | null = null;
-    let bestAIC = Infinity;
+    let bestAIC = Number.POSITIVE_INFINITY;
     
     for (const [p, d, q] of candidates) {
       try {

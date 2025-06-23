@@ -120,7 +120,7 @@ function calculateLTVPredictions(customers: any[], conversions: any[]) {
   let currentAverage = 0;
   if (conversions && conversions.length > 0) {
     const totalValue = conversions.reduce((sum, conv) => {
-      return sum + (parseFloat(conv.value) || 0);
+      return sum + (Number.parseFloat(conv.value) || 0);
     }, 0);
     currentAverage = totalValue / customerCount;
   }

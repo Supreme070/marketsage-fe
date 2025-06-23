@@ -44,7 +44,7 @@ export class ShapleyExplainer {
   /**
    * Calculate SHAP values for a given instance
    */
-  explain(instance: number[], maxSamples: number = 1000): ExplanationResult {
+  explain(instance: number[], maxSamples = 1000): ExplanationResult {
     try {
       const shapValues = this.calculateShapValues(instance, maxSamples);
       const prediction = this.model(instance);
@@ -86,7 +86,7 @@ export class ShapleyExplainer {
   /**
    * Calculate global feature importance across multiple instances
    */
-  explainGlobal(instances: number[][], maxSamples: number = 500): FeatureImportance[] {
+  explainGlobal(instances: number[][], maxSamples = 500): FeatureImportance[] {
     const globalShapValues = Array(this.featureNames.length).fill(0);
     const shapMatrix: number[][] = [];
 
@@ -289,7 +289,7 @@ export class LimeExplainer {
   /**
    * Explain prediction using LIME methodology
    */
-  explain(instance: number[], numSamples: number = 1000): ExplanationResult {
+  explain(instance: number[], numSamples = 1000): ExplanationResult {
     try {
       // Generate neighborhood samples
       const samples = this.generateNeighborhood(instance, numSamples);
@@ -363,7 +363,7 @@ export class LimeExplainer {
   private gaussianRandom(): number {
     // Box-Muller transformation for Gaussian random numbers
     let u1 = Math.random();
-    let u2 = Math.random();
+    const u2 = Math.random();
     
     u1 = Math.max(1e-8, u1); // Avoid log(0)
     
@@ -381,7 +381,7 @@ export class LimeExplainer {
     return Math.sqrt(sumSquaredDiffs);
   }
 
-  private kernelFunction(distance: number, bandwidth: number = 1.0): number {
+  private kernelFunction(distance: number, bandwidth = 1.0): number {
     // Exponential kernel
     return Math.exp(-distance * distance / (bandwidth * bandwidth));
   }
@@ -655,7 +655,7 @@ export class IntegratedGradients {
   /**
    * Calculate integrated gradients
    */
-  explain(instance: number[], steps: number = 50): ExplanationResult {
+  explain(instance: number[], steps = 50): ExplanationResult {
     const gradients = this.calculateIntegratedGradients(instance, steps);
     const prediction = this.model(instance);
     const baseValue = this.model(this.baseline);

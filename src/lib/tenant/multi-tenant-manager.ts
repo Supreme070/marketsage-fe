@@ -166,7 +166,7 @@ class MultiTenantManager {
 
   async createTenant(
     tenantData: Partial<TenantConfiguration>,
-    country: string = 'nigeria'
+    country = 'nigeria'
   ): Promise<TenantConfiguration> {
     try {
       const tenantId = this.generateTenantId();

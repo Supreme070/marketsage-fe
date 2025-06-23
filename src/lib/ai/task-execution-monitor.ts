@@ -207,7 +207,7 @@ class TaskExecutionMonitor {
   /**
    * Clear old metrics (for memory management)
    */
-  clearOldMetrics(olderThanHours: number = 24): void {
+  clearOldMetrics(olderThanHours = 24): void {
     const cutoff = new Date(Date.now() - olderThanHours * 60 * 60 * 1000);
     
     for (const [taskType, events] of this.metrics.entries()) {

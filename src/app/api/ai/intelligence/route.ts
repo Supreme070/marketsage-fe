@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     // Calculate date range
     const endDate = new Date();
     const startDate = new Date();
-    const days = parseInt(timeRange.replace('d', '')) || 30;
+    const days = Number.parseInt(timeRange.replace('d', '')) || 30;
     startDate.setDate(endDate.getDate() - days);
 
     switch (type) {
@@ -863,14 +863,14 @@ function calculateConversionRate(conversions: any[], contacts: any[]) {
 
 function calculateRevenueImpact(conversions: any[]) {
   const totalRevenue = conversions.reduce((sum, conv) => {
-    return sum + (parseFloat(conv.value) || 0);
+    return sum + (Number.parseFloat(conv.value) || 0);
   }, 0);
   return Number((totalRevenue / 1000000).toFixed(1)); // Convert to millions
 }
 
 function calculateAverageOrderValue(conversions: any[]) {
   if (!conversions.length) return 0;
-  const totalValue = conversions.reduce((sum, conv) => sum + (parseFloat(conv.value) || 0), 0);
+  const totalValue = conversions.reduce((sum, conv) => sum + (Number.parseFloat(conv.value) || 0), 0);
   return Number((totalValue / conversions.length).toFixed(2));
 }
 

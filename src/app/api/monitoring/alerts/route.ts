@@ -51,8 +51,8 @@ export async function GET(request: NextRequest) {
     const severity = searchParams.get('severity');
     const type = searchParams.get('type');
     const resolved = searchParams.get('resolved');
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const limit = Number.parseInt(searchParams.get('limit') || '50');
+    const offset = Number.parseInt(searchParams.get('offset') || '0');
 
     // Generate realistic alerts for demonstration
     const alerts = generateMockAlerts();

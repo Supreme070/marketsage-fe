@@ -108,7 +108,7 @@ export class ImageProcessor {
     
     for (let y = 0; y < image.length; y++) {
       for (let x = 0; x < image[0].length; x++) {
-        let values: number[] = [];
+        const values: number[] = [];
         
         for (let sy = 0; sy < seHeight; sy++) {
           for (let sx = 0; sx < seWidth; sx++) {
