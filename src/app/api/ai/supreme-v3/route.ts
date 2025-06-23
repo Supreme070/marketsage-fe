@@ -215,9 +215,9 @@ export async function POST(request: NextRequest) {
          const question = body.question || body.data?.question || 'Help with MarketSage';
          
          // Add Supreme-AI personality to OpenAI responses
-         const supremeAIContext = `You are Supreme-AI, MarketSage's professional AI assistant specializing in African fintech automation. You provide clear, direct, and actionable solutions. You can CREATE and EXECUTE tasks efficiently. Your responses should be professional, culturally aware, and focused on practical business outcomes.`;
+         const marketSageAIContext = `You are MarketSage AI, a professional fintech automation assistant specializing in African financial markets. You provide clear, direct, and actionable solutions. You can CREATE and EXECUTE tasks efficiently. Your responses should be professional, technically accurate, and focused on practical business outcomes for African organizations.`;
          
-         openaiResponse = await openai.generateResponse(question, supremeAIContext, [], {
+         openaiResponse = await openai.generateResponse(question, marketSageAIContext, [], {
            model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
            temperature: 0.7,
            maxTokens: 800
@@ -233,7 +233,7 @@ export async function POST(request: NextRequest) {
          success: true,
          confidence: 0.95, // High confidence from OpenAI
          data: {
-           answer: `🤖 **Supreme-AI Assistant** (OpenAI-Powered)\n\n${openaiResponse.answer}`,
+           answer: `🤖 **MarketSage AI** (OpenAI-Powered)\n\n${openaiResponse.answer}`,
            source: 'openai-supreme-hybrid',
            model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
            taskExecution: enableTaskExecution ? { 

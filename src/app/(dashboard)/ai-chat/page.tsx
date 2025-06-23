@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
-  Brain, MessageSquare, RefreshCw, Send, Sparkles, Zap, ArrowLeft
+  Brain, MessageSquare, RefreshCw, Send, Sparkles, Zap, ArrowLeft, RotateCcw, Plus
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSupremeAI } from '@/hooks/useSupremeAI';
@@ -52,18 +52,44 @@ export default function AIChatPage() {
           <Badge variant="outline" className="text-green-400 border-green-400 bg-green-900/20">
             Task Execution Enabled
           </Badge>
+          {aiChat.currentSessionId && (
+            <Badge variant="outline" className="text-blue-400 border-blue-400 bg-blue-900/20">
+              Session: {aiChat.currentSessionId.slice(-8)}
+            </Badge>
+          )}
         </div>
       </div>
 
       {/* Supreme-AI Chat Interface */}
       <Card className="flex flex-col" style={{ height: 'calc(100vh - 220px)' }}>
         <CardHeader className="flex-shrink-0">
-          <CardTitle className="flex items-center gap-2">
-            <Brain className="h-5 w-5 text-purple-400" />
-            🤖 Supreme-AI Assistant
-            <Badge variant="secondary" className="ml-2 bg-purple-900/30 text-purple-300 border-purple-700">
-              Professional
-            </Badge>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-purple-400" />
+              🤖 Supreme-AI Assistant
+              <Badge variant="secondary" className="ml-2 bg-purple-900/30 text-purple-300 border-purple-700">
+                Professional
+              </Badge>
+              {aiChat.isLoadingHistory && (
+                <Badge variant="outline" className="text-orange-400 border-orange-400 bg-orange-900/20">
+                  <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                  Loading History
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {aiChat.messages.length > 0 && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={aiChat.startNewSession}
+                  className="text-xs"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  New Session
+                </Button>
+              )}
+            </div>
           </CardTitle>
           <CardDescription>
             Advanced AI assistant for workflow creation, campaign building, and automated task execution
@@ -73,11 +99,18 @@ export default function AIChatPage() {
         <CardContent className="flex-1 flex flex-col min-h-0">
           {/* Chat Messages */}
           <div className="flex-1 overflow-y-auto space-y-4 mb-4 p-4 border rounded-lg bg-muted/20 min-h-0">
-            {aiChat.messages.length === 0 ? (
+            {aiChat.isLoadingHistory ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <RefreshCw className="h-8 w-8 mx-auto mb-4 animate-spin text-purple-400" />
+                  <p className="text-sm text-muted-foreground">Loading your conversation history...</p>
+                </div>
+              </div>
+            ) : aiChat.messages.length === 0 ? (
               <div className="text-center text-muted-foreground py-8">
                 <Brain className="h-16 w-16 mx-auto mb-4 opacity-60 text-purple-400" />
-                <h3 className="text-xl font-medium mb-3 text-purple-300">🤖 Supreme-AI Ready</h3>
-                <p className="text-lg mb-4">Professional AI assistant ready to execute your fintech automation tasks.</p>
+                <h3 className="text-xl font-medium mb-3 text-purple-300">🤖 MarketSage AI Ready</h3>
+                <p className="text-lg mb-4">Professional fintech automation assistant ready to execute your business tasks.</p>
                 
                 <div className="text-left max-w-2xl mx-auto space-y-3 text-sm">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -97,18 +130,18 @@ export default function AIChatPage() {
                     </div>
                     
                     <div className="p-3 border rounded-lg bg-orange-900/20">
-                      <h4 className="font-semibold text-orange-300 mb-2">🌍 Cross-Border Magic</h4>
+                      <h4 className="font-semibold text-orange-300 mb-2">🌍 Cross-Border Automation</h4>
                       <p>"Setup Ghana to UK remittance automation"</p>
                     </div>
                   </div>
                   
                   <div className="mt-6 p-4 border-2 border-purple-500/30 rounded-lg bg-purple-900/10">
-                    <h4 className="font-semibold text-purple-300 mb-2">🌍 My Continental Mastery:</h4>
+                    <h4 className="font-semibold text-purple-300 mb-2">🌍 African Market Expertise:</h4>
                     <ul className="text-xs space-y-1">
-                      <li>🇳🇬 Nigeria: CBN compliance, BVN integration, Naira stability wisdom</li>
-                      <li>🇰🇪 Kenya: M-Pesa mastery, Safaricom ecosystem knowledge</li>
-                      <li>🇿🇦 South Africa: Banking regulation expertise, Rand optimization</li>
-                      <li>🇬🇭 Ghana: Mobile money growth insights, GhIPSS integration</li>
+                      <li>🇳🇬 Nigeria: CBN compliance, BVN integration, regulatory frameworks</li>
+                      <li>🇰🇪 Kenya: M-Pesa integration, Safaricom ecosystem, mobile money</li>
+                      <li>🇿🇦 South Africa: Banking regulation compliance, payment systems</li>
+                      <li>🇬🇭 Ghana: Mobile money platforms, GhIPSS integration</li>
                     </ul>
                   </div>
                 </div>
@@ -132,7 +165,7 @@ export default function AIChatPage() {
                       {message.role === "assistant" && (
                         <div className="flex items-center gap-2 mb-3">
                           <Brain className="h-5 w-5 text-purple-400" />
-                          <span className="text-sm font-medium text-purple-400">🤖 Supreme-AI</span>
+                          <span className="text-sm font-medium text-purple-400">🤖 MarketSage AI</span>
                           <Badge variant="outline" className="text-xs">
                             Assistant
                           </Badge>
@@ -206,14 +239,31 @@ export default function AIChatPage() {
             <div className="flex items-center justify-between mt-3">
               <div className="flex items-center gap-2">
                 {aiChat.messages.length > 0 && (
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={aiChat.clearMessages}
-                    className="text-xs"
-                  >
-                    Clear Session
-                  </Button>
+                  <>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={aiChat.clearMessages}
+                      className="text-xs"
+                    >
+                      <RotateCcw className="h-3 w-3 mr-1" />
+                      Clear Session
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={aiChat.startNewSession}
+                      className="text-xs"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      New Session
+                    </Button>
+                  </>
+                )}
+                {aiChat.currentSessionId && (
+                  <span className="text-xs text-muted-foreground">
+                    Session: {aiChat.currentSessionId.slice(-8)}
+                  </span>
                 )}
               </div>
               
@@ -227,10 +277,10 @@ export default function AIChatPage() {
               <div className="mt-3 p-3 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-sm">
                 <div className="flex items-center gap-2">
                   <Brain className="h-4 w-4" />
-                  <span className="font-medium">Supreme-AI Cosmic Disturbance:</span>
+                  <span className="font-medium">MarketSage AI - System Issue:</span>
                 </div>
                 <p className="mt-1">{aiChat.error}</p>
-                <p className="text-xs mt-2 opacity-70">The digital pathways seem disturbed, but my ancient powers remain strong.</p>
+                <p className="text-xs mt-2 opacity-70">Technical support is continuously monitoring system performance for optimal service delivery.</p>
               </div>
             )}
           </div>

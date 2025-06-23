@@ -86,17 +86,38 @@ export default function CampaignDetailPage() {
         const response = await fetch(`/api/email/campaigns/${campaignId}`);
         
         if (!response.ok) {
-          throw new Error(`Error: ${response.status}`);
+          if (response.status === 404) {
+            setError("Campaign not found. It may have been deleted or you don't have access to it.");
+            toast({
+              title: "Campaign Not Found",
+              description: "The campaign you're looking for doesn't exist or has been deleted.",
+              variant: "destructive",
+            });
+            return;
+          }
+          
+          if (response.status === 403) {
+            setError("You don't have permission to view this campaign.");
+            toast({
+              title: "Access Denied", 
+              description: "You don't have permission to view this campaign.",
+              variant: "destructive",
+            });
+            return;
+          }
+          
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
         const data = await response.json();
         setCampaign(data);
       } catch (err) {
         console.error("Failed to fetch campaign:", err);
-        setError("Failed to load campaign. Please try again later.");
+        const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+        setError(`Failed to load campaign: ${errorMessage}`);
         toast({
           title: "Error",
-          description: "Failed to load campaign details. Please try again later.",
+          description: `Failed to load campaign details: ${errorMessage}`,
           variant: "destructive",
         });
       } finally {

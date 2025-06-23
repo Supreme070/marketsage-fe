@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { useSession } from 'next-auth/react';
 
@@ -40,7 +40,74 @@ export const useSupremeAI = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const { data: session } = useSession();
+
+  // Generate session ID and load chat history on mount
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
+    // Get or create session ID
+    let sessionId = localStorage.getItem('chatSessionId');
+    if (!sessionId) {
+      sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      localStorage.setItem('chatSessionId', sessionId);
+    }
+    setCurrentSessionId(sessionId);
+
+    // Load chat history
+    loadChatHistory(sessionId);
+  }, [session?.user?.id]);
+
+  // Load chat history from database
+  const loadChatHistory = useCallback(async (sessionId: string) => {
+    if (!session?.user?.id) return;
+
+    setIsLoadingHistory(true);
+    try {
+      const response = await fetch(`/api/ai/chat-history?sessionId=${sessionId}&limit=50`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.messages) {
+          const formattedMessages = data.messages.map((msg: any) => ({
+            id: msg.id,
+            content: msg.content,
+            role: msg.role,
+            timestamp: new Date(msg.timestamp)
+          }));
+          setMessages(formattedMessages);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load chat history:', error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, [session?.user?.id]);
+
+  // Save message to database
+  const saveMessageToDatabase = useCallback(async (message: ChatMessage, isResponse = false, context?: any) => {
+    if (!session?.user?.id || !currentSessionId) return;
+
+    try {
+      await fetch('/api/ai/chat-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessionId: currentSessionId,
+          question: message.role === 'user' ? message.content : '',
+          answer: message.role === 'assistant' ? message.content : '',
+          context: context ? JSON.stringify(context) : null,
+          confidence: 0.95
+        })
+      });
+    } catch (error) {
+      console.error('Failed to save message to database:', error);
+    }
+  }, [session?.user?.id, currentSessionId]);
 
   // Intelligent task type detection
   const detectTaskType = useCallback((content: string): { type: string; taskType?: string } => {
@@ -149,6 +216,15 @@ export const useSupremeAI = () => {
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+
+      // Save user and assistant messages to database
+      await saveMessageToDatabase(userMessage);
+      await saveMessageToDatabase(assistantMessage, true, {
+        confidence: data.confidence,
+        processingTime: data.processingTime,
+        source: data.data.source,
+        taskExecution: data.data.taskExecution
+      });
       
       // Show task execution feedback if available
       if (data.data.taskExecution) {
@@ -168,16 +244,48 @@ export const useSupremeAI = () => {
     }
   }, [detectTaskType]);
 
-  const clearMessages = useCallback(() => {
+  const clearMessages = useCallback(async () => {
+    if (!currentSessionId) return;
+
+    try {
+      // Clear from database
+      const response = await fetch(`/api/ai/chat-history?sessionId=${currentSessionId}`, {
+        method: 'DELETE'
+      });
+      
+      if (response.ok) {
+        // Clear local state
+        setMessages([]);
+        setError(null);
+        toast.success('Chat history cleared');
+      }
+    } catch (error) {
+      console.error('Failed to clear chat history:', error);
+      toast.error('Failed to clear chat history');
+    }
+  }, [currentSessionId]);
+
+  const startNewSession = useCallback(() => {
+    // Generate new session ID
+    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    localStorage.setItem('chatSessionId', sessionId);
+    setCurrentSessionId(sessionId);
+    
+    // Clear current messages
     setMessages([]);
     setError(null);
+    
+    toast.success('New chat session started');
   }, []);
 
   return {
     messages,
     isLoading,
+    isLoadingHistory,
     error,
     sendMessage,
     clearMessages,
+    startNewSession,
+    currentSessionId,
   };
 }; 
