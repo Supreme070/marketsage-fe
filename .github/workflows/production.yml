@@ -61,7 +61,7 @@ jobs:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/marketsage_test
 
     - name: Run linting
-      run: npm run lint
+      run: npm run lint:ci
 
     - name: Run tests
       run: npm run test
