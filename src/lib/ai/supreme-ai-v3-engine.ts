@@ -427,53 +427,130 @@ ${taskExecutionResult && taskExecutionResult.success ? `\n🚀 **TASK EXECUTION 
   // 3. Analysis Handler
   private async handleAnalyze(task: Extract<SupremeAIv3Task, { type: 'analyze' }>): Promise<SupremeAIv3Response> {
     const { userId, question } = task;
+    const startTime = Date.now();
     
     logger.info('Supreme-AI v3 handling analysis request', { 
       userId, 
       questionPreview: question.substring(0, 100) + '...',
-      mode: 'analysis'
+      mode: 'business-intelligence-analysis'
     });
 
     try {
-      // For now, treat analysis requests similar to questions but with analytical focus
-      const analysisContext = `You are Supreme-AI's analytical engine. Provide data-driven insights, identify patterns, and offer actionable recommendations. Focus on metrics, trends, and business intelligence.`;
+      // Use intelligent execution engine for business intelligence analysis
+      logger.info('Executing business intelligence analysis', { userId, question });
+      const analysisResult = await intelligentExecutionEngine.executeUserRequest(question, userId);
       
-      const aiInstance = getAIInstance();
-      const aiResponse = await aiInstance.generateResponse(
-        question,
-        analysisContext,
-        [],
-        {
-          model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-          temperature: 0.3, // Lower temperature for more analytical responses
-          maxTokens: 1000
-        }
-      );
+      if (analysisResult && analysisResult.success) {
+        const executionTime = Date.now() - startTime;
+        
+        logger.info('Business intelligence analysis completed successfully', { 
+          userId, 
+          message: analysisResult.message,
+          executionTime
+        });
 
-      return {
-        success: true,
-        timestamp: new Date(),
-        taskType: 'analyze',
-        data: {
-          answer: `📊 **Analysis Results**\n\n${aiResponse.answer}`,
-          analysisType: 'ai-powered',
-          mode: 'analytical'
-        },
-        confidence: 0.9,
-        debug: { 
-          mode: 'analysis',
-          aiModel: 'openai-analytical'
-        }
-      };
+        return {
+          success: true,
+          timestamp: new Date(),
+          taskType: 'analyze',
+          data: {
+            answer: analysisResult.message,
+            analysisData: analysisResult.data,
+            analysisType: 'business-intelligence',
+            mode: 'intelligent-execution',
+            suggestions: analysisResult.suggestions
+          },
+          confidence: 0.95,
+          debug: { 
+            mode: 'business-intelligence-analysis',
+            executionTime,
+            dataType: analysisResult.data ? Object.keys(analysisResult.data).join(', ') : 'none'
+          }
+        };
+      } else if (analysisResult && !analysisResult.success) {
+        // Analysis failed, fallback to AI explanation
+        logger.warn('Business intelligence analysis failed, using AI fallback', {
+          userId,
+          error: analysisResult.error,
+          message: analysisResult.message
+        });
+
+        const aiInstance = getAIInstance();
+        const fallbackContext = `The user asked: "${question}". Our business intelligence analysis failed with error: "${analysisResult.error}". Provide helpful guidance about what data might be needed or how to rephrase the query for better results.`;
+        
+        const aiResponse = await aiInstance.generateResponse(
+          question,
+          fallbackContext,
+          [],
+          {
+            model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+            temperature: 0.3,
+            maxTokens: 1000
+          }
+        );
+
+        return {
+          success: true,
+          timestamp: new Date(),
+          taskType: 'analyze',
+          data: {
+            answer: `⚠️ **Analysis Issue**\n\n${analysisResult.message}\n\n**Guidance:**\n${aiResponse.answer}`,
+            analysisType: 'fallback-guidance',
+            mode: 'ai-fallback',
+            suggestions: analysisResult.suggestions
+          },
+          confidence: 0.7,
+          debug: { 
+            mode: 'fallback-analysis',
+            originalError: analysisResult.error
+          }
+        };
+      } else {
+        // No analysis detected, use general AI response
+        const analysisContext = `You are Supreme-AI's analytical engine. The user is asking for business intelligence or data analysis. Provide insights about what specific data or metrics would be helpful to answer their question: "${question}"`;
+        
+        const aiInstance = getAIInstance();
+        const aiResponse = await aiInstance.generateResponse(
+          question,
+          analysisContext,
+          [],
+          {
+            model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+            temperature: 0.3,
+            maxTokens: 1000
+          }
+        );
+
+        return {
+          success: true,
+          timestamp: new Date(),
+          taskType: 'analyze',
+          data: {
+            answer: `📊 **Analysis Guidance**\n\n${aiResponse.answer}`,
+            analysisType: 'guidance',
+            mode: 'advisory'
+          },
+          confidence: 0.8,
+          debug: { 
+            mode: 'analysis-guidance',
+            noDataDetected: true
+          }
+        };
+      }
     } catch (error) {
-      logger.error('Analysis failed', { error: error instanceof Error ? error.message : String(error) });
+      const executionTime = Date.now() - startTime;
+      logger.error('Analysis failed completely', { 
+        error: error instanceof Error ? error.message : String(error),
+        userId,
+        executionTime
+      });
       
       return {
         success: false,
         timestamp: new Date(),
         taskType: 'analyze',
         data: {
-          answer: `❌ **Analysis Failed**\n\nUnable to complete the analysis. Please try again with a more specific query.`,
+          answer: `❌ **Analysis Failed**\n\nUnable to complete the analysis due to a system error. Please try again with a more specific query.`,
           error: error instanceof Error ? error.message : 'Unknown error'
         },
         confidence: 0.1,

@@ -132,6 +132,24 @@ export const useSupremeAI = () => {
       }
     }
     
+    // Business Intelligence queries - these should trigger analysis
+    const biPatterns = [
+      'who is the best performing', 'best performing', 'top performing', 'highest performing',
+      'team performance', 'staff performance', 'employee performance',
+      'conversion rate', 'conversion by channel', 'channel performance',
+      'revenue breakdown', 'revenue analysis', 'financial performance',
+      'customer acquisition cost', 'cac', 'acquisition metrics',
+      'workflow completion', 'workflow success', 'automation performance',
+      'how many sales', 'how many marketing', 'count of', 'personnel count',
+      'sales data', 'marketing data', 'performance metrics'
+    ];
+    
+    for (const pattern of biPatterns) {
+      if (lowerContent.includes(pattern)) {
+        return { type: 'analyze' };
+      }
+    }
+    
     // Check for other action types
     if (lowerContent.includes('analyze') || lowerContent.includes('analysis')) {
       return { type: 'analyze' };
