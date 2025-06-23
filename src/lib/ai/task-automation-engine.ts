@@ -21,7 +21,7 @@ import {
 } from '@prisma/client';
 
 // Task types (since they may not be in Prisma schema yet)
-type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED';
+type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'REVIEW' | 'DONE';
 type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
 // Types
@@ -289,7 +289,7 @@ export class AITaskAutomationEngine {
       churnRisk: insights.churnRisk,
       activityCount: insights.activities.length,
       campaignInteractions: insights.campaigns.length,
-      workflowCompletions: insights.workflows.filter((w: any) => w.status === 'COMPLETED').length
+      workflowCompletions: insights.workflows.filter((w: any) => w.status === 'COMPLETED').length  // Note: workflows use COMPLETED, tasks use DONE
     };
 
     const analysis = await this.supremeAI.analyzeCustomerBehavior([behaviorData]);
@@ -356,7 +356,7 @@ export class AITaskAutomationEngine {
 
     // Workflow optimization opportunity
     if (insights.workflows.length > 0) {
-      const incompleteWorkflows = insights.workflows.filter((w: any) => w.status !== 'COMPLETED');
+      const incompleteWorkflows = insights.workflows.filter((w: any) => w.status !== 'COMPLETED');  // Note: workflows use COMPLETED
       if (incompleteWorkflows.length > 0) {
         suggestions.push({
           title: 'Optimize Workflow Performance',
@@ -461,7 +461,7 @@ export class AITaskAutomationEngine {
     await prisma.task.update({
       where: { id: taskId },
       data: { 
-        status: 'COMPLETED'
+        status: 'DONE'
       }
     });
   }
@@ -473,7 +473,7 @@ export class AITaskAutomationEngine {
     await prisma.task.update({
       where: { id: taskId },
       data: { 
-        status: 'COMPLETED'
+        status: 'DONE'
       }
     });
   }
@@ -485,7 +485,7 @@ export class AITaskAutomationEngine {
     await prisma.task.update({
       where: { id: taskId },
       data: { 
-        status: 'COMPLETED'
+        status: 'DONE'
       }
     });
   }
@@ -539,7 +539,7 @@ export class AITaskAutomationEngine {
         completionPercentage = 50;
         suggestedNextAction = 'Monitor progress and provide updates';
         break;
-      case 'COMPLETED':
+      case 'DONE':
         completionPercentage = 100;
         suggestedNextAction = 'Review outcomes and optimize for future';
         break;
