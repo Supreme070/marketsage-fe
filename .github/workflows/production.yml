@@ -1,0 +1,127 @@
+name: Production Deployment
+
+on:
+  push:
+    branches: [ production ]
+  release:
+    types: [ published ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: marketsage_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        lfs: true
+    
+    - name: Checkout LFS objects
+      run: git lfs checkout
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Setup environment
+      run: |
+        cp .env.example .env.local || echo "No .env.example found"
+        echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/marketsage_test" >> .env.local
+        echo "NEXTAUTH_SECRET=test-secret" >> .env.local
+        echo "NEXTAUTH_URL=http://localhost:3000" >> .env.local
+
+    - name: Generate Prisma client
+      run: npm run db:generate
+
+    - name: Run database migrations
+      run: npm run db:deploy
+
+    - name: Run linting
+      run: npm run lint
+
+    - name: Run tests
+      run: npm run test
+      env:
+        NODE_ENV: test
+
+    - name: Build application
+      run: npm run build
+      env:
+        NODE_ENV: production
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        lfs: true
+    
+    - name: Run security audit
+      run: npm audit --audit-level moderate
+
+  deploy-production:
+    needs: [test, security-scan]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/production' && github.event_name == 'push'
+    
+    environment:
+      name: production
+      
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        lfs: true
+    
+    - name: Checkout LFS objects
+      run: git lfs checkout
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build application
+      run: npm run build
+      env:
+        NODE_ENV: production
+
+    - name: Run production database migrations
+      run: npm run db:deploy
+      env:
+        DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+
+    # Add your production deployment steps here
+    # Example: Deploy to production server, update production database, etc.
+    - name: Deploy to Production
+      run: |
+        echo "🚀 Deploying to production environment..."
+        echo "✅ Production deployment would happen here"
+        # Add actual deployment commands when ready
+        
+    - name: Health Check
+      run: |
+        echo "🏥 Running production health checks..."
+        echo "✅ Health checks would happen here"
+        # Add health check commands when ready
