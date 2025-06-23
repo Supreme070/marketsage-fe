@@ -194,11 +194,12 @@ export async function POST(request: NextRequest) {
       mode: forceLocal ? 'local-forced' : 'auto-detect'
     });
 
-    // Force local Supreme-AI for task execution requests
+    // Force local Supreme-AI for task execution and analysis requests (need database access)
     const isTaskExecution = body.type === 'task' || body.taskType === 'assign_task' || enableTaskExecution;
+    const isAnalysisRequest = body.type === 'analyze';
     
-    // Check if OpenAI-only mode is enabled, but respect localOnly flag and task execution
-    if ((process.env.USE_OPENAI_ONLY === 'true' || process.env.SUPREME_AI_MODE === 'disabled') && !forceLocal && !isTaskExecution) {
+    // Check if OpenAI-only mode is enabled, but respect localOnly flag, task execution, and analysis requests
+    if ((process.env.USE_OPENAI_ONLY === 'true' || process.env.SUPREME_AI_MODE === 'disabled') && !forceLocal && !isTaskExecution && !isAnalysisRequest) {
       // Redirect to OpenAI API instead of using Supreme-AI (only for non-task requests)
       const { OpenAIIntegration } = await import('@/lib/ai/openai-integration');
       const openai = new OpenAIIntegration();
