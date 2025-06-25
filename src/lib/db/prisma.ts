@@ -71,46 +71,19 @@ const createPrismaClient = (): CustomPrismaClient => {
   }
 };
 
+// Check if we're in build mode
+const isBuildTime = process.env.NODE_ENV === 'production' && 
+  (process.env.NEXT_PHASE === 'phase-production-build' || 
+   process.env.BUILDING === 'true' ||
+   process.argv.includes('build'));
+
 // Initialize Prisma client with error handling
 let prisma: CustomPrismaClient;
 let isConnected = false;
 
-try {
-  // Use cached client if available (in development)
-  if (globalForPrisma.prisma) {
-    console.log('Using existing Prisma client instance');
-    prisma = globalForPrisma.prisma;
-  } else {
-    console.log('Creating new Prisma client instance');
-    prisma = createPrismaClient();
-  }
-  
-  // Connect to the database
-  prisma.$connect()
-    .then(() => {
-      console.log('Successfully connected to database');
-      isConnected = true;
-      
-      // Set up periodic health checks in production
-      if (process.env.NODE_ENV === 'production') {
-        setInterval(async () => {
-          const isHealthy = await prisma.$healthCheck();
-          if (!isHealthy && isConnected) {
-            console.warn('Database connection lost, attempting to reconnect...');
-            isConnected = await prisma.$reconnect();
-            console.log(isConnected ? 'Reconnection successful' : 'Reconnection failed');
-          }
-        }, CONNECTION_CHECK_INTERVAL);
-      }
-    })
-    .catch(e => {
-      console.error('Failed to connect to database:', e);
-      isConnected = false;
-    });
-} catch (error) {
-  console.error('Critical error initializing Prisma client:', error);
-  
-  // Provide a mock client as fallback for non-critical routes
+if (isBuildTime) {
+  // During build time, provide a mock client to prevent database connections
+  console.log('Build time detected - using mock Prisma client');
   prisma = {
     $connect: async () => Promise.resolve(),
     $disconnect: async () => Promise.resolve(),
@@ -121,6 +94,54 @@ try {
     $use: () => ({ mock: true }),
     $transaction: async (arg: any) => arg instanceof Function ? arg([]) : [],
   } as unknown as CustomPrismaClient;
+} else {
+  try {
+    // Use cached client if available (in development)
+    if (globalForPrisma.prisma) {
+      console.log('Using existing Prisma client instance');
+      prisma = globalForPrisma.prisma;
+    } else {
+      console.log('Creating new Prisma client instance');
+      prisma = createPrismaClient();
+    }
+    
+    // Connect to the database only if not in build mode
+    prisma.$connect()
+      .then(() => {
+        console.log('Successfully connected to database');
+        isConnected = true;
+        
+        // Set up periodic health checks in production
+        if (process.env.NODE_ENV === 'production') {
+          setInterval(async () => {
+            const isHealthy = await prisma.$healthCheck();
+            if (!isHealthy && isConnected) {
+              console.warn('Database connection lost, attempting to reconnect...');
+              isConnected = await prisma.$reconnect();
+              console.log(isConnected ? 'Reconnection successful' : 'Reconnection failed');
+            }
+          }, CONNECTION_CHECK_INTERVAL);
+        }
+      })
+      .catch(e => {
+        console.error('Failed to connect to database:', e);
+        isConnected = false;
+      });
+  } catch (error) {
+    console.error('Critical error initializing Prisma client:', error);
+    
+    // Provide a mock client as fallback for non-critical routes
+    prisma = {
+      $connect: async () => Promise.resolve(),
+      $disconnect: async () => Promise.resolve(),
+      $healthCheck: async () => Promise.resolve(false),
+      $reconnect: async () => Promise.resolve(false),
+      $queryRaw: async () => Promise.resolve([]),
+      $on: () => ({ mock: true }),
+      $use: () => ({ mock: true }),
+      $transaction: async (arg: any) => arg instanceof Function ? arg([]) : [],
+    } as unknown as CustomPrismaClient;
+  }
 }
 
 // Add middleware for query timeout and retry

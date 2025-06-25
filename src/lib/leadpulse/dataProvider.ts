@@ -1,11 +1,36 @@
 /**
- * LeadPulse Data Provider
+ * LeadPulse Data Provider with AI Integration
  *
  * This module provides functions to fetch and transform data for the LeadPulse components.
- * It handles API interactions, data formatting, and caching.
+ * It handles API interactions, data formatting, caching, and AI-powered predictions.
  */
 
 import { cache } from 'react';
+
+// AI Prediction Engine Integration
+interface AIPrediction {
+  visitorId: string;
+  conversionProbability: number;
+  behaviorPrediction: 'convert' | 'browse' | 'abandon';
+  recommendedActions: string[];
+  confidence: number;
+  factors: {
+    pageTime: number;
+    clickPattern: number;
+    deviceType: number;
+    location: number;
+    referralSource: number;
+  };
+}
+
+interface AIVisitorEnhancement {
+  aiScore: number;
+  predictedValue: number;
+  segmentPrediction: 'enterprise' | 'startup' | 'individual';
+  nextAction: string;
+  urgencyLevel: 'high' | 'medium' | 'low';
+  optimization: string[];
+}
 
 // Type definitions that match the Prisma schema
 export type LeadPulseTouchpointType = 'PAGEVIEW' | 'CLICK' | 'FORM_VIEW' | 'FORM_START' | 'FORM_SUBMIT' | 'CONVERSION';
@@ -198,8 +223,11 @@ export const getActiveVisitors = cache(async (timeRange = '24h'): Promise<Visito
     const overviewData = await overviewResponse.json();
     const targetActiveCount = overviewData.overview?.activeVisitors || 0;
 
-    // Enhance visitor data with realistic activity patterns
+    // AI-enhanced visitor data with predictive analytics
     const enhancedVisitors = (data.visitors || []).map((visitor: any, index: number) => {
+      // Generate AI predictions for each visitor
+      const aiPrediction = generateAIPrediction(visitor);
+      const aiEnhancement = generateAIEnhancement(visitor, aiPrediction);
       const now = new Date();
       const currentHour = now.getHours();
       
@@ -229,7 +257,17 @@ export const getActiveVisitors = cache(async (timeRange = '24h'): Promise<Visito
       return {
         ...visitor,
         lastActive: lastActiveText,
-        engagementScore: Math.round(enhancedEngagement)
+        engagementScore: Math.round(enhancedEngagement),
+        // AI-powered enhancements
+        aiPrediction,
+        aiEnhancement,
+        conversionProbability: aiPrediction.conversionProbability,
+        behaviorPrediction: aiPrediction.behaviorPrediction,
+        aiScore: aiEnhancement.aiScore,
+        predictedValue: aiEnhancement.predictedValue,
+        segmentPrediction: aiEnhancement.segmentPrediction,
+        recommendedActions: aiPrediction.recommendedActions,
+        urgencyLevel: aiEnhancement.urgencyLevel
       };
     });
 
@@ -522,4 +560,212 @@ function getTimeRangeInMs(timeRange: string): number {
     case '30d': return 30 * day;
     default: return day; // 24h default
   }
+}
+
+/**
+ * Generate AI prediction for a visitor based on their behavior patterns
+ */
+function generateAIPrediction(visitor: any): AIPrediction {
+  const now = new Date();
+  const currentHour = now.getHours();
+  
+  // Base prediction factors
+  let conversionProbability = 0.15; // Base 15%
+  let behaviorPrediction: 'convert' | 'browse' | 'abandon' = 'browse';
+  let confidence = 0.65;
+  
+  const factors = {
+    pageTime: 0,
+    clickPattern: 0,
+    deviceType: 0,
+    location: 0,
+    referralSource: 0
+  };
+  
+  // Factor 1: Page time and engagement
+  const engagementScore = visitor.engagementScore || 50;
+  if (engagementScore > 80) {
+    conversionProbability += 0.25;
+    factors.pageTime = 85;
+    confidence += 0.15;
+  } else if (engagementScore > 60) {
+    conversionProbability += 0.15;
+    factors.pageTime = 70;
+    confidence += 0.10;
+  } else if (engagementScore < 30) {
+    conversionProbability -= 0.05;
+    factors.pageTime = 25;
+  }
+  
+  // Factor 2: Click patterns and activity
+  const pulseDataLength = visitor.pulseData?.length || 0;
+  if (pulseDataLength > 3) {
+    conversionProbability += 0.20;
+    factors.clickPattern = 80;
+    confidence += 0.10;
+  } else if (pulseDataLength > 1) {
+    conversionProbability += 0.10;
+    factors.clickPattern = 60;
+  }
+  
+  // Factor 3: Device type impact (mobile vs desktop)
+  if (visitor.device?.toLowerCase().includes('desktop')) {
+    conversionProbability += 0.08;
+    factors.deviceType = 75;
+  } else if (visitor.device?.toLowerCase().includes('mobile')) {
+    conversionProbability += 0.03; // Mobile conversion slightly lower
+    factors.deviceType = 55;
+  }
+  
+  // Factor 4: Location-based predictions (Nigerian market focus)
+  if (visitor.location?.includes('Lagos') || visitor.location?.includes('Abuja')) {
+    conversionProbability += 0.12; // Major Nigerian cities
+    factors.location = 85;
+    confidence += 0.08;
+  } else if (visitor.location?.includes('Nigeria')) {
+    conversionProbability += 0.08;
+    factors.location = 70;
+  } else if (visitor.location?.includes('Africa')) {
+    conversionProbability += 0.05;
+    factors.location = 60;
+  }
+  
+  // Factor 5: Business hours impact
+  if (currentHour >= 9 && currentHour <= 17) {
+    conversionProbability += 0.10; // Business hours boost
+    confidence += 0.05;
+  }
+  
+  // Factor 6: Platform type preferences
+  if (visitor.platform === 'web') {
+    factors.referralSource = 70;
+  } else if (visitor.platform === 'mobile' || visitor.platform === 'react-native') {
+    factors.referralSource = 65;
+  }
+  
+  // Determine behavior prediction
+  if (conversionProbability > 0.7) {
+    behaviorPrediction = 'convert';
+  } else if (conversionProbability < 0.25) {
+    behaviorPrediction = 'abandon';
+  }
+  
+  // Cap probability and confidence
+  conversionProbability = Math.min(0.95, Math.max(0.05, conversionProbability));
+  confidence = Math.min(0.98, Math.max(0.45, confidence));
+  
+  // Generate actionable recommendations
+  const recommendedActions = [];
+  if (conversionProbability > 0.6) {
+    recommendedActions.push('Priority outreach - high conversion potential');
+    recommendedActions.push('Show pricing immediately');
+  }
+  if (factors.deviceType < 60) {
+    recommendedActions.push('Optimize mobile experience');
+  }
+  if (factors.pageTime < 50) {
+    recommendedActions.push('Improve page engagement content');
+  }
+  if (factors.location > 70) {
+    recommendedActions.push('Show Nigerian Naira pricing');
+    recommendedActions.push('Enable WhatsApp contact option');
+  }
+  
+  return {
+    visitorId: visitor.id || visitor.visitorId,
+    conversionProbability: Math.round(conversionProbability * 100) / 100,
+    behaviorPrediction,
+    recommendedActions,
+    confidence: Math.round(confidence * 100) / 100,
+    factors
+  };
+}
+
+/**
+ * Generate AI enhancement data for a visitor based on predictions
+ */
+function generateAIEnhancement(visitor: any, prediction: AIPrediction): AIVisitorEnhancement {
+  // Calculate AI score (0-100) based on multiple factors
+  let aiScore = 30; // Base score
+  
+  // Boost score based on prediction factors
+  aiScore += prediction.factors.pageTime * 0.2;
+  aiScore += prediction.factors.clickPattern * 0.25;
+  aiScore += prediction.factors.deviceType * 0.15;
+  aiScore += prediction.factors.location * 0.2;
+  aiScore += prediction.factors.referralSource * 0.1;
+  
+  // Additional boost for high engagement
+  if (visitor.engagementScore > 75) {
+    aiScore += 15;
+  }
+  
+  // Cap AI score
+  aiScore = Math.min(100, Math.max(10, Math.round(aiScore)));
+  
+  // Predict customer segment
+  let segmentPrediction: 'enterprise' | 'startup' | 'individual';
+  if (aiScore > 75 && prediction.factors.location > 70) {
+    segmentPrediction = 'enterprise';
+  } else if (aiScore > 50 && visitor.engagementScore > 60) {
+    segmentPrediction = 'startup';
+  } else {
+    segmentPrediction = 'individual';
+  }
+  
+  // Calculate predicted value based on segment and behavior
+  let predictedValue = 0;
+  switch (segmentPrediction) {
+    case 'enterprise':
+      predictedValue = 450000 + (aiScore * 4000); // ₦450k - ₦850k
+      break;
+    case 'startup':
+      predictedValue = 150000 + (aiScore * 2000); // ₦150k - ₦350k
+      break;
+    case 'individual':
+      predictedValue = 50000 + (aiScore * 1000); // ₦50k - ₦150k
+      break;
+  }
+  
+  // Determine urgency level
+  let urgencyLevel: 'high' | 'medium' | 'low';
+  if (prediction.conversionProbability > 0.7) {
+    urgencyLevel = 'high';
+  } else if (prediction.conversionProbability > 0.4) {
+    urgencyLevel = 'medium';
+  } else {
+    urgencyLevel = 'low';
+  }
+  
+  // Generate next action recommendation
+  let nextAction = 'Monitor activity';
+  if (urgencyLevel === 'high') {
+    nextAction = 'Immediate contact recommended';
+  } else if (urgencyLevel === 'medium') {
+    nextAction = 'Schedule follow-up within 24h';
+  }
+  
+  // Generate optimization recommendations
+  const optimization = [];
+  if (prediction.factors.pageTime < 60) {
+    optimization.push('Improve page content engagement');
+  }
+  if (prediction.factors.deviceType < 70) {
+    optimization.push('Optimize for mobile experience');
+  }
+  if (prediction.factors.location > 70) {
+    optimization.push('Localize for Nigerian market');
+  }
+  if (visitor.engagementScore < 50) {
+    optimization.push('Implement interactive elements');
+  }
+  
+  return {
+    aiScore,
+    predictedValue: Math.round(predictedValue),
+    segmentPrediction,
+    nextAction,
+    urgencyLevel,
+    optimization
+  };
 } 

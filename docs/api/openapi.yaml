@@ -1,0 +1,1243 @@
+openapi: 3.0.3
+info:
+  title: LeadPulse API
+  description: |
+    **LeadPulse** is a comprehensive visitor intelligence and lead capture platform that provides real-time analytics, form building, and customer journey tracking.
+    
+    ## Features
+    - Real-time visitor tracking and analytics
+    - Dynamic form builder with conditional logic
+    - AI-powered lead scoring and intent analysis
+    - Multi-platform support (Web, Mobile, Apps)
+    - CRM integrations (Salesforce, HubSpot)
+    - GDPR compliant data management
+    - WebSocket real-time notifications
+    - Advanced security and audit logging
+    
+    ## Authentication
+    Most endpoints require authentication via Next-Auth session cookies or API keys.
+    
+    ## Rate Limiting
+    API requests are rate-limited per user/IP. See response headers for current limits.
+    
+  version: 2.1.0
+  contact:
+    name: MarketSage Support
+    email: support@marketsage.africa
+    url: https://marketsage.africa
+  license:
+    name: Proprietary
+    url: https://marketsage.africa/license
+    
+servers:
+  - url: https://marketsage.africa/api/leadpulse
+    description: Production server
+  - url: http://localhost:3000/api/leadpulse
+    description: Development server
+
+security:
+  - SessionAuth: []
+  - ApiKeyAuth: []
+
+paths:
+  # Visitor Tracking Endpoints
+  /visitors:
+    post:
+      tags:
+        - Visitor Tracking
+      summary: Track visitor activity
+      description: Record visitor interactions, page views, and behavioral data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fingerprint:
+                  type: string
+                  description: Browser fingerprint for visitor identification
+                  example: "fp_1234567890abcdef"
+                event:
+                  $ref: '#/components/schemas/VisitorEvent'
+                url:
+                  type: string
+                  format: uri
+                  description: Current page URL
+                  example: "https://example.com/products"
+                title:
+                  type: string
+                  description: Page title
+                  example: "Products - Example Company"
+                location:
+                  type: string
+                  description: User's timezone or location
+                  example: "Africa/Lagos"
+                device:
+                  type: string
+                  enum: [Desktop, Mobile, Tablet]
+                  example: "Desktop"
+                browser:
+                  type: string
+                  description: Browser name
+                  example: "Chrome"
+              required: [fingerprint, event, url]
+        responses:
+          200:
+            description: Event recorded successfully
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    success:
+                      type: boolean
+                      example: true
+                    visitorId:
+                      type: string
+                      example: "visitor_1234567890"
+                    score:
+                      type: number
+                      description: Updated engagement score
+                      example: 75
+          400:
+            $ref: '#/components/responses/BadRequest'
+          429:
+            $ref: '#/components/responses/RateLimited'
+    
+    get:
+      tags:
+        - Visitor Tracking
+      summary: Get visitor data
+      description: Retrieve visitor information and analytics
+      security:
+        - SessionAuth: []
+      parameters:
+        - name: timeframe
+          in: query
+          description: Time period for data retrieval
+          schema:
+            type: string
+            enum: [hour, day, week, month]
+            default: day
+        - name: limit
+          in: query
+          description: Maximum number of visitors to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 50
+        - name: offset
+          in: query
+          description: Number of visitors to skip (pagination)
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        200:
+          description: Visitor data retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  visitors:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Visitor'
+                  analytics:
+                    $ref: '#/components/schemas/VisitorAnalytics'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+
+  # Form Builder Endpoints
+  /forms:
+    post:
+      tags:
+        - Form Builder
+      summary: Create a new form
+      description: Create a dynamic form with custom fields and styling
+      security:
+        - SessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FormCreateRequest'
+      responses:
+        201:
+          description: Form created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  formId:
+                    type: string
+                    example: "form_abc123"
+                  embedCode:
+                    type: string
+                    description: JavaScript embed code for the form
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+    
+    get:
+      tags:
+        - Form Builder
+      summary: List user's forms
+      description: Get all forms created by the authenticated user
+      security:
+        - SessionAuth: []
+      parameters:
+        - name: status
+          in: query
+          description: Filter forms by status
+          schema:
+            type: string
+            enum: [active, draft, archived]
+        - name: search
+          in: query
+          description: Search forms by name or description
+          schema:
+            type: string
+      responses:
+        200:
+          description: Forms retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  forms:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Form'
+                  total:
+                    type: integer
+                    example: 25
+
+  /forms/{formId}:
+    get:
+      tags:
+        - Form Builder
+      summary: Get form details
+      description: Retrieve detailed information about a specific form
+      security:
+        - SessionAuth: []
+      parameters:
+        - name: formId
+          in: path
+          required: true
+          description: Unique form identifier
+          schema:
+            type: string
+            example: "form_abc123"
+      responses:
+        200:
+          description: Form details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  form:
+                    $ref: '#/components/schemas/Form'
+        404:
+          $ref: '#/components/responses/NotFound'
+    
+    put:
+      tags:
+        - Form Builder
+      summary: Update form
+      description: Update form fields, styling, or settings
+      security:
+        - SessionAuth: []
+      parameters:
+        - name: formId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FormUpdateRequest'
+      responses:
+        200:
+          description: Form updated successfully
+        400:
+          $ref: '#/components/responses/BadRequest'
+        404:
+          $ref: '#/components/responses/NotFound'
+    
+    delete:
+      tags:
+        - Form Builder
+      summary: Delete form
+      description: Permanently delete a form and all its submissions
+      security:
+        - SessionAuth: []
+      parameters:
+        - name: formId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Form deleted successfully
+        404:
+          $ref: '#/components/responses/NotFound'
+
+  /forms/{formId}/submissions:
+    get:
+      tags:
+        - Form Builder
+      summary: Get form submissions
+      description: Retrieve all submissions for a specific form
+      security:
+        - SessionAuth: []
+      parameters:
+        - name: formId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          description: Filter submissions from this date
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          description: Filter submissions until this date
+          schema:
+            type: string
+            format: date-time
+      responses:
+        200:
+          description: Form submissions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  submissions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FormSubmission'
+                  analytics:
+                    $ref: '#/components/schemas/FormAnalytics'
+
+  /forms/{formId}/submit:
+    post:
+      tags:
+        - Form Builder
+      summary: Submit form data
+      description: Submit form responses from website visitors
+      parameters:
+        - name: formId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+                  description: Form field values (dynamic based on form configuration)
+                  example:
+                    name: "John Doe"
+                    email: "john@example.com"
+                    company: "Example Corp"
+                metadata:
+                  type: object
+                  description: Additional submission metadata
+                  properties:
+                    visitorId:
+                      type: string
+                    fingerprint:
+                      type: string
+                    url:
+                      type: string
+                    userAgent:
+                      type: string
+      responses:
+        200:
+          description: Form submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  submissionId:
+                    type: string
+                    example: "sub_xyz789"
+                  redirect:
+                    type: string
+                    description: Optional redirect URL after submission
+        400:
+          $ref: '#/components/responses/BadRequest'
+
+  # Analytics Endpoints
+  /analytics:
+    get:
+      tags:
+        - Analytics
+      summary: Get analytics dashboard data
+      description: Retrieve comprehensive analytics including visitor metrics, engagement data, and performance indicators
+      security:
+        - SessionAuth: []
+      parameters:
+        - name: timeframe
+          in: query
+          description: Analytics time period
+          schema:
+            type: string
+            enum: [hour, day, week, month, quarter, year]
+            default: week
+        - name: metrics
+          in: query
+          description: Specific metrics to include
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [visitors, pageviews, conversions, engagement, geographic, devices]
+            example: [visitors, conversions]
+      responses:
+        200:
+          description: Analytics data retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  analytics:
+                    $ref: '#/components/schemas/AnalyticsDashboard'
+                  timeframe:
+                    type: string
+                    example: "week"
+                  lastUpdated:
+                    type: string
+                    format: date-time
+
+  # CRM Integration Endpoints
+  /integrations/crm:
+    get:
+      tags:
+        - CRM Integration
+      summary: List CRM integrations
+      description: Get all configured CRM integrations for the user
+      security:
+        - SessionAuth: []
+      parameters:
+        - name: platform
+          in: query
+          description: Filter by CRM platform
+          schema:
+            type: string
+            enum: [salesforce, hubspot, pipedrive, zoho]
+      responses:
+        200:
+          description: CRM integrations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  integrations:
+                    type: object
+                    additionalProperties:
+                      $ref: '#/components/schemas/CRMIntegration'
+                  availablePlatforms:
+                    type: array
+                    items:
+                      type: string
+                    example: [salesforce, hubspot, pipedrive, zoho]
+    
+    post:
+      tags:
+        - CRM Integration
+      summary: Add CRM integration
+      description: Configure a new CRM integration
+      security:
+        - SessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CRMIntegrationConfig'
+      responses:
+        200:
+          description: CRM integration added successfully
+        400:
+          $ref: '#/components/responses/BadRequest'
+
+  # AI Intelligence Endpoints
+  /ai/intelligence:
+    post:
+      tags:
+        - AI Intelligence
+      summary: Get AI insights
+      description: Analyze visitor data and get AI-powered insights and recommendations
+      security:
+        - SessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                analysisType:
+                  type: string
+                  enum: [lead_scoring, intent_analysis, churn_prediction, segment_analysis]
+                  example: "lead_scoring"
+                visitorIds:
+                  type: array
+                  items:
+                    type: string
+                  description: Specific visitors to analyze (optional)
+                timeframe:
+                  type: string
+                  enum: [day, week, month]
+                  default: week
+      responses:
+        200:
+          description: AI analysis completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  insights:
+                    $ref: '#/components/schemas/AIInsights'
+                  recommendations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AIRecommendation'
+
+components:
+  securitySchemes:
+    SessionAuth:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: Next-Auth session cookie
+    
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for service-to-service communication
+
+  schemas:
+    VisitorEvent:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [pageview, click, scroll_milestone, form_focus, form_submit, session_end, custom]
+          example: "pageview"
+        sessionId:
+          type: string
+          example: "lp_1234567890_abcdef"
+        timestamp:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+          example: 1640995200000
+        data:
+          type: object
+          description: Event-specific data (varies by event type)
+          example:
+            viewport:
+              width: 1920
+              height: 1080
+            referrer: "https://google.com"
+      required: [type, sessionId, timestamp]
+
+    Visitor:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "visitor_1234567890"
+        fingerprint:
+          type: string
+          example: "fp_abcdef123456"
+        score:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Engagement score (0-100)
+          example: 75
+        firstSeen:
+          type: string
+          format: date-time
+        lastSeen:
+          type: string
+          format: date-time
+        sessionCount:
+          type: integer
+          minimum: 1
+          example: 5
+        pageViews:
+          type: integer
+          minimum: 0
+          example: 23
+        location:
+          type: object
+          properties:
+            country:
+              type: string
+              example: "Nigeria"
+            city:
+              type: string
+              example: "Lagos"
+            timezone:
+              type: string
+              example: "Africa/Lagos"
+        device:
+          type: object
+          properties:
+            type:
+              type: string
+              enum: [Desktop, Mobile, Tablet]
+            browser:
+              type: string
+              example: "Chrome"
+            os:
+              type: string
+              example: "Windows"
+        isConverted:
+          type: boolean
+          example: false
+        contactId:
+          type: string
+          nullable: true
+          description: Associated contact ID if converted
+          example: "contact_xyz789"
+
+    VisitorAnalytics:
+      type: object
+      properties:
+        totalVisitors:
+          type: integer
+          example: 1250
+        uniqueVisitors:
+          type: integer
+          example: 987
+        avgEngagementScore:
+          type: number
+          example: 68.5
+        conversionRate:
+          type: number
+          example: 3.2
+        topPages:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+              views:
+                type: integer
+              conversionRate:
+                type: number
+        deviceBreakdown:
+          type: object
+          properties:
+            desktop:
+              type: number
+              example: 65.4
+            mobile:
+              type: number
+              example: 28.7
+            tablet:
+              type: number
+              example: 5.9
+
+    Form:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "form_abc123"
+        name:
+          type: string
+          example: "Contact Form"
+        description:
+          type: string
+          example: "Primary contact form for lead capture"
+        status:
+          type: string
+          enum: [active, draft, archived]
+          example: "active"
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/FormField'
+        styling:
+          $ref: '#/components/schemas/FormStyling'
+        settings:
+          $ref: '#/components/schemas/FormSettings'
+        analytics:
+          $ref: '#/components/schemas/FormAnalytics'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    FormField:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "field_name"
+        type:
+          type: string
+          enum: [TEXT, EMAIL, PHONE, NUMBER, TEXTAREA, SELECT, RADIO, CHECKBOX, DATE, FILE, URL, HIDDEN]
+          example: "EMAIL"
+        label:
+          type: string
+          example: "Email Address"
+        placeholder:
+          type: string
+          example: "Enter your email"
+        required:
+          type: boolean
+          example: true
+        validation:
+          type: object
+          properties:
+            pattern:
+              type: string
+              description: Regex pattern for validation
+            minLength:
+              type: integer
+            maxLength:
+              type: integer
+            min:
+              type: number
+            max:
+              type: number
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              value:
+                type: string
+          description: For SELECT and RADIO fields
+        conditionalLogic:
+          type: object
+          properties:
+            showIf:
+              type: object
+              description: Conditions for showing this field
+
+    FormStyling:
+      type: object
+      properties:
+        theme:
+          type: string
+          enum: [light, dark, custom]
+          example: "light"
+        primaryColor:
+          type: string
+          example: "#007bff"
+        backgroundColor:
+          type: string
+          example: "#ffffff"
+        borderRadius:
+          type: number
+          example: 8
+        customCSS:
+          type: string
+          description: Custom CSS overrides
+
+    FormSettings:
+      type: object
+      properties:
+        redirectUrl:
+          type: string
+          format: uri
+          description: URL to redirect after successful submission
+        successMessage:
+          type: string
+          example: "Thank you for your submission!"
+        emailNotifications:
+          type: boolean
+          example: true
+        autoResponder:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+            subject:
+              type: string
+            message:
+              type: string
+
+    FormSubmission:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "sub_xyz789"
+        formId:
+          type: string
+          example: "form_abc123"
+        data:
+          type: object
+          description: Submitted form data
+          example:
+            name: "John Doe"
+            email: "john@example.com"
+        visitorId:
+          type: string
+          example: "visitor_1234567890"
+        submittedAt:
+          type: string
+          format: date-time
+        ipAddress:
+          type: string
+          example: "192.168.1.1"
+        userAgent:
+          type: string
+
+    FormAnalytics:
+      type: object
+      properties:
+        totalViews:
+          type: integer
+          example: 5420
+        totalSubmissions:
+          type: integer
+          example: 387
+        conversionRate:
+          type: number
+          example: 7.14
+        avgCompletionTime:
+          type: number
+          description: Average time to complete in seconds
+          example: 125
+        dropoffAnalysis:
+          type: object
+          properties:
+            fieldDropoffs:
+              type: array
+              items:
+                type: object
+                properties:
+                  fieldId:
+                    type: string
+                  dropoffRate:
+                    type: number
+
+    CRMIntegration:
+      type: object
+      properties:
+        platform:
+          type: string
+          enum: [salesforce, hubspot, pipedrive, zoho]
+          example: "salesforce"
+        status:
+          type: string
+          enum: [active, inactive, error]
+          example: "active"
+        connectedAt:
+          type: string
+          format: date-time
+        lastSync:
+          type: string
+          format: date-time
+        syncSettings:
+          type: object
+          properties:
+            autoSync:
+              type: boolean
+            syncInterval:
+              type: integer
+              description: Sync interval in minutes
+            syncDirection:
+              type: string
+              enum: [bidirectional, to_crm, from_crm]
+
+    CRMIntegrationConfig:
+      type: object
+      properties:
+        platform:
+          type: string
+          enum: [salesforce, hubspot, pipedrive, zoho]
+        credentials:
+          type: object
+          description: Platform-specific credentials (encrypted in storage)
+          properties:
+            clientId:
+              type: string
+            clientSecret:
+              type: string
+            accessToken:
+              type: string
+            refreshToken:
+              type: string
+            apiKey:
+              type: string
+            domain:
+              type: string
+        mappings:
+          type: object
+          properties:
+            leadSource:
+              type: string
+              example: "LeadPulse"
+            customFieldMappings:
+              type: object
+              additionalProperties:
+                type: string
+        syncSettings:
+          type: object
+          properties:
+            autoSync:
+              type: boolean
+              example: true
+            syncInterval:
+              type: integer
+              example: 60
+            syncDirection:
+              type: string
+              enum: [bidirectional, to_crm, from_crm]
+              example: "to_crm"
+            conflictResolution:
+              type: string
+              enum: [leadpulse_wins, crm_wins, manual]
+              example: "leadpulse_wins"
+
+    AnalyticsDashboard:
+      type: object
+      properties:
+        summary:
+          type: object
+          properties:
+            totalVisitors:
+              type: integer
+            uniqueVisitors:
+              type: integer
+            pageViews:
+              type: integer
+            avgSessionDuration:
+              type: number
+            bounceRate:
+              type: number
+            conversionRate:
+              type: number
+        trends:
+          type: object
+          properties:
+            visitors:
+              type: array
+              items:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    format: date
+                  count:
+                    type: integer
+            conversions:
+              type: array
+              items:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    format: date
+                  count:
+                    type: integer
+        geographic:
+          type: array
+          items:
+            type: object
+            properties:
+              country:
+                type: string
+              visitors:
+                type: integer
+              percentage:
+                type: number
+        devices:
+          type: object
+          properties:
+            desktop:
+              type: number
+            mobile:
+              type: number
+            tablet:
+              type: number
+        topPages:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+              views:
+                type: integer
+              uniqueViews:
+                type: integer
+              avgTimeOnPage:
+                type: number
+
+    AIInsights:
+      type: object
+      properties:
+        leadScoring:
+          type: object
+          properties:
+            highValueVisitors:
+              type: array
+              items:
+                type: object
+                properties:
+                  visitorId:
+                    type: string
+                  score:
+                    type: number
+                  likelihood:
+                    type: string
+                    enum: [very_high, high, medium, low]
+                  reasons:
+                    type: array
+                    items:
+                      type: string
+        intentAnalysis:
+          type: object
+          properties:
+            buyingIntent:
+              type: number
+              description: Percentage of visitors showing buying intent
+            researchIntent:
+              type: number
+              description: Percentage of visitors in research phase
+            comparisonIntent:
+              type: number
+              description: Percentage of visitors comparing options
+        churnPrediction:
+          type: object
+          properties:
+            riskSegments:
+              type: array
+              items:
+                type: object
+                properties:
+                  segment:
+                    type: string
+                  riskLevel:
+                    type: string
+                    enum: [high, medium, low]
+                  visitorCount:
+                    type: integer
+                  recommendedActions:
+                    type: array
+                    items:
+                      type: string
+
+    AIRecommendation:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [engagement, conversion, retention, content]
+        title:
+          type: string
+          example: "Optimize contact form placement"
+        description:
+          type: string
+          example: "Move the contact form above the fold to increase conversion rate by an estimated 15%"
+        priority:
+          type: string
+          enum: [high, medium, low]
+        impact:
+          type: object
+          properties:
+            metric:
+              type: string
+              example: "conversion_rate"
+            expectedImprovement:
+              type: number
+              example: 15.3
+            confidence:
+              type: number
+              example: 0.87
+        implementation:
+          type: object
+          properties:
+            difficulty:
+              type: string
+              enum: [easy, medium, hard]
+            estimatedTime:
+              type: string
+              example: "2 hours"
+            resources:
+              type: array
+              items:
+                type: string
+
+    Pagination:
+      type: object
+      properties:
+        total:
+          type: integer
+          example: 1250
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 50
+        hasNext:
+          type: boolean
+          example: true
+        hasPrev:
+          type: boolean
+          example: false
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "Invalid request parameters"
+        code:
+          type: string
+          example: "VALIDATION_ERROR"
+        details:
+          type: object
+          description: Additional error details
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid parameters or malformed request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: "Invalid request parameters"
+            code: "VALIDATION_ERROR"
+    
+    Unauthorized:
+      description: Unauthorized - authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: "Authentication required"
+            code: "UNAUTHORIZED"
+    
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: "Resource not found"
+            code: "NOT_FOUND"
+    
+    RateLimited:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: "Rate limit exceeded"
+            code: "RATE_LIMITED"
+      headers:
+        Retry-After:
+          description: Number of seconds to wait before retrying
+          schema:
+            type: integer
+        X-RateLimit-Limit:
+          description: Request limit per time window
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          description: Remaining requests in current window
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          description: Unix timestamp when rate limit resets
+          schema:
+            type: integer
+
+tags:
+  - name: Visitor Tracking
+    description: Real-time visitor behavior tracking and analytics
+  - name: Form Builder
+    description: Dynamic form creation and submission management
+  - name: Analytics
+    description: Comprehensive analytics and reporting
+  - name: CRM Integration
+    description: CRM platform integrations and data synchronization
+  - name: AI Intelligence
+    description: AI-powered insights and recommendations

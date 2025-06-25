@@ -40,9 +40,11 @@ RUN chmod +x startup.sh
 # Ensure public directory exists
 RUN mkdir -p ./public
 
-# Set environment variables for Prisma generation
+# Set environment variables for build
 ARG DATABASE_URL
 ENV DATABASE_URL=${DATABASE_URL}
+ENV BUILDING=true
+ENV SKIP_DATABASE_CONNECTION=true
 
 # Reinstall and generate Prisma client before bcrypt rebuild
 RUN npm install @prisma/client prisma --save && \
@@ -111,5 +113,5 @@ EXPOSE 3000
 ENV PORT 3000
 ENV HOSTNAME 0.0.0.0
 
-# Use startup script instead of direct server start
-CMD ["./startup.sh"] 
+# Start production server directly
+CMD ["npm", "run", "start"] 

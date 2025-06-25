@@ -71,9 +71,9 @@ function generateTrafficData(): TrafficData[] {
     const weekdayMultiplier = dayOfWeek === 0 || dayOfWeek === 6 ? 0.7 : 1.0;
     
     const visitors = Math.floor(baseVisitors * weekdayMultiplier);
-    const applications = Math.floor(visitors * (0.12 + Math.random() * 0.08)); // 12-20% conversion
-    const sales = Math.floor(applications * (0.15 + Math.random() * 0.15)); // 15-30% sales conversion
-    const revenue = sales * (120000 + Math.random() * 80000); // ₦120k-200k per sale
+    const applications = Math.floor(visitors * (0.15 + Math.random() * 0.10)); // 15-25% conversion (higher for AI solutions)
+    const sales = Math.floor(applications * (0.20 + Math.random() * 0.15)); // 20-35% sales conversion (TechFlow quality)
+    const revenue = sales * (450000 + Math.random() * 350000); // ₦450k-800k per TechFlow AI solution sale
     
     // Traffic source distribution
     const organicShare = 0.35 + Math.random() * 0.15; // 35-50%
@@ -103,11 +103,12 @@ function generateTrafficData(): TrafficData[] {
 
 function generateHeatmapData(): HeatmapData[] {
   const pages = [
-    { url: '/home', title: 'Homepage' },
-    { url: '/pricing', title: 'Pricing Page' },
-    { url: '/features', title: 'Features Page' },
-    { url: '/about', title: 'About Us' },
-    { url: '/contact', title: 'Contact Page' }
+    { url: '/home', title: 'TechFlow Solutions - Home' },
+    { url: '/pricing', title: 'TechFlow Pricing - Nigerian Market' },
+    { url: '/solutions/ai-intelligence', title: 'AI Intelligence Platform' },
+    { url: '/solutions/leadpulse', title: 'LeadPulse Analytics' },
+    { url: '/enterprise', title: 'TechFlow Enterprise Solutions' },
+    { url: '/contact', title: 'Contact TechFlow Solutions' }
   ];
   
   return pages.map(page => {
@@ -147,48 +148,48 @@ function generateABTestData(): ABTestData[] {
   return [
     {
       id: 'test_1',
-      name: 'Homepage CTA Button Color',
+      name: 'TechFlow WhatsApp vs Email Contact',
       status: 'active',
       variants: [
         {
           id: 'variant_a',
-          name: 'Green Button (Control)',
-          traffic: 2456,
-          conversions: 187,
-          conversionRate: 7.61,
+          name: 'Email Contact (Control)',
+          traffic: 1456,
+          conversions: 87,
+          conversionRate: 5.97,
           confidence: 0
         },
         {
           id: 'variant_b',
-          name: 'Orange Button',
-          traffic: 2534,
-          conversions: 213,
-          conversionRate: 8.40,
-          confidence: 89
+          name: 'WhatsApp Contact',
+          traffic: 1534,
+          conversions: 156,
+          conversionRate: 10.17,
+          confidence: 95
         }
       ],
       startDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
     },
     {
       id: 'test_2',
-      name: 'Pricing Page Layout',
+      name: 'Nigerian Naira vs USD Pricing Display',
       status: 'completed',
       variants: [
         {
           id: 'variant_a',
-          name: 'Table Layout (Control)',
-          traffic: 1876,
-          conversions: 94,
-          conversionRate: 5.01,
+          name: 'USD Pricing (Control)',
+          traffic: 876,
+          conversions: 34,
+          conversionRate: 3.88,
           confidence: 0
         },
         {
           id: 'variant_b',
-          name: 'Card Layout',
-          traffic: 1923,
-          conversions: 125,
-          conversionRate: 6.50,
-          confidence: 95
+          name: 'Nigerian Naira Pricing',
+          traffic: 923,
+          conversions: 78,
+          conversionRate: 8.45,
+          confidence: 98
         }
       ],
       startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
@@ -196,24 +197,24 @@ function generateABTestData(): ABTestData[] {
     },
     {
       id: 'test_3',
-      name: 'Mobile Form Optimization',
+      name: 'TechFlow AI Demo vs Trial Signup',
       status: 'active',
       variants: [
         {
           id: 'variant_a',
-          name: 'Single Page Form (Control)',
-          traffic: 3421,
-          conversions: 341,
-          conversionRate: 9.97,
+          name: 'Free Trial CTA (Control)',
+          traffic: 2421,
+          conversions: 194,
+          conversionRate: 8.01,
           confidence: 0
         },
         {
           id: 'variant_b',
-          name: 'Multi-step Form',
-          traffic: 3456,
-          conversions: 398,
-          conversionRate: 11.52,
-          confidence: 78
+          name: 'Book AI Demo CTA',
+          traffic: 2456,
+          conversions: 268,
+          conversionRate: 10.91,
+          confidence: 87
         }
       ],
       startDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),

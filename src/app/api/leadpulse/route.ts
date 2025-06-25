@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/prisma';
+import { leadPulseCache } from '@/lib/cache/leadpulse-cache';
+import { logger } from '@/lib/logger';
 
 // Helper function to calculate smart active visitor time window
 function getActiveVisitorWindow(): Date {
@@ -16,6 +18,19 @@ function getActiveVisitorWindow(): Date {
   } else {
     // Night hours: 6 hours window (people browse at night too)
     return new Date(now.getTime() - 6 * 60 * 60 * 1000);
+  }
+}
+
+// Helper function to get time range multiplier for simulator data
+function getTimeRangeMultiplier(timeRange: string): number {
+  switch (timeRange) {
+    case '1h': return 1.2;
+    case '6h': return 2.5;
+    case '12h': return 4.0;
+    case '24h': return 6.0;
+    case '7d': return 15.0;
+    case '30d': return 45.0;
+    default: return 6.0;
   }
 }
 
@@ -82,6 +97,25 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const timeRange = searchParams.get('timeRange') || '24h';
     
+    // Check if simulator is running - if yes, show simulator data
+    let simulatorStatus = null;
+    let useSimulatorData = false;
+    
+    try {
+      const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3030';
+      const simulatorResponse = await fetch(`${baseUrl}/api/leadpulse/simulator?action=status`);
+      simulatorStatus = await simulatorResponse.json();
+      
+      if (simulatorStatus.isRunning) {
+        useSimulatorData = true;
+        logger.info('Simulator running - using simulator data');
+      } else {
+        logger.info('Simulator not running - using database/fallback data');
+      }
+    } catch (error) {
+      logger.warn('Simulator check failed - using database/fallback data');
+    }
+
     // Calculate time cutoff based on timeRange
     const now = new Date();
     let cutoffTime: Date;
@@ -106,30 +140,62 @@ export async function GET(request: NextRequest) {
         cutoffTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     }
 
-    // Get visitor stats for the time period (this should scale with time range)
-    const rawTotalVisitors = await prisma.leadPulseVisitor.count({
-      where: {
-        lastVisit: {
-          gte: cutoffTime
-        }
+    let rawTotalVisitors = 0;
+    let rawActiveVisitors = 0;
+    let activeVisitors = 0;
+    let totalVisitors = 0;
+
+    if (useSimulatorData && simulatorStatus) {
+      // Use simulator data as primary source
+      activeVisitors = simulatorStatus.activeVisitors || 0;
+      
+      // Calculate total visitors based on simulator runtime and activity
+      const simulatorUptimeMs = simulatorStatus.uptime || 0;
+      const simulatorUptimeHours = simulatorUptimeMs / (1000 * 60 * 60);
+      
+      // Estimate total visitors based on simulator activity and time range
+      const baseMultiplier = getTimeRangeMultiplier(timeRange);
+      totalVisitors = Math.max(activeVisitors, Math.floor(activeVisitors * baseMultiplier * (1 + simulatorUptimeHours * 0.1)));
+      
+      logger.info('Using simulator data:', {
+        activeVisitors,
+        totalVisitors,
+        simulatorUptime: simulatorUptimeHours,
+        totalEvents: simulatorStatus.totalEvents
+      });
+    } else {
+      // Fallback to database queries
+      try {
+        rawTotalVisitors = await prisma.leadPulseVisitor.count({
+          where: {
+            lastVisit: {
+              gte: cutoffTime
+            }
+          }
+        });
+
+        // Get raw active visitors using smart window (real-time, independent of time range)
+        const activeVisitorWindow = getActiveVisitorWindow();
+        rawActiveVisitors = await prisma.leadPulseVisitor.count({
+          where: {
+            lastVisit: {
+              gte: activeVisitorWindow
+            }
+          }
+        });
+
+        // Apply business realism to active visitors (real-time metric)
+        activeVisitors = applyBusinessRealism(Math.max(rawActiveVisitors, 1), '2h');
+
+        // Apply business realism to total visitors (time-range dependent)  
+        totalVisitors = applyBusinessRealism(Math.max(rawTotalVisitors, activeVisitors), timeRange);
+      } catch (dbError) {
+        logger.error('Database queries failed, using fallback data:', dbError);
+        // Use fallback realistic data
+        activeVisitors = applyBusinessRealism(15, '2h');
+        totalVisitors = applyBusinessRealism(45, timeRange);
       }
-    });
-
-    // Get raw active visitors using smart window (real-time, independent of time range)
-    const activeVisitorWindow = getActiveVisitorWindow();
-    const rawActiveVisitors = await prisma.leadPulseVisitor.count({
-      where: {
-        lastVisit: {
-          gte: activeVisitorWindow
-        }
-      }
-    });
-
-    // Apply business realism to active visitors (real-time metric)
-    const activeVisitors = applyBusinessRealism(Math.max(rawActiveVisitors, 1), '2h'); // Use 2h baseline for active
-
-    // Apply business realism to total visitors (time-range dependent)  
-    const totalVisitors = applyBusinessRealism(Math.max(rawTotalVisitors, activeVisitors), timeRange);
+    }
 
     // Get engagement stats
     const engagementStats = await prisma.leadPulseVisitor.aggregate({
@@ -339,14 +405,17 @@ export async function GET(request: NextRequest) {
           : 'Unknown Location'
       })),
       metadata: {
+        dataSource: useSimulatorData ? 'simulator' : 'database',
+        simulatorActive: useSimulatorData,
+        simulatorStatus: simulatorStatus,
         rawActiveVisitors,
         enhancedActiveVisitors: activeVisitors,
         rawTotalVisitors,
         enhancedTotalVisitors: totalVisitors,
-        activeVisitorWindow: activeVisitorWindow.toISOString(),
+        activeVisitorWindow: useSimulatorData ? null : getActiveVisitorWindow().toISOString(),
         businessHours: now.getHours() >= 9 && now.getHours() <= 17,
         timeRange,
-        logic: 'Active=RealTime, Total=TimeRangeDependent',
+        logic: useSimulatorData ? 'SimulatorData' : 'Active=RealTime, Total=TimeRangeDependent',
         platformAnalysis: {
           webVisitors,
           mobileAppVisitors,
@@ -425,11 +494,19 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Create touchpoint using raw SQL to avoid type issues
-    await prisma.$executeRaw`
-      INSERT INTO "LeadPulseTouchpoint" (id, "visitorId", timestamp, type, url, title, metadata, value)
-      VALUES (${generateId()}, ${visitor.id}, ${new Date()}, ${type}::"LeadPulseTouchpointType", ${url}, ${title || null}, ${JSON.stringify(metadata || {})}, ${calculateTouchpointValue(type)})
-    `;
+    // Create touchpoint using Prisma create method
+    await prisma.leadPulseTouchpoint.create({
+      data: {
+        id: generateId(),
+        visitorId: visitor.id,
+        timestamp: new Date(),
+        type: type as any, // Cast to avoid type issues
+        url: url,
+        title: title || null,
+        metadata: metadata || {},
+        value: calculateTouchpointValue(type)
+      }
+    });
 
     // Update engagement score
     const newScore = await calculateEngagementScore(visitor.id);

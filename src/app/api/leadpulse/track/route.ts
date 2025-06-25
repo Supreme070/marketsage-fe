@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { generateVisitorFingerprint, trackAnonymousVisitor, recordTouchpoint, updateVisitorEngagement } from '@/lib/leadpulse/visitorTracking';
 import { logger } from '@/lib/logger';
+import { leadPulseRealtimeService } from '@/lib/websocket/leadpulse-realtime';
+import { leadPulseCache } from '@/lib/cache/leadpulse-cache';
 
 // Force dynamic to avoid caching
 export const dynamic = 'force-dynamic';
@@ -54,11 +56,18 @@ export async function POST(request: NextRequest) {
     // Track visitor
     const visitor = await trackAnonymousVisitor(fingerprint, ip, metadata);
     
+    // Check if this is a new visitor and broadcast
+    if (visitor.firstVisit.getTime() === visitor.lastVisit.getTime()) {
+      // New visitor - broadcast to real-time listeners
+      await leadPulseRealtimeService.broadcastNewVisitor(visitor);
+    }
+    
     // Process event based on type
+    let touchpoint: any = null;
     switch (body.eventType) {
       case 'pageview':
         // Record page view touchpoint
-        await recordTouchpoint(visitor.id, body.url, {
+        touchpoint = await recordTouchpoint(visitor.id, body.url, {
           pageTitle: body.title
         }, 'PAGEVIEW');
         
@@ -68,7 +77,7 @@ export async function POST(request: NextRequest) {
         
       case 'click':
         // Record click touchpoint with details
-        await recordTouchpoint(visitor.id, body.url, {
+        touchpoint = await recordTouchpoint(visitor.id, body.url, {
           pageTitle: body.title,
           clickData: body.element
         }, 'CLICK');
@@ -162,6 +171,24 @@ export async function POST(request: NextRequest) {
           ...body
         }, 'PAGEVIEW');
         break;
+    }
+    
+    // Broadcast significant touchpoint activity
+    if (touchpoint && ['CLICK', 'FORM_VIEW', 'FORM_START', 'FORM_SUBMIT'].includes(touchpoint.type)) {
+      await leadPulseRealtimeService.broadcastVisitorActivity(visitor.id, touchpoint);
+    }
+    
+    // Update cache with new visitor/activity data
+    try {
+      await leadPulseCache.addRecentActivity(touchpoint);
+      await leadPulseCache.updateVisitorJourney(visitor.id, touchpoint);
+      
+      // Invalidate analytics cache to refresh metrics
+      if (['FORM_SUBMIT', 'CONVERSION'].includes(body.eventType.toUpperCase())) {
+        await leadPulseCache.invalidateAnalyticsOverview();
+      }
+    } catch (cacheError) {
+      logger.warn('Cache update failed:', cacheError);
     }
     
     logger.info('Processed LeadPulse event', {

@@ -460,6 +460,327 @@ Success Milestones:
 - Month 6: 4x marketing ROI achieved`,
     tags: ['getting-started', 'setup', 'onboarding', 'guide', 'milestones'],
     priority: 9
+  },
+
+  // LEADPULSE COMPREHENSIVE KNOWLEDGE
+  {
+    id: 'leadpulse-advanced-features',
+    category: 'leadpulse',
+    title: 'LeadPulse Advanced Features and AI Intelligence',
+    content: `LeadPulse is MarketSage's flagship visitor intelligence system, powered by Supreme AI v3 for advanced insights and predictions.
+
+Core AI Features:
+- Real-time visitor behavior analysis with Supreme AI scoring
+- Conversion probability prediction (up to 85% accuracy)
+- Advanced visitor segmentation using machine learning
+- Behavioral pattern recognition and classification
+- Journey mapping with intent prediction
+- Geographic intelligence for African markets
+
+AI-Powered Analytics:
+1. Business Intelligence Overview
+   - Automated insights generation every hour
+   - Performance trend analysis with predictions
+   - Revenue attribution by visitor segments
+   - Opportunity identification and recommendations
+   - Supreme score calculation (0-100 scale)
+
+2. Visitor Behavior Analysis
+   - Real-time engagement tracking
+   - Session duration and page depth analysis
+   - Form interaction monitoring
+   - Exit intent detection
+   - Device and platform analytics
+
+3. Performance Predictions
+   - Traffic forecasting (7-90 day outlook)
+   - Conversion rate predictions
+   - Revenue projections by segment
+   - Engagement trend analysis
+   - Anomaly detection for unusual patterns
+
+4. Funnel Optimization
+   - Drop-off point identification
+   - Conversion bottleneck analysis
+   - A/B test recommendations
+   - Page optimization suggestions
+   - Flow improvement strategies
+
+5. Smart Segmentation
+   - Behavior-based visitor groups
+   - Value-based segmentation
+   - Engagement level classification
+   - Geographic clustering
+   - Intent-based categorization
+
+Setup and Configuration:
+1. Install LeadPulse tracking script
+2. Configure visitor scoring parameters
+3. Set up geographic targeting rules
+4. Define conversion goals and events
+5. Establish alert thresholds
+6. Create automation triggers
+
+African Market Optimizations:
+- Nigerian diaspora tracking capabilities
+- Cross-border remittance intent detection
+- Mobile-first visitor analysis
+- Offline-to-online behavior mapping
+- Family purchase decision modeling`,
+    tags: ['leadpulse', 'ai-intelligence', 'visitor-tracking', 'predictions', 'supreme-ai', 'analytics'],
+    priority: 10
+  },
+
+  {
+    id: 'leadpulse-dashboard-guide',
+    category: 'leadpulse',
+    title: 'LeadPulse Dashboard Complete Guide',
+    content: `The LeadPulse Dashboard provides comprehensive visitor intelligence through multiple views and real-time analytics.
+
+Dashboard Sections:
+
+1. Live Visitor Map
+   - Real-time visitor locations worldwide
+   - Active session monitoring
+   - Geographic heat mapping
+   - Visitor count by region
+   - Click-to-zoom functionality
+
+2. Visitor Intelligence Tab
+   - Active visitor count and trends
+   - Platform breakdown (Web, Mobile, React Native)
+   - Conversion rate analytics
+   - Session quality scores
+   - Engagement level distribution
+
+3. Journey Visualization
+   - Complete visitor path tracking
+   - Page-by-page navigation flow
+   - Time spent analysis
+   - Drop-off point identification
+   - Conversion funnel visualization
+
+4. AI Intelligence Dashboard
+   - Supreme AI-powered insights
+   - Automated recommendations
+   - Performance predictions
+   - Visitor behavior analysis
+   - Smart segmentation results
+
+Key Metrics Explained:
+- Active Visitors: Currently browsing users
+- Intent Score: 0-100 likelihood of conversion
+- Engagement Level: LOW/MEDIUM/HIGH/VERY_HIGH
+- Session Quality: Based on duration, pages, interactions
+- Conversion Probability: ML-predicted likelihood
+
+Time Range Filters:
+- 24 hours: Real-time and recent activity
+- 7 days: Weekly trends and patterns
+- 30 days: Monthly performance analysis
+- 90 days: Quarterly insights and forecasting
+
+Advanced Filtering Options:
+- Engagement level (all/low/medium/high)
+- Device type (all/desktop/mobile/tablet)
+- Location (country/state/city)
+- Visitor status (new/returning/converted)
+- Traffic source (organic/paid/social/direct)
+
+Export and Reporting:
+- CSV export for all visitor data
+- PDF reports for stakeholder sharing
+- Automated email reports
+- Real-time dashboard embedding
+- API access for custom integrations`,
+    tags: ['leadpulse', 'dashboard', 'analytics', 'real-time', 'visitor-tracking', 'reporting'],
+    priority: 9
+  },
+
+  {
+    id: 'leadpulse-integration-supreme-ai',
+    category: 'leadpulse',
+    title: 'LeadPulse Integration with Supreme AI v3',
+    content: `LeadPulse leverages Supreme AI v3 engine for enhanced intelligence and automated insights generation.
+
+Supreme AI v3 Integration Features:
+
+1. Intelligent Task Processing
+   - leadpulse_insights: Business intelligence generation
+   - leadpulse_predict: Performance forecasting
+   - leadpulse_optimize: Conversion optimization
+   - leadpulse_visitors: Behavior analysis
+   - leadpulse_segments: Smart categorization
+
+2. RAG Engine Knowledge
+   - LeadPulse knowledge base integration
+   - Contextual visitor insights
+   - Historical pattern analysis
+   - Best practice recommendations
+   - Industry-specific guidance
+
+3. AutoML Predictions
+   - Visitor conversion probability
+   - Session value estimation
+   - Churn risk assessment
+   - Engagement prediction
+   - Revenue forecasting
+
+4. Memory Engine Context
+   - Visitor history tracking
+   - Behavioral pattern memory
+   - Cross-session analytics
+   - Long-term trend analysis
+   - Personalized insights
+
+API Integration Examples:
+
+Business Intelligence:
+GET /api/leadpulse/ai/intelligence?type=overview&timeRange=30d
+- Returns comprehensive insights
+- Supreme score calculation
+- Automated recommendations
+- Performance metrics
+
+Visitor Analysis:
+GET /api/leadpulse/ai/intelligence?type=visitor-behavior&visitorId={id}
+- Individual visitor profiles
+- Behavior pattern analysis
+- Conversion probability
+- Recommended actions
+
+Performance Predictions:
+GET /api/leadpulse/ai/intelligence?type=predictions&predictionType=TRAFFIC&timeframe=30
+- Traffic forecasting
+- Trend analysis
+- Confidence scoring
+- Actionable insights
+
+Funnel Optimization:
+GET /api/leadpulse/ai/intelligence?type=funnel-optimization&formId={id}
+- Conversion bottleneck analysis
+- Optimization recommendations
+- Expected impact calculations
+- Implementation priorities
+
+Smart Segmentation:
+GET /api/leadpulse/ai/intelligence?type=smart-segments&behaviorBased=true
+- Automated visitor categorization
+- Segment performance analysis
+- Growth opportunities
+- Targeting recommendations
+
+Best Practices:
+- Review AI insights daily
+- Act on high-confidence recommendations
+- Monitor Supreme scores for trends
+- Use predictions for planning
+- Implement suggested optimizations`,
+    tags: ['leadpulse', 'supreme-ai-v3', 'integration', 'api', 'rag-engine', 'automl', 'memory'],
+    priority: 10
+  },
+
+  {
+    id: 'leadpulse-troubleshooting',
+    category: 'leadpulse',
+    title: 'LeadPulse Troubleshooting and Common Issues',
+    content: `Common LeadPulse issues and their solutions for optimal visitor tracking performance.
+
+Tracking Issues:
+
+1. No Visitors Showing
+   - Verify tracking code installation
+   - Check script placement in <head> tag
+   - Confirm domain whitelist settings
+   - Test with incognito/private browsing
+   - Review firewall and ad-blocker settings
+
+2. Incomplete Visitor Data
+   - Check geographic IP database updates
+   - Verify third-party script conflicts
+   - Review privacy settings and consent
+   - Confirm HTTPS certificate validity
+   - Test cross-domain tracking setup
+
+3. AI Intelligence Not Loading
+   - Verify Supreme AI v3 engine status
+   - Check API rate limiting
+   - Review user permissions
+   - Confirm database connectivity
+   - Test with minimal data set
+
+Performance Issues:
+
+1. Slow Dashboard Loading
+   - Clear browser cache and cookies
+   - Check internet connection speed
+   - Verify server performance metrics
+   - Review time range selections
+   - Optimize query parameters
+
+2. Real-time Updates Delayed
+   - Check WebSocket connection
+   - Verify server-sent events
+   - Review network latency
+   - Confirm browser compatibility
+   - Test with different browsers
+
+Data Quality Issues:
+
+1. Inaccurate Visitor Counts
+   - Review bot detection settings
+   - Check session timeout configuration
+   - Verify unique visitor identification
+   - Review data retention policies
+   - Confirm timezone settings
+
+2. Wrong Geographic Data
+   - Update IP geolocation database
+   - Verify VPN/proxy detection
+   - Check regional IP assignments
+   - Review location override settings
+   - Confirm accuracy thresholds
+
+AI Prediction Issues:
+
+1. Low Confidence Scores
+   - Increase data collection period
+   - Verify feature completeness
+   - Review model training data
+   - Check prediction parameters
+   - Update algorithm weights
+
+2. Inconsistent Recommendations
+   - Review input data quality
+   - Verify algorithm parameters
+   - Check for data drift
+   - Update model training
+   - Review feedback loops
+
+Integration Problems:
+
+1. API Connectivity Issues
+   - Verify authentication credentials
+   - Check endpoint availability
+   - Review rate limiting status
+   - Confirm data format compliance
+   - Test with minimal requests
+
+2. Webhook Failures
+   - Verify endpoint accessibility
+   - Check SSL certificate validity
+   - Review payload format
+   - Confirm retry mechanisms
+   - Test with sample data
+
+Support Resources:
+- LeadPulse Status Page: Check system status
+- Developer Documentation: API reference
+- Community Forum: User discussions
+- Support Tickets: Direct assistance
+- Video Tutorials: Step-by-step guides`,
+    tags: ['leadpulse', 'troubleshooting', 'tracking', 'performance', 'ai-intelligence', 'support'],
+    priority: 8
   }
 ];
 

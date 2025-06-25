@@ -82,11 +82,11 @@ export function generateMockVisitorData(): VisitorJourney[] {
       engagementScore: 72,
       lastActive: '2 mins ago',
       pulseData: [
-        { timestamp: '2023-05-17T14:00:00Z', value: 1, type: 'pageview', url: '/home', title: 'Home Page' },
-        { timestamp: '2023-05-17T14:01:30Z', value: 2, type: 'click', url: '/products', title: 'Products Page' },
-        { timestamp: '2023-05-17T14:03:00Z', value: 1, type: 'pageview', url: '/products/1', title: 'Product Detail' },
-        { timestamp: '2023-05-17T14:05:00Z', value: 3, type: 'form_interaction', url: '/contact', title: 'Contact Form' },
-        { timestamp: '2023-05-17T14:07:00Z', value: 5, type: 'conversion', url: '/checkout', title: 'Checkout' }
+        { timestamp: '2023-05-17T14:00:00Z', value: 1, type: 'pageview', url: '/home', title: 'TechFlow Solutions - Home' },
+        { timestamp: '2023-05-17T14:01:30Z', value: 2, type: 'click', url: '/solutions', title: 'TechFlow Solutions - AI Services' },
+        { timestamp: '2023-05-17T14:03:00Z', value: 1, type: 'pageview', url: '/solutions/ai-intelligence', title: 'AI Intelligence Platform' },
+        { timestamp: '2023-05-17T14:05:00Z', value: 3, type: 'form_interaction', url: '/contact', title: 'Contact TechFlow' },
+        { timestamp: '2023-05-17T14:07:00Z', value: 5, type: 'conversion', url: '/demo-booking', title: 'Book TechFlow Demo' }
       ]
     },
     {
@@ -99,10 +99,10 @@ export function generateMockVisitorData(): VisitorJourney[] {
       engagementScore: 45,
       lastActive: '5 mins ago',
       pulseData: [
-        { timestamp: '2023-05-17T13:50:00Z', value: 1, type: 'pageview', url: '/home', title: 'Home Page' },
-        { timestamp: '2023-05-17T13:52:00Z', value: 1, type: 'pageview', url: '/about', title: 'About Us' },
-        { timestamp: '2023-05-17T13:55:00Z', value: 2, type: 'click', url: '/team', title: 'Our Team' },
-        { timestamp: '2023-05-17T13:59:00Z', value: 1, type: 'pageview', url: '/blog', title: 'Blog' }
+        { timestamp: '2023-05-17T13:50:00Z', value: 1, type: 'pageview', url: '/home', title: 'TechFlow Solutions - Home' },
+        { timestamp: '2023-05-17T13:52:00Z', value: 1, type: 'pageview', url: '/about', title: 'About TechFlow Solutions' },
+        { timestamp: '2023-05-17T13:55:00Z', value: 2, type: 'click', url: '/team', title: 'TechFlow Team' },
+        { timestamp: '2023-05-17T13:59:00Z', value: 1, type: 'pageview', url: '/blog', title: 'TechFlow AI Insights Blog' }
       ]
     },
     {
@@ -115,16 +115,16 @@ export function generateMockVisitorData(): VisitorJourney[] {
       engagementScore: 63,
       lastActive: '12 mins ago',
       pulseData: [
-        { timestamp: '2023-05-17T13:40:00Z', value: 1, type: 'pageview', url: '/home', title: 'Home Page' },
-        { timestamp: '2023-05-17T13:42:00Z', value: 2, type: 'click', url: '/products', title: 'Products Page' },
-        { timestamp: '2023-05-17T13:44:00Z', value: 1, type: 'pageview', url: '/products/2', title: 'Product Detail' },
-        { timestamp: '2023-05-17T13:46:00Z', value: 3, type: 'form_interaction', url: '/contact', title: 'Contact Form' }
+        { timestamp: '2023-05-17T13:40:00Z', value: 1, type: 'pageview', url: '/home', title: 'TechFlow Solutions - Home' },
+        { timestamp: '2023-05-17T13:42:00Z', value: 2, type: 'click', url: '/solutions', title: 'TechFlow AI Solutions' },
+        { timestamp: '2023-05-17T13:44:00Z', value: 1, type: 'pageview', url: '/solutions/leadpulse', title: 'LeadPulse Analytics by TechFlow' },
+        { timestamp: '2023-05-17T13:46:00Z', value: 3, type: 'form_interaction', url: '/contact', title: 'Contact TechFlow' }
       ]
     },
-    // Male from Lagos, Nigeria - Social Media Marketing focus
+    // Nigerian Enterprise CEO - AI Analytics focus
     {
-      id: 'lagos_male',
-      visitorId: 'lagos_male',
+      id: 'lagos_ceo',
+      visitorId: 'lagos_ceo',
       fingerprint: 'fp24680acegi13579',
       location: 'Lagos, Nigeria',
       device: 'Mobile, Chrome',
@@ -132,18 +132,18 @@ export function generateMockVisitorData(): VisitorJourney[] {
       engagementScore: 89,
       lastActive: '1 hour ago',
       pulseData: [
-        { timestamp: '2023-05-18T09:15:00Z', value: 1, type: 'pageview', url: '/home', title: 'Home Page' },
-        { timestamp: '2023-05-18T09:16:00Z', value: 2, type: 'click', url: '/services', title: 'Our Services' },
-        { timestamp: '2023-05-18T09:18:30Z', value: 1, type: 'pageview', url: '/services/social-media-marketing', title: 'Social Media Marketing Services' },
-        { timestamp: '2023-05-18T09:29:00Z', value: 1, type: 'pageview', url: '/pricing', title: 'Service Pricing' },
-        { timestamp: '2023-05-18T09:36:00Z', value: 4, type: 'form_interaction', url: '/contact', title: 'Contact Form' },
-        { timestamp: '2023-05-18T10:22:00Z', value: 5, type: 'conversion', url: '/demo-booking-confirmed', title: 'Demo Booking Confirmation' }
+        { timestamp: '2023-05-18T09:15:00Z', value: 1, type: 'pageview', url: '/home', title: 'TechFlow Solutions - Home' },
+        { timestamp: '2023-05-18T09:16:00Z', value: 2, type: 'click', url: '/solutions', title: 'TechFlow AI Solutions' },
+        { timestamp: '2023-05-18T09:18:30Z', value: 1, type: 'pageview', url: '/solutions/ai-intelligence', title: 'AI Intelligence Platform' },
+        { timestamp: '2023-05-18T09:29:00Z', value: 1, type: 'pageview', url: '/pricing', title: 'TechFlow Pricing - Nigerian Market' },
+        { timestamp: '2023-05-18T09:36:00Z', value: 4, type: 'form_interaction', url: '/contact', title: 'Contact TechFlow Sales' },
+        { timestamp: '2023-05-18T10:22:00Z', value: 5, type: 'conversion', url: '/enterprise-demo-confirmed', title: 'TechFlow Enterprise Demo Confirmed' }
       ]
     },
-    // Female from South Africa - Email Marketing & Automation focus
+    // South African Startup Founder - AI Analytics & Automation focus
     {
-      id: 'southafrica_female',
-      visitorId: 'southafrica_female',
+      id: 'capetown_founder',
+      visitorId: 'capetown_founder',
       fingerprint: 'fp97531zxcvb24680',
       location: 'Cape Town, South Africa',
       device: 'Desktop, Firefox',
@@ -151,18 +151,18 @@ export function generateMockVisitorData(): VisitorJourney[] {
       engagementScore: 76,
       lastActive: '3 hours ago',
       pulseData: [
-        { timestamp: '2023-05-17T16:40:00Z', value: 1, type: 'pageview', url: '/home', title: 'Home Page' },
-        { timestamp: '2023-05-17T16:44:40Z', value: 3, type: 'pageview', url: '/blog/email-automation-trends-2023', title: 'Email Automation Trends 2023' },
-        { timestamp: '2023-05-17T16:55:20Z', value: 2, type: 'pageview', url: '/services/email-marketing', title: 'Email Marketing Services' },
-        { timestamp: '2023-05-17T17:01:50Z', value: 4, type: 'form_interaction', url: '/resources/download-guide', title: 'Download Email Marketing Guide' },
-        { timestamp: '2023-05-19T14:30:00Z', value: 1, type: 'pageview', url: '/pricing', title: 'Service Pricing' },
-        { timestamp: '2023-05-19T14:35:50Z', value: 5, type: 'conversion', url: '/trial-signup', title: 'Free Trial Sign-up' }
+        { timestamp: '2023-05-17T16:40:00Z', value: 1, type: 'pageview', url: '/home', title: 'TechFlow Solutions - Home' },
+        { timestamp: '2023-05-17T16:44:40Z', value: 3, type: 'pageview', url: '/blog/ai-analytics-trends-africa-2023', title: 'AI Analytics Trends in Africa 2023' },
+        { timestamp: '2023-05-17T16:55:20Z', value: 2, type: 'pageview', url: '/solutions/leadpulse', title: 'LeadPulse Analytics Platform' },
+        { timestamp: '2023-05-17T17:01:50Z', value: 4, type: 'form_interaction', url: '/resources/download-guide', title: 'Download AI Analytics Guide' },
+        { timestamp: '2023-05-19T14:30:00Z', value: 1, type: 'pageview', url: '/pricing', title: 'TechFlow Pricing - African Markets' },
+        { timestamp: '2023-05-19T14:35:50Z', value: 5, type: 'conversion', url: '/trial-signup', title: 'TechFlow Free Trial Sign-up' }
       ]
     },
-    // Organization from Kenya - Enterprise Marketing Solutions focus
+    // Kenyan Bank CTO - Enterprise AI Solutions focus
     {
-      id: 'kenya_organization',
-      visitorId: 'kenya_organization',
+      id: 'nairobi_bank_cto',
+      visitorId: 'nairobi_bank_cto',
       fingerprint: 'fp86420qwerty97531',
       location: 'Nairobi, Kenya',
       device: 'Desktop, Chrome',
@@ -170,13 +170,13 @@ export function generateMockVisitorData(): VisitorJourney[] {
       engagementScore: 92,
       lastActive: '2 days ago',
       pulseData: [
-        { timestamp: '2023-05-16T11:00:00Z', value: 1, type: 'pageview', url: '/home', title: 'Home Page' },
-        { timestamp: '2023-05-16T11:04:30Z', value: 2, type: 'pageview', url: '/enterprise', title: 'Enterprise Solutions' },
-        { timestamp: '2023-05-16T11:13:40Z', value: 3, type: 'pageview', url: '/case-studies/east-africa', title: 'East African Enterprise Case Studies' },
-        { timestamp: '2023-05-16T11:36:50Z', value: 4, type: 'form_interaction', url: '/enterprise-demo', title: 'Request Enterprise Demo' },
-        { timestamp: '2023-05-18T09:33:30Z', value: 3, type: 'pageview', url: '/resources/white-papers/african-market-analysis', title: 'African Market Analysis 2023' },
-        { timestamp: '2023-05-18T09:56:20Z', value: 4, type: 'form_interaction', url: '/contact', title: 'Contact Form' },
-        { timestamp: '2023-05-20T14:00:00Z', value: 5, type: 'conversion', url: '/enterprise-subscription', title: 'Enterprise Subscription Confirmation' }
+        { timestamp: '2023-05-16T11:00:00Z', value: 1, type: 'pageview', url: '/home', title: 'TechFlow Solutions - Home' },
+        { timestamp: '2023-05-16T11:04:30Z', value: 2, type: 'pageview', url: '/enterprise', title: 'TechFlow Enterprise AI Solutions' },
+        { timestamp: '2023-05-16T11:13:40Z', value: 3, type: 'pageview', url: '/case-studies/african-banks', title: 'African Banking AI Case Studies' },
+        { timestamp: '2023-05-16T11:36:50Z', value: 4, type: 'form_interaction', url: '/enterprise-demo', title: 'Request TechFlow Enterprise Demo' },
+        { timestamp: '2023-05-18T09:33:30Z', value: 3, type: 'pageview', url: '/resources/white-papers/ai-banking-africa', title: 'AI in African Banking 2023' },
+        { timestamp: '2023-05-18T09:56:20Z', value: 4, type: 'form_interaction', url: '/contact', title: 'Contact TechFlow Enterprise' },
+        { timestamp: '2023-05-20T14:00:00Z', value: 5, type: 'conversion', url: '/enterprise-subscription', title: 'TechFlow Enterprise AI Subscription' }
       ]
     }
   ];
@@ -298,60 +298,60 @@ export function generateMockInsightData(): InsightItem[] {
     {
       id: 'i1',
       type: 'behavior',
-      title: 'High bounce rate on pricing page',
-      description: 'Visitors are leaving the pricing page without taking action. Consider simplifying the pricing structure or adding more clear calls-to-action.',
+      title: 'High engagement on TechFlow AI Intelligence page',
+      description: 'Nigerian enterprises are spending 3x more time on the AI Intelligence platform page, indicating strong market interest.',
       importance: 'high',
       metric: {
-        label: 'Bounce Rate',
-        value: 68.5,
-        format: 'percentage',
-        change: 12.3
+        label: 'Avg. Session Duration',
+        value: 4.2,
+        format: 'number',
+        change: 25.8
       },
-      recommendation: 'Add testimonials or case studies near pricing to build confidence.',
+      recommendation: 'Add WhatsApp contact button and Nigerian payment methods to capitalize on interest.',
       createdAt: '2023-05-16T12:00:00Z'
     },
     {
       id: 'i2',
       type: 'opportunity',
-      title: 'Form conversion opportunity',
-      description: 'Your contact form has a higher than average view-to-submission ratio. This represents a good opportunity to capture more leads.',
+      title: 'African market WhatsApp preference',
+      description: 'TechFlow visitors from Nigeria, Kenya, and South Africa show 60% higher engagement when WhatsApp contact is available.',
       importance: 'medium',
       metric: {
-        label: 'Form Conversion',
-        value: 18.2,
+        label: 'WhatsApp Engagement',
+        value: 60.3,
         format: 'percentage',
-        change: 3.5
+        change: 18.7
       },
-      recommendation: 'Simplify the form by reducing required fields to essential information only.',
+      recommendation: 'Integrate WhatsApp Business API across all TechFlow solution pages.',
       createdAt: '2023-05-16T10:30:00Z'
     },
     {
       id: 'i3',
       type: 'prediction',
-      title: 'Revenue forecast increase',
-      description: 'Based on current visitor engagement patterns, we predict a significant increase in conversion value for the next period.',
+      title: 'TechFlow Enterprise deals forecasted',
+      description: 'AI analysis predicts 3 enterprise clients from Nigeria and Kenya will convert within 30 days based on engagement patterns.',
       importance: 'medium',
       metric: {
-        label: 'Predicted Revenue',
-        value: 12500,
+        label: 'Predicted Revenue (₦)',
+        value: 850000,
         format: 'currency',
-        change: 8.2
+        change: 32.4
       },
       createdAt: '2023-05-15T16:45:00Z'
     },
     {
       id: 'i4',
       type: 'trend',
-      title: 'Mobile traffic growth',
-      description: 'Mobile visitors have increased significantly over the past month, now representing the majority of your traffic.',
+      title: 'African fintech interest surge',
+      description: 'TechFlow AI solutions show 45% increased interest from African fintech companies seeking intelligent analytics.',
       importance: 'low',
       metric: {
-        label: 'Mobile Traffic',
-        value: 62.8,
+        label: 'Fintech Traffic',
+        value: 45.2,
         format: 'percentage',
-        change: 15.4
+        change: 28.6
       },
-      recommendation: 'Ensure all critical pages and forms are optimized for mobile devices.',
+      recommendation: 'Create dedicated TechFlow fintech case studies and African payment integration guides.',
       createdAt: '2023-05-14T09:15:00Z'
     }
   ];
@@ -364,38 +364,38 @@ export function generateMockSegmentData(): VisitorSegment[] {
   return [
     {
       id: 's1',
-      name: 'High-Value Prospects',
-      count: 124,
-      percentage: 28.5,
-      key: 'high_value'
+      name: 'Nigerian Enterprise Clients',
+      count: 89,
+      percentage: 32.1,
+      key: 'nigerian_enterprise'
     },
     {
       id: 's2',
-      name: 'First-Time Visitors',
-      count: 215,
-      percentage: 49.4,
-      key: 'first_time'
+      name: 'African Fintech Startups',
+      count: 67,
+      percentage: 24.2,
+      key: 'african_fintech'
     },
     {
       id: 's3',
-      name: 'Repeat Visitors',
-      count: 87,
-      percentage: 20.0,
-      key: 'repeat'
+      name: 'AI Intelligence Prospects',
+      count: 134,
+      percentage: 48.4,
+      key: 'ai_prospects'
     },
     {
       id: 's4',
-      name: 'Cart Abandoners',
-      count: 42,
-      percentage: 9.7,
-      key: 'cart_abandon'
+      name: 'TechFlow Demo Attendees',
+      count: 52,
+      percentage: 18.8,
+      key: 'demo_attendees'
     },
     {
       id: 's5',
-      name: 'Newsletter Subscribers',
-      count: 156,
-      percentage: 35.9,
-      key: 'newsletter'
+      name: 'LeadPulse Trial Users',
+      count: 78,
+      percentage: 28.2,
+      key: 'leadpulse_users'
     }
   ];
 } 

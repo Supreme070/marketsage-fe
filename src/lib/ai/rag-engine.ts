@@ -106,7 +106,9 @@ async function generateAnswerFromContext(question: string, context: string): Pro
     }
 
     // Generate answer based on the question type
-    if (isSetupQuestion(question)) {
+    if (isLeadPulseQuestion(question)) {
+      return generateLeadPulseAnswer(question, context);
+    } else if (isSetupQuestion(question)) {
       return generateSetupAnswer(question, context);
     } else if (isTroubleshootingQuestion(question)) {
       return generateTroubleshootingAnswer(question, context);
@@ -137,6 +139,15 @@ function isFeaturesQuestion(question: string): boolean {
   return featureKeywords.some(keyword => question.toLowerCase().includes(keyword));
 }
 
+function isLeadPulseQuestion(question: string): boolean {
+  const leadpulseKeywords = [
+    'leadpulse', 'lead pulse', 'visitor tracking', 'visitor intelligence', 
+    'live visitors', 'visitor map', 'visitor analytics', 'visitor behavior',
+    'visitor insights', 'visitor dashboard', 'visitor journey', 'visitor data'
+  ];
+  return leadpulseKeywords.some(keyword => question.toLowerCase().includes(keyword));
+}
+
 function generateSetupAnswer(question: string, context: string): string {
   const steps = extractStepsFromContext(context);
   if (steps.length > 0) {
@@ -157,6 +168,30 @@ function generateTroubleshootingAnswer(question: string, context: string): strin
 
 function generateFeaturesAnswer(question: string, context: string): string {
   return `MarketSage provides comprehensive capabilities for this. ${context.slice(0, 400)}...\n\nYou can access this feature through your MarketSage dashboard. For a complete walkthrough, check the AI Intelligence Center or use the in-app help system.`;
+}
+
+function generateLeadPulseAnswer(question: string, context: string): string {
+  // Extract LeadPulse-specific features and capabilities from context
+  const features = extractLeadPulseFeatures(context);
+  const apiEndpoints = extractLeadPulseApiInfo(context);
+  
+  let answer = `LeadPulse is MarketSage's advanced visitor intelligence system powered by Supreme AI v3. `;
+  
+  if (question.toLowerCase().includes('dashboard') || question.toLowerCase().includes('interface')) {
+    answer += `The LeadPulse Dashboard provides:\n\n• Live Visitor Map with real-time tracking\n• AI Intelligence insights with Supreme scoring\n• Journey visualization and conversion analysis\n• Advanced filtering and segmentation\n• Export capabilities and automated reporting\n\n`;
+  } else if (question.toLowerCase().includes('ai') || question.toLowerCase().includes('intelligence')) {
+    answer += `LeadPulse integrates with Supreme AI v3 for:\n\n• Automated business intelligence generation\n• Visitor behavior prediction (85% accuracy)\n• Conversion probability scoring\n• Smart segmentation and recommendations\n• Real-time anomaly detection\n\n`;
+  } else if (question.toLowerCase().includes('api') || question.toLowerCase().includes('integration')) {
+    answer += `LeadPulse API Integration:\n\n• /api/leadpulse/ai/intelligence - AI-powered insights\n• Real-time visitor behavior analysis\n• Performance predictions and forecasting\n• Funnel optimization recommendations\n• Smart segmentation and targeting\n\n`;
+  } else if (question.toLowerCase().includes('setup') || question.toLowerCase().includes('install')) {
+    answer += `LeadPulse Setup Process:\n\n1. Install tracking script on your website\n2. Configure visitor scoring parameters\n3. Set up geographic targeting rules\n4. Define conversion goals and events\n5. Create automation triggers\n6. Monitor dashboard for insights\n\n`;
+  } else {
+    answer += `${context.slice(0, 400)}...\n\n`;
+  }
+  
+  answer += `Access LeadPulse through Dashboard → LeadPulse or chat with Supreme-AI for personalized assistance with visitor intelligence.`;
+  
+  return answer;
 }
 
 function generateGeneralAnswer(question: string, context: string): string {
@@ -189,6 +224,36 @@ function extractSolutionsFromContext(context: string): string[] {
   return solutions.slice(0, 8); // Limit to 8 solutions
 }
 
+function extractLeadPulseFeatures(context: string): string[] {
+  const lines = context.split('\n');
+  const features: string[] = [];
+  
+  for (const line of lines) {
+    if (line.includes('- ') && (
+      line.includes('tracking') || line.includes('analysis') || 
+      line.includes('prediction') || line.includes('intelligence') ||
+      line.includes('segmentation') || line.includes('optimization')
+    )) {
+      features.push(line.trim().replace('- ', ''));
+    }
+  }
+  
+  return features.slice(0, 10);
+}
+
+function extractLeadPulseApiInfo(context: string): string[] {
+  const lines = context.split('\n');
+  const apiInfo: string[] = [];
+  
+  for (const line of lines) {
+    if (line.includes('/api/leadpulse') || line.includes('GET ') || line.includes('POST ')) {
+      apiInfo.push(line.trim());
+    }
+  }
+  
+  return apiInfo.slice(0, 8);
+}
+
 function calculateConfidence(question: string, docs: Document[]): number {
   if (docs.length === 0) return 0.3;
   
@@ -199,6 +264,14 @@ function calculateConfidence(question: string, docs: Document[]): number {
     doc.metadata?.source === 'marketsage-knowledge'
   );
   if (hasMarketSageKnowledge) confidence += 0.3;
+  
+  // Extra boost for LeadPulse-specific knowledge
+  const isLeadPulseQuery = isLeadPulseQuestion(question);
+  const hasLeadPulseKnowledge = docs.some(doc => 
+    doc.text.toLowerCase().includes('leadpulse') ||
+    doc.metadata?.category === 'leadpulse'
+  );
+  if (isLeadPulseQuery && hasLeadPulseKnowledge) confidence += 0.2;
   
   // Boost for multiple relevant docs
   if (docs.length >= 3) confidence += 0.1;
@@ -214,6 +287,10 @@ function calculateConfidence(question: string, docs: Document[]): number {
 }
 
 function generateFallbackResponse(question: string): string {
+  if (isLeadPulseQuestion(question)) {
+    return `I'd be happy to help you with LeadPulse! LeadPulse is MarketSage's advanced visitor intelligence system powered by Supreme AI v3. You can access LeadPulse through Dashboard → LeadPulse to view real-time visitor analytics, AI insights, and conversion predictions. For specific LeadPulse questions, try asking about features, setup, dashboard usage, or API integration.`;
+  }
+  
   if (question.toLowerCase().includes('marketsage')) {
     return `I'd be happy to help you with MarketSage! While I'm still processing your specific question, you can find comprehensive information in your MarketSage dashboard under the AI Intelligence Center, or you can access our help documentation. For immediate assistance, try rephrasing your question or contact our support team.`;
   }

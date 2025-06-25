@@ -22,13 +22,106 @@ type VisitorData = {
   visitCount: number;
 };
 
+// Generate visitor locations based on simulator state
+async function getSimulatorLocations(simulatorStatus: any): Promise<VisitorLocation[]> {
+  const activeVisitors = simulatorStatus.activeVisitors || 0;
+  
+  // Nigerian cities for realistic simulation
+  const nigerianCities = [
+    { city: 'Lagos', country: 'Nigeria', lat: 6.5244, lng: 3.3792, weight: 0.35 },
+    { city: 'Abuja', country: 'Nigeria', lat: 9.0765, lng: 7.3986, weight: 0.20 },
+    { city: 'Kano', country: 'Nigeria', lat: 11.5004, lng: 8.5200, weight: 0.12 },
+    { city: 'Ibadan', country: 'Nigeria', lat: 7.3775, lng: 3.9470, weight: 0.10 },
+    { city: 'Port Harcourt', country: 'Nigeria', lat: 4.7719, lng: 6.7593, weight: 0.08 },
+    { city: 'Benin City', country: 'Nigeria', lat: 6.3350, lng: 5.6037, weight: 0.05 },
+    { city: 'Kaduna', country: 'Nigeria', lat: 10.5105, lng: 7.4165, weight: 0.04 },
+    { city: 'Enugu', country: 'Nigeria', lat: 6.4474, lng: 7.4983, weight: 0.03 },
+    { city: 'Jos', country: 'Nigeria', lat: 9.8965, lng: 8.8583, weight: 0.02 },
+    { city: 'Owerri', country: 'Nigeria', lat: 5.4840, lng: 7.0351, weight: 0.01 }
+  ];
+
+  const locations: VisitorLocation[] = [];
+  
+  // Distribute active visitors across cities based on weights
+  let remainingVisitors = activeVisitors;
+  
+  nigerianCities.forEach((cityData, index) => {
+    if (remainingVisitors <= 0) return;
+    
+    const isLastCity = index === nigerianCities.length - 1;
+    let visitorsForCity = isLastCity 
+      ? remainingVisitors 
+      : Math.floor(activeVisitors * cityData.weight);
+    
+    if (visitorsForCity > 0) {
+      const activeVisitorsForCity = Math.max(1, Math.floor(visitorsForCity * 0.7)); // 70% are active
+      
+      locations.push({
+        id: `sim_loc_${cityData.city.toLowerCase().replace(/\s/g, '_')}`,
+        city: cityData.city,
+        country: cityData.country,
+        isActive: true,
+        lastActive: 'just now',
+        visitCount: visitorsForCity,
+        latitude: cityData.lat,
+        longitude: cityData.lng
+      });
+      
+      remainingVisitors -= visitorsForCity;
+    }
+  });
+
+  // Add a few international locations for realism
+  if (activeVisitors > 20) {
+    const internationalCities = [
+      { city: 'Accra', country: 'Ghana', lat: 5.6037, lng: -0.1870 },
+      { city: 'Nairobi', country: 'Kenya', lat: -1.2921, lng: 36.8219 },
+      { city: 'Cape Town', country: 'South Africa', lat: -33.9249, lng: 18.4241 }
+    ];
+    
+    internationalCities.forEach(cityData => {
+      const visitorsForCity = Math.floor(Math.random() * 3) + 1; // 1-3 visitors
+      locations.push({
+        id: `sim_loc_${cityData.city.toLowerCase().replace(/\s/g, '_')}`,
+        city: cityData.city,
+        country: cityData.country,
+        isActive: Math.random() > 0.5,
+        lastActive: Math.random() > 0.5 ? 'just now' : `${Math.floor(Math.random() * 30) + 1} min ago`,
+        visitCount: visitorsForCity,
+        latitude: cityData.lat,
+        longitude: cityData.lng
+      });
+    });
+  }
+
+  return locations;
+}
+
 export async function GET(request: Request) {
   try {
     // Get query parameters
     const { searchParams } = new URL(request.url);
     const timeRange = searchParams.get('timeRange') || '24h';
 
-    // Try to fetch real data from Prisma first
+    // First check if simulator is running
+    let simulatorStatus = null;
+    let simulatorLocations: VisitorLocation[] = [];
+    
+    try {
+      const simulatorResponse = await fetch(`${new URL(request.url).origin}/api/leadpulse/simulator?action=status`);
+      simulatorStatus = await simulatorResponse.json();
+      
+      if (simulatorStatus.isRunning) {
+        // If simulator is running, generate locations from simulator state
+        simulatorLocations = await getSimulatorLocations(simulatorStatus);
+        console.log(`Simulator running: generated ${simulatorLocations.length} locations`);
+      }
+    } catch (error) {
+      console.log('Could not fetch simulator status:', error);
+    }
+
+    // Try to fetch real data from Prisma
+    let realLocations: VisitorLocation[] = [];
     try {
       // Calculate time cutoff based on timeRange
       const now = new Date();
@@ -54,37 +147,64 @@ export async function GET(request: Request) {
           cutoffTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       }
 
-      // Fetch visitors from database
-      const visitors = await prisma.anonymousVisitor.findMany({
-        where: {
-          lastVisit: {
-            gte: cutoffTime
+      // Fetch visitors from database - try both LeadPulseVisitor and fallback table
+      let visitors = [];
+      try {
+        visitors = await prisma.leadPulseVisitor.findMany({
+          where: {
+            lastVisit: {
+              gte: cutoffTime
+            }
+          },
+          select: {
+            id: true,
+            city: true,
+            country: true,
+            latitude: true,
+            longitude: true,
+            lastVisit: true,
+            totalVisits: true,
+            isActive: true
           }
-        },
-        select: {
-          id: true,
-          city: true,
-          country: true,
-          latitude: true,
-          longitude: true,
-          lastVisit: true,
-          visitCount: true
+        });
+      } catch (leadPulseError) {
+        // Fallback to anonymousVisitor table
+        try {
+          visitors = await prisma.anonymousVisitor.findMany({
+            where: {
+              lastVisit: {
+                gte: cutoffTime
+              }
+            },
+            select: {
+              id: true,
+              city: true,
+              country: true,
+              latitude: true,
+              longitude: true,
+              lastVisit: true,
+              visitCount: true
+            }
+          });
+        } catch (fallbackError) {
+          console.error('Both visitor tables failed:', { leadPulseError, fallbackError });
         }
-      });
+      }
 
       if (visitors && visitors.length > 0) {
         // Group visitors by city and aggregate data
         const locationMap = new Map<string, VisitorLocation>();
 
-        visitors.forEach((visitor) => {
+        visitors.forEach((visitor: any) => {
           if (!visitor.city || !visitor.country) return;
 
           const cityKey = `${visitor.city}, ${visitor.country}`;
-          const isActive = visitor.lastVisit.getTime() > (now.getTime() - 30 * 60 * 60 * 1000);
+          const now = new Date();
+          const isActive = visitor.isActive || visitor.lastVisit.getTime() > (now.getTime() - 30 * 60 * 60 * 1000);
           
           if (locationMap.has(cityKey)) {
             const existing = locationMap.get(cityKey)!;
-            existing.visitCount += visitor.visitCount || 1;
+            existing.visitCount += visitor.totalVisits || visitor.visitCount || 1;
             if (isActive) existing.isActive = true;
           } else {
             locationMap.set(cityKey, {
@@ -93,26 +213,40 @@ export async function GET(request: Request) {
               country: visitor.country,
               isActive,
               lastActive: isActive ? 'just now' : formatLastActive(visitor.lastVisit),
-              visitCount: visitor.visitCount || 1,
+              visitCount: visitor.totalVisits || visitor.visitCount || 1,
               latitude: visitor.latitude || 0,
               longitude: visitor.longitude || 0
             });
           }
         });
 
-        const realLocations = Array.from(locationMap.values());
-        
-        if (realLocations.length > 0) {
-          return NextResponse.json({
-            success: true,
-            locations: realLocations,
-            timeRange
-          });
-        }
+        realLocations = Array.from(locationMap.values());
       }
     } catch (prismaError) {
       console.error('Error fetching real location data:', prismaError);
-      // Continue to fallback
+    }
+
+    // Combine simulator and real locations, prioritizing simulator data
+    const combinedLocations = [...simulatorLocations];
+    
+    // Add real locations that aren't already covered by simulator
+    realLocations.forEach(realLoc => {
+      const exists = combinedLocations.find(simLoc => 
+        simLoc.city === realLoc.city && simLoc.country === realLoc.country
+      );
+      if (!exists) {
+        combinedLocations.push(realLoc);
+      }
+    });
+
+    // If we have combined data, return it
+    if (combinedLocations.length > 0) {
+      return NextResponse.json({
+        success: true,
+        locations: combinedLocations,
+        simulatorActive: simulatorStatus?.isRunning || false,
+        timeRange
+      });
     }
 
     // Get enhanced overview to ensure location count matches active visitors

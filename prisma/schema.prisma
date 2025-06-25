@@ -109,6 +109,14 @@ model User {
   activities     UserActivity[]
   notifications  Notification[]
   preferences    UserPreference?
+  
+  // LeadPulse Form Builder relations
+  createdForms   LeadPulseForm[] @relation("FormCreator")
+  
+  // Security & Compliance relations
+  securityEvents LeadPulseSecurityEvent[]
+  auditLogs      LeadPulseAuditLog[]
+  consents       LeadPulseConsent[] @relation("UserConsents")
 
   @@index([email])
 }
@@ -246,6 +254,10 @@ model Contact {
   contactJourneys ContactJourney[]
   conversionEvents ConversionEvent[]
   conversionTrackings ConversionTracking[]
+  
+  // LeadPulse Form Builder relations
+  formSubmissions LeadPulseFormSubmission[]
+  leadPulseConsents LeadPulseConsent[]
 }
 
 model List {
@@ -641,14 +653,164 @@ model WorkflowExecutionStep {
   scheduledFor    DateTime?
   output          String?   // JSON string with step output
   errorMessage    String?
-  retryCount      Int       @default(0)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
 
   // Relations
   execution       WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
 
-  @@index([status, scheduledFor])
+  @@index([executionId, stepId])
+}
+
+// =================================================================
+// LEADPULSE SECURITY & COMPLIANCE MODELS
+// =================================================================
+
+model LeadPulseSecurityEvent {
+  id              String    @id @default(cuid())
+  type            SecurityEventType
+  severity        SecuritySeverity
+  source          String
+  details         Json?     // Event-specific details
+  timestamp       DateTime  @default(now())
+  userId          String?
+  ipAddress       String?
+  userAgent       String?
+  resolved        Boolean   @default(false)
+  resolvedAt      DateTime?
+  resolvedBy      String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([type, severity, timestamp])
+  @@index([userId, timestamp])
+  @@index([ipAddress, timestamp])
+}
+
+model LeadPulseDataProcessingLog {
+  id              String    @id @default(cuid())
+  type            DataProcessingType
+  dataSubject     String    // Email or identifier of data subject
+  dataTypes       String[]  // Types of data processed
+  purpose         String    // Purpose of processing
+  legalBasis      String    // GDPR legal basis
+  processor       String?   // Third-party processor if applicable
+  timestamp       DateTime  @default(now())
+  retentionUntil  DateTime? // When data should be deleted
+  deleted         Boolean   @default(false)
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([dataSubject, timestamp])
+  @@index([type, timestamp])
+  @@index([retentionUntil])
+}
+
+model LeadPulseAuditLog {
+  id              String    @id @default(cuid())
+  action          String    // Action performed (CREATE, UPDATE, DELETE, VIEW)
+  resource        String    // Resource type (visitor, form, contact, etc.)
+  resourceId      String    // ID of the affected resource
+  userId          String?   // User who performed the action
+  userEmail       String?   // Email of the user
+  ipAddress       String?
+  userAgent       String?
+  changes         Json?     // Before/after values for updates
+  metadata        Json?     // Additional context
+  timestamp       DateTime  @default(now())
+
+  // Relations
+  user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([resource, resourceId, timestamp])
+  @@index([userId, timestamp])
+  @@index([action, timestamp])
+}
+
+model LeadPulseConsent {
+  id              String    @id @default(cuid())
+  contactId       String?   // If associated with a contact
+  userId          String    // User who owns this consent record
+  email           String    // Email address
+  consentType     ConsentType
+  purpose         String    // Purpose of data processing
+  granted         Boolean
+  grantedAt       DateTime?
+  withdrawnAt     DateTime?
+  ipAddress       String?
+  userAgent       String?
+  source          String?   // Source of consent (form, api, etc.)
+  evidenceUrl     String?   // URL to consent evidence
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  user            User      @relation("UserConsents", fields: [userId], references: [id], onDelete: Cascade)
+  contact         Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@index([email, consentType])
+  @@index([contactId])
+  @@index([granted, grantedAt])
+}
+
+model LeadPulseDataRetention {
+  id              String    @id @default(cuid())
+  resource        String    // Resource type
+  resourceId      String    // Resource ID
+  dataType        String    // Type of data
+  retentionPeriod Int       // Retention period in days
+  createdAt       DateTime  @default(now())
+  scheduledDeletion DateTime // When data should be deleted
+  deleted         Boolean   @default(false)
+  deletedAt       DateTime?
+
+  @@index([resource, resourceId])
+  @@index([scheduledDeletion, deleted])
+  @@index([dataType, scheduledDeletion])
+}
+
+// =================================================================
+// ENUMS FOR SECURITY & COMPLIANCE
+// =================================================================
+
+enum SecurityEventType {
+  SUSPICIOUS_ACTIVITY
+  RATE_LIMIT_EXCEEDED
+  INVALID_INPUT
+  UNAUTHORIZED_ACCESS
+  DATA_BREACH_ATTEMPT
+  LOGIN_FAILURE
+  PERMISSION_DENIED
+  MALICIOUS_FILE_UPLOAD
+  XSS_ATTEMPT
+  SQL_INJECTION_ATTEMPT
+}
+
+enum SecuritySeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum DataProcessingType {
+  COLLECTION
+  PROCESSING
+  SHARING
+  DELETION
+  ACCESS
+  RECTIFICATION
+  RESTRICTION
+  PORTABILITY
+}
+
+enum ConsentType {
+  MARKETING
+  ANALYTICS
+  FUNCTIONAL
+  NECESSARY
+  THIRD_PARTY_SHARING
 }
 
 model WorkflowEvent {
@@ -1501,6 +1663,7 @@ model LeadPulseVisitor {
   
   // Relations
   touchpoints     LeadPulseTouchpoint[]
+  formSubmissions LeadPulseFormSubmission[]
   
   @@index([fingerprint])
   @@index([lastVisit])
@@ -1623,6 +1786,248 @@ enum LeadPulseImportance {
   LOW
   MEDIUM
   HIGH
+}
+
+// LeadPulse Form Builder Models
+model LeadPulseForm {
+  id              String    @id @default(cuid())
+  name            String
+  title           String
+  description     String?
+  status          FormStatus @default(DRAFT)
+  
+  // Design & Configuration
+  theme           Json?     // Colors, fonts, styling
+  layout          FormLayout @default(SINGLE_COLUMN)
+  settings        Json?     // Form-level settings (notifications, redirects, etc.)
+  
+  // Behavior Settings
+  submitButtonText String   @default("Submit")
+  successMessage  String    @default("Thank you for your submission!")
+  errorMessage    String    @default("Something went wrong. Please try again.")
+  redirectUrl     String?   // Redirect after successful submission
+  
+  // Analytics & Tracking
+  isTrackingEnabled Boolean @default(true)
+  conversionGoal  String?   // What conversion event this form tracks
+  
+  // Publishing
+  isPublished     Boolean   @default(false)
+  publishedAt     DateTime?
+  embedCode       String?   // Generated embed code for external sites
+  publicUrl       String?   // Public form URL
+  
+  // Metadata
+  createdBy       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  creator         User?     @relation("FormCreator", fields: [createdBy], references: [id])
+  fields          LeadPulseFormField[]
+  submissions     LeadPulseFormSubmission[]
+  analytics       LeadPulseFormAnalytics[]
+  
+  @@index([status])
+  @@index([isPublished])
+  @@index([createdBy])
+}
+
+model LeadPulseFormField {
+  id              String    @id @default(cuid())
+  formId          String
+  type            FormFieldType
+  name            String    // Field name for data storage
+  label           String    // Display label
+  placeholder     String?
+  helpText        String?
+  
+  // Field Configuration
+  isRequired      Boolean   @default(false)
+  isVisible       Boolean   @default(true)
+  defaultValue    String?
+  
+  // Validation Rules
+  validation      Json?     // Validation rules (min/max length, regex, etc.)
+  
+  // Field-specific Options
+  options         Json?     // For select, radio, checkbox (array of options)
+  fileTypes       String[]  // For file upload fields
+  maxFileSize     Int?      // Max file size in bytes
+  
+  // Layout & Styling
+  order           Int       @default(0)
+  width           FormFieldWidth @default(FULL)
+  cssClasses      String?   // Custom CSS classes
+  
+  // Conditional Logic
+  conditionalLogic Json?    // Show/hide based on other field values
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  form            LeadPulseForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+  submissionData  LeadPulseSubmissionData[]
+  
+  @@index([formId, order])
+  @@index([type])
+}
+
+model LeadPulseFormSubmission {
+  id              String    @id @default(cuid())
+  formId          String
+  visitorId       String?   // Link to LeadPulse visitor
+  contactId       String?   // Link to created/updated contact
+  
+  // Submission Context
+  submittedAt     DateTime  @default(now())
+  ipAddress       String?
+  userAgent       String?
+  referrer        String?
+  utmSource       String?
+  utmMedium       String?
+  utmCampaign     String?
+  
+  // Processing Status
+  status          SubmissionStatus @default(PENDING)
+  processedAt     DateTime?
+  
+  // Lead Scoring
+  score           Int       @default(0)
+  quality         LeadQuality @default(UNKNOWN)
+  
+  // Metadata
+  metadata        Json?     // Additional tracking data
+  
+  // Relations
+  form            LeadPulseForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+  visitor         LeadPulseVisitor? @relation(fields: [visitorId], references: [id])
+  contact         Contact?  @relation(fields: [contactId], references: [id])
+  data            LeadPulseSubmissionData[]
+  
+  @@index([formId, submittedAt])
+  @@index([visitorId])
+  @@index([contactId])
+  @@index([status])
+}
+
+model LeadPulseSubmissionData {
+  id              String    @id @default(cuid())
+  submissionId    String
+  fieldId         String
+  fieldName       String    // Field name for easy querying
+  fieldType       FormFieldType
+  value           String?   // Text value
+  fileUrl         String?   // For file uploads
+  
+  createdAt       DateTime  @default(now())
+  
+  // Relations
+  submission      LeadPulseFormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  field           LeadPulseFormField @relation(fields: [fieldId], references: [id])
+  
+  @@index([submissionId])
+  @@index([fieldId])
+  @@index([fieldName])
+}
+
+model LeadPulseFormAnalytics {
+  id              String    @id @default(cuid())
+  formId          String
+  date            DateTime  @db.Date
+  
+  // View Metrics
+  views           Int       @default(0)
+  uniqueViews     Int       @default(0)
+  
+  // Interaction Metrics
+  fieldInteractions Int     @default(0)
+  formStarts      Int       @default(0)
+  
+  // Completion Metrics
+  submissions     Int       @default(0)
+  completions     Int       @default(0)
+  
+  // Conversion Metrics
+  conversionRate  Float     @default(0)
+  averageTime     Int?      // Average time to complete in seconds
+  abandonmentRate Float     @default(0)
+  
+  // Field Analytics
+  fieldAnalytics  Json?     // Per-field interaction and abandonment data
+  
+  // Traffic Sources
+  trafficSources  Json?     // UTM and referrer breakdown
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  form            LeadPulseForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+  
+  @@unique([formId, date])
+  @@index([formId])
+  @@index([date])
+}
+
+// Form Builder Enums
+enum FormStatus {
+  DRAFT
+  PUBLISHED
+  PAUSED
+  ARCHIVED
+}
+
+enum FormLayout {
+  SINGLE_COLUMN
+  TWO_COLUMN
+  MULTI_STEP
+  FLOATING_LABELS
+}
+
+enum FormFieldType {
+  TEXT
+  EMAIL
+  PHONE
+  NUMBER
+  TEXTAREA
+  SELECT
+  MULTISELECT
+  RADIO
+  CHECKBOX
+  DATE
+  TIME
+  DATETIME
+  FILE
+  HIDDEN
+  HTML
+  DIVIDER
+}
+
+enum FormFieldWidth {
+  QUARTER
+  THIRD
+  HALF
+  TWO_THIRDS
+  THREE_QUARTERS
+  FULL
+}
+
+enum SubmissionStatus {
+  PENDING
+  PROCESSED
+  FAILED
+  SPAM
+  DUPLICATE
+}
+
+enum LeadQuality {
+  UNKNOWN
+  COLD
+  WARM
+  HOT
+  QUALIFIED
 }
 
 // Subscription Plans
@@ -1811,4 +2216,36 @@ model BehavioralSegment {
   updatedAt       DateTime  @updatedAt
   
   @@unique([name])
+}
+
+// LeadPulse Alert System
+model LeadPulseAlert {
+  id              String    @id @default(cuid())
+  type            String    // alert type (high_value_visitor, form_abandonment, etc.)
+  title           String
+  message         String
+  priority        String    // high, medium, low, info
+  status          String    @default("ACTIVE") // ACTIVE, DISMISSED, RESOLVED
+  metadata        Json?     // Additional alert data
+  createdAt       DateTime  @default(now())
+  triggeredAt     DateTime  @default(now())
+  dismissedAt     DateTime?
+  resolvedAt      DateTime?
+  
+  @@index([type, status])
+  @@index([priority, createdAt])
+}
+
+// LeadPulse Page Views
+model LeadPulsePageView {
+  id              String    @id @default(cuid())
+  visitorId       String    // Can be fingerprint or visitor ID
+  url             String
+  title           String?
+  timestamp       DateTime  @default(now())
+  timeOnPage      Int?      // Time spent on page in seconds
+  metadata        Json?     // Additional page view data
+  
+  @@index([visitorId, timestamp])
+  @@index([url])
 }

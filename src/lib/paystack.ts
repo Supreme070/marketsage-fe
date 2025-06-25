@@ -1,10 +1,62 @@
-const PaystackAPI = require('paystack-node');
+// Initialize Paystack with direct API calls to avoid SDK issues in Docker builds
+const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || 'sk_test_6163652dff5c670d55907f429ea732ef22a98cf9';
 
-// Initialize Paystack with your secret key from environment variables
-const paystack = new PaystackAPI(
-  process.env.PAYSTACK_SECRET_KEY || 'sk_test_6163652dff5c670d55907f429ea732ef22a98cf9', 
-  'NGN'
-);
+// Mock paystack object for build compatibility
+const paystack = {
+  transaction: {
+    initialize: async (params: any) => {
+      const response = await fetch('https://api.paystack.co/transaction/initialize', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(params)
+      });
+      return response.json();
+    },
+    verify: async (reference: string) => {
+      const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+        headers: {
+          'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`
+        }
+      });
+      return response.json();
+    },
+    list: async (params: any) => {
+      const queryString = new URLSearchParams(params).toString();
+      const response = await fetch(`https://api.paystack.co/transaction?${queryString}`, {
+        headers: {
+          'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`
+        }
+      });
+      return response.json();
+    }
+  },
+  misc: {
+    listBanks: async () => {
+      const response = await fetch('https://api.paystack.co/bank', {
+        headers: {
+          'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`
+        }
+      });
+      return response.json();
+    }
+  },
+  subscription: {
+    create: async (params: any) => {
+      const response = await fetch('https://api.paystack.co/subscription', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(params)
+      });
+      return response.json();
+    }
+  }
+};
 
 // Get public key from environment variables
 export const PAYSTACK_PUBLIC_KEY = process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_e4503e5c8cb178e928507653093bec0be389422e';
@@ -43,7 +95,7 @@ export const initializeTransaction = async ({
       currency: 'NGN'
     });
 
-    return response.data;
+    return response;
   } catch (error) {
     console.error('Paystack transaction initialization failed:', error);
     throw error;
@@ -54,7 +106,7 @@ export const initializeTransaction = async ({
 export const verifyTransaction = async (reference: string) => {
   try {
     const response = await paystack.transaction.verify(reference);
-    return response.data;
+    return response;
   } catch (error) {
     console.error('Paystack transaction verification failed:', error);
     throw error;
@@ -64,8 +116,8 @@ export const verifyTransaction = async (reference: string) => {
 // List banks
 export const listBanks = async () => {
   try {
-    const response = await paystack.misc.list_banks();
-    return response.data;
+    const response = await paystack.misc.listBanks();
+    return response;
   } catch (error) {
     console.error('Failed to fetch banks:', error);
     throw error;
@@ -88,7 +140,7 @@ export const createSubscription = async ({
       plan,
       authorization
     });
-    return response.data;
+    return response;
   } catch (error) {
     console.error('Failed to create subscription:', error);
     throw error;
@@ -99,7 +151,7 @@ export const createSubscription = async ({
 export const listTransactions = async (params: any = {}) => {
   try {
     const response = await paystack.transaction.list(params);
-    return response.data;
+    return response;
   } catch (error) {
     console.error('Failed to list transactions:', error);
     throw error;
