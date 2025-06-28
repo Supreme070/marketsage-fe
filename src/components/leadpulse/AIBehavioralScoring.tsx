@@ -1,747 +1,773 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  Brain, 
-  Activity, 
-  TrendingUp, 
-  Target, 
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
+import {
+  Brain,
+  TrendingUp,
+  TrendingDown,
   Users,
-  Zap,
+  Target,
   AlertTriangle,
-  CheckCircle,
+  Star,
+  Zap,
+  Eye,
+  MousePointer,
+  Clock,
+  ArrowUp,
+  ArrowDown,
+  Filter,
+  Search,
   RefreshCw,
+  Activity,
   BarChart3,
-  LineChart
+  PieChart,
+  Lightbulb,
+  ChevronRight,
+  ChevronDown,
+  Sparkles,
+  Award,
+  TrendingDown as TrendingDownIcon,
+  ArrowRight
 } from 'lucide-react';
-import { getActiveVisitors } from '@/lib/leadpulse/dataProvider';
 
-interface BehavioralPattern {
-  id: string;
-  name: string;
-  description: string;
-  frequency: number;
-  conversionRate: number;
-  avgValue: number;
-  confidence: number;
-  trend: 'increasing' | 'decreasing' | 'stable';
-  associatedActions: string[];
-  riskLevel: 'low' | 'medium' | 'high';
-}
-
-interface VisitorScore {
+interface BehaviorScore {
   visitorId: string;
-  overallScore: number;
-  subscores: {
-    engagement: number;
-    intentSignals: number;
-    valueIndicators: number;
-    riskFactors: number;
-  };
-  patterns: string[];
-  predictions: {
-    conversionProbability: number;
-    timeToConvert: string;
-    predictedValue: number;
-    nextLikelyAction: string;
-  };
+  sessionId: string;
+  fingerprint: string;
+  location: string;
+  device: string;
+  browser: string;
+  
+  // Behavioral Metrics
+  engagementScore: number;
+  intentScore: number;
+  conversionProbability: number;
+  riskScore: number;
+  loyaltyScore: number;
+  
+  // AI Predictions
+  predictedActions: string[];
+  nextPageProbability: { [key: string]: number };
+  timeToConversion: number;
+  conversionValue: number;
+  churnRisk: 'low' | 'medium' | 'high';
+  
+  // Behavioral Patterns
+  behaviorType: 'explorer' | 'researcher' | 'buyer' | 'browser' | 'returner';
+  visitPattern: 'first_time' | 'repeat' | 'frequent' | 'loyal';
+  engagementPattern: 'passive' | 'active' | 'highly_engaged' | 'power_user';
+  
+  // Segmentation
   segments: string[];
-  confidence: number;
-  lastUpdated: Date;
+  personalityTraits: string[];
+  interests: string[];
+  
+  // Real-time Activity
+  currentPage: string;
+  timeOnCurrentPage: number;
+  isActive: boolean;
+  lastActivity: string;
+  
+  // Historical Data
+  totalSessions: number;
+  totalPageViews: number;
+  averageSessionDuration: number;
+  lastVisit: string;
+  firstVisit: string;
 }
 
-interface AIInsight {
-  type: 'pattern' | 'anomaly' | 'opportunity' | 'risk';
+interface ScorePrediction {
+  id: string;
+  type: 'conversion' | 'engagement' | 'churn' | 'value' | 'timing';
   title: string;
   description: string;
-  impact: string;
-  actionable: boolean;
-  priority: 'high' | 'medium' | 'low';
+  prediction: string | number;
   confidence: number;
+  timeframe: string;
+  trend: 'increasing' | 'decreasing' | 'stable';
+  impact: 'high' | 'medium' | 'low';
+  recommendedAction: string;
   affectedVisitors: number;
 }
 
-interface Props {
-  updateInterval?: number;
-  maxVisitors?: number;
+interface BehaviorInsight {
+  id: string;
+  type: 'pattern' | 'anomaly' | 'opportunity' | 'risk';
+  title: string;
+  description: string;
+  recommendation: string;
+  confidence: number;
+  impact: 'high' | 'medium' | 'low';
+  affectedSegment: string;
+  metrics: {
+    before: number;
+    after: number;
+    improvement: number;
+  };
 }
 
-export default function AIBehavioralScoring({ 
-  updateInterval = 5000,
-  maxVisitors = 20 
-}: Props) {
-  const [behavioralPatterns, setBehavioralPatterns] = useState<BehavioralPattern[]>([]);
-  const [visitorScores, setVisitorScores] = useState<VisitorScore[]>([]);
-  const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
-  const [selectedPattern, setSelectedPattern] = useState<string | null>(null);
+interface AIBehavioralScoringProps {
+  className?: string;
+}
 
-  // Real-time behavioral scoring and pattern recognition
+export default function AIBehavioralScoring({ className }: AIBehavioralScoringProps) {
+  const [behaviorScores, setBehaviorScores] = useState<BehaviorScore[]>([]);
+  const [predictions, setPredictions] = useState<ScorePrediction[]>([]);
+  const [insights, setInsights] = useState<BehaviorInsight[]>([]);
+  const [selectedScore, setSelectedScore] = useState<BehaviorScore | null>(null);
+  const [expandedScore, setExpandedScore] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterSegment, setFilterSegment] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'conversionProbability' | 'engagementScore' | 'riskScore'>('conversionProbability');
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Fetch behavioral scoring data
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    fetchScoringData();
+    const interval = setInterval(fetchScoringData, 30000); // Update every 30 seconds
+    return () => clearInterval(interval);
+  }, [sortBy, filterSegment]);
 
-    const performBehavioralAnalysis = async () => {
-      setIsAnalyzing(true);
+  const fetchScoringData = async () => {
+    try {
+      setRefreshing(true);
+      const [scoresResponse, predictionsResponse, insightsResponse] = await Promise.all([
+        fetch(`/api/leadpulse/ai/behavioral-scores?sort=${sortBy}&segment=${filterSegment}`),
+        fetch('/api/leadpulse/ai/score-predictions'),
+        fetch('/api/leadpulse/ai/behavioral-insights')
+      ]);
+
+      // Use mock data for demo
+      const mockScores = generateMockBehaviorScores();
+      setBehaviorScores(mockScores);
+      setPredictions(generateMockPredictions());
+      setInsights(generateMockInsights());
       
-      try {
-        // Fetch active visitors with AI data
-        const visitors = await getActiveVisitors('30m');
-        
-        // Filter for visitors with sufficient data for analysis
-        const analysisReadyVisitors = visitors.filter(visitor => 
-          visitor.pulseData && visitor.pulseData.length > 0
-        );
-
-        // Perform AI pattern recognition
-        const patterns = recognizeBehavioralPatterns(analysisReadyVisitors);
-        setBehavioralPatterns(patterns);
-
-        // Calculate behavioral scores for each visitor
-        const scores = calculateBehavioralScores(analysisReadyVisitors, patterns);
-        setVisitorScores(scores.slice(0, maxVisitors));
-
-        // Generate AI insights from patterns and scores
-        const insights = generateAIInsights(patterns, scores);
-        setAiInsights(insights);
-
-        setLastUpdate(new Date());
-      } catch (error) {
-        console.error('Error performing behavioral analysis:', error);
-      } finally {
-        setIsAnalyzing(false);
+      if (mockScores.length > 0 && !selectedScore) {
+        setSelectedScore(mockScores[0]);
       }
-    };
-
-    // Initial analysis
-    performBehavioralAnalysis();
-
-    // Set up real-time updates
-    interval = setInterval(performBehavioralAnalysis, updateInterval);
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [updateInterval, maxVisitors]);
-
-  const recognizeBehavioralPatterns = (visitors: any[]): BehavioralPattern[] => {
-    const patterns: BehavioralPattern[] = [];
-
-    // Pattern 1: High-intent pricing focus
-    const pricingFocusedVisitors = visitors.filter(visitor => {
-      const pulseData = visitor.pulseData || [];
-      const pricingInteractions = pulseData.filter((pulse: any) => 
-        pulse.url?.includes('pricing') || pulse.title?.toLowerCase().includes('pricing')
-      );
-      return pricingInteractions.length >= 2;
-    });
-
-    if (pricingFocusedVisitors.length > 0) {
-      const conversionRate = pricingFocusedVisitors.filter(v => 
-        v.metadata?.aiPrediction?.behaviorPrediction === 'convert'
-      ).length / pricingFocusedVisitors.length;
-
-      patterns.push({
-        id: 'pricing-focus',
-        name: 'Pricing-Focused Exploration',
-        description: 'Visitors spending significant time on pricing pages',
-        frequency: pricingFocusedVisitors.length,
-        conversionRate: conversionRate * 100,
-        avgValue: calculateAvgValue(pricingFocusedVisitors),
-        confidence: 0.87,
-        trend: conversionRate > 0.6 ? 'increasing' : 'stable',
-        associatedActions: ['Show enterprise plans', 'Trigger pricing call', 'Display testimonials'],
-        riskLevel: conversionRate > 0.7 ? 'low' : 'medium'
-      });
-    }
-
-    // Pattern 2: Feature exploration behavior
-    const featureExplorers = visitors.filter(visitor => {
-      const pulseData = visitor.pulseData || [];
-      const featurePages = pulseData.filter((pulse: any) => 
-        pulse.url?.includes('features') || pulse.url?.includes('solutions')
-      );
-      return featurePages.length >= 3;
-    });
-
-    if (featureExplorers.length > 0) {
-      patterns.push({
-        id: 'feature-exploration',
-        name: 'Deep Feature Analysis',
-        description: 'Visitors thoroughly exploring product capabilities',
-        frequency: featureExplorers.length,
-        conversionRate: calculatePatternConversionRate(featureExplorers),
-        avgValue: calculateAvgValue(featureExplorers),
-        confidence: 0.82,
-        trend: 'increasing',
-        associatedActions: ['Offer feature demo', 'Show use cases', 'Connect with sales'],
-        riskLevel: 'low'
-      });
-    }
-
-    // Pattern 3: Quick abandonment risk
-    const quickAbandonRisk = visitors.filter(visitor => {
-      const pulseData = visitor.pulseData || [];
-      const engagementScore = visitor.engagementScore || 0;
-      return pulseData.length <= 2 && engagementScore < 40;
-    });
-
-    if (quickAbandonRisk.length > 0) {
-      patterns.push({
-        id: 'quick-abandon',
-        name: 'Quick Abandon Risk',
-        description: 'Low engagement visitors at risk of immediate departure',
-        frequency: quickAbandonRisk.length,
-        conversionRate: calculatePatternConversionRate(quickAbandonRisk),
-        avgValue: calculateAvgValue(quickAbandonRisk),
-        confidence: 0.91,
-        trend: 'stable',
-        associatedActions: ['Immediate engagement prompt', 'Show value proposition', 'Offer assistance'],
-        riskLevel: 'high'
-      });
-    }
-
-    // Pattern 4: Enterprise decision-making
-    const enterpriseDecisionMakers = visitors.filter(visitor => {
-      const location = visitor.location || '';
-      const metadata = visitor.metadata;
-      const isEnterprise = metadata?.aiEnhancement?.segmentPrediction === 'enterprise';
-      const hasHighEngagement = visitor.engagementScore > 70;
-      return isEnterprise && hasHighEngagement && location.includes('Nigeria');
-    });
-
-    if (enterpriseDecisionMakers.length > 0) {
-      patterns.push({
-        id: 'enterprise-decision',
-        name: 'Enterprise Decision Process',
-        description: 'High-value Nigerian enterprise visitors in evaluation phase',
-        frequency: enterpriseDecisionMakers.length,
-        conversionRate: calculatePatternConversionRate(enterpriseDecisionMakers),
-        avgValue: calculateAvgValue(enterpriseDecisionMakers),
-        confidence: 0.94,
-        trend: 'increasing',
-        associatedActions: ['Priority sales contact', 'Enterprise demo', 'Case study sharing'],
-        riskLevel: 'low'
-      });
-    }
-
-    // Pattern 5: Mobile optimization needs
-    const mobileUsers = visitors.filter(visitor => 
-      visitor.device?.toLowerCase().includes('mobile')
-    );
-
-    if (mobileUsers.length > 0) {
-      const mobileConversionRate = calculatePatternConversionRate(mobileUsers);
-      patterns.push({
-        id: 'mobile-behavior',
-        name: 'Mobile User Behavior',
-        description: 'Mobile visitor interaction patterns and conversion rates',
-        frequency: mobileUsers.length,
-        conversionRate: mobileConversionRate,
-        avgValue: calculateAvgValue(mobileUsers),
-        confidence: 0.78,
-        trend: mobileConversionRate < 50 ? 'decreasing' : 'stable',
-        associatedActions: ['Optimize mobile UX', 'WhatsApp integration', 'Mobile-first CTAs'],
-        riskLevel: mobileConversionRate < 50 ? 'high' : 'medium'
-      });
-    }
-
-    return patterns;
-  };
-
-  const calculateBehavioralScores = (visitors: any[], patterns: BehavioralPattern[]): VisitorScore[] => {
-    return visitors.map(visitor => {
-      const pulseData = visitor.pulseData || [];
-      const aiPrediction = visitor.metadata?.aiPrediction;
-      const aiEnhancement = visitor.metadata?.aiEnhancement;
-
-      // Calculate engagement score
-      const engagementScore = calculateEngagementScore(visitor, pulseData);
+    } catch (error) {
+      console.error('Error fetching behavioral scoring data:', error);
+      const mockScores = generateMockBehaviorScores();
+      setBehaviorScores(mockScores);
+      setPredictions(generateMockPredictions());
+      setInsights(generateMockInsights());
       
-      // Calculate intent signals
-      const intentScore = calculateIntentSignals(visitor, pulseData, patterns);
+      if (mockScores.length > 0) {
+        setSelectedScore(mockScores[0]);
+      }
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Filter and sort behavior scores
+  const filteredScores = behaviorScores
+    .filter(score => {
+      const matchesSearch = !searchQuery || 
+        score.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        score.device.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        score.behaviorType.toLowerCase().includes(searchQuery.toLowerCase());
       
-      // Calculate value indicators
-      const valueScore = calculateValueIndicators(visitor, aiEnhancement);
+      const matchesSegment = filterSegment === 'all' || 
+        score.segments.some(segment => segment.toLowerCase().includes(filterSegment.toLowerCase()));
       
-      // Calculate risk factors
-      const riskScore = calculateRiskFactors(visitor, patterns);
+      return matchesSearch && matchesSegment;
+    })
+    .sort((a, b) => b[sortBy] - a[sortBy]);
 
-      // Overall behavioral score (weighted average)
-      const overallScore = Math.round(
-        (engagementScore * 0.3) + 
-        (intentScore * 0.3) + 
-        (valueScore * 0.25) + 
-        ((100 - riskScore) * 0.15)
-      );
-
-      // Identify matching patterns
-      const matchingPatterns = patterns.filter(pattern => 
-        visitorMatchesPattern(visitor, pattern)
-      ).map(p => p.name);
-
-      // Generate predictions
-      const predictions = {
-        conversionProbability: aiPrediction?.conversionProbability || (overallScore / 100),
-        timeToConvert: estimateTimeToConvert(overallScore, intentScore),
-        predictedValue: aiEnhancement?.predictedValue || (overallScore * 5000),
-        nextLikelyAction: predictNextAction(visitor, overallScore, intentScore)
-      };
-
-      return {
-        visitorId: visitor.id,
-        overallScore,
-        subscores: {
-          engagement: engagementScore,
-          intentSignals: intentScore,
-          valueIndicators: valueScore,
-          riskFactors: riskScore
-        },
-        patterns: matchingPatterns,
-        predictions,
-        segments: determineSegments(visitor, overallScore),
-        confidence: aiPrediction?.confidence || (overallScore / 100),
-        lastUpdated: new Date()
-      };
-    });
-  };
-
-  const calculateEngagementScore = (visitor: any, pulseData: any[]): number => {
-    const baseEngagement = visitor.engagementScore || 0;
-    const pulseBonus = Math.min(30, pulseData.length * 5); // Up to 30 bonus points
-    const timeBonus = pulseData.reduce((sum, pulse) => {
-      const timeOnPage = pulse.metadata?.timeOnPage || 30;
-      return sum + Math.min(10, timeOnPage / 10);
-    }, 0);
-    
-    return Math.min(100, baseEngagement + pulseBonus + timeBonus);
-  };
-
-  const calculateIntentSignals = (visitor: any, pulseData: any[], patterns: BehavioralPattern[]): number => {
-    let intentScore = 40; // Base score
-    
-    // High-intent page visits
-    const highIntentPages = ['pricing', 'contact', 'demo', 'enterprise'];
-    const highIntentVisits = pulseData.filter(pulse => 
-      highIntentPages.some(page => pulse.url?.includes(page))
-    ).length;
-    intentScore += highIntentVisits * 15;
-    
-    // Form interactions
-    const formInteractions = pulseData.filter(pulse => 
-      pulse.type === 'FORM_VIEW' || pulse.type === 'FORM_START'
-    ).length;
-    intentScore += formInteractions * 20;
-    
-    // Pattern matching bonus
-    const matchingHighIntentPatterns = patterns.filter(pattern => 
-      pattern.riskLevel === 'low' && visitorMatchesPattern(visitor, pattern)
-    ).length;
-    intentScore += matchingHighIntentPatterns * 10;
-    
-    return Math.min(100, intentScore);
-  };
-
-  const calculateValueIndicators = (visitor: any, aiEnhancement: any): number => {
-    let valueScore = 30; // Base score
-    
-    if (aiEnhancement) {
-      // Segment-based scoring
-      if (aiEnhancement.segmentPrediction === 'enterprise') valueScore += 40;
-      else if (aiEnhancement.segmentPrediction === 'startup') valueScore += 25;
-      else valueScore += 10;
-      
-      // Predicted value scoring
-      if (aiEnhancement.predictedValue > 400000) valueScore += 30;
-      else if (aiEnhancement.predictedValue > 200000) valueScore += 20;
-      else if (aiEnhancement.predictedValue > 100000) valueScore += 10;
-    }
-    
-    // Location-based value (Nigerian market focus)
-    if (visitor.location?.includes('Lagos') || visitor.location?.includes('Abuja')) {
-      valueScore += 20;
-    } else if (visitor.location?.includes('Nigeria')) {
-      valueScore += 15;
-    }
-    
-    return Math.min(100, valueScore);
-  };
-
-  const calculateRiskFactors = (visitor: any, patterns: BehavioralPattern[]): number => {
-    let riskScore = 0; // Lower is better
-    
-    // Low engagement risk
-    const engagementScore = visitor.engagementScore || 0;
-    if (engagementScore < 30) riskScore += 40;
-    else if (engagementScore < 50) riskScore += 20;
-    
-    // Quick abandon pattern
-    const matchingRiskPatterns = patterns.filter(pattern => 
-      pattern.riskLevel === 'high' && visitorMatchesPattern(visitor, pattern)
-    ).length;
-    riskScore += matchingRiskPatterns * 30;
-    
-    // Device risk (mobile conversion typically lower)
-    if (visitor.device?.toLowerCase().includes('mobile')) {
-      riskScore += 15;
-    }
-    
-    // Limited activity risk
-    const pulseCount = visitor.pulseData?.length || 0;
-    if (pulseCount <= 1) riskScore += 25;
-    else if (pulseCount <= 2) riskScore += 15;
-    
-    return Math.min(100, riskScore);
-  };
-
-  const visitorMatchesPattern = (visitor: any, pattern: BehavioralPattern): boolean => {
-    const pulseData = visitor.pulseData || [];
-    
-    switch (pattern.id) {
-      case 'pricing-focus':
-        return pulseData.filter((pulse: any) => 
-          pulse.url?.includes('pricing')).length >= 2;
-      case 'feature-exploration':
-        return pulseData.filter((pulse: any) => 
-          pulse.url?.includes('features') || pulse.url?.includes('solutions')).length >= 3;
-      case 'quick-abandon':
-        return pulseData.length <= 2 && (visitor.engagementScore || 0) < 40;
-      case 'enterprise-decision':
-        return visitor.metadata?.aiEnhancement?.segmentPrediction === 'enterprise' &&
-               (visitor.engagementScore || 0) > 70;
-      case 'mobile-behavior':
-        return visitor.device?.toLowerCase().includes('mobile');
-      default:
-        return false;
-    }
-  };
-
-  const calculatePatternConversionRate = (visitors: any[]): number => {
-    if (visitors.length === 0) return 0;
-    
-    const converters = visitors.filter(visitor => 
-      visitor.metadata?.aiPrediction?.behaviorPrediction === 'convert' ||
-      visitor.metadata?.aiPrediction?.conversionProbability > 0.6
-    ).length;
-    
-    return (converters / visitors.length) * 100;
-  };
-
-  const calculateAvgValue = (visitors: any[]): number => {
-    if (visitors.length === 0) return 0;
-    
-    const totalValue = visitors.reduce((sum, visitor) => {
-      return sum + (visitor.metadata?.aiEnhancement?.predictedValue || 100000);
-    }, 0);
-    
-    return Math.round(totalValue / visitors.length);
-  };
-
-  const estimateTimeToConvert = (overallScore: number, intentScore: number): string => {
-    const combinedScore = (overallScore + intentScore) / 2;
-    
-    if (combinedScore > 80) return '5-15 minutes';
-    if (combinedScore > 60) return '15-60 minutes';
-    if (combinedScore > 40) return '1-6 hours';
-    if (combinedScore > 20) return '6-24 hours';
-    return '1-7 days';
-  };
-
-  const predictNextAction = (visitor: any, overallScore: number, intentScore: number): string => {
-    if (intentScore > 80) return 'Submit contact form';
-    if (intentScore > 60) return 'Request pricing information';
-    if (overallScore > 70) return 'Explore enterprise features';
-    if (overallScore > 50) return 'Compare pricing plans';
-    return 'Continue browsing features';
-  };
-
-  const determineSegments = (visitor: any, overallScore: number): string[] => {
-    const segments = [];
-    
-    if (overallScore > 80) segments.push('High-value prospect');
-    if (overallScore > 60) segments.push('Qualified lead');
-    if (visitor.metadata?.aiEnhancement?.segmentPrediction === 'enterprise') segments.push('Enterprise');
-    if (visitor.location?.includes('Nigeria')) segments.push('Nigerian market');
-    if (visitor.device?.toLowerCase().includes('mobile')) segments.push('Mobile user');
-    
-    return segments;
-  };
-
-  const generateAIInsights = (patterns: BehavioralPattern[], scores: VisitorScore[]): AIInsight[] => {
-    const insights: AIInsight[] = [];
-    
-    // High-risk pattern insight
-    const highRiskPatterns = patterns.filter(p => p.riskLevel === 'high');
-    if (highRiskPatterns.length > 0) {
-      insights.push({
-        type: 'risk',
-        title: 'High Abandon Risk Detected',
-        description: `${highRiskPatterns[0].frequency} visitors showing quick abandon patterns`,
-        impact: 'Immediate intervention required to prevent loss',
-        actionable: true,
-        priority: 'high',
-        confidence: 0.91,
-        affectedVisitors: highRiskPatterns[0].frequency
-      });
-    }
-    
-    // High-value opportunity insight
-    const highValueVisitors = scores.filter(s => s.overallScore > 80).length;
-    if (highValueVisitors > 0) {
-      insights.push({
-        type: 'opportunity',
-        title: 'High-Value Prospects Active',
-        description: `${highValueVisitors} visitors with 80+ behavioral scores`,
-        impact: 'Priority sales engagement recommended',
-        actionable: true,
-        priority: 'high',
-        confidence: 0.88,
-        affectedVisitors: highValueVisitors
-      });
-    }
-    
-    // Pattern anomaly insight
-    const enterprisePattern = patterns.find(p => p.id === 'enterprise-decision');
-    if (enterprisePattern && enterprisePattern.trend === 'increasing') {
-      insights.push({
-        type: 'pattern',
-        title: 'Enterprise Interest Surge',
-        description: 'Increased enterprise visitor engagement detected',
-        impact: 'Scale enterprise marketing efforts',
-        actionable: true,
-        priority: 'medium',
-        confidence: 0.85,
-        affectedVisitors: enterprisePattern.frequency
-      });
-    }
-    
-    return insights;
-  };
-
+  // Get score color
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600 bg-green-50 border-green-200';
-    if (score >= 60) return 'text-blue-600 bg-blue-50 border-blue-200';
-    if (score >= 40) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-    return 'text-red-600 bg-red-50 border-red-200';
+    if (score >= 80) return 'text-green-600 bg-green-100';
+    if (score >= 60) return 'text-blue-600 bg-blue-100';
+    if (score >= 40) return 'text-yellow-600 bg-yellow-100';
+    return 'text-red-600 bg-red-100';
   };
 
-  const getPatternIcon = (patternId: string) => {
-    switch (patternId) {
-      case 'pricing-focus': return <Target className="h-4 w-4" />;
-      case 'feature-exploration': return <BarChart3 className="h-4 w-4" />;
-      case 'quick-abandon': return <AlertTriangle className="h-4 w-4" />;
-      case 'enterprise-decision': return <Users className="h-4 w-4" />;
-      case 'mobile-behavior': return <Activity className="h-4 w-4" />;
-      default: return <Brain className="h-4 w-4" />;
+  // Get behavior type icon
+  const getBehaviorTypeIcon = (type: string) => {
+    switch (type) {
+      case 'explorer': return Eye;
+      case 'researcher': return Brain;
+      case 'buyer': return Target;
+      case 'browser': return MousePointer;
+      case 'returner': return Users;
+      default: return Activity;
     }
   };
+
+  // Get risk color
+  const getRiskColor = (risk: string) => {
+    switch (risk) {
+      case 'high': return 'text-red-600 bg-red-100';
+      case 'medium': return 'text-yellow-600 bg-yellow-100';
+      case 'low': return 'text-green-600 bg-green-100';
+      default: return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  // Get prediction icon
+  const getPredictionIcon = (type: string) => {
+    switch (type) {
+      case 'conversion': return Target;
+      case 'engagement': return Activity;
+      case 'churn': return TrendingDownIcon;
+      case 'value': return Award;
+      case 'timing': return Clock;
+      default: return Brain;
+    }
+  };
+
+  // Format duration
+  const formatDuration = (seconds: number) => {
+    if (seconds < 60) return `${seconds}s`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+    return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+  };
+
+  // Mock data generators
+  const generateMockBehaviorScores = (): BehaviorScore[] => {
+    const locations = ['Lagos, Nigeria', 'Abuja, Nigeria', 'Accra, Ghana', 'Nairobi, Kenya', 'Cape Town, South Africa'];
+    const devices = ['Desktop', 'Mobile', 'Tablet'];
+    const browsers = ['Chrome', 'Safari', 'Firefox', 'Edge'];
+    const behaviorTypes = ['explorer', 'researcher', 'buyer', 'browser', 'returner'];
+    const visitPatterns = ['first_time', 'repeat', 'frequent', 'loyal'];
+    const engagementPatterns = ['passive', 'active', 'highly_engaged', 'power_user'];
+    
+    return Array.from({ length: 25 }, (_, i) => {
+      const conversionProb = Math.floor(Math.random() * 95) + 5;
+      const engagementScore = Math.floor(Math.random() * 95) + 5;
+      const riskScore = Math.floor(Math.random() * 80) + 10;
+      
+      return {
+        visitorId: `visitor_${i}`,
+        sessionId: `session_${i}`,
+        fingerprint: `fp_${i}`,
+        location: locations[Math.floor(Math.random() * locations.length)],
+        device: devices[Math.floor(Math.random() * devices.length)],
+        browser: browsers[Math.floor(Math.random() * browsers.length)],
+        
+        engagementScore,
+        intentScore: Math.floor(Math.random() * 90) + 10,
+        conversionProbability: conversionProb,
+        riskScore,
+        loyaltyScore: Math.floor(Math.random() * 85) + 15,
+        
+        predictedActions: [
+          'View pricing page',
+          'Download whitepaper',
+          'Request demo',
+          'Contact sales'
+        ].slice(0, Math.floor(Math.random() * 3) + 1),
+        
+        nextPageProbability: {
+          '/pricing': 0.45,
+          '/demo': 0.32,
+          '/contact': 0.28,
+          '/solutions': 0.15
+        },
+        
+        timeToConversion: Math.floor(Math.random() * 2880) + 120, // 2 minutes to 48 hours
+        conversionValue: Math.floor(Math.random() * 5000) + 500,
+        churnRisk: riskScore > 60 ? 'high' : riskScore > 30 ? 'medium' : 'low',
+        
+        behaviorType: behaviorTypes[Math.floor(Math.random() * behaviorTypes.length)] as any,
+        visitPattern: visitPatterns[Math.floor(Math.random() * visitPatterns.length)] as any,
+        engagementPattern: engagementPatterns[Math.floor(Math.random() * engagementPatterns.length)] as any,
+        
+        segments: ['Nigerian Market', 'Enterprise', 'High Intent'].slice(0, Math.floor(Math.random() * 3) + 1),
+        personalityTraits: ['Analytical', 'Detail-oriented', 'Price-sensitive'].slice(0, Math.floor(Math.random() * 3) + 1),
+        interests: ['Marketing Automation', 'CRM', 'Analytics'].slice(0, Math.floor(Math.random() * 3) + 1),
+        
+        currentPage: ['/pricing', '/demo', '/solutions', '/contact'][Math.floor(Math.random() * 4)],
+        timeOnCurrentPage: Math.floor(Math.random() * 300) + 30,
+        isActive: Math.random() > 0.3,
+        lastActivity: new Date(Date.now() - Math.random() * 3600000).toISOString(),
+        
+        totalSessions: Math.floor(Math.random() * 15) + 1,
+        totalPageViews: Math.floor(Math.random() * 50) + 5,
+        averageSessionDuration: Math.floor(Math.random() * 1800) + 300,
+        lastVisit: new Date(Date.now() - Math.random() * 86400000).toISOString(),
+        firstVisit: new Date(Date.now() - Math.random() * 2592000000).toISOString()
+      };
+    });
+  };
+
+  const generateMockPredictions = (): ScorePrediction[] => {
+    return [
+      {
+        id: 'pred_1',
+        type: 'conversion',
+        title: 'Conversion Rate Increase',
+        description: 'High-intent visitors showing 23% increase in conversion signals',
+        prediction: '23%',
+        confidence: 87,
+        timeframe: 'Next 7 days',
+        trend: 'increasing',
+        impact: 'high',
+        recommendedAction: 'Deploy targeted demo offers to high-intent segments',
+        affectedVisitors: 142
+      },
+      {
+        id: 'pred_2',
+        type: 'engagement',
+        title: 'Mobile Engagement Optimization',
+        description: 'Mobile users showing decreased engagement on pricing page',
+        prediction: '15%',
+        confidence: 74,
+        timeframe: 'Current week',
+        trend: 'decreasing',
+        impact: 'medium',
+        recommendedAction: 'Implement mobile-optimized pricing display',
+        affectedVisitors: 89
+      },
+      {
+        id: 'pred_3',
+        type: 'churn',
+        title: 'Early Warning: Visitor Churn',
+        description: 'Repeat visitors showing early churn indicators',
+        prediction: '34',
+        confidence: 91,
+        timeframe: 'Next 48 hours',
+        trend: 'increasing',
+        impact: 'high',
+        recommendedAction: 'Trigger re-engagement email campaign',
+        affectedVisitors: 34
+      },
+      {
+        id: 'pred_4',
+        type: 'value',
+        title: 'High-Value Prospect Identification',
+        description: 'Enterprise behavior patterns indicate premium segment',
+        prediction: '$12,500',
+        confidence: 82,
+        timeframe: 'Quarterly forecast',
+        trend: 'stable',
+        impact: 'high',
+        recommendedAction: 'Assign dedicated sales representative',
+        affectedVisitors: 18
+      }
+    ];
+  };
+
+  const generateMockInsights = (): BehaviorInsight[] => {
+    return [
+      {
+        id: 'insight_1',
+        type: 'pattern',
+        title: 'Nigerian Enterprise Buying Pattern',
+        description: 'Enterprise visitors from Nigeria spend 3x longer on solution pages before converting',
+        recommendation: 'Create Nigeria-specific enterprise landing pages with detailed solution breakdowns',
+        confidence: 89,
+        impact: 'high',
+        affectedSegment: 'Nigerian Enterprise',
+        metrics: {
+          before: 12,
+          after: 31,
+          improvement: 158
+        }
+      },
+      {
+        id: 'insight_2',
+        type: 'anomaly',
+        title: 'Unusual Mobile Conversion Spike',
+        description: 'Mobile conversions increased 45% in Lagos during business hours',
+        recommendation: 'Investigate mobile optimization and replicate successful elements',
+        confidence: 76,
+        impact: 'medium',
+        affectedSegment: 'Lagos Mobile Users',
+        metrics: {
+          before: 8,
+          after: 16,
+          improvement: 100
+        }
+      },
+      {
+        id: 'insight_3',
+        type: 'opportunity',
+        title: 'Pricing Page Optimization Window',
+        description: 'Visitors spending 5+ minutes on pricing show 85% higher conversion intent',
+        recommendation: 'Add interactive pricing calculator and comparison tools',
+        confidence: 93,
+        impact: 'high',
+        affectedSegment: 'Price Researchers',
+        metrics: {
+          before: 15,
+          after: 42,
+          improvement: 180
+        }
+      },
+      {
+        id: 'insight_4',
+        type: 'risk',
+        title: 'Weekend Visitor Engagement Drop',
+        description: 'Weekend visitors show 60% lower engagement and higher churn risk',
+        recommendation: 'Implement weekend-specific engagement strategies and content',
+        confidence: 81,
+        impact: 'medium',
+        affectedSegment: 'Weekend Visitors',
+        metrics: {
+          before: 45,
+          after: 18,
+          improvement: -60
+        }
+      }
+    ];
+  };
+
+  if (isLoading) {
+    return (
+      <Card className={className}>
+        <CardContent className="flex items-center justify-center h-96">
+          <div className="flex items-center gap-2">
+            <Brain className="w-5 h-5 animate-pulse" />
+            <span>Loading AI behavioral scoring...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const highConversionVisitors = behaviorScores.filter(s => s.conversionProbability >= 70).length;
+  const highRiskVisitors = behaviorScores.filter(s => s.churnRisk === 'high').length;
+  const avgEngagement = behaviorScores.reduce((sum, s) => sum + s.engagementScore, 0) / behaviorScores.length;
 
   return (
-    <div className="space-y-6">
-      {/* Behavioral Patterns */}
+    <div className={`space-y-6 ${className}`}>
+      {/* Header */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
-              <Brain className="h-5 w-5 text-purple-600" />
-              AI Behavioral Patterns
-              <Badge variant="outline" className="ml-2">
-                {behavioralPatterns.length} Detected
-              </Badge>
+              <Brain className="w-5 h-5" />
+              AI Behavioral Scoring & Predictions
             </CardTitle>
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsAnalyzing(true)}
-                disabled={isAnalyzing}
-                className="h-8"
-              >
-                <RefreshCw className={`h-3 w-3 mr-1 ${isAnalyzing ? 'animate-spin' : ''}`} />
-                {isAnalyzing ? 'Analyzing...' : 'Refresh'}
+              <Button variant="outline" size="sm" onClick={fetchScoringData} disabled={refreshing}>
+                <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                Refresh
               </Button>
-              <div className="text-xs text-muted-foreground">
-                Updated: {lastUpdate.toLocaleTimeString()}
-              </div>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            {behavioralPatterns.map((pattern) => (
-              <div
-                key={pattern.id}
-                className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                  selectedPattern === pattern.id ? 'ring-2 ring-purple-500' : ''
-                } ${pattern.riskLevel === 'high' ? 'border-red-200 bg-red-50/50' : 
-                    pattern.riskLevel === 'medium' ? 'border-yellow-200 bg-yellow-50/50' : 
-                    'border-green-200 bg-green-50/50'}`}
-                onClick={() => setSelectedPattern(selectedPattern === pattern.id ? null : pattern.id)}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {getPatternIcon(pattern.id)}
-                    <span className="font-medium text-sm">{pattern.name}</span>
-                  </div>
-                  <Badge variant={pattern.trend === 'increasing' ? 'default' : 'secondary'} className="text-xs">
-                    {pattern.trend}
-                  </Badge>
-                </div>
-                
-                <p className="text-xs text-gray-600 mb-3">{pattern.description}</p>
-                
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  <div className="text-center">
-                    <div className="font-bold text-blue-600">{pattern.frequency}</div>
-                    <div className="text-gray-500">Visitors</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="font-bold text-green-600">{pattern.conversionRate.toFixed(1)}%</div>
-                    <div className="text-gray-500">Convert</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="font-bold text-purple-600">{Math.round(pattern.confidence * 100)}%</div>
-                    <div className="text-gray-500">Confidence</div>
-                  </div>
-                </div>
-                
-                {selectedPattern === pattern.id && (
-                  <div className="mt-3 pt-3 border-t">
-                    <div className="text-xs text-gray-700 mb-2">
-                      <strong>Recommended Actions:</strong>
-                    </div>
-                    <div className="space-y-1">
-                      {pattern.associatedActions.map((action, index) => (
-                        <div key={index} className="text-xs text-blue-600 flex items-center gap-1">
-                          <Zap className="h-3 w-3" />
-                          {action}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </CardContent>
       </Card>
 
-      {/* Visitor Behavioral Scores */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <LineChart className="h-5 w-5 text-blue-600" />
-            Real-time Behavioral Scores
-            <Badge variant="outline" className="ml-2">
-              {visitorScores.length} Scored
-            </Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {visitorScores.map((score) => (
-              <div key={score.visitorId} className={`p-4 border rounded-lg ${getScoreColor(score.overallScore)}`}>
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <div className="font-medium text-sm">
-                      Visitor {score.visitorId.slice(-4).toUpperCase()}
-                    </div>
-                    <div className="text-xs opacity-75">
-                      {score.segments.join(' • ')}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold">{score.overallScore}</div>
-                    <div className="text-xs">Score</div>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-4 gap-3 mb-3 text-xs">
-                  <div className="text-center">
-                    <div className="font-bold">{score.subscores.engagement}</div>
-                    <div className="opacity-75">Engagement</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="font-bold">{score.subscores.intentSignals}</div>
-                    <div className="opacity-75">Intent</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="font-bold">{score.subscores.valueIndicators}</div>
-                    <div className="opacity-75">Value</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="font-bold">{100 - score.subscores.riskFactors}</div>
-                    <div className="opacity-75">Safety</div>
-                  </div>
-                </div>
-                
-                <div className="space-y-2 text-xs">
-                  <div>
-                    <strong>Predictions:</strong> {Math.round(score.predictions.conversionProbability * 100)}% convert in {score.predictions.timeToConvert}
-                  </div>
-                  <div>
-                    <strong>Next Action:</strong> {score.predictions.nextLikelyAction}
-                  </div>
-                  <div>
-                    <strong>Value:</strong> ₦{(score.predictions.predictedValue / 1000).toFixed(0)}k predicted
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* AI Insights */}
-      {aiInsights.length > 0 && (
+      {/* Overview Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-yellow-600" />
-              AI Behavioral Insights
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {aiInsights.map((insight, index) => (
-                <div
-                  key={index}
-                  className={`p-3 border rounded-lg ${
-                    insight.priority === 'high' ? 'border-red-200 bg-red-50' :
-                    insight.priority === 'medium' ? 'border-yellow-200 bg-yellow-50' :
-                    'border-green-200 bg-green-50'
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      {insight.type === 'risk' && <AlertTriangle className="h-4 w-4 text-red-600" />}
-                      {insight.type === 'opportunity' && <Target className="h-4 w-4 text-green-600" />}
-                      {insight.type === 'pattern' && <TrendingUp className="h-4 w-4 text-blue-600" />}
-                      {insight.type === 'anomaly' && <Activity className="h-4 w-4 text-purple-600" />}
-                      <span className="font-medium text-sm">{insight.title}</span>
-                    </div>
-                    <Badge variant={insight.priority === 'high' ? 'destructive' : 'secondary'} className="text-xs">
-                      {insight.priority}
-                    </Badge>
-                  </div>
-                  
-                  <p className="text-sm mb-2">{insight.description}</p>
-                  
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-blue-600 font-medium">{insight.impact}</span>
-                    <span>
-                      {insight.affectedVisitors} visitors • {Math.round(insight.confidence * 100)}% confidence
-                    </span>
-                  </div>
-                </div>
-              ))}
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                <Target className="w-4 h-4 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">High Conversion Probability</p>
+                <p className="text-xl font-semibold">{highConversionVisitors}</p>
+              </div>
             </div>
           </CardContent>
         </Card>
-      )}
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                <AlertTriangle className="w-4 h-4 text-red-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">High Churn Risk</p>
+                <p className="text-xl font-semibold">{highRiskVisitors}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Activity className="w-4 h-4 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Avg Engagement</p>
+                <p className="text-xl font-semibold">{avgEngagement.toFixed(1)}%</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                <Users className="w-4 h-4 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Tracked Visitors</p>
+                <p className="text-xl font-semibold">{behaviorScores.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content */}
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Visitor Scores List */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">Visitor Behavioral Scores</CardTitle>
+              <div className="text-sm text-gray-600">
+                {filteredScores.length} visitors
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* Filters and Search */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Search by location, device, or behavior type..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant={sortBy === 'conversionProbability' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSortBy('conversionProbability')}
+                >
+                  Conversion
+                </Button>
+                <Button
+                  variant={sortBy === 'engagementScore' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSortBy('engagementScore')}
+                >
+                  Engagement
+                </Button>
+                <Button
+                  variant={sortBy === 'riskScore' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSortBy('riskScore')}
+                >
+                  Risk
+                </Button>
+              </div>
+            </div>
+
+            {/* Visitor List */}
+            <ScrollArea className="h-96">
+              <div className="space-y-3">
+                {filteredScores.map((score) => {
+                  const BehaviorIcon = getBehaviorTypeIcon(score.behaviorType);
+                  return (
+                    <div key={score.visitorId} className="border rounded-lg">
+                      <div
+                        className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                        onClick={() => setExpandedScore(expandedScore === score.visitorId ? null : score.visitorId)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-3 h-3 rounded-full ${score.isActive ? 'bg-green-400 animate-pulse' : 'bg-gray-300'}`} />
+                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <BehaviorIcon className="w-4 h-4 text-blue-600" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{score.location}</span>
+                                <Badge variant="outline" className="text-xs">
+                                  {score.behaviorType}
+                                </Badge>
+                                <Badge className={getRiskColor(score.churnRisk) + ' text-xs'}>
+                                  {score.churnRisk} risk
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-gray-600">{score.device} • {score.currentPage}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <div className="flex gap-2 text-xs">
+                                <span className={`px-2 py-1 rounded ${getScoreColor(score.conversionProbability)}`}>
+                                  {score.conversionProbability}% convert
+                                </span>
+                                <span className={`px-2 py-1 rounded ${getScoreColor(score.engagementScore)}`}>
+                                  {score.engagementScore}% engage
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">${score.conversionValue.toLocaleString()} value</p>
+                            </div>
+                            {expandedScore === score.visitorId ? (
+                              <ChevronDown className="w-4 h-4 text-gray-400" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4 text-gray-400" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Expanded Details */}
+                      {expandedScore === score.visitorId && (
+                        <div className="px-4 pb-4 border-t bg-gray-50">
+                          <div className="pt-4 space-y-4">
+                            {/* Score Breakdown */}
+                            <div>
+                              <h4 className="font-medium mb-2">Score Breakdown</h4>
+                              <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                  <div className="flex justify-between mb-1">
+                                    <span>Intent Score</span>
+                                    <span className="font-medium">{score.intentScore}%</span>
+                                  </div>
+                                  <Progress value={score.intentScore} className="h-2" />
+                                </div>
+                                <div>
+                                  <div className="flex justify-between mb-1">
+                                    <span>Loyalty Score</span>
+                                    <span className="font-medium">{score.loyaltyScore}%</span>
+                                  </div>
+                                  <Progress value={score.loyaltyScore} className="h-2" />
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Predicted Actions */}
+                            <div>
+                              <h4 className="font-medium mb-2">Predicted Next Actions</h4>
+                              <div className="space-y-1">
+                                {score.predictedActions.map((action, index) => (
+                                  <div key={index} className="flex items-center gap-2 text-sm">
+                                    <ArrowRight className="w-3 h-3 text-gray-400" />
+                                    <span>{action}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Segments & Traits */}
+                            <div>
+                              <h4 className="font-medium mb-2">Segments & Traits</h4>
+                              <div className="flex flex-wrap gap-1">
+                                {[...score.segments, ...score.personalityTraits].map((item, index) => (
+                                  <Badge key={index} variant="outline" className="text-xs">
+                                    {item}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Time to Conversion */}
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-600">Predicted conversion time:</span>
+                              <span className="font-medium">{formatDuration(score.timeToConversion)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+
+        {/* Predictions Panel */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Sparkles className="w-5 h-5" />
+              AI Predictions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="predictions" className="space-y-4">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="predictions">Predictions</TabsTrigger>
+                <TabsTrigger value="insights">Insights</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="predictions" className="space-y-3">
+                {predictions.map((prediction) => {
+                  const Icon = getPredictionIcon(prediction.type);
+                  return (
+                    <div key={prediction.id} className="p-3 border rounded-lg">
+                      <div className="flex items-start gap-2 mb-2">
+                        <Icon className="w-4 h-4 mt-0.5 text-blue-600" />
+                        <div className="flex-1">
+                          <h3 className="font-medium text-sm">{prediction.title}</h3>
+                          <p className="text-xs text-gray-600">{prediction.description}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="text-lg font-bold text-blue-600">
+                          {prediction.prediction}
+                        </div>
+                        <Badge variant={prediction.impact === 'high' ? 'default' : 'outline'} className="text-xs">
+                          {prediction.confidence}% confident
+                        </Badge>
+                      </div>
+                      
+                      <div className="text-xs text-gray-600 mb-2">
+                        {prediction.timeframe} • {prediction.affectedVisitors} visitors
+                      </div>
+                      
+                      <div className="text-xs bg-blue-50 p-2 rounded">
+                        💡 {prediction.recommendedAction}
+                      </div>
+                    </div>
+                  );
+                })}
+              </TabsContent>
+
+              <TabsContent value="insights" className="space-y-3">
+                {insights.map((insight) => (
+                  <div key={insight.id} className="p-3 border rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-medium text-sm">{insight.title}</h3>
+                      <Badge variant={insight.impact === 'high' ? 'default' : 'outline'} className="text-xs">
+                        {insight.confidence}% confident
+                      </Badge>
+                    </div>
+                    
+                    <p className="text-xs text-gray-600 mb-2">{insight.description}</p>
+                    
+                    <div className="flex items-center gap-2 mb-2 text-xs">
+                      <span className="text-gray-600">Impact:</span>
+                      <span className={`font-medium ${
+                        insight.metrics.improvement > 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {insight.metrics.improvement > 0 ? '+' : ''}{insight.metrics.improvement}%
+                      </span>
+                    </div>
+                    
+                    <div className="text-xs bg-gray-50 p-2 rounded">
+                      🎯 {insight.recommendation}
+                    </div>
+                  </div>
+                ))}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -105,7 +105,7 @@ const sidebarNavItems: NavItem[] = [
     icon: Eye,
     submenu: [
       {
-        title: "Dashboard",
+        title: "Main Dashboard",
         href: "/leadpulse",
         icon: BarChart4,
       },
@@ -115,9 +115,9 @@ const sidebarNavItems: NavItem[] = [
         icon: LineChart,
       },
       {
-        title: "Forms",
-        href: "/leadpulse/forms/new",
-        icon: FileText,
+        title: "Lead Management",
+        href: "/leadpulse/lead-management",
+        icon: Users,
       },
       {
         title: "Setup",
@@ -147,6 +147,11 @@ const sidebarNavItems: NavItem[] = [
         icon: MessageCircle,
       },
       {
+        title: "Templates",
+        href: "/templates",
+        icon: FileText,
+      },
+      {
         title: "A/B Testing",
         href: "/campaigns/ab-testing",
         icon: Beaker,
@@ -159,36 +164,9 @@ const sidebarNavItems: NavItem[] = [
     ],
   },
   {
-    title: "Content",
-    href: "/content",
-    icon: FolderTree,
-    submenu: [
-      {
-        title: "Email Templates",
-        href: "/email/templates",
-        icon: FileText,
-      },
-      {
-        title: "SMS Templates",
-        href: "/sms/templates",
-        icon: FileText,
-      },
-      {
-        title: "WhatsApp Templates",
-        href: "/whatsapp/templates",
-        icon: FileText,
-      },
-    ],
-  },
-  {
     title: "Automations",
     href: "/workflows",
     icon: Zap,
-  },
-  {
-    title: "Customer Journeys",
-    href: "/dashboard/journeys",
-    icon: Route,
   },
   {
     title: "Task Management",
@@ -218,11 +196,6 @@ const sidebarNavItems: NavItem[] = [
     ],
   },
   {
-    title: "Integrations",
-    href: "/integrations",
-    icon: Store,
-  },
-  {
     title: "Support",
     href: "/support",
     icon: HelpCircle,
@@ -241,6 +214,11 @@ const sidebarNavItems: NavItem[] = [
         title: "Contact Support",
         href: "/support/contact",
         icon: MailQuestion,
+      },
+      {
+        title: "Integrations",
+        href: "/integrations",
+        icon: Store,
       },
     ],
   },

@@ -11,6 +11,7 @@ import {
   Users,
   AlertCircle
 } from 'lucide-react';
+import { getActiveVisitors } from '@/lib/leadpulse/dataProvider';
 
 interface SimulatorStatus {
   isRunning: boolean;
@@ -85,8 +86,6 @@ export default function LivePulseIndicator({
       if (!simulatorStatus?.isRunning) return;
       
       try {
-        // Import getActiveVisitors dynamically
-        const { getActiveVisitors } = await import('@/lib/leadpulse/dataProvider');
         const visitors = await getActiveVisitors('10m');
         
         // Filter for simulator-generated visitors with AI data

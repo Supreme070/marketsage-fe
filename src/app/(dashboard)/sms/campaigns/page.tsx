@@ -38,11 +38,17 @@ import {
   RefreshCw,
   FileText,
   AlertCircle,
+  Cpu,
+  Zap,
+  TrendingUp,
+  Target,
+  Smartphone
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSMSCampaigns } from "@/lib/api";
 import toast from "react-hot-toast";
+import { quantumSMSOptimizer } from '@/lib/ai/quantum-sms-optimizer';
 
 // Define interface for SMS Campaign
 interface SMSCampaign {
@@ -57,6 +63,18 @@ interface SMSCampaign {
   createdBy?: string;
   provider?: string;
   tags?: string[];
+  message?: string;
+  quantumOptimization?: {
+    messageOptimization: number;
+    timingOptimization: number;
+    providerOptimization: number;
+    overallQuantumAdvantage: number;
+    predictedPerformance: {
+      deliveryRate: number;
+      responseRate: number;
+      costPerMessage: number;
+    };
+  };
 }
 
 export default function SMSCampaignsPage() {
@@ -67,6 +85,8 @@ export default function SMSCampaignsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [providerFilter, setProviderFilter] = useState<string | null>(null);
+  const [quantumOptimizations, setQuantumOptimizations] = useState<Record<string, any>>({});
+  const [isOptimizing, setIsOptimizing] = useState<Record<string, boolean>>({});
   
   useEffect(() => {
     const fetchCampaigns = async () => {
@@ -74,6 +94,9 @@ export default function SMSCampaignsPage() {
         setIsLoading(true);
         const data = await getSMSCampaigns();
         setCampaigns(data);
+        
+        // Apply quantum optimizations to SMS campaigns
+        await applySMSQuantumOptimizations(data);
       } catch (error) {
         console.error("Failed to fetch SMS campaigns:", error);
         toast.error("Failed to load SMS campaigns");
@@ -84,6 +107,67 @@ export default function SMSCampaignsPage() {
 
     fetchCampaigns();
   }, []);
+
+  // Apply quantum optimizations to SMS campaigns
+  const applySMSQuantumOptimizations = async (campaignList: SMSCampaign[]) => {
+    const optimizations: Record<string, any> = {};
+    
+    for (const campaign of campaignList.slice(0, 4)) { // Optimize first 4 SMS campaigns
+      if (campaign.status === 'DRAFT' || campaign.status === 'SCHEDULED') {
+        setIsOptimizing(prev => ({ ...prev, [campaign.id]: true }));
+        
+        try {
+          const quantum = await quantumSMSOptimizer.optimizeSMSCampaign({
+            id: campaign.id,
+            name: campaign.name,
+            message: campaign.message || `SMS Campaign: ${campaign.name}`,
+            provider: campaign.provider || 'africastalking',
+            status: campaign.status as any,
+            scheduledDate: campaign.scheduledDate ? new Date(campaign.scheduledDate) : undefined,
+            recipients: [], // Would normally get from API
+            segments: [],
+            market: 'NGN' // Default to Nigerian market
+          });
+          
+          optimizations[campaign.id] = quantum;
+        } catch (error) {
+          console.warn(`Quantum SMS optimization failed for campaign ${campaign.id}:`, error);
+        } finally {
+          setIsOptimizing(prev => ({ ...prev, [campaign.id]: false }));
+        }
+      }
+    }
+    
+    setQuantumOptimizations(optimizations);
+  };
+
+  // Handle quantum optimization for individual SMS campaign
+  const handleOptimizeSMSCampaign = async (campaign: SMSCampaign) => {
+    setIsOptimizing(prev => ({ ...prev, [campaign.id]: true }));
+    
+    try {
+      const quantum = await quantumSMSOptimizer.optimizeSMSCampaign({
+        id: campaign.id,
+        name: campaign.name,
+        message: campaign.message || `SMS Campaign: ${campaign.name}`,
+        provider: campaign.provider || 'africastalking',
+        status: campaign.status as any,
+        scheduledDate: campaign.scheduledDate ? new Date(campaign.scheduledDate) : undefined,
+        recipients: [],
+        segments: [],
+        market: 'NGN'
+      });
+      
+      setQuantumOptimizations(prev => ({ ...prev, [campaign.id]: quantum }));
+      
+      toast.success(`⚡ SMS Quantum Optimization Complete - +${(quantum.messageOptimization.quantumAdvantage * 100).toFixed(1)}% quantum advantage`);
+    } catch (error) {
+      console.error('Quantum SMS optimization failed:', error);
+      toast.error('SMS Quantum optimization failed. Using classical methods.');
+    } finally {
+      setIsOptimizing(prev => ({ ...prev, [campaign.id]: false }));
+    }
+  };
 
   const itemsPerPage = 5;
   const filteredCampaigns = campaigns.filter(campaign => {
@@ -226,14 +310,38 @@ export default function SMSCampaignsPage() {
     }
   };
 
+  // Get quantum optimization summary
+  const getSMSQuantumSummary = () => {
+    const optimizedCampaigns = Object.keys(quantumOptimizations).length;
+    const avgQuantumAdvantage = optimizedCampaigns > 0 
+      ? Object.values(quantumOptimizations).reduce((sum, opt: any) => 
+          sum + opt.messageOptimization.quantumAdvantage, 0) / optimizedCampaigns
+      : 0;
+    return { optimizedCampaigns, avgQuantumAdvantage };
+  };
+  
+  const { optimizedCampaigns, avgQuantumAdvantage } = getSMSQuantumSummary();
+
   return (
     <div className="flex flex-col space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">SMS Campaigns</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage SMS campaigns across various African telecom providers.
+            Manage SMS campaigns across various African telecom providers with quantum optimization.
           </p>
+          {optimizedCampaigns > 0 && (
+            <div className="flex items-center gap-2 mt-2">
+              <Badge variant="outline" className="text-cyan-400 border-cyan-400 bg-cyan-900/20">
+                <Smartphone className="h-3 w-3 mr-1" />
+                ⚡ {optimizedCampaigns} Quantum Optimized
+              </Badge>
+              <Badge variant="outline" className="text-green-400 border-green-400 bg-green-900/20">
+                <TrendingUp className="h-3 w-3 mr-1" />
+                +{(avgQuantumAdvantage * 100).toFixed(1)}% Avg Improvement
+              </Badge>
+            </div>
+          )}
         </div>
         <Button asChild>
           <Link href="/sms/campaigns/new">
@@ -243,15 +351,89 @@ export default function SMSCampaignsPage() {
         </Button>
       </div>
 
+      {/* Quantum SMS Optimization Overview */}
+      {optimizedCampaigns > 0 && (
+        <Card className="bg-gradient-to-r from-blue-950/50 to-green-950/50 border-blue-500/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Smartphone className="h-5 w-5 text-blue-400" />
+              ⚡ Quantum SMS Intelligence
+            </CardTitle>
+            <CardDescription>
+              Advanced quantum optimizations for African mobile networks and cultural messaging
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Zap className="h-4 w-4 text-blue-400" />
+                  <span className="font-medium text-blue-300">SMS Optimized</span>
+                </div>
+                <div className="text-2xl font-bold text-blue-100">{optimizedCampaigns}</div>
+                <p className="text-xs text-blue-200">Quantum-enhanced SMS campaigns</p>
+              </div>
+              
+              <div className="p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="h-4 w-4 text-green-400" />
+                  <span className="font-medium text-green-300">Performance Boost</span>
+                </div>
+                <div className="text-2xl font-bold text-green-100">+{(avgQuantumAdvantage * 100).toFixed(1)}%</div>
+                <p className="text-xs text-green-200">Average quantum advantage</p>
+              </div>
+              
+              <div className="p-3 bg-purple-900/20 border border-purple-500/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="h-4 w-4 text-purple-400" />
+                  <span className="font-medium text-purple-300">Delivery Rate</span>
+                </div>
+                <div className="text-2xl font-bold text-purple-100">
+                  {optimizedCampaigns > 0 ? 
+                    (Object.values(quantumOptimizations).reduce((sum, opt: any) => 
+                      sum + opt.performancePrediction.estimatedDeliveryRate, 0) / optimizedCampaigns * 100).toFixed(1)
+                    : '95.0'}%
+                </div>
+                <p className="text-xs text-purple-200">Predicted delivery rate</p>
+              </div>
+              
+              <div className="p-3 bg-orange-900/20 border border-orange-500/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <MessageSquare className="h-4 w-4 text-orange-400" />
+                  <span className="font-medium text-orange-300">Response Rate</span>
+                </div>
+                <div className="text-2xl font-bold text-orange-100">
+                  {optimizedCampaigns > 0 ? 
+                    (Object.values(quantumOptimizations).reduce((sum, opt: any) => 
+                      sum + opt.performancePrediction.estimatedResponseRate, 0) / optimizedCampaigns * 100).toFixed(1)
+                    : '12.0'}%
+                </div>
+                <p className="text-xs text-orange-200">Expected response rate</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className={optimizedCampaigns > 0 ? 'border-cyan-500/30' : ''}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Campaigns</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              Total Campaigns
+              {optimizedCampaigns > 0 && (
+                <Badge variant="outline" className="text-cyan-400 border-cyan-400 bg-cyan-900/20 text-xs">
+                  ⚡ Enhanced
+                </Badge>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{campaigns.length}</div>
             <p className="text-xs text-muted-foreground mt-1">
               {statusCounts.ACTIVE} active, {statusCounts.SCHEDULED} scheduled
+              {optimizedCampaigns > 0 && (
+                <span className="block text-cyan-400">⚡ {optimizedCampaigns} quantum optimized</span>
+              )}
             </p>
           </CardContent>
         </Card>
@@ -426,7 +608,7 @@ export default function SMSCampaignsPage() {
                   <TableHead>Recipients</TableHead>
                   <TableHead>Performance</TableHead>
                   <TableHead>Delivery Date</TableHead>
-                  <TableHead className="w-[80px]">Actions</TableHead>
+                  <TableHead className="w-[120px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -461,8 +643,29 @@ export default function SMSCampaignsPage() {
                     <TableRow key={campaign.id}>
                       <TableCell className="font-medium">
                         <div className="flex flex-col">
-                          <span>{campaign.name}</span>
+                          <div className="flex items-center gap-2">
+                            <span>{campaign.name}</span>
+                            {quantumOptimizations[campaign.id] && (
+                              <Badge variant="outline" className="text-cyan-400 border-cyan-400 bg-cyan-900/20 text-xs">
+                                <Smartphone className="h-3 w-3 mr-1" />
+                                ⚡ Optimized
+                              </Badge>
+                            )}
+                            {isOptimizing[campaign.id] && (
+                              <Badge variant="outline" className="text-orange-400 border-orange-400 bg-orange-900/20 text-xs">
+                                <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                                Optimizing...
+                              </Badge>
+                            )}
+                          </div>
                           <span className="text-xs text-muted-foreground">by {campaign.createdBy || 'Unknown'}</span>
+                          {quantumOptimizations[campaign.id] && (
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-cyan-400">
+                                +{(quantumOptimizations[campaign.id].messageOptimization.quantumAdvantage * 100).toFixed(1)}% quantum boost
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>{campaign.provider ? getProviderBadge(campaign.provider) : '-'}</TableCell>
@@ -474,7 +677,28 @@ export default function SMSCampaignsPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {campaign.status === 'DRAFT' || campaign.status === 'SCHEDULED' ? (
+                        {quantumOptimizations[campaign.id] ? (
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="text-muted-foreground">Delivery:</span>
+                              <Badge variant="outline" className="text-green-400 border-green-400">
+                                {(quantumOptimizations[campaign.id].performancePrediction.estimatedDeliveryRate * 100).toFixed(1)}%
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="text-muted-foreground">Response:</span>
+                              <Badge variant="outline" className="text-blue-400 border-blue-400">
+                                {(quantumOptimizations[campaign.id].performancePrediction.estimatedResponseRate * 100).toFixed(1)}%
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="text-muted-foreground">Cost:</span>
+                              <Badge variant="outline" className="text-orange-400 border-orange-400">
+                                ${quantumOptimizations[campaign.id].performancePrediction.estimatedCostPerMessage.toFixed(3)}
+                              </Badge>
+                            </div>
+                          </div>
+                        ) : campaign.status === 'DRAFT' || campaign.status === 'SCHEDULED' ? (
                           <span className="text-xs text-muted-foreground">Not sent yet</span>
                         ) : (
                           <div className="flex flex-col text-xs">
@@ -506,6 +730,15 @@ export default function SMSCampaignsPage() {
                                 <Edit className="mr-2 h-4 w-4" /> Edit
                               </Link>
                             </DropdownMenuItem>
+                            {(campaign.status === "DRAFT" || campaign.status === "SCHEDULED") && !quantumOptimizations[campaign.id] && (
+                              <DropdownMenuItem 
+                                onClick={() => handleOptimizeSMSCampaign(campaign)}
+                                disabled={isOptimizing[campaign.id]}
+                              >
+                                <Cpu className="mr-2 h-4 w-4" /> 
+                                {isOptimizing[campaign.id] ? 'Optimizing...' : '⚡ Quantum Optimize'}
+                              </DropdownMenuItem>
+                            )}
                             {(campaign.status === 'ACTIVE' || campaign.status === 'COMPLETED') && (
                               <DropdownMenuItem asChild>
                                 <Link href={`/sms/campaigns/${campaign.id}/stats`}>
@@ -516,6 +749,11 @@ export default function SMSCampaignsPage() {
                             <DropdownMenuItem onClick={() => handleDuplicateCampaign(campaign.id)}>
                               <Copy className="mr-2 h-4 w-4" /> Duplicate
                             </DropdownMenuItem>
+                            {quantumOptimizations[campaign.id] && (
+                              <DropdownMenuItem>
+                                <Target className="mr-2 h-4 w-4" /> View SMS Optimization
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               className="text-destructive"

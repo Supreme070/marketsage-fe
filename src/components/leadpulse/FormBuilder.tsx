@@ -144,13 +144,14 @@ export function FormBuilder({
     const newField: FormField = {
       id: `field_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       type: fieldType,
-      name: `field_${fields.length + 1}`,
+      name: generateFieldName(fieldType, fields.length + 1),
       label: getDefaultLabel(fieldType),
       placeholder: getDefaultPlaceholder(fieldType),
-      isRequired: false,
+      isRequired: getDefaultRequired(fieldType),
       isVisible: true,
       order: fields.length,
-      width: 'FULL'
+      width: getDefaultWidth(fieldType),
+      validation: getDefaultValidation(fieldType)
     };
 
     setFields(prev => [...prev, newField]);
@@ -387,6 +388,76 @@ export function FormBuilder({
 }
 
 // Helper functions
+function generateFieldName(fieldType: string, index: number): string {
+  const prefixes: Record<string, string> = {
+    TEXT: 'text',
+    EMAIL: 'email',
+    PHONE: 'phone',
+    NUMBER: 'number',
+    TEXTAREA: 'message',
+    SELECT: 'selection',
+    MULTISELECT: 'multi_select',
+    RADIO: 'radio',
+    CHECKBOX: 'checkbox',
+    DATE: 'date',
+    TIME: 'time',
+    DATETIME: 'datetime',
+    FILE: 'file',
+    HIDDEN: 'hidden',
+    HTML: 'content',
+    DIVIDER: 'divider'
+  };
+
+  const prefix = prefixes[fieldType] || 'field';
+  return `${prefix}_${index}`;
+}
+
+function getDefaultRequired(fieldType: string): boolean {
+  // Email fields are commonly required for lead capture
+  return fieldType === 'EMAIL';
+}
+
+function getDefaultWidth(fieldType: string): string {
+  // Phone and email fields work well in half width on desktop
+  const halfWidthFields = ['PHONE', 'EMAIL', 'DATE', 'TIME'];
+  return halfWidthFields.includes(fieldType) ? 'HALF' : 'FULL';
+}
+
+function getDefaultValidation(fieldType: string): any {
+  const validations: Record<string, any> = {
+    EMAIL: {
+      type: 'email',
+      required: true,
+      message: 'Please enter a valid email address'
+    },
+    PHONE: {
+      type: 'african_phone',
+      required: false,
+      message: 'Please enter a valid African phone number (e.g., +234 803 123 4567)',
+      countries: ['NG', 'KE', 'ZA', 'GH', 'UG', 'TZ', 'ZW', 'ZM']
+    },
+    NUMBER: {
+      type: 'number',
+      min: 0,
+      message: 'Please enter a valid number'
+    },
+    TEXT: {
+      type: 'text',
+      minLength: 2,
+      maxLength: 255,
+      message: 'Please enter between 2 and 255 characters'
+    },
+    TEXTAREA: {
+      type: 'text',
+      minLength: 10,
+      maxLength: 1000,
+      message: 'Please enter between 10 and 1000 characters'
+    }
+  };
+
+  return validations[fieldType] || null;
+}
+
 function getDefaultLabel(fieldType: string): string {
   const labels: Record<string, string> = {
     TEXT: 'Text Input',
@@ -413,8 +484,8 @@ function getDefaultLabel(fieldType: string): string {
 function getDefaultPlaceholder(fieldType: string): string {
   const placeholders: Record<string, string> = {
     TEXT: 'Enter text...',
-    EMAIL: 'Enter your email address...',
-    PHONE: 'Enter your phone number...',
+    EMAIL: 'example@domain.com',
+    PHONE: '+234 803 123 4567', // Nigerian format as primary
     NUMBER: 'Enter a number...',
     TEXTAREA: 'Enter your message...',
     SELECT: 'Select an option...',
@@ -426,4 +497,47 @@ function getDefaultPlaceholder(fieldType: string): string {
   };
 
   return placeholders[fieldType] || '';
+}
+
+// African market phone number validation
+function validateAfricanPhoneNumber(phone: string): boolean {
+  // Remove all non-digits
+  const digits = phone.replace(/\D/g, '');
+  
+  // African country phone patterns
+  const patterns = [
+    /^234[789]\d{8}$/, // Nigeria: +234 followed by 7, 8, or 9 and 8 digits
+    /^254[17]\d{8}$/, // Kenya: +254 followed by 1 or 7 and 8 digits  
+    /^27[1-8]\d{8}$/, // South Africa: +27 followed by 1-8 and 8 digits
+    /^233[235][0-9]\d{7}$/, // Ghana: +233 followed by specific patterns
+    /^256[37]\d{8}$/, // Uganda: +256 followed by 3 or 7 and 8 digits
+    /^255[67]\d{8}$/, // Tanzania: +255 followed by 6 or 7 and 8 digits
+    /^263[77]\d{7}$/, // Zimbabwe: +263 followed by 77 and 7 digits
+    /^260[79]\d{7}$/, // Zambia: +260 followed by 7 or 9 and 7 digits
+  ];
+  
+  return patterns.some(pattern => pattern.test(digits));
+}
+
+// Format African phone numbers for display
+function formatAfricanPhoneNumber(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  
+  // Format based on country code
+  if (digits.startsWith('234') && digits.length === 13) {
+    // Nigeria: +234 803 123 4567
+    return `+234 ${digits.slice(3, 6)} ${digits.slice(6, 9)} ${digits.slice(9)}`;
+  } else if (digits.startsWith('254') && digits.length === 12) {
+    // Kenya: +254 712 345 678
+    return `+254 ${digits.slice(3, 6)} ${digits.slice(6, 9)} ${digits.slice(9)}`;
+  } else if (digits.startsWith('27') && digits.length === 11) {
+    // South Africa: +27 82 123 4567
+    return `+27 ${digits.slice(2, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
+  } else if (digits.startsWith('233') && digits.length === 12) {
+    // Ghana: +233 24 123 4567
+    return `+233 ${digits.slice(3, 5)} ${digits.slice(5, 8)} ${digits.slice(8)}`;
+  }
+  
+  // Fallback formatting
+  return phone;
 }

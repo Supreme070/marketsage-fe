@@ -289,6 +289,219 @@ export function FormFieldEditor({
 
         {needsOptions && <Separator />}
 
+        {/* Validation Rules */}
+        {!isDivider && !isHtmlField && (
+          <div className="space-y-4">
+            <h4 className="font-medium text-sm">Validation Rules</h4>
+            
+            {field.type === 'TEXT' && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="min-length">Min Length</Label>
+                  <Input
+                    id="min-length"
+                    type="number"
+                    value={field.validation?.minLength || ''}
+                    onChange={(e) => onFieldChange({ 
+                      validation: { 
+                        ...field.validation, 
+                        minLength: e.target.value ? Number(e.target.value) : undefined 
+                      }
+                    })}
+                    placeholder="2"
+                    min="0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="max-length">Max Length</Label>
+                  <Input
+                    id="max-length"
+                    type="number"
+                    value={field.validation?.maxLength || ''}
+                    onChange={(e) => onFieldChange({ 
+                      validation: { 
+                        ...field.validation, 
+                        maxLength: e.target.value ? Number(e.target.value) : undefined 
+                      }
+                    })}
+                    placeholder="255"
+                    min="1"
+                  />
+                </div>
+              </div>
+            )}
+
+            {field.type === 'TEXTAREA' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="min-length">Min Length</Label>
+                    <Input
+                      id="min-length"
+                      type="number"
+                      value={field.validation?.minLength || ''}
+                      onChange={(e) => onFieldChange({ 
+                        validation: { 
+                          ...field.validation, 
+                          minLength: e.target.value ? Number(e.target.value) : undefined 
+                        }
+                      })}
+                      placeholder="10"
+                      min="0"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="max-length">Max Length</Label>
+                    <Input
+                      id="max-length"
+                      type="number"
+                      value={field.validation?.maxLength || ''}
+                      onChange={(e) => onFieldChange({ 
+                        validation: { 
+                          ...field.validation, 
+                          maxLength: e.target.value ? Number(e.target.value) : undefined 
+                        }
+                      })}
+                      placeholder="1000"
+                      min="1"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="rows">Number of Rows</Label>
+                  <Input
+                    id="rows"
+                    type="number"
+                    value={field.validation?.rows || 4}
+                    onChange={(e) => onFieldChange({ 
+                      validation: { 
+                        ...field.validation, 
+                        rows: e.target.value ? Number(e.target.value) : 4 
+                      }
+                    })}
+                    placeholder="4"
+                    min="2"
+                    max="10"
+                  />
+                </div>
+              </div>
+            )}
+
+            {field.type === 'NUMBER' && (
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="min-value">Min Value</Label>
+                  <Input
+                    id="min-value"
+                    type="number"
+                    value={field.validation?.min || ''}
+                    onChange={(e) => onFieldChange({ 
+                      validation: { 
+                        ...field.validation, 
+                        min: e.target.value ? Number(e.target.value) : undefined 
+                      }
+                    })}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="max-value">Max Value</Label>
+                  <Input
+                    id="max-value"
+                    type="number"
+                    value={field.validation?.max || ''}
+                    onChange={(e) => onFieldChange({ 
+                      validation: { 
+                        ...field.validation, 
+                        max: e.target.value ? Number(e.target.value) : undefined 
+                      }
+                    })}
+                    placeholder="100"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="step">Step</Label>
+                  <Input
+                    id="step"
+                    type="number"
+                    value={field.validation?.step || 1}
+                    onChange={(e) => onFieldChange({ 
+                      validation: { 
+                        ...field.validation, 
+                        step: e.target.value ? Number(e.target.value) : 1 
+                      }
+                    })}
+                    placeholder="1"
+                    min="0.01"
+                    step="0.01"
+                  />
+                </div>
+              </div>
+            )}
+
+            {field.type === 'PHONE' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Supported Countries</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { code: 'NG', name: 'Nigeria', pattern: '+234' },
+                      { code: 'KE', name: 'Kenya', pattern: '+254' },
+                      { code: 'ZA', name: 'South Africa', pattern: '+27' },
+                      { code: 'GH', name: 'Ghana', pattern: '+233' },
+                      { code: 'UG', name: 'Uganda', pattern: '+256' },
+                      { code: 'TZ', name: 'Tanzania', pattern: '+255' },
+                      { code: 'ZW', name: 'Zimbabwe', pattern: '+263' },
+                      { code: 'ZM', name: 'Zambia', pattern: '+260' }
+                    ].map((country) => (
+                      <div key={country.code} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id={`country-${country.code}`}
+                          checked={field.validation?.countries?.includes(country.code) || false}
+                          onChange={(e) => {
+                            const countries = field.validation?.countries || [];
+                            const newCountries = e.target.checked
+                              ? [...countries, country.code]
+                              : countries.filter(c => c !== country.code);
+                            onFieldChange({
+                              validation: {
+                                ...field.validation,
+                                countries: newCountries
+                              }
+                            });
+                          }}
+                          className="rounded"
+                        />
+                        <Label htmlFor={`country-${country.code}`} className="text-sm">
+                          {country.name} ({country.pattern})
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="validation-message">Custom Error Message</Label>
+              <Input
+                id="validation-message"
+                value={field.validation?.message || ''}
+                onChange={(e) => onFieldChange({ 
+                  validation: { 
+                    ...field.validation, 
+                    message: e.target.value 
+                  }
+                })}
+                placeholder="Please enter a valid value"
+              />
+            </div>
+          </div>
+        )}
+
+        {(!isDivider && !isHtmlField) && <Separator />}
+
         {/* File Upload Settings */}
         {isFileField && (
           <div className="space-y-4">
@@ -322,6 +535,76 @@ export function FormFieldEditor({
                 min="0"
                 step="0.1"
               />
+            </div>
+          </div>
+        )}
+
+        {isFileField && <Separator />}
+
+        {/* Conditional Logic */}
+        {!isDivider && !isHtmlField && (
+          <div className="space-y-4">
+            <h4 className="font-medium text-sm">Conditional Logic</h4>
+            <p className="text-xs text-gray-500">
+              Show or hide this field based on other field values
+            </p>
+            
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Enable Conditional Logic</Label>
+                <Switch
+                  checked={!!field.conditionalLogic?.enabled}
+                  onCheckedChange={(checked) => onFieldChange({
+                    conditionalLogic: {
+                      ...field.conditionalLogic,
+                      enabled: checked
+                    }
+                  })}
+                />
+              </div>
+
+              {field.conditionalLogic?.enabled && (
+                <div className="space-y-3 p-3 border rounded-md bg-gray-50">
+                  <div className="space-y-2">
+                    <Label>Show this field when:</Label>
+                    <Select
+                      value={field.conditionalLogic?.action || 'show'}
+                      onValueChange={(value) => onFieldChange({
+                        conditionalLogic: {
+                          ...field.conditionalLogic,
+                          action: value
+                        }
+                      })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="show">Show field</SelectItem>
+                        <SelectItem value="hide">Hide field</SelectItem>
+                        <SelectItem value="require">Make field required</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Condition</Label>
+                    <Input
+                      value={field.conditionalLogic?.condition || ''}
+                      onChange={(e) => onFieldChange({
+                        conditionalLogic: {
+                          ...field.conditionalLogic,
+                          condition: e.target.value
+                        }
+                      })}
+                      placeholder="fieldName equals 'value'"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Example: email_1 contains '@business.com'
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

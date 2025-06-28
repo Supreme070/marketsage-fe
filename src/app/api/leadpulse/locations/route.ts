@@ -49,7 +49,7 @@ async function getSimulatorLocations(simulatorStatus: any): Promise<VisitorLocat
     if (remainingVisitors <= 0) return;
     
     const isLastCity = index === nigerianCities.length - 1;
-    let visitorsForCity = isLastCity 
+    const visitorsForCity = isLastCity 
       ? remainingVisitors 
       : Math.floor(activeVisitors * cityData.weight);
     

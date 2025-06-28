@@ -27,6 +27,7 @@ import { useSupremeAI } from '@/hooks/useSupremeAI';
 import { useAIIntelligenceOverview } from '@/hooks/useAIIntelligence';
 import { useSession } from 'next-auth/react';
 import LivePulseIndicator from './LivePulseIndicator';
+import { getActiveVisitors } from '@/lib/leadpulse/dataProvider';
 
 interface TrafficData {
   date: string;
@@ -180,7 +181,6 @@ export default function TrafficConversionAnalytics() {
           
           if (status.isRunning) {
             // Fetch AI-scored visitors from simulator
-            const { getActiveVisitors } = await import('@/lib/leadpulse/dataProvider');
             const visitors = await getActiveVisitors('15m'); // Last 15 minutes
             
             // Filter for simulator-generated visitors with AI data
@@ -433,7 +433,7 @@ export default function TrafficConversionAnalytics() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [metrics, realTimeConversions.currentProbability]);
+  }, [metrics]);
   
   // Generate AI insights from traffic data
   const generateAIInsights = async (traffic: TrafficData[], metrics: ConversionMetrics) => {

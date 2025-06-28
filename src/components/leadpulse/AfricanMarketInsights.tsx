@@ -465,7 +465,7 @@ export default function AfricanMarketInsights({
                         <div className="flex justify-between">
                           <span>Weekly Growth:</span>
                           <span className={`font-medium ${
-                            parseFloat(currentData?.currentActivity?.weeklyGrowth || '0') > 0 
+                            Number.parseFloat(currentData?.currentActivity?.weeklyGrowth || '0') > 0 
                               ? 'text-green-600' : 'text-red-600'
                           }`}>
                             {currentData?.currentActivity?.weeklyGrowth || 0}%

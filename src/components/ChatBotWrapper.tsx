@@ -8,15 +8,26 @@ const ChatBot = dynamic(() => import('@/components/ChatBot'), { ssr: false });
 
 export default function ChatBotWrapper() {
   const [showPulse, setShowPulse] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  
+  // Ensure component only renders on client side
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   // Add a pulsing animation effect that starts after a delay
   useEffect(() => {
+    if (!mounted) return;
+    
     const timer = setTimeout(() => {
       setShowPulse(true);
     }, 3000);
     
     return () => clearTimeout(timer);
-  }, []);
+  }, [mounted]);
+  
+  // Don't render anything on the server side
+  if (!mounted) return null;
   
   return (
     <ChatBot 

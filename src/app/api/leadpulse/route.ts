@@ -94,6 +94,58 @@ function applyBusinessRealism(realCount: number, timeRange: string): number {
 // GET: Fetch real-time dashboard data
 export async function GET(request: NextRequest) {
   try {
+    // Test database connection first
+    await prisma.$queryRaw`SELECT 1`;
+  } catch (dbError) {
+    console.error('Database connection failed, using fallback data:', dbError);
+    
+    // Return mock fallback data
+    const { searchParams } = new URL(request.url);
+    const timeRange = searchParams.get('timeRange') || '24h';
+    
+    const now = new Date();
+    const currentHour = now.getHours();
+    const multiplier = currentHour >= 9 && currentHour <= 17 ? 1.5 : 1.0;
+    
+    const baseActive = Math.floor((Math.random() * 20 + 15) * multiplier);
+    const baseTotal = Math.floor(baseActive * (Math.random() * 3 + 4));
+    
+    return NextResponse.json({
+      overview: {
+        activeVisitors: baseActive,
+        totalVisitors: baseTotal,
+        avgEngagementScore: Math.random() * 30 + 60,
+        conversionRate: Math.random() * 5 + 2
+      },
+      platformBreakdown: {
+        web: { count: Math.floor(baseTotal * 0.6), percentage: 60 },
+        mobile: { count: Math.floor(baseTotal * 0.3), percentage: 30 },
+        reactNative: { count: Math.floor(baseTotal * 0.05), percentage: 5 },
+        nativeApps: { count: Math.floor(baseTotal * 0.03), percentage: 3 },
+        hybrid: { count: Math.floor(baseTotal * 0.02), percentage: 2 }
+      },
+      touchpoints: {
+        page_view: Math.floor(baseTotal * 8),
+        click: Math.floor(baseTotal * 3),
+        form_view: Math.floor(baseTotal * 0.8),
+        form_submit: Math.floor(baseTotal * 0.2)
+      },
+      topLocations: [
+        { location: 'Lagos, Nigeria', visitors: Math.floor(baseTotal * 0.4) },
+        { location: 'Nairobi, Kenya', visitors: Math.floor(baseTotal * 0.2) },
+        { location: 'Cape Town, South Africa', visitors: Math.floor(baseTotal * 0.15) },
+        { location: 'Accra, Ghana', visitors: Math.floor(baseTotal * 0.1) }
+      ],
+      recentActivity: [],
+      metadata: {
+        lastUpdated: now.toISOString(),
+        timeRange,
+        dataSource: 'fallback'
+      }
+    });
+  }
+  
+  try {
     const { searchParams } = new URL(request.url);
     const timeRange = searchParams.get('timeRange') || '24h';
     

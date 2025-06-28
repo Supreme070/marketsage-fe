@@ -31,7 +31,8 @@ import {
   Bell,
   Database,
   Eye,
-  Lock
+  Lock,
+  MapPin
 } from 'lucide-react';
 
 interface FormSettings {
@@ -473,6 +474,28 @@ export function FormSettingsPanel({
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
+                  <Label>African Phone Validation</Label>
+                  <p className="text-sm text-gray-600">Enable African phone number format validation</p>
+                </div>
+                <Switch
+                  checked={form.settings.enableAfricanPhoneValidation ?? true}
+                  onCheckedChange={(checked) => updateSettings('enableAfricanPhoneValidation', checked)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>GDPR Compliance</Label>
+                  <p className="text-sm text-gray-600">Add GDPR consent checkbox for EU visitors</p>
+                </div>
+                <Switch
+                  checked={form.settings.enableGDPRCompliance || false}
+                  onCheckedChange={(checked) => updateSettings('enableGDPRCompliance', checked)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
                   <Label>File Uploads</Label>
                   <p className="text-sm text-gray-600">Allow file upload fields</p>
                 </div>
@@ -495,6 +518,109 @@ export function FormSettingsPanel({
                   />
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* African Market Compliance */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="w-4 h-4" />
+                African Market Compliance
+              </CardTitle>
+              <CardDescription>
+                Compliance settings for African markets
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Primary Market</Label>
+                <Select 
+                  value={form.settings.primaryMarket || 'NG'} 
+                  onValueChange={(value) => updateSettings('primaryMarket', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NG">Nigeria</SelectItem>
+                    <SelectItem value="KE">Kenya</SelectItem>
+                    <SelectItem value="ZA">South Africa</SelectItem>
+                    <SelectItem value="GH">Ghana</SelectItem>
+                    <SelectItem value="UG">Uganda</SelectItem>
+                    <SelectItem value="TZ">Tanzania</SelectItem>
+                    <SelectItem value="ZW">Zimbabwe</SelectItem>
+                    <SelectItem value="ZM">Zambia</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Data Protection Compliance</Label>
+                  <p className="text-sm text-gray-600">Follow local data protection laws</p>
+                </div>
+                <Switch
+                  checked={form.settings.enableDataProtection ?? true}
+                  onCheckedChange={(checked) => updateSettings('enableDataProtection', checked)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Mobile-First Validation</Label>
+                  <p className="text-sm text-gray-600">Prioritize mobile experience (90%+ mobile usage)</p>
+                </div>
+                <Switch
+                  checked={form.settings.enableMobileFirstValidation ?? true}
+                  onCheckedChange={(checked) => updateSettings('enableMobileFirstValidation', checked)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Consent Message</Label>
+                <Textarea
+                  value={form.settings.consentMessage || 'By submitting this form, you consent to the collection and processing of your personal data in accordance with our Privacy Policy.'}
+                  onChange={(e) => updateSettings('consentMessage', e.target.value)}
+                  placeholder="Consent message for data collection"
+                  rows={3}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Supported Languages</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { code: 'en', name: 'English' },
+                    { code: 'fr', name: 'French' },
+                    { code: 'pt', name: 'Portuguese' },
+                    { code: 'ar', name: 'Arabic' },
+                    { code: 'sw', name: 'Swahili' },
+                    { code: 'ha', name: 'Hausa' },
+                    { code: 'yo', name: 'Yoruba' },
+                    { code: 'ig', name: 'Igbo' }
+                  ].map((lang) => (
+                    <div key={lang.code} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`lang-${lang.code}`}
+                        checked={form.settings.supportedLanguages?.includes(lang.code) || lang.code === 'en'}
+                        onChange={(e) => {
+                          const languages = form.settings.supportedLanguages || ['en'];
+                          const newLanguages = e.target.checked
+                            ? [...languages, lang.code]
+                            : languages.filter(l => l !== lang.code);
+                          updateSettings('supportedLanguages', newLanguages);
+                        }}
+                        className="rounded"
+                      />
+                      <Label htmlFor={`lang-${lang.code}`} className="text-sm">
+                        {lang.name}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

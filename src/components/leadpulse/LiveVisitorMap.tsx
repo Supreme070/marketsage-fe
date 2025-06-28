@@ -178,23 +178,36 @@ export default function LiveVisitorMap({
     filterLocationsByGeoPath(activeLocations, geoPath);
   }, [geoPath, activeLocations]);
   
-  // Simulate activity pulses every few seconds
+  // Generate activity pulses that match actual visitor count
   useEffect(() => {
     if (mapView === '3d') return; // Don't need pulses in 3D mode as it has its own animations
     
+    const activeVisitorLocations = filteredLocations.filter(loc => loc.isActive);
+    const activeCount = activeVisitorLocations.length;
+    
+    if (activeCount === 0) {
+      setActivityPulses([]);
+      return;
+    }
+    
+    // Create pulses for each active visitor location
     const interval = setInterval(() => {
-      if (filteredLocations.length > 0) {
-        const activeLocations = filteredLocations.filter(loc => loc.isActive);
-          
-        if (activeLocations.length === 0) return;
-        
-        const randomLocation = activeLocations[Math.floor(Math.random() * activeLocations.length)];
+      // Generate pulses proportional to visitor count (1 pulse per 2-3 active visitors)
+      const pulsesToGenerate = Math.max(1, Math.ceil(activeCount / 2.5));
+      
+      for (let i = 0; i < pulsesToGenerate; i++) {
+        // Select random active location
+        const randomLocation = activeVisitorLocations[Math.floor(Math.random() * activeVisitorLocations.length)];
         const { x, y } = convertToSVGCoordinates(randomLocation.latitude, randomLocation.longitude);
         
+        // Add slight randomness to avoid overlapping pulses
+        const offsetX = x + (Math.random() - 0.5) * 10;
+        const offsetY = y + (Math.random() - 0.5) * 10;
+        
         const newPulse = {
-          id: `pulse_${Date.now()}`,
-          x,
-          y,
+          id: `pulse_${Date.now()}_${i}`,
+          x: offsetX,
+          y: offsetY,
           timestamp: Date.now()
         };
         
@@ -205,7 +218,7 @@ export default function LiveVisitorMap({
           setActivityPulses(prev => prev.filter(p => p.id !== newPulse.id));
         }, 2000);
       }
-    }, 3000);
+    }, 1500); // Faster pulse generation for more activity
     
     return () => clearInterval(interval);
   }, [filteredLocations, mapView]);
@@ -441,8 +454,8 @@ export default function LiveVisitorMap({
             name: 'Africa',
             code: 'AF',
             type: 'continent',
-            coordinates: { lat: 0, lng: 20, x: 400, y: 300 },
-            svgPath: "M 380 250 L 420 240 L 460 260 L 480 300 L 470 350 L 440 380 L 400 390 L 360 370 L 340 340 L 350 300 L 370 270 L 380 250 Z",
+            coordinates: { lat: 0, lng: 20, x: 500, y: 300 },
+            svgPath: "M 495 110 L 505 115 L 515 120 L 525 130 L 535 140 L 545 155 L 555 170 L 565 185 L 575 200 L 580 215 L 585 230 L 590 245 L 595 260 L 600 275 L 605 290 L 608 305 L 610 320 L 612 335 L 610 350 L 605 365 L 600 380 L 595 395 L 590 410 L 585 425 L 580 440 L 575 455 L 570 470 L 565 485 L 560 500 L 555 515 L 545 525 L 530 530 L 515 532 L 500 530 L 485 525 L 470 518 L 455 510 L 440 500 L 430 488 L 422 475 L 415 460 L 410 445 L 405 430 L 400 415 L 395 400 L 390 385 L 388 370 L 385 355 L 383 340 L 382 325 L 381 310 L 380 295 L 379 280 L 378 265 L 377 250 L 378 235 L 380 220 L 383 205 L 387 190 L 392 175 L 398 160 L 405 145 L 413 130 L 422 118 L 432 108 L 443 100 L 455 95 L 468 93 L 481 95 L 495 110 Z",
             viewBox: "305.55555555555554 126.66666666666669 255.55555555555554 340",
             clickable: true,
             children: ['GHA', 'KEN', 'NGA', 'ZAF']
@@ -768,27 +781,63 @@ export default function LiveVisitorMap({
                         );
                       })}
                     
-                    {/* Activity pulses */}
+                    {/* Enhanced Activity pulses */}
                     {mapMode !== 'heat' && (
                       <AnimatePresence>
                         {activityPulses.map(pulse => (
-                          <motion.circle
-                            key={pulse.id}
-                            cx={pulse.x}
-                            cy={pulse.y}
-                            r={4}
-                            fill="#ff4444"
-                            initial={{ opacity: 0.8, scale: 1 }}
-                            animate={{ 
-                              opacity: 0,
-                              scale: 4,
-                            }}
-                            exit={{ opacity: 0 }}
-                            transition={{
-                              duration: 1.5,
-                              ease: "easeOut"
-                            }}
-                          />
+                          <g key={pulse.id}>
+                            {/* Main pulse circle */}
+                            <motion.circle
+                              cx={pulse.x}
+                              cy={pulse.y}
+                              r={3}
+                              fill="#00ff88"
+                              initial={{ opacity: 1, scale: 1 }}
+                              animate={{ 
+                                opacity: 0,
+                                scale: 6,
+                              }}
+                              exit={{ opacity: 0 }}
+                              transition={{
+                                duration: 2,
+                                ease: "easeOut"
+                              }}
+                            />
+                            {/* Secondary pulse ring */}
+                            <motion.circle
+                              cx={pulse.x}
+                              cy={pulse.y}
+                              r={2}
+                              fill="none"
+                              stroke="#00ff88"
+                              strokeWidth="2"
+                              initial={{ opacity: 0.8, scale: 1 }}
+                              animate={{ 
+                                opacity: 0,
+                                scale: 8,
+                              }}
+                              exit={{ opacity: 0 }}
+                              transition={{
+                                duration: 2.5,
+                                ease: "easeOut",
+                                delay: 0.2
+                              }}
+                            />
+                            {/* Center dot */}
+                            <motion.circle
+                              cx={pulse.x}
+                              cy={pulse.y}
+                              r={1.5}
+                              fill="#ffffff"
+                              initial={{ opacity: 1 }}
+                              animate={{ opacity: 0 }}
+                              exit={{ opacity: 0 }}
+                              transition={{
+                                duration: 1,
+                                ease: "easeOut"
+                              }}
+                            />
+                          </g>
                         ))}
                       </AnimatePresence>
                     )}
@@ -825,7 +874,12 @@ export default function LiveVisitorMap({
               <div className="bg-gray-800/30 rounded-md p-3 border border-gray-700/30">
                 <div className="text-xs text-gray-400">Visitors Shown</div>
                 <div className="text-xl font-bold text-green-400">{filteredLocations.length}</div>
-                <div className="text-xs text-gray-500">({filteredLocations.filter(l => l.isActive).length} active)</div>
+                <div className="text-xs text-gray-500 flex items-center gap-1">
+                  ({filteredLocations.filter(l => l.isActive).length} active)
+                  {filteredLocations.filter(l => l.isActive).length > 0 && (
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  )}
+                </div>
               </div>
               <div className="bg-gray-800/30 rounded-md p-3 border border-gray-700/30">
                 <div className="text-xs text-gray-400">Current View</div>

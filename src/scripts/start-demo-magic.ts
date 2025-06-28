@@ -71,13 +71,13 @@ async function main() {
         process.exit(1);
       }
     } else if (arg.startsWith('--duration=')) {
-      config.duration = parseInt(arg.split('=')[1]);
+      config.duration = Number.parseInt(arg.split('=')[1]);
     } else if (arg.startsWith('--visitors=')) {
-      config.visitorsPerMinute = parseInt(arg.split('=')[1]);
+      config.visitorsPerMinute = Number.parseInt(arg.split('=')[1]);
     } else if (arg.startsWith('--forms=')) {
-      config.formSubmissionRate = parseInt(arg.split('=')[1]);
+      config.formSubmissionRate = Number.parseInt(arg.split('=')[1]);
     } else if (arg.startsWith('--alerts=')) {
-      config.alertFrequency = parseInt(arg.split('=')[1]);
+      config.alertFrequency = Number.parseInt(arg.split('=')[1]);
     } else if (arg === '--help' || arg === '-h') {
       showHelp();
       process.exit(0);

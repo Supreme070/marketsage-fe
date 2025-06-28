@@ -1,0 +1,337 @@
+// Enhanced Workflow Schema - Optimized for Performance and Scalability
+// This replaces the JSON-based workflow definition storage with normalized tables
+
+// =================================================================
+// ENHANCED WORKFLOW MODELS - NORMALIZED APPROACH
+// =================================================================
+
+model Workflow {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  status          WorkflowStatus @default(INACTIVE)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String
+
+  // Enhanced performance tracking
+  performanceScore     Float?    @default(0)
+  complexityRating     ComplexityRating @default(SIMPLE)
+  lastOptimizationAt   DateTime?
+  avgExecutionTime     Int?      @default(0) // milliseconds
+  successRate          Float?    @default(0) // 0-1
+  totalExecutions      Int       @default(0)
+  
+  // Relations
+  createdBy       User      @relation(fields: [createdById], references: [id])
+  nodes           WorkflowNode[]
+  connections     WorkflowConnection[]
+  triggers        WorkflowTrigger[]
+  executions      WorkflowExecution[]
+  analytics       WorkflowAnalytics[]
+  versions        WorkflowVersion[]
+  cache           WorkflowDefinitionCache?
+
+  @@index([status, createdAt])
+  @@index([performanceScore, status])
+  @@index([complexityRating, status])
+}
+
+// Normalized workflow nodes table (replaces JSON storage)
+model WorkflowNode {
+  id              String    @id @default(cuid())
+  workflowId      String
+  type            WorkflowNodeType
+  label           String
+  description     String?
+  positionX       Float     @default(0)
+  positionY       Float     @default(0)
+  config          Json?     // Node-specific configuration
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  workflow        Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  sourceConnections WorkflowConnection[] @relation("SourceNode")
+  targetConnections WorkflowConnection[] @relation("TargetNode")
+  triggers        WorkflowTrigger[]
+
+  @@index([workflowId, type])
+  @@index([workflowId, isActive])
+}
+
+// Normalized workflow connections table
+model WorkflowConnection {
+  id              String    @id @default(cuid())
+  workflowId      String
+  sourceNodeId    String
+  targetNodeId    String
+  sourceHandle    String?
+  targetHandle    String?
+  conditionType   ConnectionConditionType @default(ALWAYS)
+  conditionValue  String?   // JSON for complex conditions
+  label           String?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+
+  // Relations
+  workflow        Workflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  sourceNode      WorkflowNode @relation("SourceNode", fields: [sourceNodeId], references: [id], onDelete: Cascade)
+  targetNode      WorkflowNode @relation("TargetNode", fields: [targetNodeId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceNodeId, targetNodeId, sourceHandle])
+  @@index([workflowId, isActive])
+}
+
+// Enhanced workflow triggers with better categorization
+model WorkflowTrigger {
+  id              String    @id @default(cuid())
+  workflowId      String
+  nodeId          String
+  triggerType     TriggerType
+  conditions      Json?     // Trigger conditions
+  isActive        Boolean   @default(true)
+  lastTriggeredAt DateTime?
+  triggerCount    Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  workflow        Workflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  node            WorkflowNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@index([triggerType, isActive])
+  @@index([workflowId, isActive])
+}
+
+// Enhanced workflow execution with performance tracking
+model WorkflowExecution {
+  id              String    @id @default(cuid())
+  workflowId      String
+  contactId       String
+  status          WorkflowExecutionStatus @default(RUNNING)
+  currentStepId   String?
+  context         Json?     // Execution context as JSON
+  complexityScore Float?    @default(0)
+  estimatedDuration Int?    @default(0) // seconds
+  priority        ExecutionPriority @default(NORMAL)
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+  lastExecutedAt  DateTime?
+  errorMessage    String?
+  errorCategory   String?
+  retryCount      Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  workflow        Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  contact         Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  steps           WorkflowExecutionStep[]
+
+  @@unique([workflowId, contactId])
+  @@index([status, priority, createdAt])
+  @@index([workflowId, status])
+  @@index([contactId, status])
+}
+
+// Enhanced workflow execution steps with performance metrics
+model WorkflowExecutionStep {
+  id              String    @id @default(cuid())
+  executionId     String
+  stepId          String    // References WorkflowNode.id
+  nodeType        WorkflowNodeType
+  status          StepExecutionStatus @default(PENDING)
+  executionDuration Int?    @default(0) // milliseconds
+  retryCount      Int       @default(0)
+  startedAt       DateTime?
+  completedAt     DateTime?
+  scheduledFor    DateTime?
+  output          Json?     // Step output
+  errorMessage    String?
+  errorCategory   String?
+  createdAt       DateTime  @default(now())
+
+  // Relations
+  execution       WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@index([executionId, stepId])
+  @@index([nodeType, status])
+  @@index([errorCategory, status])
+}
+
+// Workflow analytics cache for performance
+model WorkflowAnalytics {
+  id              String    @id @default(cuid())
+  workflowId      String
+  dateRange       AnalyticsRange
+  periodStart     DateTime
+  periodEnd       DateTime
+  totalExecutions Int       @default(0)
+  completedExecutions Int   @default(0)
+  failedExecutions Int      @default(0)
+  avgCompletionTime Float   @default(0)
+  completionRate  Float     @default(0)
+  errorRate       Float     @default(0)
+  mostCommonError String?
+  performanceScore Float    @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  workflow        Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, dateRange, periodStart])
+  @@index([dateRange, periodStart])
+  @@index([performanceScore])
+}
+
+// Workflow definition caching for performance
+model WorkflowDefinitionCache {
+  workflowId      String    @id
+  definitionHash  String
+  cachedDefinition Json
+  nodeCount       Int
+  connectionCount Int
+  lastModified    DateTime
+  cacheCreatedAt  DateTime  @default(now())
+  cacheHitCount   Int       @default(0)
+
+  // Relations
+  workflow        Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([definitionHash])
+  @@index([lastModified])
+}
+
+// Workflow versioning for change management
+model WorkflowVersion {
+  id              String    @id @default(cuid())
+  workflowId      String
+  versionNumber   Int
+  definitionSnapshot Json
+  changeDescription String?
+  createdBy       String?
+  createdAt       DateTime  @default(now())
+  isActive        Boolean   @default(false)
+
+  // Relations
+  workflow        Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  creator         User?     @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@unique([workflowId, versionNumber])
+  @@index([workflowId, isActive])
+}
+
+// Queue monitoring for system health
+model WorkflowQueueMetrics {
+  id              String    @id @default(cuid())
+  queueName       String
+  timestamp       DateTime
+  waitingJobs     Int       @default(0)
+  activeJobs      Int       @default(0)
+  completedJobs   Int       @default(0)
+  failedJobs      Int       @default(0)
+  processingRate  Float     @default(0) // jobs per minute
+  avgProcessingTime Float   @default(0) // milliseconds
+  memoryUsageMb   Float     @default(0)
+
+  @@index([queueName, timestamp])
+  @@index([timestamp])
+}
+
+// =================================================================
+// ENHANCED ENUMS
+// =================================================================
+
+enum WorkflowNodeType {
+  TRIGGER
+  ACTION
+  CONDITION
+  DELAY
+  EMAIL
+  SMS
+  WHATSAPP
+  WEBHOOK
+  NOTIFICATION
+  SUB_WORKFLOW
+  LOOP
+  PARALLEL
+}
+
+enum ConnectionConditionType {
+  ALWAYS
+  YES
+  NO
+  CUSTOM
+  EXPRESSION
+}
+
+enum ComplexityRating {
+  SIMPLE      // 1-5 nodes
+  MODERATE    // 6-15 nodes
+  COMPLEX     // 16-30 nodes
+  ADVANCED    // 31+ nodes
+}
+
+enum ExecutionPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum AnalyticsRange {
+  HOUR
+  DAY
+  WEEK
+  MONTH
+  QUARTER
+  YEAR
+}
+
+enum WorkflowStatus {
+  ACTIVE
+  INACTIVE
+  PAUSED
+  ARCHIVED
+  DRAFT
+  TESTING
+}
+
+enum WorkflowExecutionStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  PAUSED
+  CANCELLED
+  TIMEOUT
+}
+
+enum StepExecutionStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  SKIPPED
+  SCHEDULED
+  RETRYING
+}
+
+enum TriggerType {
+  CONTACT_CREATED
+  CONTACT_ADDED_TO_LIST
+  CONTACT_UPDATED
+  EMAIL_OPENED
+  EMAIL_CLICKED
+  EMAIL_BOUNCED
+  SMS_DELIVERED
+  SMS_FAILED
+  FORM_SUBMITTED
+  WEBHOOK_RECEIVED
+  SCHEDULE_TRIGGERED
+  API_CALL
+  CUSTOM_EVENT
+}

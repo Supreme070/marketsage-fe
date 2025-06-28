@@ -10,11 +10,15 @@ import {
   Settings, TrendingUp, Calendar, RefreshCw, Plus, 
   ArrowUpRight, ArrowDownRight, Bell, Map, BarChart3,
   Headphones, Workflow, Target, Clock, ChevronRight,
-  Monitor, Database, Globe
+  Monitor, Database, Globe, Atom, Brain, Rocket, Square,
+  Cpu, Phone, Smartphone
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import ConversionSubSidebar from "@/components/dashboard/ConversionSubSidebar";
+import { quantumIntegration } from "@/lib/quantum";
+import { masterSimulation, type MasterSimulationState } from "@/lib/simulation/master-simulation-controller";
 
 interface DashboardOverview {
   kpis: {
@@ -50,8 +54,8 @@ export default function CommandCenterDashboard() {
   const { data: session } = useSession();
   const userName = session?.user?.name || "User";
   
-  const [loading, setLoading] = useState(true);
-  const [dashboardData, setDashboardData] = useState<DashboardOverview | null>(null);
+  const [loading, setLoading] = useState(false); // No loading since we start with simulation data
+  const [simulationState, setSimulationState] = useState<MasterSimulationState>(masterSimulation.getState());
   const [timeRange, setTimeRange] = useState('24h');
   const [liveUpdates, setLiveUpdates] = useState<Array<{
     id: string;
@@ -61,104 +65,112 @@ export default function CommandCenterDashboard() {
     timestamp: string;
     href: string;
   }>>([]);
+  const [conversionSidebarExpanded, setConversionSidebarExpanded] = useState(false);
+  const [isStartingSimulation, setIsStartingSimulation] = useState(false);
 
-  // Initial fetch and polling for dashboard overview
+  // Subscribe to master simulation state changes
   useEffect(() => {
-    let overviewInterval: NodeJS.Timeout;
-    async function fetchDashboardOverview() {
-      try {
-        const response = await fetch(`/api/dashboard/overview?timeRange=${timeRange}`);
-        const data = await response.json();
-        if (data.success) {
-          setDashboardData(data.data as DashboardOverview);
-          
-          // Initialize live updates with first 6 items from recentActivity
-          if (data.data.recentActivity && liveUpdates.length === 0) {
-            const initialUpdates = data.data.recentActivity.slice(0, 6).map((item: any, index: number) => ({
-              ...item,
-              id: `init_${index}_${Date.now()}`
-            }));
-            setLiveUpdates(initialUpdates);
-          }
-        }
-      } catch (error) {
-        console.error('Error polling dashboard overview:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    // initial fetch
-    fetchDashboardOverview();
-    // polling every 7 seconds
-    overviewInterval = setInterval(fetchDashboardOverview, 7000);
-
-    return () => clearInterval(overviewInterval);
-  }, [timeRange]);
-
-  // Simple live updates simulation with proper state management
-  useEffect(() => {
-    let updatesInterval: NodeJS.Timeout;
-    
-    const simulateUpdate = () => {
-      const updateTypes = ['campaign', 'workflow', 'journey', 'leadpulse', 'support'];
-      const titles = {
-        campaign: 'Email Campaign Sent',
-        workflow: 'Workflow Triggered',
-        journey: 'Customer Journey Started',
-        leadpulse: 'New Visitor Detected',
-        support: 'Support Ticket Created'
-      };
-      const descriptions = {
-        campaign: 'Newsletter to subscribers',
-        workflow: 'Welcome sequence activated',
-        journey: 'Onboarding journey initiated',
-        leadpulse: 'High-intent visitor from Lagos',
-        support: 'Integration help request'
-      };
+    const handleSimulationStateChange = (newState: MasterSimulationState) => {
+      setSimulationState(newState);
       
-      const randomType = updateTypes[Math.floor(Math.random() * updateTypes.length)];
-      const newUpdate = {
-        id: `live_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        type: randomType,
-        title: titles[randomType as keyof typeof titles],
-        description: descriptions[randomType as keyof typeof descriptions],
-        timestamp: new Date().toISOString(),
-        href: `/${randomType}`
-      };
-      
-      // Properly manage exactly 6 items with smooth transitions
-      setLiveUpdates(prev => {
-        const newList = [newUpdate, ...prev];
-        // Always return exactly 6 items, no more
-        return newList.slice(0, 6);
-      });
-      
-      // Update KPIs based on update type
-      if (dashboardData) {
-        setDashboardData(prevData => prevData ? ({
-          ...prevData,
-          livePulse: {
-            ...prevData.livePulse,
-            activeVisitors: randomType === 'leadpulse' ? 
-              prevData.livePulse.activeVisitors + 1 : 
-              prevData.livePulse.activeVisitors
-          }
-        }) : prevData);
+      // Update live updates based on simulation activity
+      if (newState.isRunning) {
+        updateLiveActivity(newState);
       }
     };
 
-    // Start simulating updates after 3 seconds, then every 8 seconds
-    const startDelay = setTimeout(() => {
-      simulateUpdate();
-      updatesInterval = setInterval(simulateUpdate, 8000);
-    }, 3000);
+    masterSimulation.onStateChange(handleSimulationStateChange);
+    
+    // Initialize with current state
+    setSimulationState(masterSimulation.getState());
 
     return () => {
-      clearTimeout(startDelay);
-      clearInterval(updatesInterval);
+      // No cleanup method available, but state will reset when component unmounts
     };
-  }, [dashboardData]);
+  }, []);
+
+  // Master simulation control functions
+  const startMasterSimulation = async () => {
+    try {
+      setIsStartingSimulation(true);
+      const simulationId = await masterSimulation.startSimulation({
+        market: 'ALL',
+        duration: 30, // 30 minutes
+        intensity: 'medium',
+        scenario: 'normal',
+        enableQuantum: true,
+        realTimeUpdates: true
+      });
+      
+      toast.success(`🚀 MarketSage Master Simulation Started!`);
+      console.log(`Master simulation started: ${simulationId}`);
+    } catch (error) {
+      console.error('Failed to start master simulation:', error);
+      toast.error('Failed to start simulation');
+    } finally {
+      setIsStartingSimulation(false);
+    }
+  };
+
+  const stopMasterSimulation = () => {
+    masterSimulation.stopSimulation();
+    setLiveUpdates([]); // Clear live updates
+    toast.info('🛑 Master Simulation Stopped');
+  };
+
+  const updateLiveActivity = (state: MasterSimulationState) => {
+    if (!state.isRunning) return;
+
+    // Generate live updates based on simulation activity
+    const activities = [];
+    
+    if (state.campaigns.email.sent > 0) {
+      activities.push({
+        id: `email_${Date.now()}`,
+        type: 'campaign',
+        title: 'Email Campaign Active',
+        description: `${state.campaigns.email.sent} emails sent, ${state.campaigns.email.conversions} conversions`,
+        timestamp: new Date().toISOString(),
+        href: '/email/campaigns'
+      });
+    }
+    
+    if (state.leadpulse.totalVisitors > 0) {
+      activities.push({
+        id: `leadpulse_${Date.now()}`,
+        type: 'leadpulse',
+        title: 'LeadPulse Activity',
+        description: `${state.leadpulse.totalVisitors} visitors tracked, ${state.leadpulse.insights} insights generated`,
+        timestamp: new Date().toISOString(),
+        href: '/leadpulse'
+      });
+    }
+    
+    if (state.ai.tasksProcessed > 0) {
+      activities.push({
+        id: `ai_${Date.now()}`,
+        type: 'ai',
+        title: 'AI Processing',
+        description: `${state.ai.tasksProcessed} quantum tasks processed, ${(state.ai.quantumAdvantage * 100).toFixed(1)}% advantage`,
+        timestamp: new Date().toISOString(),
+        href: '/ai-chat'
+      });
+    }
+    
+    if (state.campaigns.workflows.triggered > 0) {
+      activities.push({
+        id: `workflow_${Date.now()}`,
+        type: 'workflow',
+        title: 'Workflow Automation',
+        description: `${state.campaigns.workflows.triggered} workflows triggered, ${state.campaigns.workflows.completed} completed`,
+        timestamp: new Date().toISOString(),
+        href: '/workflows'
+      });
+    }
+
+    // Update live updates with latest activities
+    setLiveUpdates(activities.slice(0, 6));
+  };
 
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) {
@@ -209,68 +221,76 @@ export default function CommandCenterDashboard() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-        <div className="grid gap-4 md:grid-cols-4">
-          {[1,2,3,4].map(i => (
-            <div key={i} className="h-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
-          ))}
-        </div>
-        <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
-        <div className="grid gap-4 md:grid-cols-6">
-          {[1,2,3,4,5,6].map(i => (
-            <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (!dashboardData) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <p className="text-muted-foreground mb-4">Failed to load dashboard data</p>
-          <Button onClick={() => window.location.reload()}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Retry
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // No loading states needed - we always have simulation data available
 
   return (
-    <div className="space-y-6">
-      {/* Clean Header */}
+    <>
+      <ConversionSubSidebar 
+        isExpanded={conversionSidebarExpanded}
+        onToggle={() => setConversionSidebarExpanded(!conversionSidebarExpanded)}
+        simulationState={simulationState}
+      />
+      
+      <div className={`space-y-6 transition-all duration-300 ${conversionSidebarExpanded ? 'mr-80' : 'mr-16'}`}>
+      {/* Enhanced Header with Master Simulation Controls */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Marketing Dashboard</h1>
+          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-3">
+            Marketing Dashboard
+            {simulationState.isRunning && (
+              <Badge variant="secondary" className="bg-green-500/20 text-green-400 border-green-500/30">
+                <div className="w-2 h-2 bg-green-400 rounded-full mr-1 animate-pulse"></div>
+                Live Simulation
+              </Badge>
+            )}
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Real-time overview of your marketing performance
+            {simulationState.isRunning 
+              ? `Master simulation active - All metrics synchronized across MarketSage`
+              : 'Production ready - Start simulation to see live African fintech data'
+            }
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {!simulationState.isRunning ? (
+            <Button 
+              onClick={startMasterSimulation}
+              disabled={isStartingSimulation}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isStartingSimulation ? (
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Rocket className="h-4 w-4 mr-2" />
+              )}
+              Start Master Simulation
+            </Button>
+          ) : (
+            <Button 
+              onClick={stopMasterSimulation}
+              variant="outline"
+              className="border-red-500/20 text-red-400 hover:bg-red-500/10"
+            >
+              <Square className="h-4 w-4 mr-2" />
+              Stop Simulation
+            </Button>
+          )}
+          
           <select 
             className="px-3 py-1 text-sm border rounded-md bg-background"
             value={timeRange} 
             onChange={(e) => setTimeRange(e.target.value)}
+            disabled={simulationState.isRunning}
           >
             <option value="24h">Last 24 hours</option>
             <option value="7d">Last 7 days</option>
             <option value="30d">Last 30 days</option>
           </select>
-          <Button variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
         </div>
       </div>
 
       {/* Key Metrics Grid */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <Card className="border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -279,10 +299,16 @@ export default function CommandCenterDashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₦{formatNumber(dashboardData.kpis.revenueToday)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(simulationState.dashboard.revenueToday)}</div>
             <p className="text-xs text-muted-foreground flex items-center mt-1">
-              <TrendingUp className="h-3 w-3 mr-1 text-green-600" />
-              +12.5% from yesterday
+              {simulationState.isRunning ? (
+                <>
+                  <TrendingUp className="h-3 w-3 mr-1 text-green-600" />
+                  Live simulation data
+                </>
+              ) : (
+                'Start simulation to see revenue'
+              )}
             </p>
           </CardContent>
         </Card>
@@ -295,10 +321,16 @@ export default function CommandCenterDashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardData.livePulse.activeVisitors}</div>
+            <div className="text-2xl font-bold">{simulationState.dashboard.activeVisitors}</div>
             <div className="text-xs text-muted-foreground flex items-center mt-1">
-              <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-              Live count
+              {simulationState.isRunning ? (
+                <>
+                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                  Live count
+                </>
+              ) : (
+                'Start simulation to track visitors'
+              )}
             </div>
           </CardContent>
         </Card>
@@ -311,10 +343,16 @@ export default function CommandCenterDashboard() {
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardData.kpis.conversionRate.toFixed(1)}%</div>
+            <div className="text-2xl font-bold">{simulationState.dashboard.conversionRate.toFixed(1)}%</div>
             <p className="text-xs text-muted-foreground flex items-center mt-1">
-              <TrendingUp className="h-3 w-3 mr-1 text-green-600" />
-              +0.3% from last week
+              {simulationState.isRunning ? (
+                <>
+                  <TrendingUp className="h-3 w-3 mr-1 text-green-600" />
+                  Real-time optimization
+                </>
+              ) : (
+                'Start simulation for conversions'
+              )}
             </p>
           </CardContent>
         </Card>
@@ -327,16 +365,37 @@ export default function CommandCenterDashboard() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardData.kpis.runningAutomations}</div>
+            <div className="text-2xl font-bold">{simulationState.dashboard.activeCampaigns}</div>
             <p className="text-xs text-muted-foreground">
-              Across all channels
+              {simulationState.isRunning ? 'Across all channels' : 'Start simulation for campaigns'}
             </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border bg-gradient-to-br from-purple-500/5 to-blue-500/5 border-purple-500/20">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Quantum Enhancement
+            </CardTitle>
+            <Atom className="h-4 w-4 text-purple-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-400">
+              {(simulationState.dashboard.quantumAdvantage * 100).toFixed(1)}%
+            </div>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <div className={`w-2 h-2 rounded-full ${
+                simulationState.isRunning ? 'bg-green-500' : 'bg-gray-500'
+              } ${simulationState.isRunning ? 'animate-pulse' : ''}`}></div>
+              {simulationState.isRunning ? 'operational' : 'ready'}
+            </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Main Content Grid */}
       <div className="grid gap-6 grid-cols-12">
+
         {/* Audience Growth Chart */}
         <Card className="col-span-8 border">
           <CardHeader>
@@ -420,41 +479,82 @@ export default function CommandCenterDashboard() {
       <Card className="border">
         <CardHeader>
           <CardTitle className="text-lg font-medium">Channel Performance</CardTitle>
-          <CardDescription>Multi-channel engagement metrics and activity</CardDescription>
+          <CardDescription>
+            {simulationState.isRunning 
+              ? 'Live multi-channel engagement metrics from master simulation'
+              : 'Start simulation to see channel performance data'
+            }
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-6 grid-cols-3">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Email Campaigns</span>
-                <span className="text-sm font-medium">{dashboardData.modules.campaigns.count} active</span>
+                <span className="text-sm font-medium">{simulationState.campaigns.email.sent} sent</span>
               </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 rounded-full" style={{ width: '67%' }}></div>
+                <div 
+                  className="h-full bg-blue-500 rounded-full transition-all duration-500" 
+                  style={{ 
+                    width: simulationState.campaigns.email.sent > 0 
+                      ? `${Math.min(100, (simulationState.campaigns.email.opened / simulationState.campaigns.email.sent) * 100)}%` 
+                      : '0%' 
+                  }}
+                ></div>
               </div>
-              <div className="text-xs text-muted-foreground">67% engagement rate</div>
+              <div className="text-xs text-muted-foreground">
+                {simulationState.campaigns.email.sent > 0 
+                  ? `${((simulationState.campaigns.email.opened / simulationState.campaigns.email.sent) * 100).toFixed(1)}% open rate`
+                  : 'No activity yet'
+                }
+              </div>
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">SMS Campaigns</span>
-                <span className="text-sm font-medium">{dashboardData.livePulse.conversionsToday} sent today</span>
+                <span className="text-sm font-medium">{simulationState.campaigns.sms.sent} sent</span>
               </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 rounded-full" style={{ width: '45%' }}></div>
+                <div 
+                  className="h-full bg-green-500 rounded-full transition-all duration-500" 
+                  style={{ 
+                    width: simulationState.campaigns.sms.sent > 0 
+                      ? `${Math.min(100, (simulationState.campaigns.sms.delivered / simulationState.campaigns.sms.sent) * 100)}%` 
+                      : '0%' 
+                  }}
+                ></div>
               </div>
-              <div className="text-xs text-muted-foreground">45% open rate</div>
+              <div className="text-xs text-muted-foreground">
+                {simulationState.campaigns.sms.sent > 0 
+                  ? `${((simulationState.campaigns.sms.delivered / simulationState.campaigns.sms.sent) * 100).toFixed(1)}% delivery rate`
+                  : 'No activity yet'
+                }
+              </div>
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">WhatsApp</span>
-                <span className="text-sm font-medium">{dashboardData.livePulse.engagementTrend.toFixed(0)}% response</span>
+                <span className="text-sm font-medium">{simulationState.campaigns.whatsapp.sent} sent</span>
               </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-purple-500 rounded-full" style={{ width: '87%' }}></div>
+                <div 
+                  className="h-full bg-purple-500 rounded-full transition-all duration-500" 
+                  style={{ 
+                    width: simulationState.campaigns.whatsapp.sent > 0 
+                      ? `${Math.min(100, (simulationState.campaigns.whatsapp.replied / simulationState.campaigns.whatsapp.sent) * 100)}%` 
+                      : '0%' 
+                  }}
+                ></div>
               </div>
-              <div className="text-xs text-muted-foreground">87% response rate</div>
+              <div className="text-xs text-muted-foreground">
+                {simulationState.campaigns.whatsapp.sent > 0 
+                  ? `${((simulationState.campaigns.whatsapp.replied / simulationState.campaigns.whatsapp.sent) * 100).toFixed(1)}% response rate`
+                  : 'No activity yet'
+                }
+              </div>
             </div>
           </div>
         </CardContent>
@@ -469,7 +569,7 @@ export default function CommandCenterDashboard() {
                 <Workflow className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <div className="font-medium text-sm">Workflows</div>
-                  <div className="text-xs text-muted-foreground">{dashboardData.modules.workflows.count} active</div>
+                  <div className="text-xs text-muted-foreground">{simulationState.campaigns.workflows.active} active</div>
                 </div>
               </div>
             </CardContent>
@@ -483,7 +583,7 @@ export default function CommandCenterDashboard() {
                 <Monitor className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <div className="font-medium text-sm">Lead Intelligence</div>
-                  <div className="text-xs text-muted-foreground">{dashboardData.modules.leadpulse.count} insights</div>
+                  <div className="text-xs text-muted-foreground">{simulationState.leadpulse.insights} insights</div>
                 </div>
               </div>
             </CardContent>
@@ -497,7 +597,7 @@ export default function CommandCenterDashboard() {
                 <Mail className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <div className="font-medium text-sm">Campaigns</div>
-                  <div className="text-xs text-muted-foreground">{dashboardData.modules.campaigns.count} running</div>
+                  <div className="text-xs text-muted-foreground">{simulationState.dashboard.activeCampaigns} running</div>
                 </div>
               </div>
             </CardContent>
@@ -511,13 +611,152 @@ export default function CommandCenterDashboard() {
                 <Database className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <div className="font-medium text-sm">Segments</div>
-                  <div className="text-xs text-muted-foreground">Audience management</div>
+                  <div className="text-xs text-muted-foreground">
+                    {simulationState.isRunning ? 'Live targeting' : 'Ready for targeting'}
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
         </Link>
       </div>
-    </div>
+
+      {/* Quantum Intelligence Panel */}
+      <Card className="border bg-gradient-to-br from-purple-500/5 to-blue-500/5 border-purple-500/20">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg font-medium flex items-center gap-2">
+              <Atom className="h-5 w-5 text-purple-400" />
+              Quantum Intelligence
+            </CardTitle>
+            <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/20">
+              {simulationState.isRunning ? 'AI Enhanced' : 'Ready'}
+            </Badge>
+          </div>
+          <CardDescription>
+            {simulationState.isRunning 
+              ? 'Real-time quantum optimization across all MarketSage components'
+              : 'Quantum-enhanced AI, campaigns, and contact intelligence ready to activate'
+            }
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 grid-cols-3">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Campaign Optimization</span>
+                <span className="text-sm font-medium text-green-400">
+                  +{(simulationState.ai.quantumAdvantage * 100).toFixed(1)}%
+                </span>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full transition-all duration-500" 
+                  style={{ width: `${simulationState.ai.quantumAdvantage * 100}%` }}
+                ></div>
+              </div>
+              <div className="text-xs text-muted-foreground">Email, SMS, WhatsApp enhanced</div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Contact Intelligence</span>
+                <span className="text-sm font-medium text-blue-400">
+                  +{(Math.min(1, simulationState.ai.quantumAdvantage + 0.12) * 100).toFixed(1)}%
+                </span>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-500" 
+                  style={{ width: `${Math.min(1, simulationState.ai.quantumAdvantage + 0.12) * 100}%` }}
+                ></div>
+              </div>
+              <div className="text-xs text-muted-foreground">Lead scoring & behavioral prediction</div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">AI Chat Enhancement</span>
+                <span className="text-sm font-medium text-amber-400">
+                  {(simulationState.ai.successRate * 100).toFixed(1)}%
+                </span>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500" 
+                  style={{ width: `${simulationState.ai.successRate * 100}%` }}
+                ></div>
+              </div>
+              <div className="text-xs text-muted-foreground">Response & intent optimization</div>
+            </div>
+          </div>
+
+          {/* Quantum Performance Monitoring Cards */}
+          <div className="mt-6 grid gap-4 grid-cols-2">
+            <div className="p-4 bg-purple-900/20 border border-purple-500/30 rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <Cpu className="h-4 w-4 text-purple-400" />
+                <span className="font-medium text-purple-300">Quantum Processing</span>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-300">Tasks Processed</span>
+                  <span className="font-medium text-purple-400">{simulationState.ai.tasksProcessed}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-300">Success Rate</span>
+                  <span className="font-medium text-green-400">{(simulationState.ai.successRate * 100).toFixed(1)}%</span>
+                </div>
+                {simulationState.ai.chatInteractions > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-300">AI Interactions</span>
+                    <span className="font-medium text-blue-400">{simulationState.ai.chatInteractions}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="p-4 bg-cyan-900/20 border border-cyan-500/30 rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <Brain className="h-4 w-4 text-cyan-400" />
+                <span className="font-medium text-cyan-300">Multi-Channel Intelligence</span>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-300 flex items-center gap-1">
+                    <Mail className="h-3 w-3" /> Email Optimization
+                  </span>
+                  <span className="font-medium text-blue-400">Active</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-300 flex items-center gap-1">
+                    <Smartphone className="h-3 w-3" /> SMS Enhancement
+                  </span>
+                  <span className="font-medium text-green-400">Active</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-300 flex items-center gap-1">
+                    <Phone className="h-3 w-3" /> WhatsApp Intelligence
+                  </span>
+                  <span className="font-medium text-purple-400">Active</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-4 p-3 bg-gray-800/20 rounded-lg border border-gray-700/30">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-300">Overall Quantum Advantage</span>
+              <span className="font-medium text-emerald-400">+{(simulationState.ai.quantumAdvantage * 100).toFixed(1)}% performance boost</span>
+            </div>
+            <div className="flex items-center justify-between text-sm mt-2">
+              <span className="text-gray-300">Components Enhanced</span>
+              <span className="font-medium text-cyan-400">Email • SMS • WhatsApp • AI Chat • Contacts • Workflows</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      </div>
+    </>
   );
 }

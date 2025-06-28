@@ -151,7 +151,7 @@ export default function VisitorInsights({
                                         insight.importance === 'medium' ? 'default' : 'secondary'}
                                 className="text-xs"
                               >
-                                {insight.importance.toUpperCase()}
+                                {insight.importance?.toUpperCase() || 'LOW'}
                               </Badge>
                               <span className="text-xs text-gray-400">
                                 {new Date(insight.createdAt).toLocaleDateString()}

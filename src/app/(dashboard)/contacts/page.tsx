@@ -33,7 +33,13 @@ import {
   Mail,
   MessageSquare,
   Phone,
-  Loader2
+  Loader2,
+  Cpu,
+  Zap,
+  TrendingUp,
+  Target,
+  Users,
+  Brain
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -41,6 +47,7 @@ import ContactFormModal from "@/components/contacts/ContactFormModal";
 import ImportModal from "@/components/contacts/ImportModal";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import ContactForm from "@/components/contacts/ContactForm";
+import { quantumContactOptimizer } from '@/lib/ai/quantum-contact-optimizer';
 
 // Add the interface for form values
 interface ContactFormData {
@@ -121,6 +128,8 @@ export default function ContactsPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+  const [quantumOptimizations, setQuantumOptimizations] = useState<Record<string, any>>({});
+  const [isOptimizing, setIsOptimizing] = useState<Record<string, boolean>>({});
   
   // Function to fetch contacts from the API
   const fetchContacts = async () => {
@@ -135,11 +144,14 @@ export default function ContactsPage() {
       const data = await response.json();
       setContacts(data);
       setError(null);
+      
+      // Apply quantum optimizations to contacts
+      await applyContactQuantumOptimizations(data);
     } catch (err) {
       console.error('Error fetching contacts:', err);
       setError('Failed to load contacts. Please try again.');
       // Fall back to sample data if API fails
-      import('@/data/sampleContacts').then(module => {
+      import('@/data/sampleContacts').then(async module => {
         // Convert sample data to match Contact type
         const sampleContacts: Contact[] = module.allAfricanContacts.map((contact, index) => ({
           id: `sample-${index}`,
@@ -164,9 +176,93 @@ export default function ContactsPage() {
         }));
         setContacts(sampleContacts);
         toast.error('Using sample data as API request failed');
+        
+        // Apply quantum optimizations to sample contacts
+        await applyContactQuantumOptimizations(sampleContacts);
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Apply quantum optimizations to contacts
+  const applyContactQuantumOptimizations = async (contactList: Contact[]) => {
+    const optimizations: Record<string, any> = {};
+    
+    for (const contact of contactList.slice(0, 5)) { // Optimize first 5 contacts
+      if (contact.status === 'ACTIVE') {
+        setIsOptimizing(prev => ({ ...prev, [contact.id]: true }));
+        
+        try {
+          const quantum = await quantumContactOptimizer.optimizeContact({
+            id: contact.id,
+            firstName: contact.firstName,
+            lastName: contact.lastName,
+            email: contact.email,
+            phone: contact.phone,
+            company: contact.company,
+            jobTitle: contact.jobTitle,
+            address: contact.address,
+            city: contact.city,
+            state: contact.state,
+            country: contact.country,
+            postalCode: contact.postalCode,
+            notes: contact.notes,
+            source: contact.source,
+            status: contact.status as any,
+            tags: contact.tags,
+            createdAt: contact.createdAt,
+            updatedAt: contact.updatedAt,
+            createdById: contact.createdById
+          });
+          
+          optimizations[contact.id] = quantum;
+        } catch (error) {
+          console.warn(`Quantum contact optimization failed for contact ${contact.id}:`, error);
+        } finally {
+          setIsOptimizing(prev => ({ ...prev, [contact.id]: false }));
+        }
+      }
+    }
+    
+    setQuantumOptimizations(optimizations);
+  };
+
+  // Handle quantum optimization for individual contact
+  const handleOptimizeContact = async (contact: Contact) => {
+    setIsOptimizing(prev => ({ ...prev, [contact.id]: true }));
+    
+    try {
+      const quantum = await quantumContactOptimizer.optimizeContact({
+        id: contact.id,
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+        email: contact.email,
+        phone: contact.phone,
+        company: contact.company,
+        jobTitle: contact.jobTitle,
+        address: contact.address,
+        city: contact.city,
+        state: contact.state,
+        country: contact.country,
+        postalCode: contact.postalCode,
+        notes: contact.notes,
+        source: contact.source,
+        status: contact.status as any,
+        tags: contact.tags,
+        createdAt: contact.createdAt,
+        updatedAt: contact.updatedAt,
+        createdById: contact.createdById
+      });
+      
+      setQuantumOptimizations(prev => ({ ...prev, [contact.id]: quantum }));
+      
+      toast.success(`⚡ Contact Quantum Optimization Complete - Lead Score: ${quantum.leadScoring.quantumScore.toFixed(1)}`);
+    } catch (error) {
+      console.error('Quantum contact optimization failed:', error);
+      toast.error('Contact Quantum optimization failed. Using classical methods.');
+    } finally {
+      setIsOptimizing(prev => ({ ...prev, [contact.id]: false }));
     }
   };
 
@@ -281,6 +377,22 @@ export default function ContactsPage() {
     .sort(([, countA], [, countB]) => countB - countA)
     .slice(0, 5);
 
+  // Get quantum optimization summary
+  const getContactQuantumSummary = () => {
+    const optimizedContacts = Object.keys(quantumOptimizations).length;
+    const avgLeadScore = optimizedContacts > 0 
+      ? Object.values(quantumOptimizations).reduce((sum, opt: any) => 
+          sum + opt.leadScoring.quantumScore, 0) / optimizedContacts
+      : 0;
+    const avgQuantumAdvantage = optimizedContacts > 0 
+      ? Object.values(quantumOptimizations).reduce((sum, opt: any) => 
+          sum + opt.leadScoring.quantumAdvantage, 0) / optimizedContacts
+      : 0;
+    return { optimizedContacts, avgLeadScore, avgQuantumAdvantage };
+  };
+  
+  const { optimizedContacts, avgLeadScore, avgQuantumAdvantage } = getContactQuantumSummary();
+
   // Handle export function
   const handleExportContacts = async () => {
     setExportLoading(true);
@@ -314,7 +426,24 @@ export default function ContactsPage() {
   return (
     <div className="flex flex-col space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Contacts</h2>
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Contacts</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage your contact database with quantum-enhanced lead scoring and behavioral insights.
+          </p>
+          {optimizedContacts > 0 && (
+            <div className="flex items-center gap-2 mt-2">
+              <Badge variant="outline" className="text-cyan-400 border-cyan-400 bg-cyan-900/20">
+                <Users className="h-3 w-3 mr-1" />
+                ⚡ {optimizedContacts} Quantum Optimized
+              </Badge>
+              <Badge variant="outline" className="text-green-400 border-green-400 bg-green-900/20">
+                <TrendingUp className="h-3 w-3 mr-1" />
+                {avgLeadScore.toFixed(1)} Avg Lead Score
+              </Badge>
+            </div>
+          )}
+        </div>
         <div className="flex items-center space-x-2">
           <Button 
             variant="outline" 
@@ -344,6 +473,65 @@ export default function ContactsPage() {
         </div>
       </div>
 
+      {/* Quantum Contact Intelligence Overview */}
+      {optimizedContacts > 0 && (
+        <Card className="bg-gradient-to-r from-purple-950/50 to-blue-950/50 border-purple-500/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-purple-400" />
+              ⚡ Quantum Contact Intelligence
+            </CardTitle>
+            <CardDescription>
+              Advanced quantum optimizations for lead scoring, behavioral prediction, and engagement insights
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="p-3 bg-purple-900/20 border border-purple-500/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Zap className="h-4 w-4 text-purple-400" />
+                  <span className="font-medium text-purple-300">Contacts Optimized</span>
+                </div>
+                <div className="text-2xl font-bold text-purple-100">{optimizedContacts}</div>
+                <p className="text-xs text-purple-200">Quantum-enhanced contacts</p>
+              </div>
+              
+              <div className="p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="h-4 w-4 text-blue-400" />
+                  <span className="font-medium text-blue-300">Avg Lead Score</span>
+                </div>
+                <div className="text-2xl font-bold text-blue-100">{avgLeadScore.toFixed(1)}</div>
+                <p className="text-xs text-blue-200">Quantum-calculated score</p>
+              </div>
+              
+              <div className="p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="h-4 w-4 text-green-400" />
+                  <span className="font-medium text-green-300">Conversion Rate</span>
+                </div>
+                <div className="text-2xl font-bold text-green-100">
+                  {optimizedContacts > 0 ? 
+                    (Object.values(quantumOptimizations).reduce((sum, opt: any) => 
+                      sum + opt.leadScoring.conversionProbability, 0) / optimizedContacts * 100).toFixed(1)
+                    : '0.0'}%
+                </div>
+                <p className="text-xs text-green-200">Predicted conversion rate</p>
+              </div>
+              
+              <div className="p-3 bg-cyan-900/20 border border-cyan-500/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Brain className="h-4 w-4 text-cyan-400" />
+                  <span className="font-medium text-cyan-300">Quantum Advantage</span>
+                </div>
+                <div className="text-2xl font-bold text-cyan-100">+{(avgQuantumAdvantage * 100).toFixed(1)}%</div>
+                <p className="text-xs text-cyan-200">Performance improvement</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Import Modal */}
       <ImportModal 
         isOpen={isImportModalOpen}
@@ -356,9 +544,19 @@ export default function ContactsPage() {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle>All Contacts</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            All Contacts
+            {optimizedContacts > 0 && (
+              <Badge variant="outline" className="text-purple-400 border-purple-400 bg-purple-900/20 text-xs">
+                ⚡ Enhanced
+              </Badge>
+            )}
+          </CardTitle>
           <CardDescription>
-            Manage your {contacts.length} contacts from across Africa.
+            Manage your {contacts.length} contacts from across Africa with quantum-enhanced insights.
+            {optimizedContacts > 0 && (
+              <span className="block text-purple-400 mt-1">⚡ {optimizedContacts} contacts quantum optimized</span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -495,6 +693,7 @@ export default function ContactsPage() {
                     <TableHead>Company</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Performance</TableHead>
                     <TableHead>Tags</TableHead>
                     <TableHead className="w-[80px]">Actions</TableHead>
                   </TableRow>
@@ -503,9 +702,37 @@ export default function ContactsPage() {
                   {displayedContacts.map((contact) => (
                     <TableRow key={contact.id}>
                       <TableCell className="font-medium">
-                        {contact.firstName || contact.lastName 
-                          ? `${contact.firstName || ''} ${contact.lastName || ''}`.trim()
-                          : 'Unnamed Contact'}
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-2">
+                            <span>
+                              {contact.firstName || contact.lastName 
+                                ? `${contact.firstName || ''} ${contact.lastName || ''}`.trim()
+                                : 'Unnamed Contact'}
+                            </span>
+                            {quantumOptimizations[contact.id] && (
+                              <Badge variant="outline" className="text-purple-400 border-purple-400 bg-purple-900/20 text-xs">
+                                <Brain className="h-3 w-3 mr-1" />
+                                ⚡ Optimized
+                              </Badge>
+                            )}
+                            {isOptimizing[contact.id] && (
+                              <Badge variant="outline" className="text-orange-400 border-orange-400 bg-orange-900/20 text-xs">
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                Optimizing...
+                              </Badge>
+                            )}
+                          </div>
+                          {quantumOptimizations[contact.id] && (
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-purple-400">
+                                Lead Score: {quantumOptimizations[contact.id].leadScoring.quantumScore.toFixed(1)}
+                              </span>
+                              <Badge variant="outline" className="text-xs text-green-400 border-green-400">
+                                {(quantumOptimizations[contact.id].leadScoring.conversionProbability * 100).toFixed(0)}% conversion
+                              </Badge>
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>{contact.email || 'N/A'}</TableCell>
                       <TableCell>
@@ -534,6 +761,36 @@ export default function ContactsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
+                        {quantumOptimizations[contact.id] ? (
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="text-muted-foreground">Score:</span>
+                              <Badge variant="outline" className="text-purple-400 border-purple-400">
+                                {quantumOptimizations[contact.id].leadScoring.quantumScore.toFixed(1)}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="text-muted-foreground">Risk:</span>
+                              <Badge variant="outline" className={`${
+                                quantumOptimizations[contact.id].behaviorPrediction.churnRisk.riskLevel === 'low' ? 'text-green-400 border-green-400' :
+                                quantumOptimizations[contact.id].behaviorPrediction.churnRisk.riskLevel === 'medium' ? 'text-yellow-400 border-yellow-400' :
+                                'text-red-400 border-red-400'
+                              }`}>
+                                {quantumOptimizations[contact.id].behaviorPrediction.churnRisk.riskLevel}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="text-muted-foreground">Channel:</span>
+                              <span className="text-muted-foreground">
+                                {quantumOptimizations[contact.id].behaviorPrediction.preferredChannels[0]?.channel || 'email'}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Not analyzed</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {contact.tags.slice(0, 2).map((tag) => (
                             <Badge key={tag} variant="outline">
@@ -558,6 +815,15 @@ export default function ContactsPage() {
                             <DropdownMenuItem onClick={() => handleEditContact(contact)}>
                               <Edit className="mr-2 h-4 w-4" /> Edit
                             </DropdownMenuItem>
+                            {contact.status === 'ACTIVE' && !quantumOptimizations[contact.id] && (
+                              <DropdownMenuItem 
+                                onClick={() => handleOptimizeContact(contact)}
+                                disabled={isOptimizing[contact.id]}
+                              >
+                                <Cpu className="mr-2 h-4 w-4" /> 
+                                {isOptimizing[contact.id] ? 'Optimizing...' : '⚡ Quantum Optimize'}
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem>
                               <Mail className="mr-2 h-4 w-4" /> Send Email
                             </DropdownMenuItem>
@@ -567,6 +833,11 @@ export default function ContactsPage() {
                             <DropdownMenuItem>
                               <Phone className="mr-2 h-4 w-4" /> Call
                             </DropdownMenuItem>
+                            {quantumOptimizations[contact.id] && (
+                              <DropdownMenuItem>
+                                <Target className="mr-2 h-4 w-4" /> View Contact Intelligence
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               className="text-destructive" 

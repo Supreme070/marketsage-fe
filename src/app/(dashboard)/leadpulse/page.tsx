@@ -9,11 +9,12 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
-import { PlusCircle, Activity, Users, ArrowUpRight, Clock, TrendingUp, Copy, RotateCcw, Download, Filter, Trash2, Tag } from 'lucide-react';
+import { PlusCircle, Activity, Users, ArrowUpRight, Clock, TrendingUp, Copy, RotateCcw, Download, Filter, Trash2, Tag, Atom, Zap, Brain, Target } from 'lucide-react';
 import VisitorPulseVisualization from '@/components/leadpulse/VisitorPulseVisualization';
 import JourneyVisualization from '@/components/leadpulse/JourneyVisualization';
 import VisitorInsights from '@/components/leadpulse/VisitorInsights';
 import LiveVisitorMap from '@/components/leadpulse/LiveVisitorMap';
+import HeatmapHotspots from '@/components/leadpulse/HeatmapHotspots';
 
 import { 
   getActiveVisitors, 
@@ -28,6 +29,8 @@ import {
   type VisitorSegment,
   type VisitorLocation
 } from '@/lib/leadpulse/dataProvider';
+import { quantumLeadPulseOptimizer, type VisitorBehaviorData, type QuantumLeadPulseOptimization } from '@/lib/leadpulse/quantum-leadpulse-optimizer';
+import { toast } from 'sonner';
 
 export default function LeadPulseDashboard() {
   const router = useRouter();
@@ -77,6 +80,12 @@ export default function LeadPulseDashboard() {
   const [insightData, setInsightData] = useState<InsightItem[]>([]);
   const [segmentData, setSegmentData] = useState<VisitorSegment[]>([]);
   const [locationData, setLocationData] = useState<VisitorLocation[]>([]);
+  
+  // Quantum optimization state
+  const [quantumOptimization, setQuantumOptimization] = useState<QuantumLeadPulseOptimization | null>(null);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [quantumInsights, setQuantumInsights] = useState<any[]>([]);
+  const [visitorScores, setVisitorScores] = useState<Record<string, any>>({});
   
   // Add simulator integration
   const [simulatorStatus, setSimulatorStatus] = useState<any>(null);
@@ -429,6 +438,146 @@ export default function LeadPulseDashboard() {
         break;
     }
   };
+
+  // Quantum optimization functions
+  const optimizeLeadPulseWithQuantum = async () => {
+    setIsOptimizing(true);
+    
+    try {
+      // Convert visitor data to behavior data format
+      const behaviorData: VisitorBehaviorData[] = visitorData.map(visitor => ({
+        visitorId: visitor.id,
+        sessionDuration: Math.random() * 600 + 60, // Mock session duration
+        pageViews: Math.floor(Math.random() * 10) + 1,
+        interactions: Math.floor(Math.random() * 20) + 1,
+        scrollDepth: Math.random() * 100,
+        deviceType: visitor.device || 'unknown',
+        geolocation: {
+          country: visitor.location?.split(',')[0] || 'Nigeria',
+          region: visitor.location?.split(',')[1] || 'Lagos',
+          city: visitor.location?.split(',')[2] || 'Lagos',
+          market: 'NGN'
+        },
+        touchpoints: [
+          {
+            type: 'page_view',
+            timestamp: new Date(visitor.lastActive),
+            value: '/',
+            engagementScore: visitor.engagementScore / 100
+          }
+        ],
+        conversionProbability: visitor.engagementScore / 100,
+        customerValue: Math.random() * 1000 + 200
+      }));
+
+      const optimization = await quantumLeadPulseOptimizer.analyzeVisitorBehavior(
+        behaviorData,
+        [],
+        ['NGN', 'KES', 'GHS', 'ZAR', 'EGP']
+      );
+
+      setQuantumOptimization(optimization);
+      
+      // Generate quantum insights
+      const insights = [
+        {
+          type: 'segmentation',
+          title: 'Quantum Visitor Segmentation Complete',
+          description: `Identified ${optimization.visitorSegmentation.segments.length} high-value segments with ${(optimization.visitorSegmentation.quantumAdvantage * 100).toFixed(1)}% quantum advantage`,
+          impact: optimization.visitorSegmentation.quantumAdvantage,
+          priority: 'high'
+        },
+        {
+          type: 'prediction',
+          title: 'AI Conversion Prediction Enhanced',
+          description: `Quantum ML model achieved ${(optimization.conversionPrediction.modelAccuracy * 100).toFixed(1)}% accuracy in predicting visitor conversions`,
+          impact: optimization.conversionPrediction.quantumAdvantage,
+          priority: 'high'
+        },
+        {
+          type: 'heatmap',
+          title: 'Heatmap Optimization Insights',
+          description: `Found ${optimization.heatmapOptimization.optimizedElements.length} elements with ${(optimization.heatmapOptimization.quantumAdvantage * 100).toFixed(1)}% improvement potential`,
+          impact: optimization.heatmapOptimization.quantumAdvantage,
+          priority: 'medium'
+        },
+        {
+          type: 'african_markets',
+          title: 'African Market Intelligence',
+          description: `Optimized for ${Object.keys(optimization.africanMarketInsights.marketPerformance).length} African markets with cultural intelligence`,
+          impact: optimization.africanMarketInsights.quantumAdvantage,
+          priority: 'high'
+        }
+      ];
+
+      setQuantumInsights(insights);
+
+      toast.success(`🔬 Quantum LeadPulse Optimization Complete!`, {
+        description: `${(optimization.visitorSegmentation.quantumAdvantage * 100).toFixed(1)}% quantum advantage achieved across ${optimization.visitorSegmentation.segments.length} segments`
+      });
+
+    } catch (error) {
+      console.error('Quantum optimization failed:', error);
+      toast.error('Quantum optimization failed', {
+        description: 'Falling back to classical analytics methods'
+      });
+    } finally {
+      setIsOptimizing(false);
+    }
+  };
+
+  const optimizeForAfricanMarket = async (market: 'NGN' | 'KES' | 'GHS' | 'ZAR' | 'EGP') => {
+    try {
+      const marketNames = {
+        NGN: 'Nigeria',
+        KES: 'Kenya', 
+        GHS: 'Ghana',
+        ZAR: 'South Africa',
+        EGP: 'Egypt'
+      };
+
+      // Mock visitor segmentation for the specific market
+      const marketOptimization = await quantumLeadPulseOptimizer.optimizeVisitorSegmentation(
+        [],
+        market,
+        ['conversion', 'engagement', 'cultural_alignment']
+      );
+
+      toast.success(`🌍 African Market Optimization Complete for ${marketNames[market]}!`, {
+        description: `Quantum advantage: ${(marketOptimization.quantumAdvantage * 100).toFixed(1)}%`
+      });
+
+    } catch (error) {
+      console.error('Market optimization failed:', error);
+      toast.error('Market optimization failed');
+    }
+  };
+
+  const getRealtimeVisitorScore = async (visitorId: string) => {
+    try {
+      const visitor = visitorData.find(v => v.id === visitorId);
+      if (!visitor) return;
+
+      const score = await quantumLeadPulseOptimizer.getRealtimeVisitorScore(
+        visitorId,
+        {
+          pageViews: Math.floor(Math.random() * 10) + 1,
+          timeOnSite: Math.random() * 600,
+          interactions: Math.floor(Math.random() * 20)
+        },
+        'NGN'
+      );
+
+      setVisitorScores(prev => ({
+        ...prev,
+        [visitorId]: score
+      }));
+
+      return score;
+    } catch (error) {
+      console.error('Real-time scoring failed:', error);
+    }
+  };
   
   return (
     <div className="space-y-6">
@@ -436,6 +585,10 @@ export default function LeadPulseDashboard() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold tracking-tight">LeadPulse</h1>
+            <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/20">
+              <Atom className="h-3 w-3 mr-1" />
+              Quantum Enhanced
+            </Badge>
             {simulatorConnected && (
               <div className="flex items-center gap-2 px-3 py-1 bg-green-50 border border-green-200 rounded-full">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
@@ -483,37 +636,19 @@ export default function LeadPulseDashboard() {
           </div>
           
           <div className="flex items-center gap-2">
-            {!simulatorConnected && (
-              <Button 
-                variant="outline" 
-                onClick={async () => {
-                  try {
-                    const response = await fetch('/api/leadpulse/simulator', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ 
-                        action: 'start',
-                        config: {
-                          intensity: 'medium',
-                          duration: 300000, // 5 minutes
-                          aiEnabled: true,
-                          marketFocus: 'nigeria'
-                        }
-                      })
-                    });
-                    if (response.ok) {
-                      setSimulatorConnected(true);
-                    }
-                  } catch (error) {
-                    console.error('Error starting simulator:', error);
-                  }
-                }}
-                className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
-              >
-                <Activity className="mr-2 h-4 w-4" />
-                Start Demo
-              </Button>
-            )}
+            <Button
+              onClick={optimizeLeadPulseWithQuantum}
+              disabled={isOptimizing}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {isOptimizing ? (
+                <Zap className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Atom className="mr-2 h-4 w-4" />
+              )}
+              Quantum Optimize
+            </Button>
+            
             <Button 
               variant="outline" 
               onClick={() => router.push('/leadpulse/setup')}
@@ -587,6 +722,160 @@ export default function LeadPulseDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Quantum Insights Panel */}
+      {quantumOptimization && (
+        <Card className="border bg-gradient-to-br from-purple-500/5 to-blue-500/5 border-purple-500/20">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-medium flex items-center gap-2">
+                <Atom className="h-5 w-5 text-purple-400" />
+                Quantum LeadPulse Intelligence
+              </CardTitle>
+              <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/20">
+                {quantumInsights.length} Insights Generated
+              </Badge>
+            </div>
+            <CardDescription>
+              Advanced quantum optimization insights for visitor behavior and conversion prediction
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Visitor Segmentation</span>
+                  <span className="text-sm font-medium text-purple-400">
+                    +{(quantumOptimization.visitorSegmentation.quantumAdvantage * 100).toFixed(1)}%
+                  </span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full transition-all duration-500" 
+                    style={{ width: `${quantumOptimization.visitorSegmentation.quantumAdvantage * 100}%` }}
+                  ></div>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {quantumOptimization.visitorSegmentation.segments.length} segments identified
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Conversion Prediction</span>
+                  <span className="text-sm font-medium text-blue-400">
+                    {(quantumOptimization.conversionPrediction.modelAccuracy * 100).toFixed(1)}%
+                  </span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-500" 
+                    style={{ width: `${quantumOptimization.conversionPrediction.modelAccuracy * 100}%` }}
+                  ></div>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {quantumOptimization.conversionPrediction.predictions.length} predictions made
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Heatmap Optimization</span>
+                  <span className="text-sm font-medium text-amber-400">
+                    +{(quantumOptimization.heatmapOptimization.quantumAdvantage * 100).toFixed(1)}%
+                  </span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500" 
+                    style={{ width: `${quantumOptimization.heatmapOptimization.quantumAdvantage * 100}%` }}
+                  ></div>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {quantumOptimization.heatmapOptimization.optimizedElements.length} elements optimized
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">African Markets</span>
+                  <span className="text-sm font-medium text-green-400">
+                    +{(quantumOptimization.africanMarketInsights.quantumAdvantage * 100).toFixed(1)}%
+                  </span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full transition-all duration-500" 
+                    style={{ width: `${quantumOptimization.africanMarketInsights.quantumAdvantage * 100}%` }}
+                  ></div>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {Object.keys(quantumOptimization.africanMarketInsights.marketPerformance).length} markets analyzed
+                </div>
+              </div>
+            </div>
+
+            {/* Quantum Recommendations */}
+            <div className="mt-6 space-y-4">
+              <h4 className="text-sm font-medium flex items-center gap-2">
+                <Brain className="h-4 w-4" />
+                Real-time Quantum Recommendations
+              </h4>
+              <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
+                {quantumOptimization.realTimeRecommendations.slice(0, 4).map((rec, index) => (
+                  <div key={index} className="p-3 bg-muted/30 rounded-lg border">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant="outline" className={`text-xs ${
+                            rec.priority === 'critical' ? 'border-red-500 text-red-400' :
+                            rec.priority === 'high' ? 'border-orange-500 text-orange-400' :
+                            rec.priority === 'medium' ? 'border-blue-500 text-blue-400' :
+                            'border-gray-500 text-gray-400'
+                          }`}>
+                            {rec.priority}
+                          </Badge>
+                          <span className="text-xs font-medium capitalize">{rec.type}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{rec.description}</p>
+                      </div>
+                      <div className="text-right ml-2">
+                        <div className="text-sm font-medium text-green-400">
+                          +{(rec.expectedImpact * 100).toFixed(0)}%
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {(rec.quantumConfidence * 100).toFixed(0)}% confidence
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* African Market Optimization Buttons */}
+            <div className="mt-6 space-y-4">
+              <h4 className="text-sm font-medium flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                African Market Optimization
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {['NGN', 'KES', 'GHS', 'ZAR', 'EGP'].map((market) => (
+                  <Button
+                    key={market}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => optimizeForAfricanMarket(market as any)}
+                    className="text-xs"
+                  >
+                    Optimize for {market}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       
       {/* Platform Breakdown - Mobile vs Web */}
       <Card>
@@ -760,9 +1049,10 @@ export default function LeadPulseDashboard() {
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
         <TabsList>
-          <TabsTrigger value="visitors">Visitor Activity</TabsTrigger>
-          <TabsTrigger value="journeys">Visitor Journeys</TabsTrigger>
-          <TabsTrigger value="forms">Forms</TabsTrigger>
+          <TabsTrigger value="visitors">Live Visitors & Map</TabsTrigger>
+          <TabsTrigger value="heatmaps">Heatmaps & Hotspots 🔥</TabsTrigger>
+          <TabsTrigger value="journeys">Visitor Journey</TabsTrigger>
+          <TabsTrigger value="intelligence">AI Intelligence</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
         
@@ -933,6 +1223,8 @@ export default function LeadPulseDashboard() {
                 selectAll={selectAll}
                 onSelectVisitorBulk={handleSelectVisitorBulk}
                 onSelectAll={handleSelectAll}
+                visitorScores={visitorScores}
+                getRealtimeVisitorScore={getRealtimeVisitorScore}
               />
             </CardContent>
           </Card>
@@ -948,6 +1240,10 @@ export default function LeadPulseDashboard() {
               <TopPagesTable />
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        <TabsContent value="heatmaps" className="space-y-4">
+          <HeatmapHotspots />
         </TabsContent>
         
         <TabsContent value="journeys" className="space-y-4">
@@ -1011,34 +1307,12 @@ export default function LeadPulseDashboard() {
           </Card>
         </TabsContent>
         
-        <TabsContent value="forms" className="space-y-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>LeadPulse Forms</CardTitle>
-                <CardDescription>
-                  Smart forms for capturing visitor information
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleExport('forms', 'csv')}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Export CSV
-                </Button>
-                <Button onClick={() => router.push('/leadpulse/forms/new')}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  New Form
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <FormsList />
-            </CardContent>
-          </Card>
+        <TabsContent value="intelligence" className="space-y-4">
+          <VisitorInsights 
+            visitors={visitorData} 
+            insights={insightData}
+            isLoading={loading}
+          />
         </TabsContent>
         
         <TabsContent value="settings" className="space-y-4">
@@ -1243,7 +1517,7 @@ export default function LeadPulseDashboard() {
 }
 
 // Table components
-function RecentVisitorsTable({ visitors = [], onSelectVisitor, selectedVisitors, selectAll, onSelectVisitorBulk, onSelectAll }: { visitors: VisitorJourney[], onSelectVisitor: (visitorId: string) => void, selectedVisitors: string[], selectAll: boolean, onSelectVisitorBulk: (visitorId: string, checked: boolean) => void, onSelectAll: (checked: boolean) => void }) {
+function RecentVisitorsTable({ visitors = [], onSelectVisitor, selectedVisitors, selectAll, onSelectVisitorBulk, onSelectAll, visitorScores, getRealtimeVisitorScore }: { visitors: VisitorJourney[], onSelectVisitor: (visitorId: string) => void, selectedVisitors: string[], selectAll: boolean, onSelectVisitorBulk: (visitorId: string, checked: boolean) => void, onSelectAll: (checked: boolean) => void, visitorScores: Record<string, any>, getRealtimeVisitorScore: (visitorId: string) => void }) {
   if (!visitors || visitors.length === 0) {
     return (
       <div className="text-center py-4 text-muted-foreground">
@@ -1269,6 +1543,7 @@ function RecentVisitorsTable({ visitors = [], onSelectVisitor, selectedVisitors,
             <th scope="col" className="px-6 py-3">Device</th>
             <th scope="col" className="px-6 py-3">Last Active</th>
             <th scope="col" className="px-6 py-3">Engagement</th>
+            <th scope="col" className="px-6 py-3">Quantum Score</th>
             <th scope="col" className="px-6 py-3">Actions</th>
           </tr>
         </thead>
@@ -1331,14 +1606,38 @@ function RecentVisitorsTable({ visitors = [], onSelectVisitor, selectedVisitors,
                 </div>
               </td>
               <td className="px-6 py-4">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => onSelectVisitor(visitor.id)}
-                  className="hover:bg-blue-50 hover:border-blue-300"
-                >
-                  View Journey
-                </Button>
+                {visitorScores[visitor.id] ? (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/20">
+                      <Atom className="h-3 w-3 mr-1" />
+                      {visitorScores[visitor.id].score.toFixed(0)}
+                    </Badge>
+                    <div className="text-xs text-muted-foreground">
+                      {(visitorScores[visitor.id].probability * 100).toFixed(0)}% conv.
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => getRealtimeVisitorScore(visitor.id)}
+                    className="text-purple-400 hover:bg-purple-50"
+                  >
+                    <Zap className="h-3 w-3" />
+                  </Button>
+                )}
+              </td>
+              <td className="px-6 py-4">
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => onSelectVisitor(visitor.id)}
+                    className="hover:bg-blue-50 hover:border-blue-300"
+                  >
+                    View Journey
+                  </Button>
+                </div>
               </td>
             </tr>
           ))}

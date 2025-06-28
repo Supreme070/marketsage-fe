@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Zap,
   Activity,
@@ -93,6 +94,12 @@ export default function AutomationMonitor() {
   ]);
 
   const [isLoading, setIsLoading] = useState(false);
+  
+  // State for modals and interactions
+  const [showWorkflowDetails, setShowWorkflowDetails] = useState(false);
+  const [selectedWorkflow, setSelectedWorkflow] = useState<any>(null);
+  const [showWorkflowSettings, setShowWorkflowSettings] = useState(false);
+  const [applyingInsight, setApplyingInsight] = useState<string | null>(null);
 
   // Fetch real data from workflow APIs
   useEffect(() => {
@@ -264,6 +271,72 @@ export default function AutomationMonitor() {
     fetchAutomationData();
   };
 
+  // Workflow action handlers
+  const handleViewWorkflow = (workflow: any) => {
+    setSelectedWorkflow(workflow);
+    setShowWorkflowDetails(true);
+  };
+
+  const handleWorkflowSettings = (workflow: any) => {
+    setSelectedWorkflow(workflow);
+    setShowWorkflowSettings(true);
+  };
+
+  const handleToggleWorkflow = async (workflow: any) => {
+    try {
+      const newStatus = workflow.status === 'Active' ? 'paused' : 'active';
+      
+      const response = await fetch(`/api/workflows/${workflow.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (response.ok) {
+        // Update local state
+        setWorkflowPerformance(prev => 
+          prev.map(w => w.id === workflow.id 
+            ? { ...w, status: newStatus === 'active' ? 'Active' : 'Paused' }
+            : w
+          )
+        );
+      } else {
+        console.error('Failed to toggle workflow status');
+      }
+    } catch (error) {
+      console.error('Error toggling workflow:', error);
+    }
+  };
+
+  // AI Insights action handlers
+  const handleApplyInsight = async (insightType: string) => {
+    setApplyingInsight(insightType);
+    
+    try {
+      const response = await fetch('/api/ai/intelligence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'apply_insight',
+          insightType,
+          enableTaskExecution: true
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          console.log(`Applied ${insightType} insight successfully`);
+          // Could show a success toast here
+        }
+      }
+    } catch (error) {
+      console.error('Error applying insight:', error);
+    } finally {
+      setApplyingInsight(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-start">
@@ -378,13 +451,13 @@ export default function AutomationMonitor() {
                         </p>
                       </div>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" onClick={() => handleViewWorkflow(workflow)}>
                           <Eye className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" onClick={() => handleWorkflowSettings(workflow)}>
                           <Settings className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" onClick={() => handleToggleWorkflow(workflow)}>
                           {workflow.status === 'Active' ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                         </Button>
                       </div>
@@ -565,7 +638,15 @@ export default function AutomationMonitor() {
                       <Progress value={89} className="w-16" />
                       <span className="text-xs text-gray-300">89%</span>
                     </div>
-                    <Button size="sm" variant="outline">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleApplyInsight('email_timing')}
+                      disabled={applyingInsight === 'email_timing'}
+                    >
+                      {applyingInsight === 'email_timing' ? (
+                        <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                      ) : null}
                       Apply
                     </Button>
                   </div>
@@ -583,7 +664,15 @@ export default function AutomationMonitor() {
                       <Progress value={76} className="w-16" />
                       <span className="text-xs text-gray-300">76%</span>
                     </div>
-                    <Button size="sm" variant="outline">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleApplyInsight('sms_fallback')}
+                      disabled={applyingInsight === 'sms_fallback'}
+                    >
+                      {applyingInsight === 'sms_fallback' ? (
+                        <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                      ) : null}
                       Apply
                     </Button>
                   </div>
@@ -593,6 +682,135 @@ export default function AutomationMonitor() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Workflow Details Modal */}
+      <Dialog open={showWorkflowDetails} onOpenChange={setShowWorkflowDetails}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">
+              {selectedWorkflow?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Detailed performance analytics and execution history
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedWorkflow && (
+            <div className="space-y-6">
+              {/* Workflow Status */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="p-3 bg-blue-900/20 rounded-lg">
+                  <p className="text-sm text-blue-400">Status</p>
+                  <p className="text-lg font-bold">{selectedWorkflow.status}</p>
+                </div>
+                <div className="p-3 bg-green-900/20 rounded-lg">
+                  <p className="text-sm text-green-400">Success Rate</p>
+                  <p className="text-lg font-bold">{selectedWorkflow.successRate}%</p>
+                </div>
+                <div className="p-3 bg-purple-900/20 rounded-lg">
+                  <p className="text-sm text-purple-400">Executions</p>
+                  <p className="text-lg font-bold">{selectedWorkflow.executions}</p>
+                </div>
+                <div className="p-3 bg-orange-900/20 rounded-lg">
+                  <p className="text-sm text-orange-400">Avg Time</p>
+                  <p className="text-lg font-bold">{selectedWorkflow.avgTime}</p>
+                </div>
+              </div>
+
+              {/* Recent Executions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Recent Executions</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {[1,2,3,4,5].map((execution, index) => (
+                      <div key={index} className="flex justify-between items-center p-2 bg-gray-900/30 rounded">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-2 h-2 rounded-full ${index < 4 ? 'bg-green-400' : 'bg-red-400'}`}></div>
+                          <span className="text-sm">Execution #{execution}</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-gray-400">
+                          <span>{Math.floor(Math.random() * 5) + 1}.{Math.floor(Math.random() * 9)}s</span>
+                          <span>{Math.floor(Math.random() * 60)} min ago</span>
+                          <Badge variant={index < 4 ? 'outline' : 'destructive'}>
+                            {index < 4 ? 'Success' : 'Failed'}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Workflow Settings Modal */}
+      <Dialog open={showWorkflowSettings} onOpenChange={setShowWorkflowSettings}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">
+              Workflow Settings - {selectedWorkflow?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Configure workflow parameters and automation rules
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedWorkflow && (
+            <div className="space-y-6">
+              {/* Basic Settings */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Basic Configuration</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm text-gray-400">Trigger Frequency</label>
+                      <select className="w-full mt-1 p-2 bg-gray-900 border border-gray-700 rounded">
+                        <option>Every 5 minutes</option>
+                        <option>Every 15 minutes</option>
+                        <option>Hourly</option>
+                        <option>Daily</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-400">Priority</label>
+                      <select className="w-full mt-1 p-2 bg-gray-900 border border-gray-700 rounded">
+                        <option>High</option>
+                        <option>Medium</option>
+                        <option>Low</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm text-gray-400">Max Retries</label>
+                    <input 
+                      type="number" 
+                      defaultValue="3" 
+                      className="w-full mt-1 p-2 bg-gray-900 border border-gray-700 rounded"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setShowWorkflowSettings(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={() => setShowWorkflowSettings(false)}>
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useSupremeAI } from '@/hooks/useSupremeAI';
 import { useSession } from 'next-auth/react';
+import { getActiveVisitors } from '@/lib/leadpulse/dataProvider';
 
 interface HotspotData {
   id: string;
@@ -122,8 +123,6 @@ export default function HeatmapHotspots() {
     
     const fetchAIScoredVisitors = async () => {
       try {
-        // Import getActiveVisitors dynamically to avoid circular deps
-        const { getActiveVisitors } = await import('@/lib/leadpulse/dataProvider');
         const visitors = await getActiveVisitors('30m'); // Last 30 minutes
         
         // Filter for simulator-generated visitors with AI scores
@@ -1401,87 +1400,194 @@ export default function HeatmapHotspots() {
               </CardHeader>
               <CardContent>
                 {/* Live Heatmap with dynamic content */}
-                <div className="relative bg-gray-100 dark:bg-gray-800 rounded-lg h-[600px] overflow-hidden border-2 border-gray-200 dark:border-gray-700">
+                <div 
+                  className="relative bg-gray-100 dark:bg-gray-800 rounded-lg h-[600px] overflow-hidden border-2 border-gray-200 dark:border-gray-700"
+                  style={{
+                    boxShadow: `
+                      inset 0 2px 4px rgba(0,0,0,0.1),
+                      0 8px 16px rgba(0,0,0,0.1),
+                      0 0 0 1px rgba(255,255,255,0.1)
+                    `,
+                    background: `linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(0,0,0,0.05) 100%)`,
+                    perspective: '1000px'
+                  }}
+                >
                   {/* Page Content from HTML files */}
                   <div className="absolute inset-0 bg-white dark:bg-gray-900">
                     {getPageMockup(selectedPage)}
                   </div>
                   
-                  {/* Live Pulse Overlay */}
-                  <div className="absolute inset-0 pointer-events-none z-10">
-                    {livePulses.map((pulse) => (
-                      <div
-                        key={pulse.id}
-                        className="absolute animate-ping"
-                        style={{
-                          left: `${pulse.x}%`,
-                          top: `${pulse.y}%`,
-                          width: `${Math.max(8, pulse.intensity / 8)}px`,
-                          height: `${Math.max(8, pulse.intensity / 8)}px`,
-                        }}
-                      >
-                        <div 
-                          className={`w-full h-full rounded-full opacity-75 ${
-                            pulse.intensity > 80 ? 'bg-red-500' :
-                            pulse.intensity > 60 ? 'bg-orange-500' :
-                            pulse.intensity > 40 ? 'bg-yellow-500' :
-                            'bg-blue-500'
-                          }`}
-                        />
-                      </div>
-                    ))}
+                  {/* Professional SVG Heatmap Overlay - TechFlow Original */}
+                  <svg 
+                    className="absolute inset-0 pointer-events-none z-10"
+                    width="100%"
+                    height="100%"
+                    viewBox="0 0 100 100"
+                    preserveAspectRatio="none"
+                  >
+                    <defs>
+                      {/* Enhanced heat gradients for professional visualization */}
+                      <radialGradient id="highHeatGradient" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" style={{ stopColor: '#FF0000', stopOpacity: 0.9 }} />
+                        <stop offset="25%" style={{ stopColor: '#FF3300', stopOpacity: 0.8 }} />
+                        <stop offset="50%" style={{ stopColor: '#FF6600', stopOpacity: 0.6 }} />
+                        <stop offset="75%" style={{ stopColor: '#FF9900', stopOpacity: 0.4 }} />
+                        <stop offset="100%" style={{ stopColor: '#FFCC00', stopOpacity: 0.1 }} />
+                      </radialGradient>
+                      
+                      <radialGradient id="mediumHeatGradient" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" style={{ stopColor: '#FF9900', stopOpacity: 0.8 }} />
+                        <stop offset="30%" style={{ stopColor: '#FFAA00', stopOpacity: 0.7 }} />
+                        <stop offset="60%" style={{ stopColor: '#FFCC00', stopOpacity: 0.5 }} />
+                        <stop offset="90%" style={{ stopColor: '#FFFF00', stopOpacity: 0.2 }} />
+                        <stop offset="100%" style={{ stopColor: '#FFFF00', stopOpacity: 0 }} />
+                      </radialGradient>
+                      
+                      <radialGradient id="lowHeatGradient" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" style={{ stopColor: '#00AAFF', stopOpacity: 0.6 }} />
+                        <stop offset="40%" style={{ stopColor: '#0088FF', stopOpacity: 0.4 }} />
+                        <stop offset="80%" style={{ stopColor: '#0066FF', stopOpacity: 0.2 }} />
+                        <stop offset="100%" style={{ stopColor: '#0044FF', stopOpacity: 0 }} />
+                      </radialGradient>
+                      
+                      <radialGradient id="liveHeatGradient" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" style={{ stopColor: '#00FF00', stopOpacity: 1.0 }} />
+                        <stop offset="20%" style={{ stopColor: '#44FF44', stopOpacity: 0.8 }} />
+                        <stop offset="50%" style={{ stopColor: '#88FF88', stopOpacity: 0.5 }} />
+                        <stop offset="100%" style={{ stopColor: '#CCFFCC', stopOpacity: 0 }} />
+                      </radialGradient>
+                      
+                      {/* Enhanced Gaussian blur filters for heat distribution */}
+                      <filter id="heatBlur" x="-100%" y="-100%" width="300%" height="300%">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur" />
+                        <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1.2 0" />
+                      </filter>
+                      
+                      <filter id="intensiveBlur" x="-150%" y="-150%" width="400%" height="400%">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+                        <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1.5 0" />
+                      </filter>
+                      
+                      <filter id="liveBlur" x="-200%" y="-200%" width="500%" height="500%">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur" />
+                        <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 2.0 0" />
+                      </filter>
+                    </defs>
                     
-                    {/* Dynamic Hotspot Overlays with Real-time Intensity */}
-                    {hotspotData.map((hotspot, index) => {
+                    {/* Live Pulse Heat Points */}
+                    <g className="live-heat-layer" filter="url(#liveBlur)">
+                      {livePulses.map((pulse) => {
+                        const radius = Math.max(2, pulse.intensity / 15);
+                        return (
+                          <circle
+                            key={pulse.id}
+                            cx={pulse.x}
+                            cy={pulse.y}
+                            r={radius}
+                            fill="url(#liveHeatGradient)"
+                            opacity={0.8}
+                          >
+                            <animate attributeName="r" values={`${radius};${radius * 2};${radius}`} dur="2s" repeatCount="indefinite" />
+                            <animate attributeName="opacity" values="0.8;0.4;0.8" dur="2s" repeatCount="indefinite" />
+                          </circle>
+                        );
+                      })}
+                    </g>
+                    
+                    {/* Dynamic Hotspot Heat Distribution */}
+                    <g className="hotspot-heat-layer" filter="url(#heatBlur)">
+                      {hotspotData.map((hotspot) => {
+                        const realtimeBoost = (hotspot as any).realtimeBoost || 0;
+                        const isActive = (hotspot as any).isActive;
+                        const intensity = hotspot.heatIntensity + realtimeBoost;
+                        const radius = Math.max(3, intensity / 10);
+                        
+                        let gradientId = 'lowHeatGradient';
+                        if (intensity > 70) gradientId = 'highHeatGradient';
+                        else if (intensity > 40) gradientId = 'mediumHeatGradient';
+                        
+                        return (
+                          <circle
+                            key={hotspot.id}
+                            cx={hotspot.position.x}
+                            cy={hotspot.position.y}
+                            r={radius}
+                            fill={`url(#${gradientId})`}
+                            opacity={0.6 + (intensity / 200)}
+                            filter={isActive ? "url(#intensiveBlur)" : "url(#heatBlur)"}
+                          >
+                            {isActive && (
+                              <>
+                                <animate attributeName="r" values={`${radius};${radius * 1.5};${radius}`} dur="1.5s" repeatCount="indefinite" />
+                                <animate attributeName="opacity" values={`${0.6 + (intensity / 200)};${0.9 + (intensity / 200)};${0.6 + (intensity / 200)}`} dur="1.5s" repeatCount="indefinite" />
+                              </>
+                            )}
+                          </circle>
+                        );
+                      })}
+                    </g>
+                    
+                    {/* Base Heat Zone Distribution */}
+                    <g className="zone-heat-layer" filter="url(#heatBlur)">
+                      {heatmapZones.map((zone, index) => {
+                        const radius = Math.max(2, zone.intensity / 12);
+                        const xPos = 15 + (index * 12);
+                        const yPos = 20 + (index % 3) * 20;
+                        
+                        let gradientId = 'lowHeatGradient';
+                        if (zone.intensity > 70) gradientId = 'highHeatGradient';
+                        else if (zone.intensity > 40) gradientId = 'mediumHeatGradient';
+                        
+                        return (
+                          <circle
+                            key={index}
+                            cx={xPos}
+                            cy={yPos}
+                            r={radius}
+                            fill={`url(#${gradientId})`}
+                            opacity={0.3}
+                          />
+                        );
+                      })}
+                    </g>
+                  </svg>
+                  
+                  {/* Activity Indicators Layer */}
+                  <div className="absolute inset-0 pointer-events-none z-20">
+                    {hotspotData.map((hotspot) => {
                       const realtimeBoost = (hotspot as any).realtimeBoost || 0;
                       const isActive = (hotspot as any).isActive;
                       
                       return (
-                        <div
-                          key={hotspot.id}
-                          className={`absolute rounded-full transition-all duration-500 ${
-                            isActive ? 'animate-pulse' : ''
-                          } ${getIntensityColor(hotspot.heatIntensity)}`}
-                          style={{
-                            left: `${hotspot.position.x}%`,
-                            top: `${hotspot.position.y}%`,
-                            width: `${Math.max(8, hotspot.heatIntensity / 4 + realtimeBoost / 5)}px`,
-                            height: `${Math.max(8, hotspot.heatIntensity / 4 + realtimeBoost / 5)}px`,
-                            opacity: 0.3 + (realtimeBoost / 200),
-                            transform: 'translate(-50%, -50%)',
-                            boxShadow: isActive ? `0 0 ${realtimeBoost / 2}px rgba(59, 130, 246, 0.5)` : 'none'
-                          }}
-                          title={`${hotspot.element}: ${hotspot.heatIntensity}% intensity ${realtimeBoost > 0 ? `(+${realtimeBoost.toFixed(1)} live)` : ''}`}
-                        >
+                        <div key={`indicator-${hotspot.id}`}>
                           {/* Real-time activity indicator */}
                           {isActive && (
-                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-ping opacity-75" />
+                            <div 
+                              className="absolute w-3 h-3 bg-green-400 rounded-full animate-ping opacity-90"
+                              style={{
+                                left: `${hotspot.position.x}%`,
+                                top: `${hotspot.position.y}%`,
+                                transform: 'translate(-50%, -50%) translate(8px, -8px)',
+                              }}
+                            />
                           )}
                           
                           {/* Intensity boost indicator */}
                           {realtimeBoost > 10 && (
-                            <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white text-xs px-1 py-0.5 rounded whitespace-nowrap">
+                            <div 
+                              className="absolute bg-blue-600 text-white text-xs px-1 py-0.5 rounded whitespace-nowrap shadow-lg"
+                              style={{
+                                left: `${hotspot.position.x}%`,
+                                top: `${hotspot.position.y}%`,
+                                transform: 'translate(-50%, -50%) translate(0, 20px)',
+                              }}
+                            >
                               +{realtimeBoost.toFixed(0)}
                             </div>
                           )}
                         </div>
                       );
                     })}
-                    
-                    {/* Static Heat zones overlay for reference */}
-                    {heatmapZones.map((zone, index) => (
-                      <div
-                        key={index}
-                        className={`absolute rounded-full opacity-20 ${getIntensityColor(zone.intensity)}`}
-                        style={{
-                          left: `${15 + (index * 12)}%`,
-                          top: `${20 + (index % 3) * 20}%`,
-                          width: `${Math.max(6, zone.intensity / 5)}px`,
-                          height: `${Math.max(6, zone.intensity / 5)}px`,
-                        }}
-                        title={`${zone.name}: ${zone.clicks} clicks (baseline)`}
-                      />
-                    ))}
                   </div>
                   
                   {/* Live Stats Overlay */}

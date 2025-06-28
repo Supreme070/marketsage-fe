@@ -9,12 +9,19 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { useSession } from 'next-auth/react';
+import { quantumAIChatOptimizer } from '@/lib/ai/quantum-ai-chat-optimizer';
 
 interface ChatMessage {
   id: string;
   content: string;
   role: 'user' | 'assistant';
   timestamp: Date;
+  quantumOptimization?: {
+    improvementScore: number;
+    culturalAdaptations: string[];
+    quantumAdvantage: number;
+    recommendations: any[];
+  };
 }
 
 interface SupremeAIResponse {
@@ -42,6 +49,8 @@ export const useSupremeAI = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [quantumOptimizations, setQuantumOptimizations] = useState<any[]>([]);
+  const [chatSession, setChatSession] = useState<any>(null);
   const { data: session } = useSession();
 
   // Generate session ID and load chat history on mount
@@ -55,6 +64,24 @@ export const useSupremeAI = () => {
       localStorage.setItem('chatSessionId', sessionId);
     }
     setCurrentSessionId(sessionId);
+
+    // Initialize quantum chat session
+    const quantumSession = {
+      sessionId,
+      userId: session.user.id,
+      messages: [],
+      context: {},
+      startTime: new Date(),
+      lastActivity: new Date(),
+      market: (session.user as any)?.market || 'NGN',
+      userProfile: {
+        role: session.user.role || 'USER',
+        expertise: [],
+        preferences: {},
+        interaction_history: []
+      }
+    };
+    setChatSession(quantumSession);
 
     // Load chat history
     loadChatHistory(sessionId);
@@ -164,7 +191,7 @@ export const useSupremeAI = () => {
   }, []);
 
   const sendMessage = useCallback(async (content: string) => {
-    if (!content.trim()) return;
+    if (!content.trim() || !chatSession) return;
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -188,12 +215,23 @@ export const useSupremeAI = () => {
       // Detect the appropriate task type
       const { type, taskType } = detectTaskType(content.trim());
       
+      // Enhance intent recognition using quantum optimization
+      const intentAnalysis = await quantumAIChatOptimizer.enhanceIntentRecognition(
+        content.trim(),
+        chatSession.messages,
+        chatSession.userProfile
+      );
+      
+      console.log('🔮 Quantum intent analysis:', intentAnalysis);
+      
       const requestBody: any = {
         type,
         question: content.trim(),
         userId: session.user.id,
-        enableTaskExecution: hasAdminPrivileges, // Only enable for users with admin privileges
-        forceLocal: false, // Allow OpenAI + Supreme-AI hybrid mode
+        enableTaskExecution: hasAdminPrivileges,
+        forceLocal: false,
+        quantumIntents: intentAnalysis.intents,
+        quantumAdvantage: intentAnalysis.quantumAdvantage
       };
       
       // Add taskType if it's a task request
@@ -201,7 +239,7 @@ export const useSupremeAI = () => {
         requestBody.taskType = taskType;
       }
       
-      console.log('🔍 Detected task type:', { type, taskType, content: content.trim(), hasAdminPrivileges, userRole: session?.user?.role });
+      console.log('🔍 Detected task type:', { type, taskType, content: content.trim(), hasAdminPrivileges, userRole: session?.user?.role, quantumAdvantage: intentAnalysis.quantumAdvantage });
       
       // Show user feedback about task execution capabilities
       if (type === 'task' && !hasAdminPrivileges) {
@@ -226,14 +264,48 @@ export const useSupremeAI = () => {
         throw new Error('Supreme-AI request failed');
       }
 
+      // Apply quantum optimization to the AI response
+      const updatedChatSession = {
+        ...chatSession,
+        messages: [...chatSession.messages, userMessage],
+        lastActivity: new Date()
+      };
+      
+      const quantumOptimization = await quantumAIChatOptimizer.optimizeChatResponse(
+        content.trim(),
+        data.data.answer,
+        updatedChatSession,
+        {
+          confidence: data.confidence,
+          processingTime: data.processingTime,
+          source: data.data.source,
+          taskExecution: data.data.taskExecution
+        }
+      );
+      
+      console.log('⚡ Quantum optimization result:', quantumOptimization);
+      
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
-        content: data.data.answer,
+        content: quantumOptimization.responseOptimization.optimizedResponse || data.data.answer,
         role: 'assistant',
         timestamp: new Date(),
+        quantumOptimization: {
+          improvementScore: quantumOptimization.responseOptimization.improvementScore,
+          culturalAdaptations: quantumOptimization.responseOptimization.culturalAdaptations,
+          quantumAdvantage: quantumOptimization.responseOptimization.quantumAdvantage,
+          recommendations: quantumOptimization.personalizedRecommendations
+        }
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+      setQuantumOptimizations(prev => [...prev, quantumOptimization]);
+      
+      // Update chat session
+      setChatSession({
+        ...updatedChatSession,
+        messages: [...updatedChatSession.messages, assistantMessage]
+      });
 
       // Save user and assistant messages to database
       await saveMessageToDatabase(userMessage);
@@ -241,14 +313,32 @@ export const useSupremeAI = () => {
         confidence: data.confidence,
         processingTime: data.processingTime,
         source: data.data.source,
-        taskExecution: data.data.taskExecution
+        taskExecution: data.data.taskExecution,
+        quantumOptimization: quantumOptimization
       });
+      
+      // Show quantum optimization feedback
+      if (quantumOptimization.responseOptimization.quantumAdvantage > 0.15) {
+        toast.success(`⚡ Quantum optimization applied (+${(quantumOptimization.responseOptimization.quantumAdvantage * 100).toFixed(1)}% improvement)`);
+      }
       
       // Show task execution feedback if available
       if (data.data.taskExecution) {
         console.log('✅ Task execution result:', data.data.taskExecution);
         if (data.data.taskExecution.success) {
           toast.success('Task executed successfully!');
+        }
+      }
+      
+      // Show personalized recommendations
+      if (quantumOptimization.personalizedRecommendations.length > 0) {
+        const highPriorityRecs = quantumOptimization.personalizedRecommendations.filter(
+          rec => rec.priority === 'high' || rec.priority === 'critical'
+        );
+        if (highPriorityRecs.length > 0) {
+          setTimeout(() => {
+            toast.success(`🎯 ${highPriorityRecs.length} personalized recommendations available`);
+          }, 2000);
         }
       }
 
@@ -260,7 +350,7 @@ export const useSupremeAI = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [detectTaskType]);
+  }, [detectTaskType, chatSession, session?.user]);
 
   const clearMessages = useCallback(async () => {
     if (!currentSessionId) return;
@@ -289,12 +379,33 @@ export const useSupremeAI = () => {
     localStorage.setItem('chatSessionId', sessionId);
     setCurrentSessionId(sessionId);
     
-    // Clear current messages
+    // Initialize new quantum chat session
+    if (session?.user) {
+      const quantumSession = {
+        sessionId,
+        userId: session.user.id,
+        messages: [],
+        context: {},
+        startTime: new Date(),
+        lastActivity: new Date(),
+        market: (session.user as any)?.market || 'NGN',
+        userProfile: {
+          role: session.user.role || 'USER',
+          expertise: [],
+          preferences: {},
+          interaction_history: []
+        }
+      };
+      setChatSession(quantumSession);
+    }
+    
+    // Clear current messages and optimizations
     setMessages([]);
+    setQuantumOptimizations([]);
     setError(null);
     
-    toast.success('New chat session started');
-  }, []);
+    toast.success('⚡ New quantum-enhanced chat session started');
+  }, [session?.user]);
 
   return {
     messages,
@@ -305,5 +416,26 @@ export const useSupremeAI = () => {
     clearMessages,
     startNewSession,
     currentSessionId,
+    quantumOptimizations,
+    chatSession,
+    // Quantum-specific methods
+    getPersonalizedRecommendations: () => {
+      const allRecs = quantumOptimizations.flatMap(opt => opt.personalizedRecommendations || []);
+      return allRecs.filter(rec => rec.priority === 'high' || rec.priority === 'critical');
+    },
+    getQuantumAdvantageScore: () => {
+      if (quantumOptimizations.length === 0) return 0;
+      const avgAdvantage = quantumOptimizations.reduce(
+        (sum, opt) => sum + (opt.responseOptimization?.quantumAdvantage || 0), 
+        0
+      ) / quantumOptimizations.length;
+      return Math.round(avgAdvantage * 100) / 100;
+    },
+    getCulturalAdaptations: () => {
+      const allAdaptations = quantumOptimizations.flatMap(
+        opt => opt.responseOptimization?.culturalAdaptations || []
+      );
+      return [...new Set(allAdaptations)];
+    }
   };
 }; 

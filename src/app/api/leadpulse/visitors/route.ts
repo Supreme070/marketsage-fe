@@ -309,13 +309,12 @@ async function calculateEngagementScore(visitorId: string): Promise<number> {
       }
     }
   });
-  
-  const totalValue = recentTouchpoints.reduce((sum, tp) => sum + (tp.value || 1), 0);
-  const baseScore = Math.min(totalValue * 10, 100); // Cap at 100
-  
-  return Math.round(baseScore);
-}
-    return total + ((tp.score || 1) * recencyFactor);
+
+  // Calculate score based on touchpoint values and recency
+  const score = recentTouchpoints.reduce((total: number, tp: any) => {
+    const age = Date.now() - tp.timestamp.getTime();
+    const recencyFactor = Math.max(0.1, 1 - (age / (24 * 60 * 60 * 1000)));
+    return total + ((tp.value || 1) * recencyFactor);
   }, 0);
 
   // Normalize score to 0-100 range

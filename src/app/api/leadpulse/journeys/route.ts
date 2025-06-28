@@ -26,6 +26,24 @@ interface PrismaTouchpoint {
  */
 export async function GET(request: NextRequest) {
   try {
+    // Test database connection first
+    await prisma.$queryRaw`SELECT 1`;
+  } catch (dbError) {
+    console.error('Database connection failed in journeys API, using mock data:', dbError);
+    
+    // Return mock journey data
+    const { searchParams } = new URL(request.url);
+    const visitorId = searchParams.get('visitorId');
+    
+    const mockJourneys = generateMockJourneyData(visitorId || undefined);
+    return NextResponse.json({ 
+      success: true,
+      journeys: mockJourneys,
+      dataSource: 'fallback'
+    });
+  }
+  
+  try {
     // Get visitor ID from query if provided
     const { searchParams } = new URL(request.url);
     const visitorId = searchParams.get('visitorId');

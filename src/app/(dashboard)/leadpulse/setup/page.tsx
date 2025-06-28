@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Copy, Check, RefreshCw, Code, Globe, SmartphoneNfc, Smartphone } from 'lucide-react';
+import { ArrowLeft, Copy, Check, RefreshCw, Code, Globe, SmartphoneNfc, Smartphone, FileText } from 'lucide-react';
 
 export default function LeadPulseSetupPage() {
   const router = useRouter();
@@ -554,7 +554,7 @@ tracker.trackConversion('purchase', value: 99.99, properties: {'product': 'premi
       </div>
       
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="tracking">
             <Code className="h-4 w-4 mr-2" />
             Web Tracking
@@ -570,6 +570,10 @@ tracker.trackConversion('purchase', value: 99.99, properties: {'product': 'premi
           <TabsTrigger value="qrcode">
             <SmartphoneNfc className="h-4 w-4 mr-2" />
             WhatsApp QR Code
+          </TabsTrigger>
+          <TabsTrigger value="forms">
+            <FileText className="h-4 w-4 mr-2" />
+            Forms
           </TabsTrigger>
         </TabsList>
         
@@ -1089,6 +1093,60 @@ tracker.trackConversion('purchase', value: 99.99, properties: {'product': 'premi
                 <p className="text-muted-foreground text-sm">
                   Create your first QR code using the form above.
                 </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="forms" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Forms Management</CardTitle>
+              <CardDescription>
+                Create, edit, and manage your LeadPulse forms
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <h3 className="font-medium">Form Builder</h3>
+                    <p className="text-sm text-muted-foreground">Create and customize forms with drag-and-drop interface</p>
+                  </div>
+                  <Button onClick={() => router.push('/leadpulse/forms')}>
+                    Open Forms
+                  </Button>
+                </div>
+                
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <h3 className="font-medium">Form Performance</h3>
+                    <p className="text-sm text-muted-foreground">View analytics and performance metrics for your forms</p>
+                  </div>
+                  <Button variant="outline" onClick={() => router.push('/leadpulse/forms')}>
+                    View Analytics
+                  </Button>
+                </div>
+                
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <h3 className="font-medium">A/B Testing</h3>
+                    <p className="text-sm text-muted-foreground">Test different form variations to optimize conversions</p>
+                  </div>
+                  <Button variant="outline" onClick={() => router.push('/leadpulse/forms')}>
+                    Manage Tests
+                  </Button>
+                </div>
+                
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <h3 className="font-medium">Integration Settings</h3>
+                    <p className="text-sm text-muted-foreground">Configure form integrations with external services</p>
+                  </div>
+                  <Button variant="outline" onClick={() => router.push('/leadpulse/forms')}>
+                    Configure
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

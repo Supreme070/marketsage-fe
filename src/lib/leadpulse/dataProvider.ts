@@ -114,166 +114,141 @@ export interface VisitorLocation {
 }
 
 /**
- * Fetch visitor locations with proper error handling and fallbacks
+ * Fetch visitor locations with simulation-aware behavior
  */
 export const getVisitorLocations = cache(async (timeRange = '24h'): Promise<VisitorLocation[]> => {
   try {
-    // Call API endpoint instead of using Prisma directly
-    const response = await fetch(`/api/leadpulse/locations?timeRange=${timeRange}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      throw new Error(`Error fetching locations: ${response.statusText}`);
+    // Check if simulation is running
+    const { masterSimulation } = await import('../simulation/master-simulation-controller');
+    const simulationState = masterSimulation.getState();
+    
+    // If simulation is NOT running, return empty locations
+    if (!simulationState.isRunning) {
+      console.log('getVisitorLocations: Simulation OFF - returning empty locations');
+      return [];
     }
-
-    const data = await response.json();
-    return data.locations || [];
+    
+    // Simulation IS running - return location data
+    console.log('getVisitorLocations: Simulation ACTIVE - returning location data');
+    const totalVisitors = simulationState.leadpulse.totalVisitors || 0;
+    
+    if (totalVisitors === 0) return [];
+    
+    return [
+      { location: 'Lagos, Nigeria', visitors: Math.floor(totalVisitors * 0.35), percentage: 35 },
+      { location: 'Nairobi, Kenya', visitors: Math.floor(totalVisitors * 0.22), percentage: 22 },
+      { location: 'Cape Town, South Africa', visitors: Math.floor(totalVisitors * 0.17), percentage: 17 },
+      { location: 'Accra, Ghana', visitors: Math.floor(totalVisitors * 0.14), percentage: 14 },
+      { location: 'Abuja, Nigeria', visitors: Math.floor(totalVisitors * 0.12), percentage: 12 }
+    ];
   } catch (error) {
-    console.error('Error fetching visitor locations:', error);
-    return []; // Return empty array instead of mock data
+    console.error('Error in getVisitorLocations:', error);
+    return [];
   }
 });
 
 /**
- * Fetch visitor segments with proper error handling
+ * Fetch visitor segments with simulation-aware behavior
  */
 export const getVisitorSegments = cache(async (): Promise<VisitorSegment[]> => {
   try {
-    // Call API endpoint instead of using Prisma directly
-    const response = await fetch('/api/leadpulse/segments', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      throw new Error(`Error fetching segments: ${response.statusText}`);
+    // Check if simulation is running
+    const { masterSimulation } = await import('../simulation/master-simulation-controller');
+    const simulationState = masterSimulation.getState();
+    
+    // If simulation is NOT running, return empty segments
+    if (!simulationState.isRunning) {
+      console.log('getVisitorSegments: Simulation OFF - returning empty segments');
+      return [];
     }
-
-    const data = await response.json();
-    return data.segments || [];
+    
+    // Simulation IS running - return segment data based on simulation
+    console.log('getVisitorSegments: Simulation ACTIVE - returning segment data');
+    const totalVisitors = simulationState.leadpulse.totalVisitors || 0;
+    
+    if (totalVisitors === 0) return [];
+    
+    return [
+      { name: 'High Intent', count: Math.floor(totalVisitors * 0.18), percentage: 18 },
+      { name: 'New Visitors', count: Math.floor(totalVisitors * 0.51), percentage: 51 },
+      { name: 'Returning Customers', count: Math.floor(totalVisitors * 0.23), percentage: 23 },
+      { name: 'Mobile Users', count: Math.floor(totalVisitors * 0.68), percentage: 68 }
+    ];
   } catch (error) {
-    console.error('Error fetching visitor segments:', error);
-    return []; // Return empty array instead of mock data
+    console.error('Error in getVisitorSegments:', error);
+    return [];
   }
 });
 
 /**
- * Fetch visitor insights with proper error handling
+ * Fetch visitor insights with simulation-aware behavior
  */
 export const getVisitorInsights = cache(async (): Promise<InsightItem[]> => {
   try {
-    // Call API endpoint instead of using Prisma directly
-    const response = await fetch('/api/leadpulse/insights', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      throw new Error(`Error fetching insights: ${response.statusText}`);
+    // Check if simulation is running
+    const { masterSimulation } = await import('../simulation/master-simulation-controller');
+    const simulationState = masterSimulation.getState();
+    
+    // If simulation is NOT running, return empty insights
+    if (!simulationState.isRunning) {
+      console.log('getVisitorInsights: Simulation OFF - returning empty insights');
+      return [];
     }
-
-    const data = await response.json();
-    return data.insights || [];
+    
+    // Simulation IS running - return insights based on simulation activity
+    console.log('getVisitorInsights: Simulation ACTIVE - generating insights');
+    const insights = simulationState.leadpulse.insights || 0;
+    
+    if (insights === 0) return [];
+    
+    return [
+      {
+        id: '1',
+        type: 'TREND' as LeadPulseInsightType,
+        title: 'Mobile traffic increased 23%',
+        description: 'More users are accessing from mobile devices',
+        importance: 'HIGH' as LeadPulseImportance,
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: '2', 
+        type: 'OPPORTUNITY' as LeadPulseInsightType,
+        title: 'Optimize pricing page',
+        description: 'High exit rate detected on pricing page',
+        importance: 'MEDIUM' as LeadPulseImportance,
+        createdAt: new Date().toISOString()
+      }
+    ];
   } catch (error) {
-    console.error('Error fetching visitor insights:', error);
-    return []; // Return empty array instead of mock data
+    console.error('Error in getVisitorInsights:', error);
+    return [];
   }
 });
 
 /**
- * Fetch active visitors and their pulse data
+ * Fetch active visitors and their pulse data with simulation-aware behavior
  */
 export const getActiveVisitors = cache(async (timeRange = '24h'): Promise<VisitorJourney[]> => {
   try {
-    // Call API endpoint to get visitors
-    const response = await fetch(`/api/leadpulse/visitors?timeRange=${timeRange}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || `Error fetching visitors: ${response.statusText}`);
-    }
-
-    // Get enhanced overview to know target active visitor count
-    const overviewResponse = await fetch(`/api/leadpulse?timeRange=${timeRange}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-    });
+    // First check if simulation is running
+    const { masterSimulation } = await import('../simulation/master-simulation-controller');
+    const simulationState = masterSimulation.getState();
     
-    const overviewData = await overviewResponse.json();
-    const targetActiveCount = overviewData.overview?.activeVisitors || 0;
+    // If simulation is NOT running, return empty array (no visitors)
+    if (!simulationState.isRunning) {
+      console.log('getActiveVisitors: Simulation OFF - returning empty visitor list');
+      return [];
+    }
+    
+    console.log('getActiveVisitors: Simulation ACTIVE - generating visitor data');
+    const targetActiveCount = simulationState.dashboard.activeVisitors || 0;
 
-    // AI-enhanced visitor data with predictive analytics
-    const enhancedVisitors = (data.visitors || []).map((visitor: any, index: number) => {
-      // Generate AI predictions for each visitor
-      const aiPrediction = generateAIPrediction(visitor);
-      const aiEnhancement = generateAIEnhancement(visitor, aiPrediction);
-      const now = new Date();
-      const currentHour = now.getHours();
-      
-      // Create realistic "last active" times based on business patterns
-      let lastActiveText = visitor.lastActive;
-      
-      // If visitor hasn't been seen recently, create realistic activity
-      if (!lastActiveText || lastActiveText === 'Unknown') {
-        const minutesAgo = Math.floor(Math.random() * 180) + 1; // 1-180 minutes ago
-        
-        if (minutesAgo < 5) {
-          lastActiveText = 'just now';
-        } else if (minutesAgo < 60) {
-          lastActiveText = `${minutesAgo} min ago`;
-        } else {
-          const hoursAgo = Math.floor(minutesAgo / 60);
-          lastActiveText = `${hoursAgo}h ago`;
-        }
-      }
-      
-      // Enhance engagement score based on time patterns
-      let enhancedEngagement = visitor.engagementScore || 0;
-      if (currentHour >= 9 && currentHour <= 17) {
-        enhancedEngagement = Math.min(100, enhancedEngagement * 1.2); // Business hours boost
-      }
-      
-      return {
-        ...visitor,
-        lastActive: lastActiveText,
-        engagementScore: Math.round(enhancedEngagement),
-        // AI-powered enhancements
-        aiPrediction,
-        aiEnhancement,
-        conversionProbability: aiPrediction.conversionProbability,
-        behaviorPrediction: aiPrediction.behaviorPrediction,
-        aiScore: aiEnhancement.aiScore,
-        predictedValue: aiEnhancement.predictedValue,
-        segmentPrediction: aiEnhancement.segmentPrediction,
-        recommendedActions: aiPrediction.recommendedActions,
-        urgencyLevel: aiEnhancement.urgencyLevel
-      };
-    });
+    // Generate visitors based on simulation data only
+    const enhancedVisitors: any[] = [];
 
-    // Ensure we have enough visitors to match the active count
-    if (enhancedVisitors.length < targetActiveCount) {
-      const additionalVisitorsNeeded = targetActiveCount - enhancedVisitors.length;
+    // Generate visitors to match simulation count
+    if (targetActiveCount > 0) {
+      const additionalVisitorsNeeded = targetActiveCount;
       
       // Generate additional realistic visitors
       for (let i = 0; i < additionalVisitorsNeeded; i++) {
@@ -346,7 +321,7 @@ export const getActiveVisitors = cache(async (timeRange = '24h'): Promise<Visito
 });
 
 /**
- * Fetch enhanced overview data with realistic business metrics
+ * Fetch enhanced overview data with simulation-aware realistic business metrics
  */
 export const getEnhancedOverview = cache(async (timeRange = '24h'): Promise<{
   activeVisitors: number;
@@ -362,79 +337,110 @@ export const getEnhancedOverview = cache(async (timeRange = '24h'): Promise<{
   metadata?: any;
 }> => {
   try {
-    const response = await fetch(`/api/leadpulse?timeRange=${timeRange}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || `Error fetching overview: ${response.statusText}`);
+    // First check if simulation is running via master simulation state
+    const { masterSimulation } = await import('../simulation/master-simulation-controller');
+    const simulationState = masterSimulation.getState();
+    
+    // If simulation is NOT running, return all zeros (production ready state)
+    if (!simulationState.isRunning) {
+      console.log('getEnhancedOverview: Simulation OFF - returning zero state');
+      return {
+        activeVisitors: 0,
+        totalVisitors: 0,
+        conversionRate: 0,
+        platformBreakdown: {
+          web: { count: 0, percentage: 0 },
+          mobile: { count: 0, percentage: 0 },
+          reactNative: { count: 0, percentage: 0 },
+          nativeApps: { count: 0, percentage: 0 },
+          hybrid: { count: 0, percentage: 0 }
+        },
+        metadata: { 
+          simulationRunning: false,
+          dataSource: 'master-simulation',
+          timeRange,
+          lastUpdated: new Date().toISOString()
+        }
+      };
     }
-
+    
+    // Simulation IS running - return data from master simulation
+    console.log('getEnhancedOverview: Simulation ACTIVE - using simulation data');
+    const activeVisitors = simulationState.dashboard.activeVisitors;
+    const totalVisitors = simulationState.leadpulse.totalVisitors;
+    const conversionRate = simulationState.dashboard.conversionRate;
+    
     return {
-      activeVisitors: data.overview?.activeVisitors || 0,
-      totalVisitors: data.overview?.totalVisitors || 0,
-      conversionRate: data.overview?.conversionRate || 0,
-      platformBreakdown: data.platformBreakdown,
-      metadata: data.metadata
+      activeVisitors,
+      totalVisitors: Math.max(totalVisitors, activeVisitors),
+      conversionRate,
+      platformBreakdown: {
+        web: { count: Math.round(totalVisitors * 0.6), percentage: 60 },
+        mobile: { count: Math.round(totalVisitors * 0.3), percentage: 30 },
+        reactNative: { count: Math.round(totalVisitors * 0.05), percentage: 5 },
+        nativeApps: { count: Math.round(totalVisitors * 0.03), percentage: 3 },
+        hybrid: { count: Math.round(totalVisitors * 0.02), percentage: 2 }
+      },
+      metadata: { 
+        simulationRunning: true,
+        simulationId: simulationState.simulationId,
+        dataSource: 'master-simulation',
+        timeRange,
+        lastUpdated: new Date().toISOString()
+      }
     };
+    
   } catch (error) {
-    console.error('Error fetching enhanced overview:', error);
-    // Fallback to realistic demo data
-    const now = new Date();
-    const currentHour = now.getHours();
-    
-    // Business hours factor with more fluctuation
-    const businessFactor = (currentHour >= 9 && currentHour <= 17) ? 1.4 : 0.7;
-    const baseActive = Math.floor(Math.random() * 25 + 20) * businessFactor; // 20-45 range with business factor
-    
-    // Add extra randomization for realistic business simulation
-    const fluctuation = 0.8 + Math.random() * 0.4; // ±20% additional fluctuation
-    const finalActive = Math.round(baseActive * fluctuation);
-    
+    console.error('Error checking simulation state:', error);
+    // Fallback to zero state if error
     return {
-      activeVisitors: Math.max(15, finalActive), // Minimum 15, up to ~50+
-      totalVisitors: Math.round(finalActive * (2 + Math.random())), // 2-3x multiplier
-      conversionRate: 12 + Math.random() * 8, // 12-20% range
-      metadata: { fallback: true, fluctuation }
+      activeVisitors: 0,
+      totalVisitors: 0,
+      conversionRate: 0,
+      platformBreakdown: {
+        web: { count: 0, percentage: 0 },
+        mobile: { count: 0, percentage: 0 },
+        reactNative: { count: 0, percentage: 0 },
+        nativeApps: { count: 0, percentage: 0 },
+        hybrid: { count: 0, percentage: 0 }
+      },
+      metadata: { 
+        simulationRunning: false,
+        dataSource: 'fallback',
+        error: true,
+        timeRange,
+        lastUpdated: new Date().toISOString()
+      }
     };
   }
 });
 
 /**
- * Fetch visitor journeys and their touchpoints
+ * Fetch visitor journeys and their touchpoints with simulation-aware behavior
  */
 export const getVisitorJourneys = cache(async (visitorId?: string): Promise<VisitorPath[]> => {
   try {
-    // Call API endpoint
-    const url = visitorId 
-      ? `/api/leadpulse/journeys?visitorId=${visitorId}`
-      : '/api/leadpulse/journeys';
-      
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      throw new Error(`Error fetching journeys: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data.journeys || [];
-  } catch (error) {
-    console.error('Error fetching visitor journeys:', error);
+    // Check if simulation is running
+    const { masterSimulation } = await import('../simulation/master-simulation-controller');
+    const simulationState = masterSimulation.getState();
     
-    // Return mock data for now
+    // If simulation is NOT running, return empty journeys
+    if (!simulationState.isRunning) {
+      console.log('getVisitorJourneys: Simulation OFF - returning empty journeys');
+      return [];
+    }
+    
+    // Simulation IS running - return journey data
+    console.log('getVisitorJourneys: Simulation ACTIVE - generating journey data');
+    const journeyCompletions = simulationState.leadpulse.journeyCompletions || 0;
+    
+    if (journeyCompletions === 0) return [];
+    
+    // Return mock data based on simulation state
     return generateMockJourneyData(visitorId);
+  } catch (error) {
+    console.error('Error in getVisitorJourneys:', error);
+    return [];
   }
 });
 
