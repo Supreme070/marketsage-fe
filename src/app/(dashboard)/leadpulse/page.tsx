@@ -149,24 +149,9 @@ export default function LeadPulseDashboard() {
           simulatorStatus
         });
         
-        // If simulator is connected and we have limited data, boost the metrics
-        let enhancedOverview = overview;
-        if (simulatorConnected && overview.totalVisitors < 10) {
-          console.log('Simulator connected - enhancing metrics');
-          enhancedOverview = {
-            ...overview,
-            activeVisitors: Math.max(overview.activeVisitors, simulatorStatus?.activeVisitors || 8),
-            totalVisitors: Math.max(overview.totalVisitors, 45),
-            conversionRate: Math.max(overview.conversionRate, 12.3),
-            platformBreakdown: overview.platformBreakdown?.web?.count > 0 ? overview.platformBreakdown : {
-              web: { count: 28, percentage: 62 },
-              mobile: { count: 15, percentage: 33 },
-              reactNative: { count: 2, percentage: 4 },
-              nativeApps: { count: 0, percentage: 0 },
-              hybrid: { count: 0, percentage: 0 }
-            }
-          };
-        }
+        // Use simulation data directly - no enhancement to maintain sync with dashboard
+        console.log('LeadPulse using real simulation data - no enhancement');
+        const enhancedOverview = overview;
         
         setVisitorData(visitors);
         setJourneyData(journeys);

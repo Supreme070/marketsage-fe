@@ -28,6 +28,7 @@ import { useAIIntelligenceOverview } from '@/hooks/useAIIntelligence';
 import { useSession } from 'next-auth/react';
 import LivePulseIndicator from './LivePulseIndicator';
 import { getActiveVisitors } from '@/lib/leadpulse/dataProvider';
+import GrafanaStyleCards from './GrafanaStyleCards';
 
 interface TrafficData {
   date: string;
@@ -584,6 +585,13 @@ export default function TrafficConversionAnalytics() {
 
   return (
     <div className="space-y-6">
+      {/* New Grafana-Style Cards */}
+      <GrafanaStyleCards 
+        simulationData={liveSimulationData?.realTimeMetrics}
+        timeRange={timeRange}
+        onTimeRangeChange={setTimeRange}
+      />
+      
       {/* Compact Header */}
       <div className="flex items-center justify-between">
         <div>

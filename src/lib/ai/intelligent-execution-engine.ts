@@ -394,6 +394,9 @@ class IntelligentExecutionEngine {
             OR: [
               { name: { contains: taskData.assignee, mode: 'insensitive' } },
               { email: { contains: taskData.assignee, mode: 'insensitive' } },
+              // Also search by last name for partial matches like "okafor" -> "Ngozi Okafor"
+              { name: { endsWith: ` ${taskData.assignee}`, mode: 'insensitive' } },
+              { name: { startsWith: `${taskData.assignee} `, mode: 'insensitive' } },
               ...(mappedRole ? [{ role: mappedRole as any }] : [])
             ],
             isActive: true
@@ -523,38 +526,62 @@ class IntelligentExecutionEngine {
   }
 
   /**
-   * Generate default workflow nodes
+   * Generate intelligent workflow nodes based on type and market
    */
   private generateDefaultWorkflowNodes(type: string, market: string) {
-    const baseNodes = [
-      {
-        name: 'Start',
-        type: 'START',
-        config: { message: 'Workflow initiated' }
-      },
-      {
-        name: 'Send Welcome',
-        type: 'SEND_EMAIL',
-        config: { template: 'welcome', delay: 0 }
-      },
-      {
-        name: 'Wait 1 Day', 
-        type: 'WAIT',
-        config: { duration: 24 * 60 * 60 * 1000 }
-      },
-      {
-        name: 'Follow Up',
-        type: 'SEND_EMAIL',
-        config: { template: 'follow_up', delay: 0 }
-      },
-      {
-        name: 'End',
-        type: 'END',
-        config: { message: 'Workflow completed' }
-      }
-    ];
+    // Nigerian fintech onboarding workflow
+    if (type.toLowerCase().includes('onboarding') && market.toLowerCase().includes('nigerian')) {
+      return [
+        { name: 'Start', type: 'START', config: { message: 'Nigerian fintech onboarding initiated' } },
+        { name: 'Welcome SMS', type: 'SEND_SMS', config: { template: 'welcome_nigeria', delay: 0 } },
+        { name: 'BVN Collection', type: 'FORM', config: { formType: 'bvn_verification', required: true } },
+        { name: 'BVN Verification', type: 'API_CALL', config: { endpoint: 'verify_bvn', timeout: 30000 } },
+        { name: 'Identity Verification', type: 'CONDITIONAL', config: { condition: 'bvn_verified' } },
+        { name: 'KYC Document Upload', type: 'FORM', config: { formType: 'kyc_documents', required: true } },
+        { name: 'Account Creation', type: 'API_CALL', config: { endpoint: 'create_account', delay: 1000 } },
+        { name: 'Welcome Email', type: 'SEND_EMAIL', config: { template: 'account_created_nigeria', delay: 5000 } },
+        { name: 'Send Debit Card', type: 'TASK', config: { taskType: 'physical_card_request', priority: 'HIGH' } },
+        { name: 'End', type: 'END', config: { message: 'Nigerian fintech onboarding completed' } }
+      ];
+    }
 
-    return baseNodes;
+    // Cross-border remittance automation (Ghana to UK)
+    if (type.toLowerCase().includes('remittance') && market.toLowerCase().includes('ghana')) {
+      return [
+        { name: 'Start', type: 'START', config: { message: 'Cross-border remittance automation initiated' } },
+        { name: 'Compliance Check', type: 'API_CALL', config: { endpoint: 'ghana_compliance_check', timeout: 15000 } },
+        { name: 'AML Screening', type: 'API_CALL', config: { endpoint: 'aml_screening', required: true } },
+        { name: 'Exchange Rate Lock', type: 'API_CALL', config: { endpoint: 'lock_exchange_rate', delay: 0 } },
+        { name: 'Payment Processing', type: 'CONDITIONAL', config: { condition: 'compliance_passed' } },
+        { name: 'UK Bank Verification', type: 'API_CALL', config: { endpoint: 'verify_uk_bank', timeout: 20000 } },
+        { name: 'Transfer Execution', type: 'API_CALL', config: { endpoint: 'execute_transfer', priority: 'HIGH' } },
+        { name: 'SMS Confirmation', type: 'SEND_SMS', config: { template: 'transfer_sent_ghana', delay: 2000 } },
+        { name: 'UK Recipient Notification', type: 'SEND_EMAIL', config: { template: 'funds_incoming_uk', delay: 5000 } },
+        { name: 'End', type: 'END', config: { message: 'Cross-border transfer completed' } }
+      ];
+    }
+
+    // General fintech workflow
+    if (type.toLowerCase().includes('fintech')) {
+      return [
+        { name: 'Start', type: 'START', config: { message: 'Fintech workflow initiated' } },
+        { name: 'Identity Verification', type: 'FORM', config: { formType: 'identity_check', required: true } },
+        { name: 'Compliance Screening', type: 'API_CALL', config: { endpoint: 'compliance_check', timeout: 15000 } },
+        { name: 'Account Setup', type: 'CONDITIONAL', config: { condition: 'compliance_passed' } },
+        { name: 'Welcome Package', type: 'SEND_EMAIL', config: { template: 'fintech_welcome', delay: 1000 } },
+        { name: 'Follow Up', type: 'SEND_SMS', config: { template: 'account_ready', delay: 86400000 } },
+        { name: 'End', type: 'END', config: { message: 'Fintech workflow completed' } }
+      ];
+    }
+
+    // Default fallback workflow
+    return [
+      { name: 'Start', type: 'START', config: { message: 'Workflow initiated' } },
+      { name: 'Send Welcome', type: 'SEND_EMAIL', config: { template: 'welcome', delay: 0 } },
+      { name: 'Wait 1 Day', type: 'WAIT', config: { duration: 24 * 60 * 60 * 1000 } },
+      { name: 'Follow Up', type: 'SEND_EMAIL', config: { template: 'follow_up', delay: 0 } },
+      { name: 'End', type: 'END', config: { message: 'Workflow completed' } }
+    ];
   }
 
   /**

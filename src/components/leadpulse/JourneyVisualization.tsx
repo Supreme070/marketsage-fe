@@ -80,10 +80,10 @@ export default function JourneyVisualization({
     isLoading
   });
   
-  // Get the selected visitor path
+  // Get the selected visitor path - show first available journey if none selected
   const selectedPath = selectedVisitorId 
     ? data.find(path => path.visitorId === selectedVisitorId) 
-    : data[0];
+    : data.length > 0 ? data[0] : null;
     
   console.log('Selected path:', selectedPath);
   
@@ -434,7 +434,7 @@ export default function JourneyVisualization({
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.5 }}
                 >
-                  No visitor selected
+                  No journey data available
                 </motion.div>
               )
             ) : (
@@ -445,7 +445,7 @@ export default function JourneyVisualization({
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.5 }}
                 >
-                  No visitor selected
+                  No journey data available
                 </motion.div>
               )
             )}

@@ -259,16 +259,18 @@ Extract workflow information from this request: "${userQuery}"
 Please extract workflow details and respond with JSON:
 {
   "name": "Workflow name or title",
-  "type": "onboarding|retention|nurturing|general",
-  "market": "nigeria|kenya|ghana|south_africa|multi_market", 
-  "industry": "fintech|banking|general",
+  "type": "onboarding|retention|nurturing|remittance|compliance|automation|general",
+  "market": "nigeria|nigerian|kenya|ghana|uk|south_africa|cross_border|multi_market", 
+  "industry": "fintech|banking|remittance|general",
   "objective": "Main goal of the workflow",
-  "steps": ["List of workflow steps if mentioned"]
+  "steps": ["List of workflow steps if mentioned"],
+  "features": ["BVN verification", "KYC", "AML screening", etc. if mentioned]
 }
 
 Examples:
-"create Nigerian onboarding workflow" → {"type": "onboarding", "market": "nigeria"}
-"build retention workflow for Ghana" → {"type": "retention", "market": "ghana"}
+"create Nigerian fintech onboarding workflow with BVN verification" → {"type": "onboarding", "market": "nigerian", "industry": "fintech", "features": ["BVN verification"]}
+"build cross-border remittance automation from Ghana to UK" → {"type": "remittance", "market": "cross_border", "industry": "remittance"}
+"create fintech onboarding workflow" → {"type": "onboarding", "industry": "fintech"}
 
 Only include fields that can be inferred. Use null for missing fields.
 Respond with valid JSON only.`;

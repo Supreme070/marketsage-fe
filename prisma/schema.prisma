@@ -53,6 +53,13 @@ model Organization {
   // Relations
   users          User[]
   integrations   Integration[]
+  contacts       Contact[]
+  lists          List[]
+  emailCampaigns EmailCampaign[]
+  tasks          Task[]
+  smsProviders   SMSProvider[]
+  whatsappConfigs WhatsAppBusinessConfig[]
+  emailDomainConfigs EmailDomainConfig[]
 }
 
 // User model for authentication and platform access
@@ -241,9 +248,11 @@ model Contact {
   emailVerified   Boolean   @default(false)
   phoneVerified   Boolean   @default(false)
   createdById     String
+  organizationId  String?   // Made optional for safe migration
 
   // Relations
   createdBy       User      @relation("CreatedBy", fields: [createdById], references: [id])
+  organization    Organization? @relation(fields: [organizationId], references: [id])
   listMembers     ListMember[]
   segmentMembers  SegmentMember[]
   emailActivities EmailActivity[]
@@ -258,6 +267,8 @@ model Contact {
   // LeadPulse Form Builder relations
   formSubmissions LeadPulseFormSubmission[]
   leadPulseConsents LeadPulseConsent[]
+
+  @@index([organizationId])
 }
 
 model List {
@@ -268,13 +279,17 @@ model List {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   createdById     String
+  organizationId  String?   // Made optional for safe migration
 
   // Relations
   createdBy       User      @relation("ListCreator", fields: [createdById], references: [id])
+  organization    Organization? @relation(fields: [organizationId], references: [id])
   members         ListMember[]
   emailCampaigns  EmailCampaign[] @relation("CampaignLists")
   smsCampaigns    SMSCampaign[]   @relation("SMSCampaignLists")
   waCampaigns     WhatsAppCampaign[] @relation("WACampaignLists")
+
+  @@index([organizationId])
 }
 
 model ListMember {
@@ -355,14 +370,18 @@ model EmailCampaign {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   createdById     String
+  organizationId  String?   // Made optional for safe migration
 
   // Relations
   createdBy       User      @relation("CampaignCreator", fields: [createdById], references: [id])
+  organization    Organization? @relation(fields: [organizationId], references: [id])
   template        EmailTemplate? @relation(fields: [templateId], references: [id])
   lists           List[]    @relation("CampaignLists")
   segments        Segment[] @relation("CampaignSegments")
   activities      EmailActivity[]
   tasks           Task[]
+
+  @@index([organizationId])
 }
 
 model EmailActivity {
@@ -1526,14 +1545,18 @@ model Task {
   segmentId       String?
   campaignId      String?
   regionId        String?
+  organizationId  String?   // Made optional for safe migration
 
   // Relations
   creator         User      @relation(name: "TaskCreator", fields: [creatorId], references: [id])
   assignee        User?     @relation(name: "TaskAssignee", fields: [assigneeId], references: [id])
   campaign        EmailCampaign? @relation(fields: [campaignId], references: [id])
+  organization    Organization? @relation(fields: [organizationId], references: [id])
   dependencies    TaskDependency[] @relation("DependentTask")
   dependsOn       TaskDependency[] @relation("PrerequisiteTask")
   comments        TaskComment[]
+
+  @@index([organizationId])
 }
 
 model TaskDependency {
@@ -2248,4 +2271,62 @@ model LeadPulsePageView {
   
   @@index([visitorId, timestamp])
   @@index([url])
+}
+
+// Onboarding Configuration Models
+model SMSProvider {
+  id                  String    @id @default(cuid())
+  organizationId      String    @unique
+  provider            String    // africastalking, twilio, termii, nexmo
+  credentials         Json      // Encrypted provider credentials
+  senderId            String?   // Sender ID for providers that require it
+  isActive            Boolean   @default(false)
+  verificationStatus  String    @default("pending") // pending, verified, failed
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  
+  // Relations
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([organizationId])
+}
+
+model WhatsAppBusinessConfig {
+  id                  String    @id @default(cuid())
+  organizationId      String    @unique
+  businessAccountId   String
+  phoneNumberId       String
+  accessToken         String    // Encrypted access token
+  webhookUrl          String
+  verifyToken         String
+  phoneNumber         String?   // The actual phone number
+  displayName         String?   // Business display name
+  isActive            Boolean   @default(false)
+  verificationStatus  String    @default("pending") // pending, verified, failed
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  
+  // Relations
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([organizationId])
+}
+
+model EmailDomainConfig {
+  id                  String    @id @default(cuid())
+  organizationId      String    @unique
+  domain              String
+  spfVerified         Boolean   @default(false)
+  dkimVerified        Boolean   @default(false)
+  dmarcVerified       Boolean   @default(false)
+  mxVerified          Boolean   @default(false)
+  verificationStatus  String    @default("pending") // pending, partial, verified, failed
+  lastChecked         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  
+  // Relations
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([organizationId])
 }

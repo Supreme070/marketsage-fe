@@ -3,6 +3,7 @@ import { getToken } from 'next-auth/jwt';
 import type { NextRequest } from 'next/server';
 import { handleApiError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
+import { setTenantContext, clearTenantContext } from '@/lib/tenant/edge-tenant-context';
 
 /**
  * Middleware for the MarketSage application
@@ -12,13 +13,31 @@ import { logger } from '@/lib/logger';
  */
 export async function middleware(request: NextRequest) {
   try {
-    // Process API routes with consistent headers
+    // Process API routes with consistent headers and tenant context
     if (request.nextUrl.pathname.startsWith('/api')) {
+      // Get token for tenant context
+      const token = await getToken({
+        req: request,
+        secret: process.env.NEXTAUTH_SECRET,
+      });
+
       // Add security headers
       const response = NextResponse.next();
       response.headers.set('X-Content-Type-Options', 'nosniff');
       response.headers.set('X-XSS-Protection', '1; mode=block');
       response.headers.set('X-Frame-Options', 'DENY');
+      
+      // Add tenant context to request headers and environment for database middleware
+      if (token?.organizationId) {
+        response.headers.set('x-tenant-id', token.organizationId);
+        // Also add to the request for downstream processing
+        request.headers.set('x-tenant-id', token.organizationId);
+        // Set in environment for database middleware access
+        setTenantContext(token.organizationId);
+      } else {
+        // Clear tenant context if no valid token
+        clearTenantContext();
+      }
       
       // Get client IP address from headers (for proxied requests)
       const clientIp = request.headers.get('x-forwarded-for') || 
@@ -32,6 +51,7 @@ export async function middleware(request: NextRequest) {
         query: Object.fromEntries(request.nextUrl.searchParams.entries()),
         ip: clientIp,
         userAgent: request.headers.get('user-agent') || 'unknown',
+        tenantId: token?.organizationId || 'anonymous',
       });
       
       return response;

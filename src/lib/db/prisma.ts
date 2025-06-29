@@ -269,6 +269,128 @@ prisma.$use(async (params: any, next: any) => {
   return runWithRetry();
 });
 
+// TENANT ISOLATION MIDDLEWARE - Critical Security Feature
+// This middleware automatically adds organizationId filters to all database queries
+// to ensure complete data isolation between tenants
+prisma.$use(async (params: any, next: any) => {
+  // Models that require tenant isolation
+  const TENANT_ISOLATED_MODELS = [
+    'Contact', 'EmailCampaign', 'SMSCampaign', 'WhatsAppCampaign', 
+    'List', 'Segment', 'Workflow', 'Task', 'Lead', 'Journey',
+    'ConversionEvent', 'ConversionTracking', 'ConversionFunnel',
+    'AI_ContentAnalysis', 'AI_CustomerSegment', 'AI_ChatHistory',
+    'LeadPulseVisitor', 'LeadPulseTouchpoint', 'PredictionModel',
+    'ChurnPrediction', 'LifetimeValuePrediction', 'ContactJourney'
+  ];
+
+  // Skip tenant isolation for non-tenant models or if no model specified
+  if (!params.model || !TENANT_ISOLATED_MODELS.includes(params.model)) {
+    return next(params);
+  }
+
+  // Skip for build time or when using mock client
+  if (typeof prisma.$healthCheck === 'function') {
+    const isHealthy = await prisma.$healthCheck();
+    if (!isHealthy) {
+      return next(params);
+    }
+  }
+
+  try {
+    // Get tenant ID from request context
+    const tenantId = getCurrentTenantId();
+    
+    // If no tenant context available, allow query to proceed (for system operations)
+    if (!tenantId) {
+      // Log warning for production to detect potential security issues
+      if (process.env.NODE_ENV === 'production') {
+        console.warn(`Database query without tenant context: ${params.model}.${params.action}`);
+      }
+      return next(params);
+    }
+
+    // Add tenant filter based on operation type
+    switch (params.action) {
+      case 'findMany':
+      case 'findFirst':
+      case 'findUnique':
+      case 'count':
+      case 'aggregate':
+      case 'groupBy':
+        // Add organizationId filter to WHERE clause
+        if (!params.args) params.args = {};
+        if (!params.args.where) params.args.where = {};
+        
+        // Only add filter if not already present
+        if (!params.args.where.organizationId) {
+          params.args.where.organizationId = tenantId;
+        }
+        break;
+
+      case 'create':
+        // Ensure organizationId is set for new records
+        if (!params.args) params.args = {};
+        if (!params.args.data) params.args.data = {};
+        
+        // Set organizationId for the new record
+        if (!params.args.data.organizationId) {
+          params.args.data.organizationId = tenantId;
+        }
+        break;
+
+      case 'createMany':
+        // Ensure organizationId is set for all new records
+        if (!params.args) params.args = {};
+        if (!params.args.data) params.args.data = [];
+        
+        // Set organizationId for each record in batch create
+        if (Array.isArray(params.args.data)) {
+          params.args.data = params.args.data.map((record: any) => ({
+            ...record,
+            organizationId: record.organizationId || tenantId
+          }));
+        }
+        break;
+
+      case 'update':
+      case 'updateMany':
+      case 'upsert':
+      case 'delete':
+      case 'deleteMany':
+        // Add organizationId filter to WHERE clause for safety
+        if (!params.args) params.args = {};
+        if (!params.args.where) params.args.where = {};
+        
+        // Ensure we only update/delete records from the current tenant
+        if (!params.args.where.organizationId) {
+          params.args.where.organizationId = tenantId;
+        }
+        break;
+    }
+
+    return next(params);
+
+  } catch (error) {
+    console.error('Tenant isolation middleware error:', error);
+    // Continue with original query if middleware fails
+    return next(params);
+  }
+});
+
+// Import tenant context utilities (Edge Runtime compatible)
+import { extractTenantIdFromEnvironment } from '@/lib/tenant/edge-tenant-context';
+
+// Helper function to get current tenant ID from request context
+function getCurrentTenantId(): string | null {
+  try {
+    // Use the tenant context utility
+    return extractTenantIdFromEnvironment();
+  } catch (error) {
+    console.warn('Could not determine tenant context:', error);
+    return null;
+  }
+}
+
 // Setup proper shutdown for production
 if (process.env.NODE_ENV === 'production') {
   const gracefulShutdown = async () => {

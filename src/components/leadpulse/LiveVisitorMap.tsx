@@ -115,16 +115,22 @@ export default function LiveVisitorMap({
     updateViewBox();
   }, [geoPath]);
   
-  // Fetch visitor locations
+  // Fetch visitor locations with real-time updates
   useEffect(() => {
+    let isActive = true;
+    let refreshInterval: NodeJS.Timeout | null = null;
+
     async function fetchLocations() {
-      setLoading(true);
+      if (!isActive) return;
+      
       try {
         // Fetch both locations and enhanced overview for consistency
         const [locations, overview] = await Promise.all([
           getVisitorLocations(selectedTimeRange),
           fetch(`/api/leadpulse?timeRange=${selectedTimeRange}`).then(res => res.json())
         ]);
+        
+        if (!isActive) return; // Component unmounted
         
         // Ensure active location count matches enhanced overview
         // Don't override the isActive property from the API - it's already correctly set
@@ -138,16 +144,42 @@ export default function LiveVisitorMap({
         filterLocationsByGeoPath(enhancedLocations, geoPath);
       } catch (error) {
         console.error('Error fetching visitor locations:', error);
+        if (!isActive) return;
+        
         // Fallback to original logic
-        const locations = await getVisitorLocations(selectedTimeRange);
-        setActiveLocations(locations);
-        filterLocationsByGeoPath(locations, geoPath);
+        try {
+          const locations = await getVisitorLocations(selectedTimeRange);
+          if (isActive) {
+            setActiveLocations(locations);
+            filterLocationsByGeoPath(locations, geoPath);
+          }
+        } catch (fallbackError) {
+          console.error('Fallback fetch also failed:', fallbackError);
+        }
       } finally {
-        setLoading(false);
+        if (isActive) {
+          setLoading(false);
+        }
       }
     }
     
+    // Initial fetch
+    setLoading(true);
     fetchLocations();
+    
+    // Set up real-time polling every 3 seconds for live simulation updates
+    refreshInterval = setInterval(() => {
+      if (isActive) {
+        fetchLocations();
+      }
+    }, 3000);
+    
+    return () => {
+      isActive = false;
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+    };
   }, [selectedTimeRange, geoPath]);
   
   // Filter locations based on geo path

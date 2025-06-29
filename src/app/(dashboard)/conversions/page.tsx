@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -28,10 +28,25 @@ import TimeSeriesPanel from '@/components/panels/TimeSeriesPanel';
 import PiePanel from '@/components/panels/PiePanel';
 import BarPanel from '@/components/panels/BarPanel';
 import Panel from '@/components/panels/Panel';
+import { masterSimulation } from '@/lib/simulation/master-simulation-controller';
 
 export default function ConversionsPage() {
   const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d' | '90d'>('30d');
   const [refreshing, setRefreshing] = useState(false);
+  const [simulationState, setSimulationState] = useState(masterSimulation.getState());
+
+  // Subscribe to simulation state changes
+  useEffect(() => {
+    const handleSimulationStateChange = (newState: any) => {
+      setSimulationState(newState);
+    };
+
+    masterSimulation.onStateChange(handleSimulationStateChange);
+    
+    return () => {
+      // Cleanup handled by master simulation
+    };
+  }, []);
 
   const refreshData = async () => {
     setRefreshing(true);
@@ -40,48 +55,70 @@ export default function ConversionsPage() {
     toast.success('Conversion data refreshed');
   };
 
-  // Mock time series data for charts
-  const conversionTrendData = Array.from({ length: 30 }).map((_, idx) => ({
-    x: `Day ${idx + 1}`,
-    y: Math.round(15 + Math.random() * 20 + Math.sin(idx * 0.2) * 5),
-  }));
+  // Simulation-based time series data for charts
+  const conversionTrendData = Array.from({ length: 30 }).map((_, idx) => {
+    const baseConversions = simulationState.isRunning ? simulationState.dashboard.conversionRate : 3.5;
+    const dayVariation = Math.sin(idx * 0.2) * 2 + Math.random() * 1.5;
+    return {
+      x: `Day ${idx + 1}`,
+      y: Math.max(0, Math.round(baseConversions + dayVariation)),
+    };
+  });
 
-  const revenueTrendData = Array.from({ length: 30 }).map((_, idx) => ({
-    x: `Day ${idx + 1}`,
-    y: Math.round(45000 + Math.random() * 30000 + Math.cos(idx * 0.15) * 8000),
-  }));
+  const revenueTrendData = Array.from({ length: 30 }).map((_, idx) => {
+    const baseRevenue = simulationState.isRunning ? 
+      (simulationState.dashboard.totalRevenue / 30) : 45000;
+    const dayVariation = Math.cos(idx * 0.15) * 8000 + Math.random() * 15000;
+    return {
+      x: `Day ${idx + 1}`,
+      y: Math.max(0, Math.round(baseRevenue + dayVariation)),
+    };
+  });
 
-  // Sparkline data for stat panels
+  // Simulation-based sparkline data for stat panels
+  const currentConversionRate = simulationState.isRunning ? simulationState.dashboard.conversionRate : 3.5;
+  const currentRevenue = simulationState.isRunning ? simulationState.dashboard.totalRevenue : 580000;
+  const currentConversions = simulationState.isRunning ? 
+    Math.round(simulationState.leadpulse.totalVisitors * (currentConversionRate / 100)) : 48;
+
   const conversionRateSparkline = Array.from({ length: 10 }).map((_, idx) => ({
     x: idx,
-    y: Math.round(8.3 + idx * 0.1 + Math.random() * 0.8),
+    y: Math.max(0, Math.round(currentConversionRate + idx * 0.1 + Math.random() * 0.8)),
   }));
 
   const revenueSparkline = Array.from({ length: 10 }).map((_, idx) => ({
     x: idx,
-    y: Math.round(580000 + idx * 12000 + Math.random() * 50000),
+    y: Math.max(0, Math.round(currentRevenue + idx * 12000 + Math.random() * 50000)),
   }));
 
   const costSparkline = Array.from({ length: 10 }).map((_, idx) => ({
     x: idx,
-    y: Math.round(1200 - idx * 15 + Math.random() * 100),
+    y: Math.max(0, Math.round(1200 - idx * 15 + Math.random() * 100)),
   }));
 
   const conversionsSparkline = Array.from({ length: 10 }).map((_, idx) => ({
     x: idx,
-    y: Math.round(483 + idx * 8 + Math.random() * 20),
+    y: Math.max(0, Math.round(currentConversions + idx * 2 + Math.random() * 5)),
   }));
 
-  // Conversion Funnel Panel
-  const ConversionFunnelPanel = () => (
-    <Panel title="Conversion Funnel">
-      <div className="flex flex-col space-y-4 h-full justify-center">
-        {[
-          { stage: 'Visitors', count: 12450, percentage: 100, color: 'bg-blue-500' },
-          { stage: 'Leads', count: 5280, percentage: 42.4, color: 'bg-green-500' },
-          { stage: 'Opportunities', count: 1860, percentage: 14.9, color: 'bg-amber-500' },
-          { stage: 'Customers', count: 483, percentage: 3.9, color: 'bg-purple-500' }
-        ].map((item, index) => (
+  // Simulation-based Conversion Funnel Panel
+  const ConversionFunnelPanel = () => {
+    const totalVisitors = simulationState.isRunning ? simulationState.leadpulse.totalVisitors : 1245;
+    const leads = Math.round(totalVisitors * 0.424);
+    const opportunities = Math.round(totalVisitors * 0.149);
+    const customers = Math.round(totalVisitors * (currentConversionRate / 100));
+
+    const funnelData = [
+      { stage: 'Visitors', count: totalVisitors, percentage: 100, color: 'bg-blue-500' },
+      { stage: 'Leads', count: leads, percentage: Math.round((leads / totalVisitors) * 100 * 10) / 10, color: 'bg-green-500' },
+      { stage: 'Opportunities', count: opportunities, percentage: Math.round((opportunities / totalVisitors) * 100 * 10) / 10, color: 'bg-amber-500' },
+      { stage: 'Customers', count: customers, percentage: Math.round((customers / totalVisitors) * 100 * 10) / 10, color: 'bg-purple-500' }
+    ];
+
+    return (
+      <Panel title="Conversion Funnel">
+        <div className="flex flex-col space-y-4 h-full justify-center">
+          {funnelData.map((item, index) => (
           <div key={index} className="relative">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-white">{item.stage}</span>
@@ -101,10 +138,11 @@ export default function ConversionsPage() {
                     </div>
                   </div>
                       </div>
-        ))}
-                      </div>
-    </Panel>
-  );
+          ))}
+        </div>
+      </Panel>
+    );
+  };
 
   // Top Converting Channels Panel
   const TopChannelsPanel = () => (
@@ -193,7 +231,7 @@ export default function ConversionsPage() {
       component: (
         <SingleStatPanel
           title="Conversion Rate"
-          value="8.3"
+          value={currentConversionRate.toFixed(1)}
           unit="%"
           isLoading={false}
           trendValue="+1.2% vs last month"
@@ -212,7 +250,7 @@ export default function ConversionsPage() {
       component: (
         <SingleStatPanel
           title="Total Conversions"
-          value="483"
+          value={currentConversions.toString()}
           unit=""
           isLoading={false}
           trendValue="+67 vs last month"
@@ -231,7 +269,7 @@ export default function ConversionsPage() {
       component: (
         <SingleStatPanel
           title="Revenue"
-          value="₦5.8"
+          value={`₦${(currentRevenue / 1000000).toFixed(1)}`}
           unit="M"
           isLoading={false}
           trendValue="+₦890K vs last month"

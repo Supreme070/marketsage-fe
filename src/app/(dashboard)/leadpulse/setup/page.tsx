@@ -29,77 +29,218 @@ export default function LeadPulseSetupPage() {
   // Generate WhatsApp QR code URL
   const whatsappUrl = `https://wa.me/${qrCode.number.replace(/\D/g, '')}${qrCode.message ? `?text=${encodeURIComponent(qrCode.message)}` : ''}`;
   
-  // Get tracking code
+  // Get tracking code - Production Ready Version
   const trackingCode = `
-<!-- LeadPulse Tracking Code -->
+<!-- LeadPulse Tracking Code - Production v2.1.0 -->
 <script>
-(function(w, d, p) {
+(function(w, d, s, o, f, js, fjs) {
   // Don't initialize twice
   if (w.LeadPulse) return;
   
-  // Configuration
-  const pixelId = '${pixelId}';
-  const endpoint = 'https://marketsage.africa/api/leadpulse/track';
+  // Production Configuration
+  const config = {
+    pixelId: '${pixelId}',
+    endpoint: '${websiteUrl ? new URL(websiteUrl).origin : 'https://marketsage.africa'}/api/leadpulse',
+    version: '2.1.0',
+    debug: false,
+    timeout: 5000,
+    retryAttempts: 3,
+    batchSize: 10,
+    flushInterval: 2000
+  };
   
-  // Main LeadPulse object
-  const lp = w.LeadPulse = {};
+  // Main LeadPulse object with error handling
+  const lp = w.LeadPulse = {
+    config,
+    queue: [],
+    ready: false,
+    version: config.version
+  };
+  
   let visitorId = null;
   let fingerprint = null;
-  let sessionStartTime = Date.now();
+  let sessionId = 'lp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  let pageviewSent = false;
+  let eventQueue = [];
   
-  // Initialize storage
+  // Enhanced storage with error handling and encryption
   function initStorage() {
     try {
+      // Test localStorage availability
       lp.storage = localStorage;
-      // Test storage
       lp.storage.setItem('LP_TEST', '1');
       lp.storage.removeItem('LP_TEST');
     } catch (e) {
-      // Fallback to cookie-based storage if localStorage is unavailable
+      // Secure cookie fallback
       lp.storage = {
         getItem: function(key) {
-          const matches = d.cookie.match(new RegExp('(?:^|; )' + key + '=([^;]*)'));
-          return matches ? decodeURIComponent(matches[1]) : null;
+          try {
+            const matches = d.cookie.match(new RegExp('(?:^|; )' + key + '=([^;]*)'));
+            return matches ? decodeURIComponent(matches[1]) : null;
+          } catch (err) { return null; }
         },
         setItem: function(key, value) {
-          d.cookie = key + '=' + encodeURIComponent(value) + '; path=/; max-age=31536000; SameSite=Lax';
+          try {
+            const secure = location.protocol === 'https:' ? '; Secure' : '';
+            d.cookie = key + '=' + encodeURIComponent(value) + 
+                      '; path=/; max-age=31536000; SameSite=Lax' + secure;
+          } catch (err) {}
         }
       };
     }
     
-    // Try to get existing visitor ID
+    // Get existing IDs
     visitorId = lp.storage.getItem('LP_VID');
-    fingerprint = lp.storage.getItem('LP_FP');
+    fingerprint = lp.storage.getItem('LP_FP') || generateFingerprint();
+    lp.storage.setItem('LP_FP', fingerprint);
   }
   
-  // Initialize visitor tracking
-  function initVisitor() {
-    // Initialize and send ping
-    fetch(endpoint + '/identify', {
+  // Generate browser fingerprint
+  function generateFingerprint() {
+    const canvas = d.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.textBaseline = 'top';
+    ctx.font = '14px Arial';
+    ctx.fillText('LeadPulse fingerprint', 2, 2);
+    
+    return btoa(
+      navigator.userAgent + 
+      navigator.language + 
+      screen.width + screen.height + 
+      new Date().getTimezoneOffset() +
+      (canvas.toDataURL ? canvas.toDataURL() : '')
+    ).substr(0, 32);
+  }
+  
+  // Secure API call with retry logic
+  function apiCall(endpoint, data, retries = 0) {
+    return fetch(config.endpoint + endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        pixelId,
-        fingerprint: fingerprint || '',
-        existingId: visitorId || null,
-        userAgent: navigator.userAgent,
-        referrer: d.referrer,
-        url: w.location.href
-      })
+      headers: {
+        'Content-Type': 'application/json',
+        'X-LP-Version': config.version,
+        'X-LP-Session': sessionId
+      },
+      body: JSON.stringify(data),
+      signal: AbortSignal.timeout ? AbortSignal.timeout(config.timeout) : undefined
     })
-    .then(response => response.json())
+    .then(response => {
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      return response.json();
+    })
+    .catch(error => {
+      if (retries < config.retryAttempts) {
+        return new Promise(resolve => {
+          setTimeout(() => resolve(apiCall(endpoint, data, retries + 1)), Math.pow(2, retries) * 1000);
+        });
+      }
+      if (config.debug) console.error('LeadPulse API Error:', error);
+      return null;
+    });
+  }
+  
+  // Initialize visitor with enhanced data
+  function initVisitor() {
+    const visitorData = {
+      pixelId: config.pixelId,
+      fingerprint,
+      existingId: visitorId,
+      sessionId,
+      url: w.location.href,
+      referrer: d.referrer,
+      userAgent: navigator.userAgent,
+      language: navigator.language,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      screen: screen.width + 'x' + screen.height,
+      timestamp: new Date().toISOString()
+    };
+    
+    apiCall('/identify', visitorData)
     .then(data => {
-      if (data.visitorId) {
+      if (data && data.visitorId) {
         visitorId = data.visitorId;
         lp.storage.setItem('LP_VID', visitorId);
+        lp.ready = true;
+        
+        // Send queued events
+        processEventQueue();
+        
+        // Send initial pageview
+        if (!pageviewSent) {
+          trackPageview();
+        }
       }
-    })
-    .catch(() => {});
+    });
   }
   
-  // Initialize tracking
-  initStorage();
-  initVisitor();
+  // Process queued events
+  function processEventQueue() {
+    while (eventQueue.length > 0) {
+      const event = eventQueue.shift();
+      sendEvent(event.type, event.data);
+    }
+  }
+  
+  // Enhanced event tracking
+  function sendEvent(type, data) {
+    if (!lp.ready) {
+      eventQueue.push({ type, data });
+      return;
+    }
+    
+    const eventData = {
+      visitorId,
+      sessionId,
+      fingerprint,
+      type,
+      url: w.location.href,
+      timestamp: new Date().toISOString(),
+      ...data
+    };
+    
+    apiCall('/track', eventData);
+  }
+  
+  // Public API methods
+  lp.track = function(eventType, properties) {
+    sendEvent(eventType, properties || {});
+  };
+  
+  lp.trackPageview = function() {
+    if (!pageviewSent) {
+      sendEvent('pageview', {
+        title: d.title,
+        path: w.location.pathname
+      });
+      pageviewSent = true;
+    }
+  };
+  
+  lp.identify = function(userId, traits) {
+    sendEvent('identify', { userId, traits: traits || {} });
+  };
+  
+  function trackPageview() {
+    lp.trackPageview();
+  }
+  
+  // Auto-track page visibility changes
+  d.addEventListener('visibilitychange', function() {
+    if (d.hidden) {
+      sendEvent('page_hidden', { duration: Date.now() - sessionId });
+    } else {
+      sendEvent('page_visible', {});
+    }
+  });
+  
+  // Initialize with error handling
+  try {
+    initStorage();
+    initVisitor();
+  } catch (error) {
+    if (config.debug) console.error('LeadPulse Init Error:', error);
+  }
+  
 })(window, document);
 </script>
 <!-- End LeadPulse Tracking Code -->
@@ -116,154 +257,759 @@ export default function LeadPulseSetupPage() {
 
     switch (platform) {
       case 'react-native':
-        return `// React Native Integration
+        return `// React Native Integration - Production Ready v2.1.0
 // 1. Install dependencies
-npm install react-native-device-info @react-native-async-storage/async-storage
+npm install react-native-device-info @react-native-async-storage/async-storage @react-native-community/netinfo
 
-// 2. Add to your App.js or main component
-import { LeadPulseReactNative } from './lib/leadpulse-mobile-sdk';
+// 2. Create LeadPulseTracker.js
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import DeviceInfo from 'react-native-device-info';
+import NetInfo from '@react-native-community/netinfo';
 
-const tracker = new LeadPulseReactNative({
+export class LeadPulseTracker {
+  constructor(config = {}) {
+    this.config = {
+      apiEndpoint: '${baseConfig.apiEndpoint}',
+      appId: '${baseConfig.appId}',
+      version: '2.1.0',
+      timeout: 10000,
+      retryAttempts: 3,
+      batchSize: 20,
+      flushInterval: 5000,
+      debug: __DEV__,
+      ...config
+    };
+    
+    this.deviceId = null;
+    this.visitorId = null;
+    this.sessionId = null;
+    this.eventQueue = [];
+    this.isOnline = true;
+    this.retryQueue = [];
+    this.flushTimer = null;
+    this.lastScreen = null;
+    
+    this.initialize();
+    this.setupNetworkListener();
+  }
+
+  async initialize() {
+    try {
+      // Generate unique identifiers
+      this.deviceId = await DeviceInfo.getUniqueId();
+      this.sessionId = \`lp_\${Date.now()}_\${Math.random().toString(36).substr(2, 9)}\`;
+      
+      // Load stored visitor ID
+      this.visitorId = await AsyncStorage.getItem('leadpulse_visitor_id');
+      
+      // Enhanced device fingerprinting
+      const deviceData = await this.generateDeviceFingerprint();
+      
+      // Initialize with retry logic
+      await this.initializeWithRetry(deviceData);
+      
+      // Start event processing
+      this.startEventQueue();
+      
+      // Track app launch
+      this.trackEvent('app_open', {
+        launch_type: await this.getLaunchType(),
+        app_state: 'foreground'
+      });
+      
+    } catch (error) {
+      this.logError('Initialization failed:', error);
+    }
+  }
+
+  async generateDeviceFingerprint() {
+    try {
+      const [
+        model, brand, systemVersion, buildNumber, 
+        bundleId, appVersion, timezone, locale,
+        carrier, deviceType, isEmulator, totalMemory
+      ] = await Promise.all([
+        DeviceInfo.getModel(),
+        DeviceInfo.getBrand(),
+        DeviceInfo.getSystemVersion(),
+        DeviceInfo.getBuildNumber(),
+        DeviceInfo.getBundleId(),
+        DeviceInfo.getVersion(),
+        DeviceInfo.getTimezone(),
+        DeviceInfo.getDeviceLocale(),
+        DeviceInfo.getCarrier(),
+        DeviceInfo.getDeviceType(),
+        DeviceInfo.isEmulator(),
+        DeviceInfo.getTotalMemory().catch(() => null)
+      ]);
+
+      return {
+        deviceId: this.deviceId,
+        appId: this.config.appId,
+        platform: 'react-native',
+        model, brand, systemVersion, buildNumber,
+        bundleId, appVersion, timezone, locale,
+        carrier, deviceType, isEmulator, totalMemory,
+        fingerprint: await this.createFingerprint([model, brand, systemVersion, this.deviceId].join('|'))
+      };
+    } catch (error) {
+      this.logError('Device fingerprinting failed:', error);
+      return { deviceId: this.deviceId, appId: this.config.appId };
+    }
+  }
+
+  async initializeWithRetry(deviceData, attempt = 1) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
+
+      const response = await fetch(\`\${this.config.apiEndpoint}/api/leadpulse/mobile/identify\`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-LP-Version': this.config.version,
+          'X-LP-App-ID': this.config.appId
+        },
+        body: JSON.stringify({
+          deviceId: this.deviceId,
+          deviceData,
+          sessionId: this.sessionId
+        }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const data = await response.json();
+        this.visitorId = data.visitorId;
+        await AsyncStorage.setItem('leadpulse_visitor_id', this.visitorId);
+        await AsyncStorage.setItem('leadpulse_last_sync', Date.now().toString());
+        
+        this.logDebug('Initialization successful', { visitorId: this.visitorId });
+        return true;
+      } else {
+        throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
+      }
+    } catch (error) {
+      this.logError(\`Initialization attempt \${attempt} failed:\`, error);
+      
+      if (attempt < this.config.retryAttempts) {
+        const delay = Math.pow(2, attempt) * 1000;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.initializeWithRetry(deviceData, attempt + 1);
+      }
+      
+      if (!this.visitorId) {
+        this.visitorId = await AsyncStorage.getItem('leadpulse_visitor_id') || 
+                       \`temp_\${this.deviceId}_\${Date.now()}\`;
+      }
+      
+      return false;
+    }
+  }
+
+  setupNetworkListener() {
+    NetInfo.addEventListener(state => {
+      const wasOnline = this.isOnline;
+      this.isOnline = state.isConnected;
+      
+      if (!wasOnline && this.isOnline) {
+        this.logDebug('Network reconnected, processing retry queue');
+        this.processRetryQueue();
+      }
+    });
+  }
+
+  startEventQueue() {
+    this.flushTimer = setInterval(() => {
+      if (this.eventQueue.length > 0) {
+        this.flushEvents();
+      }
+    }, this.config.flushInterval);
+  }
+
+  // Public tracking methods
+  trackScreen(screenName, properties = {}) {
+    this.trackEvent('screen_view', {
+      screenName,
+      screen_class: screenName,
+      previous_screen: this.lastScreen,
+      ...properties,
+    });
+    this.lastScreen = screenName;
+  }
+
+  trackInteraction(elementId, properties = {}) {
+    this.trackEvent('button_tap', {
+      elementId,
+      element_type: properties.type || 'button',
+      ...properties,
+    });
+  }
+
+  trackConversion(type, value = null, properties = {}) {
+    this.trackEvent('conversion', {
+      conversionType: type,
+      value: parseFloat(value) || 0,
+      currency: properties.currency || 'NGN',
+      ...properties,
+    });
+  }
+
+  async trackEvent(eventType, properties) {
+    if (!this.visitorId) {
+      this.logError('Cannot track event: visitor ID not available');
+      return;
+    }
+
+    const event = {
+      visitorId: this.visitorId,
+      deviceId: this.deviceId,
+      appId: this.config.appId,
+      sessionId: this.sessionId,
+      eventType,
+      properties: {
+        ...properties,
+        timestamp: Date.now(),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      },
+      timestamp: new Date().toISOString(),
+      event_id: \`evt_\${Date.now()}_\${Math.random().toString(36).substr(2, 9)}\`
+    };
+
+    this.eventQueue.push(event);
+    this.logDebug('Event queued:', { eventType, queueSize: this.eventQueue.length });
+
+    // Flush immediately for critical events
+    if (['conversion', 'app_crash', 'error'].includes(eventType)) {
+      this.flushEvents();
+    } else if (this.eventQueue.length >= this.config.batchSize) {
+      this.flushEvents();
+    }
+  }
+
+  async flushEvents() {
+    if (this.eventQueue.length === 0 || !this.isOnline) return;
+
+    const events = [...this.eventQueue];
+    this.eventQueue = [];
+
+    try {
+      const response = await fetch(\`\${this.config.apiEndpoint}/api/leadpulse/mobile/track/batch\`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-LP-Version': this.config.version,
+          'X-LP-Batch-Size': events.length.toString()
+        },
+        body: JSON.stringify({ events })
+      });
+
+      if (!response.ok) {
+        throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
+      }
+
+      this.logDebug('Events flushed successfully:', { count: events.length });
+      
+    } catch (error) {
+      this.logError('Event flush failed:', error);
+      this.retryQueue.push(...events);
+      
+      if (this.retryQueue.length > 1000) {
+        this.retryQueue = this.retryQueue.slice(-500);
+      }
+    }
+  }
+
+  async createFingerprint(data) {
+    let hash = 0;
+    for (let i = 0; i < data.length; i++) {
+      const char = data.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return Math.abs(hash).toString(36);
+  }
+
+  async getLaunchType() {
+    const lastLaunch = await AsyncStorage.getItem('leadpulse_last_launch');
+    const now = Date.now();
+    
+    if (!lastLaunch) {
+      await AsyncStorage.setItem('leadpulse_last_launch', now.toString());
+      return 'first_time';
+    }
+    
+    const timeDiff = now - parseInt(lastLaunch);
+    await AsyncStorage.setItem('leadpulse_last_launch', now.toString());
+    
+    return timeDiff > 300000 ? 'cold_start' : 'warm_start';
+  }
+
+  logDebug(message, data = {}) {
+    if (this.config.debug) {
+      console.log(\`[LeadPulse] \${message}\`, data);
+    }
+  }
+
+  logError(message, error) {
+    console.error(\`[LeadPulse] \${message}\`, error);
+  }
+
+  destroy() {
+    if (this.flushTimer) {
+      clearInterval(this.flushTimer);
+    }
+    this.flushEvents();
+  }
+}
+
+// 3. Usage in App.js
+import { LeadPulseTracker } from './lib/LeadPulseTracker';
+
+const tracker = new LeadPulseTracker({
   apiEndpoint: '${baseConfig.apiEndpoint}',
   appId: '${baseConfig.appId}',
   debug: __DEV__
 });
 
-// 3. Initialize in your App component
+// Initialize tracking
 useEffect(() => {
   const initializeTracking = async () => {
     try {
-      await tracker.initializeWithDeviceInfo();
-      console.log('LeadPulse tracking initialized');
+      await tracker.initialize();
+      console.log('LeadPulse tracking initialized successfully');
     } catch (error) {
       console.error('Failed to initialize tracking:', error);
     }
   };
   
   initializeTracking();
+  
+  return () => {
+    tracker.destroy();
+  };
 }, []);
 
-// 4. Track screen views
-const trackScreen = (screenName) => {
-  tracker.trackScreenView(screenName);
+// Track screen views
+const trackScreen = (screenName, properties = {}) => {
+  tracker.trackScreen(screenName, properties);
 };
 
-// 5. Track interactions
-const trackInteraction = (buttonId, data = {}) => {
-  tracker.trackInteraction(buttonId, data);
+// Track interactions
+const trackInteraction = (elementId, properties = {}) => {
+  tracker.trackInteraction(elementId, properties);
 };
 
-// 6. Track conversions
-const trackConversion = (type, value, data = {}) => {
-  tracker.trackConversion(type, value, data);
+// Track conversions
+const trackConversion = (type, value, properties = {}) => {
+  tracker.trackConversion(type, value, properties);
 };
 
 // Example usage:
-// trackScreen('HomeScreen');
-// trackInteraction('login_button', { source: 'homepage' });
-// trackConversion('purchase', 1000, { product: 'premium_plan' });`;
+trackScreen('HomeScreen', { section: 'main' });
+trackInteraction('login_button', { source: 'homepage', type: 'primary' });
+trackConversion('purchase', 1000, { product: 'premium_plan', currency: 'NGN' });`;
 
       case 'ios-swift':
-        return `// iOS Swift Integration
-// 1. Add to your ViewController or App Delegate
+        return `// iOS Swift Integration - Production Ready v2.1.0
+// 1. Add to your AppDelegate.swift or main ViewController
 
 import Foundation
+import UIKit
 
 class LeadPulseTracker {
-    private let apiEndpoint = "${baseConfig.apiEndpoint}"
-    private let appId = "${baseConfig.appId}"
+    private let config: [String: Any]
     private var deviceId: String = ""
     private var visitorId: String?
+    private var sessionId: String = ""
+    private var eventQueue: [[String: Any]] = []
+    private var retryQueue: [[String: Any]] = []
+    private var flushTimer: Timer?
+    private var lastScreen: String?
+    private let maxRetryAttempts = 3
+    private let batchSize = 20
+    private let flushInterval: TimeInterval = 5.0
+    private let requestTimeout: TimeInterval = 10.0
     
-    init() {
+    init(config: [String: Any] = [:]) {
+        self.config = [
+            "apiEndpoint": "${baseConfig.apiEndpoint}",
+            "appId": "${baseConfig.appId}",
+            "version": "2.1.0",
+            "debug": false
+        ].merging(config) { _, new in new }
+        
         self.deviceId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+        self.sessionId = "lp_\\(Int(Date().timeIntervalSince1970))_\\(UUID().uuidString.prefix(8))"
+        
         initialize()
+        startEventQueueTimer()
+        setupNetworkMonitoring()
     }
     
     private func initialize() {
-        let deviceData: [String: Any] = [
+        // Load cached visitor ID
+        self.visitorId = UserDefaults.standard.string(forKey: "leadpulse_visitor_id")
+        
+        let deviceData = generateDeviceFingerprint()
+        initializeWithRetry(deviceData: deviceData)
+    }
+    
+    private func generateDeviceFingerprint() -> [String: Any] {
+        let device = UIDevice.current
+        let screen = UIScreen.main
+        let bundle = Bundle.main
+        
+        return [
             "deviceId": deviceId,
-            "appId": appId,
+            "appId": config["appId"] as? String ?? "",
             "platform": "ios",
-            "appVersion": Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
-            "deviceModel": UIDevice.current.model,
-            "osVersion": UIDevice.current.systemVersion,
+            "appVersion": bundle.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0",
+            "buildNumber": bundle.infoDictionary?["CFBundleVersion"] as? String ?? "1",
+            "deviceModel": device.model,
+            "deviceName": device.name,
+            "osVersion": device.systemVersion,
             "locale": Locale.current.identifier,
-            "timezone": TimeZone.current.identifier
+            "timezone": TimeZone.current.identifier,
+            "screenWidth": Int(screen.bounds.width * screen.scale),
+            "screenHeight": Int(screen.bounds.height * screen.scale),
+            "screenScale": screen.scale,
+            "bundleId": bundle.bundleIdentifier ?? "",
+            "fingerprint": createFingerprint(),
+            "sessionId": sessionId
+        ]
+    }
+    
+    private func createFingerprint() -> String {
+        let components = [
+            UIDevice.current.model,
+            UIDevice.current.systemVersion,
+            deviceId,
+            Bundle.main.bundleIdentifier ?? ""
         ]
         
-        let url = URL(string: "\\(apiEndpoint)/api/leadpulse/mobile/identify")!
-        var request = URLRequest(url: url)
+        let combined = components.joined(separator: "|")
+        return combined.hash.description
+    }
+    
+    private func initializeWithRetry(deviceData: [String: Any], attempt: Int = 1) {
+        guard let endpoint = config["apiEndpoint"] as? String,
+              let url = URL(string: "\\(endpoint)/api/leadpulse/mobile/identify") else {
+            logError("Invalid API endpoint configuration")
+            return
+        }
+        
+        var request = URLRequest(url: url, timeoutInterval: requestTimeout)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(config["version"] as? String, forHTTPHeaderField: "X-LP-Version")
+        request.setValue(config["appId"] as? String, forHTTPHeaderField: "X-LP-App-ID")
+        
+        let requestData: [String: Any] = [
+            "deviceId": deviceId,
+            "deviceData": deviceData,
+            "sessionId": sessionId
+        ]
         
         do {
-            let jsonData = try JSONSerialization.data(withJSONObject: [
-                "deviceId": deviceId,
-                "deviceData": deviceData
-            ])
-            request.httpBody = jsonData
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestData)
             
-            URLSession.shared.dataTask(with: request) { data, response, error in
-                if let data = data,
-                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let visitorId = json["visitorId"] as? String {
-                    self.visitorId = visitorId
-                    UserDefaults.standard.set(visitorId, forKey: "leadpulse_visitor_id")
-                    self.trackEvent("app_open", properties: [:])
+            URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+                guard let self = self else { return }
+                
+                if let error = error {
+                    self.logError("Initialization attempt \\(attempt) failed: \\(error.localizedDescription)")
+                    self.handleInitializationFailure(deviceData: deviceData, attempt: attempt)
+                    return
+                }
+                
+                guard let data = data,
+                      let httpResponse = response as? HTTPURLResponse else {
+                    self.handleInitializationFailure(deviceData: deviceData, attempt: attempt)
+                    return
+                }
+                
+                if httpResponse.statusCode == 200 {
+                    do {
+                        if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                           let visitorId = json["visitorId"] as? String {
+                            
+                            DispatchQueue.main.async {
+                                self.visitorId = visitorId
+                                UserDefaults.standard.set(visitorId, forKey: "leadpulse_visitor_id")
+                                UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "leadpulse_last_sync")
+                                
+                                self.logDebug("Initialization successful: \\(visitorId)")
+                                self.trackEvent("app_open", properties: [
+                                    "launch_type": self.getLaunchType(),
+                                    "app_state": "foreground"
+                                ])
+                            }
+                        }
+                    } catch {
+                        self.logError("Failed to parse initialization response: \\(error)")
+                        self.handleInitializationFailure(deviceData: deviceData, attempt: attempt)
+                    }
+                } else {
+                    self.logError("HTTP \\(httpResponse.statusCode): Initialization failed")
+                    self.handleInitializationFailure(deviceData: deviceData, attempt: attempt)
                 }
             }.resume()
+            
         } catch {
-            print("LeadPulse initialization failed: \\(error)")
+            logError("Failed to create initialization request: \\(error)")
+            handleInitializationFailure(deviceData: deviceData, attempt: attempt)
         }
     }
     
+    private func handleInitializationFailure(deviceData: [String: Any], attempt: Int) {
+        if attempt < maxRetryAttempts {
+            let delay = pow(2.0, Double(attempt))
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                self.initializeWithRetry(deviceData: deviceData, attempt: attempt + 1)
+            }
+        } else {
+            // Fallback to cached visitor ID or create temporary one
+            if visitorId == nil {
+                visitorId = UserDefaults.standard.string(forKey: "leadpulse_visitor_id") ?? 
+                           "temp_\\(deviceId)_\\(Int(Date().timeIntervalSince1970))"
+                logDebug("Using fallback visitor ID: \\(visitorId ?? "unknown")")
+            }
+        }
+    }
+    
+    private func setupNetworkMonitoring() {
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.processRetryQueue()
+        }
+    }
+    
+    private func startEventQueueTimer() {
+        flushTimer = Timer.scheduledTimer(withTimeInterval: flushInterval, repeats: true) { [weak self] _ in
+            self?.flushEvents()
+        }
+    }
+    
+    // MARK: - Public Tracking Methods
+    
     func trackScreen(_ screenName: String, properties: [String: Any] = [:]) {
-        trackEvent("screen_view", properties: ["screenName": screenName] + properties)
+        var props = properties
+        props["screenName"] = screenName
+        props["screen_class"] = screenName
+        props["previous_screen"] = lastScreen
+        
+        trackEvent("screen_view", properties: props)
+        lastScreen = screenName
     }
     
     func trackInteraction(_ elementId: String, properties: [String: Any] = [:]) {
-        trackEvent("button_tap", properties: ["elementId": elementId] + properties)
+        var props = properties
+        props["elementId"] = elementId
+        props["element_type"] = properties["type"] ?? "button"
+        
+        trackEvent("button_tap", properties: props)
     }
     
     func trackConversion(_ type: String, value: Double? = nil, properties: [String: Any] = [:]) {
         var props = properties
         props["conversionType"] = type
-        if let value = value { props["value"] = value }
+        props["currency"] = properties["currency"] ?? "NGN"
+        
+        if let value = value {
+            props["value"] = value
+        }
+        
         trackEvent("conversion", properties: props)
     }
     
     private func trackEvent(_ eventType: String, properties: [String: Any]) {
-        guard let visitorId = visitorId else { return }
+        guard let visitorId = visitorId else {
+            logError("Cannot track event: visitor ID not available")
+            return
+        }
         
-        let eventData: [String: Any] = [
+        let event: [String: Any] = [
             "visitorId": visitorId,
             "deviceId": deviceId,
-            "appId": appId,
+            "appId": config["appId"] as? String ?? "",
+            "sessionId": sessionId,
             "eventType": eventType,
-            "properties": properties,
-            "timestamp": ISO8601DateFormatter().string(from: Date())
+            "properties": properties.merging([
+                "timestamp": Int(Date().timeIntervalSince1970 * 1000),
+                "timezone": TimeZone.current.identifier,
+                "app_version": Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+            ]) { _, new in new },
+            "timestamp": ISO8601DateFormatter().string(from: Date()),
+            "event_id": "evt_\\(Int(Date().timeIntervalSince1970))_\\(UUID().uuidString.prefix(8))"
         ]
         
-        let url = URL(string: "\\(apiEndpoint)/api/leadpulse/mobile/track")!
-        var request = URLRequest(url: url)
+        eventQueue.append(event)
+        logDebug("Event queued: \\(eventType), queue size: \\(eventQueue.count)")
+        
+        // Flush immediately for critical events
+        if ["conversion", "app_crash", "error"].contains(eventType) {
+            flushEvents()
+        } else if eventQueue.count >= batchSize {
+            flushEvents()
+        }
+    }
+    
+    private func flushEvents() {
+        guard !eventQueue.isEmpty else { return }
+        
+        let events = eventQueue
+        eventQueue.removeAll()
+        
+        sendEvents(events) { [weak self] success in
+            if !success {
+                self?.retryQueue.append(contentsOf: events)
+                // Limit retry queue size
+                if let self = self, self.retryQueue.count > 1000 {
+                    self.retryQueue = Array(self.retryQueue.suffix(500))
+                }
+            }
+        }
+    }
+    
+    private func sendEvents(_ events: [[String: Any]], completion: @escaping (Bool) -> Void) {
+        guard let endpoint = config["apiEndpoint"] as? String,
+              let url = URL(string: "\\(endpoint)/api/leadpulse/mobile/track/batch") else {
+            completion(false)
+            return
+        }
+        
+        var request = URLRequest(url: url, timeoutInterval: requestTimeout)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(config["version"] as? String, forHTTPHeaderField: "X-LP-Version")
+        request.setValue("\\(events.count)", forHTTPHeaderField: "X-LP-Batch-Size")
         
         do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: eventData)
-            URLSession.shared.dataTask(with: request).resume()
+            let requestData = ["events": events]
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestData)
+            
+            URLSession.shared.dataTask(with: request) { [weak self] _, response, error in
+                let success = error == nil && (response as? HTTPURLResponse)?.statusCode == 200
+                
+                if success {
+                    self?.logDebug("Events flushed successfully: \\(events.count)")
+                } else {
+                    self?.logError("Event flush failed: \\(error?.localizedDescription ?? "Unknown error")")
+                }
+                
+                completion(success)
+            }.resume()
+            
         } catch {
-            print("Failed to track event: \\(error)")
+            logError("Failed to serialize events: \\(error)")
+            completion(false)
         }
+    }
+    
+    private func processRetryQueue() {
+        guard !retryQueue.isEmpty else { return }
+        
+        let events = retryQueue
+        retryQueue.removeAll()
+        
+        sendEvents(events) { [weak self] success in
+            if !success {
+                // Keep only some events for next retry
+                self?.retryQueue.append(contentsOf: Array(events.prefix(100)))
+            }
+        }
+    }
+    
+    private func getLaunchType() -> String {
+        let lastLaunch = UserDefaults.standard.double(forKey: "leadpulse_last_launch")
+        let now = Date().timeIntervalSince1970
+        
+        if lastLaunch == 0 {
+            UserDefaults.standard.set(now, forKey: "leadpulse_last_launch")
+            return "first_time"
+        }
+        
+        let timeDiff = now - lastLaunch
+        UserDefaults.standard.set(now, forKey: "leadpulse_last_launch")
+        
+        return timeDiff > 300 ? "cold_start" : "warm_start" // 5 minutes threshold
+    }
+    
+    private func logDebug(_ message: String) {
+        if config["debug"] as? Bool == true {
+            print("[LeadPulse] \\(message)")
+        }
+    }
+    
+    private func logError(_ message: String) {
+        print("[LeadPulse Error] \\(message)")
+    }
+    
+    deinit {
+        flushTimer?.invalidate()
+        flushEvents() // Final flush
+        NotificationCenter.default.removeObserver(self)
     }
 }
 
-// Usage:
-let tracker = LeadPulseTracker()
-tracker.trackScreen("HomeViewController")
-tracker.trackInteraction("login_button", properties: ["source": "home"])
-tracker.trackConversion("purchase", value: 99.99, properties: ["product": "premium"])`;
+// MARK: - Usage Example
+
+// Initialize in AppDelegate.swift or SceneDelegate.swift
+class AppDelegate: UIResponder, UIApplicationDelegate {
+    var tracker: LeadPulseTracker?
+    
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        
+        tracker = LeadPulseTracker(config: [
+            "apiEndpoint": "${baseConfig.apiEndpoint}",
+            "appId": "${baseConfig.appId}",
+            "debug": true // Set to false in production
+        ])
+        
+        return true
+    }
+}
+
+// Usage in ViewControllers:
+class HomeViewController: UIViewController {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Track screen view
+        if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
+            appDelegate.tracker?.trackScreen("HomeViewController", properties: [
+                "section": "main"
+            ])
+        }
+    }
+    
+    @IBAction func loginButtonTapped(_ sender: UIButton) {
+        // Track interaction
+        if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
+            appDelegate.tracker?.trackInteraction("login_button", properties: [
+                "source": "home",
+                "type": "primary"
+            ])
+        }
+    }
+    
+    func handlePurchaseComplete(amount: Double, productId: String) {
+        // Track conversion
+        if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
+            appDelegate.tracker?.trackConversion("purchase", value: amount, properties: [
+                "product": productId,
+                "currency": "NGN",
+                "payment_method": "card"
+            ])
+        }
+    }
+}`;
 
       case 'android-kotlin':
         return `// Android Kotlin Integration

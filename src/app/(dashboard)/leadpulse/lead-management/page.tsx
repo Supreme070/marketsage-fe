@@ -32,8 +32,8 @@ export default function LeadManagement() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Lead Management</h1>
-          <p className="text-gray-600">Manage customer journeys, lead scoring, and attribution analysis</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Lead Management</h1>
+          <p className="text-gray-600 dark:text-gray-300">Manage customer journeys, lead scoring, and attribution analysis</p>
         </div>
         <Button 
           onClick={handleRefresh}

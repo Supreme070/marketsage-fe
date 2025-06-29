@@ -134,13 +134,69 @@ export const getVisitorLocations = cache(async (timeRange = '24h'): Promise<Visi
     
     if (totalVisitors === 0) return [];
     
-    return [
-      { location: 'Lagos, Nigeria', visitors: Math.floor(totalVisitors * 0.35), percentage: 35 },
-      { location: 'Nairobi, Kenya', visitors: Math.floor(totalVisitors * 0.22), percentage: 22 },
-      { location: 'Cape Town, South Africa', visitors: Math.floor(totalVisitors * 0.17), percentage: 17 },
-      { location: 'Accra, Ghana', visitors: Math.floor(totalVisitors * 0.14), percentage: 14 },
-      { location: 'Abuja, Nigeria', visitors: Math.floor(totalVisitors * 0.12), percentage: 12 }
+    // Get active visitors from simulation for determining which locations are active
+    const activeVisitors = simulationState.dashboard.activeVisitors || 0;
+    
+    // Calculate which locations have active visitors based on distribution
+    const baseLocations = [
+      { 
+        id: 'lagos-ng',
+        city: 'Lagos', 
+        country: 'Nigeria', 
+        latitude: 6.5244, 
+        longitude: 3.3792,
+        totalShare: 0.35 
+      },
+      { 
+        id: 'nairobi-ke',
+        city: 'Nairobi', 
+        country: 'Kenya', 
+        latitude: -1.2921, 
+        longitude: 36.8219,
+        totalShare: 0.22 
+      },
+      { 
+        id: 'capetown-za',
+        city: 'Cape Town', 
+        country: 'South Africa', 
+        latitude: -33.9249, 
+        longitude: 18.4241,
+        totalShare: 0.17 
+      },
+      { 
+        id: 'accra-gh',
+        city: 'Accra', 
+        country: 'Ghana', 
+        latitude: 5.6037, 
+        longitude: -0.1870,
+        totalShare: 0.14 
+      },
+      { 
+        id: 'abuja-ng',
+        city: 'Abuja', 
+        country: 'Nigeria', 
+        latitude: 9.0765, 
+        longitude: 7.3986,
+        totalShare: 0.12 
+      }
     ];
+
+    return baseLocations.map((location, index) => {
+      const visitCount = Math.floor(totalVisitors * location.totalShare);
+      const activeInLocation = Math.floor(activeVisitors * location.totalShare);
+      const isActive = activeInLocation > 0;
+      
+      return {
+        id: location.id,
+        city: location.city,
+        country: location.country,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        isActive,
+        lastActive: isActive ? 'just now' : `${Math.floor(Math.random() * 30) + 1} min ago`,
+        visitCount: Math.max(visitCount, isActive ? 1 : 0)
+      };
+    });
   } catch (error) {
     console.error('Error in getVisitorLocations:', error);
     return [];
@@ -433,11 +489,17 @@ export const getVisitorJourneys = cache(async (visitorId?: string): Promise<Visi
     // Simulation IS running - return journey data
     console.log('getVisitorJourneys: Simulation ACTIVE - generating journey data');
     const journeyCompletions = simulationState.leadpulse.journeyCompletions || 0;
+    const totalVisitors = simulationState.leadpulse.totalVisitors || 0;
     
-    if (journeyCompletions === 0) return [];
+    // If we have visitors but no journey completions, still show some journey data
+    if (totalVisitors === 0) return [];
     
-    // Return mock data based on simulation state
-    return generateMockJourneyData(visitorId);
+    // Return mock data based on simulation state - generate journeys even if completions is 0
+    const mockJourneys = generateMockJourneyData(visitorId);
+    
+    // Scale the number of journeys based on visitor activity
+    const numberOfJourneys = Math.min(mockJourneys.length, Math.max(1, Math.ceil(totalVisitors / 20)));
+    return mockJourneys.slice(0, numberOfJourneys);
   } catch (error) {
     console.error('Error in getVisitorJourneys:', error);
     return [];
