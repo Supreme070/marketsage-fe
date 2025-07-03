@@ -65,6 +65,9 @@ model Organization {
   customerProfiles CustomerProfile[]
   aiActionPlans    AIActionPlan[]
   customerEvents   CustomerEvent[]
+  
+  // Analytics Relations
+  conversionFunnels ConversionFunnel[]
 }
 
 // User model for authentication and platform access
@@ -1237,16 +1240,26 @@ model ConversionTracking {
 
 model ConversionFunnel {
   id              String    @id @default(cuid())
+  funnelId        String    @unique  // External funnel ID used by analytics engine
   name            String
   description     String?
-  stages          String    // JSON array of conversion event IDs in order
+  steps           Json      // JSON array of funnel steps
+  goalValue       Float     @default(0)
+  isActive        Boolean   @default(true)
+  metadata        Json?     // JSON with micro-conversions and other metadata
+  organizationId  String
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  createdById     String
+  createdById     String?
   
   // Relations
-  createdBy       User      @relation("FunnelCreator", fields: [createdById], references: [id])
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  createdBy       User?     @relation("FunnelCreator", fields: [createdById], references: [id])
   reports         ConversionFunnelReport[]
+  
+  @@index([organizationId])
+  @@index([funnelId])
+  @@index([isActive])
 }
 
 model ConversionFunnelReport {
@@ -1841,6 +1854,7 @@ model LeadPulseVisitor {
   // Relations
   touchpoints     LeadPulseTouchpoint[]
   formSubmissions LeadPulseFormSubmission[]
+  analytics       LeadPulseAnalytics[]
   
   @@index([fingerprint])
   @@index([lastVisit])
@@ -2425,6 +2439,46 @@ model LeadPulsePageView {
   
   @@index([visitorId, timestamp])
   @@index([url])
+}
+
+// Advanced Analytics Model for Scroll Depth and Click Heat Mapping
+model LeadPulseAnalytics {
+  id                    String    @id @default(cuid())
+  sessionId             String    @unique
+  visitorId             String
+  page                  String
+  startTime             DateTime
+  endTime               DateTime?
+  userAgent             String?
+  viewport              Json?     // { width, height }
+  referrer              String?
+  isNewVisitor          Boolean   @default(false)
+  
+  // Scroll Analytics
+  scrollAnalytics       Json?     // ScrollAnalytics object
+  
+  // Click Heatmap Data
+  clickHeatmap          Json?     // ClickHeatmapData object
+  
+  // Behavioral Insights
+  behavioralInsights    Json?     // BehavioralInsights object
+  engagementScore       Int       @default(0)
+  userIntent            String    @default("browse") // research, purchase, browse, support
+  conversionProbability Int       @default(0)
+  frustrationSignals    String[]  @default([])
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  
+  // Relation to visitor
+  visitor               LeadPulseVisitor @relation(fields: [visitorId], references: [fingerprint])
+  
+  @@index([sessionId])
+  @@index([visitorId, startTime])
+  @@index([page, startTime])
+  @@index([engagementScore])
+  @@index([userIntent])
+  @@index([conversionProbability])
 }
 
 // Onboarding Configuration Models

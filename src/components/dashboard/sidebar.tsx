@@ -31,6 +31,9 @@ import {
   Cpu,
   ThumbsUp,
   Gift,
+  Target,
+  TrendingDown,
+  Activity,
   type LucideIcon
 } from "lucide-react";
 
@@ -137,6 +140,16 @@ const sidebarNavItems: NavItem[] = [
         title: "Analytics",
         href: "/leadpulse/analytics",
         icon: LineChart,
+      },
+      {
+        title: "Funnel Analytics",
+        href: "/analytics/funnels",
+        icon: TrendingDown,
+      },
+      {
+        title: "Real-Time Analytics",
+        href: "/analytics/realtime",
+        icon: Activity,
       },
       {
         title: "Lead Management",

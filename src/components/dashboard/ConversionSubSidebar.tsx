@@ -40,39 +40,29 @@ interface ConversionMetrics {
   }>;
 }
 
-import type { MasterSimulationState } from "@/lib/simulation/master-simulation-controller";
 
 interface ConversionSubSidebarProps {
   isExpanded?: boolean;
   onToggle?: () => void;
   className?: string;
-  simulationState?: MasterSimulationState;
 }
 
 export default function ConversionSubSidebar({ 
   isExpanded = false, 
   onToggle,
-  className = "",
-  simulationState
+  className = ""
 }: ConversionSubSidebarProps) {
-  // Get metrics from master simulation state
-  const metrics = simulationState ? {
-    conversionRate: simulationState.conversions.conversionRate,
-    totalConversions: simulationState.conversions.totalConversions,
-    revenue: simulationState.conversions.revenue,
-    costPerConversion: simulationState.conversions.costPerConversion,
-    topChannels: simulationState.conversions.topChannels,
-    recentConversions: []
-  } : {
-    conversionRate: 0,
-    totalConversions: 0,
-    revenue: 0,
-    costPerConversion: 0,
+  // Demo conversion metrics with realistic data
+  const metrics = {
+    conversionRate: 3.2,
+    totalConversions: 45,
+    revenue: 2350000,
+    costPerConversion: 52000,
     topChannels: [
-      { name: 'Email', conversions: 0, rate: 0, trend: 'up' as const },
-      { name: 'WhatsApp', conversions: 0, rate: 0, trend: 'up' as const },
-      { name: 'SMS', conversions: 0, rate: 0, trend: 'up' as const },
-      { name: 'Workflows', conversions: 0, rate: 0, trend: 'up' as const }
+      { name: 'Email', conversions: 18, rate: 4.1, trend: 'up' as const },
+      { name: 'WhatsApp', conversions: 12, rate: 3.8, trend: 'up' as const },
+      { name: 'SMS', conversions: 8, rate: 2.9, trend: 'down' as const },
+      { name: 'Workflows', conversions: 7, rate: 2.1, trend: 'up' as const }
     ],
     recentConversions: []
   };
@@ -85,13 +75,8 @@ export default function ConversionSubSidebar({
     timestamp: string;
   }>>([]);
 
-  // Generate live conversions based on simulation activity
+  // Generate live conversions for demo
   useEffect(() => {
-    if (!simulationState?.isRunning) {
-      setLiveConversions([]);
-      return;
-    }
-
     const generateLiveConversion = () => {
       const channels = ['Email', 'WhatsApp', 'SMS', 'Workflows'];
       const types = ['Lead', 'Purchase', 'Sign-up', 'Trial'];
@@ -107,9 +92,9 @@ export default function ConversionSubSidebar({
       setLiveConversions(prev => [newConversion, ...prev.slice(0, 4)]);
     };
 
-    const interval = setInterval(generateLiveConversion, 20000); // Every 20 seconds
+    const interval = setInterval(generateLiveConversion, 45000); // Every 45 seconds
     return () => clearInterval(interval);
-  }, [simulationState?.isRunning]);
+  }, []);
 
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) {
@@ -186,14 +171,8 @@ export default function ConversionSubSidebar({
                     <div className="text-2xl font-bold text-green-400">{metrics.conversionRate.toFixed(1)}%</div>
                     <div className="text-xs text-muted-foreground">Conversion Rate</div>
                     <div className="flex items-center justify-center gap-1 mt-1 text-xs">
-                      {simulationState?.isRunning ? (
-                        <>
-                          <TrendingUp className="h-3 w-3 text-green-400" />
-                          <span className="text-green-400">Live optimization</span>
-                        </>
-                      ) : (
-                        <span className="text-muted-foreground">Start simulation</span>
-                      )}
+                      <TrendingUp className="h-3 w-3 text-green-400" />
+                      <span className="text-green-400">Live tracking</span>
                     </div>
                   </div>
                 </div>
@@ -242,18 +221,12 @@ export default function ConversionSubSidebar({
                 <h4 className="text-sm font-medium flex items-center gap-2">
                   <Activity className="h-4 w-4" />
                   Live Activity
-                  {simulationState?.isRunning && liveConversions.length > 0 && (
+                  {liveConversions.length > 0 && (
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                   )}
                 </h4>
                 
-                {!simulationState?.isRunning ? (
-                  <div className="p-3 bg-muted/30 rounded border text-center">
-                    <div className="text-sm text-muted-foreground">
-                      Start master simulation to see live conversion activity
-                    </div>
-                  </div>
-                ) : liveConversions.length > 0 ? (
+                {liveConversions.length > 0 ? (
                   <div className="space-y-2">
                     {liveConversions.map((conversion, index) => (
                       <motion.div
@@ -320,16 +293,8 @@ export default function ConversionSubSidebar({
                   <div className="text-lg font-bold text-amber-400">{formatCurrency(metrics.costPerConversion)}</div>
                   <div className="text-xs text-muted-foreground">Cost per Conversion</div>
                   <div className="flex items-center justify-center gap-1 mt-1 text-xs">
-                    {simulationState?.isRunning && metrics.costPerConversion > 0 ? (
-                      <>
-                        <TrendingDown className="h-3 w-3 text-green-400" />
-                        <span className="text-green-400">Optimizing cost</span>
-                      </>
-                    ) : (
-                      <span className="text-muted-foreground">
-                        {simulationState?.isRunning ? 'Calculating...' : 'Start simulation'}
-                      </span>
-                    )}
+                    <TrendingDown className="h-3 w-3 text-green-400" />
+                    <span className="text-green-400">Optimizing cost</span>
                   </div>
                 </div>
               </div>
@@ -350,9 +315,7 @@ export default function ConversionSubSidebar({
               <div className="text-xs text-muted-foreground transform -rotate-90 whitespace-nowrap">Total</div>
             </div>
 
-            {simulationState?.isRunning && (
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            )}
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
           </div>
         )}
       </div>

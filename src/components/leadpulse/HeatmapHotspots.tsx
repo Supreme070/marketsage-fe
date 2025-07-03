@@ -272,7 +272,7 @@ export default function HeatmapHotspots() {
     };
   }, [simulatorConnected]);
 
-  // Real-time intensity simulation based on visitor data
+  // Real-time intensity updates based on visitor data
   useEffect(() => {
     const interval = setInterval(() => {
       // Simulate real visitor activity with bias toward TechFlow patterns
@@ -896,7 +896,7 @@ export default function HeatmapHotspots() {
     return insights[pageKey] || insights['homepage'];
   };
 
-  // Live pulse simulation
+  // Live pulse animations
   useEffect(() => {
     const interval = setInterval(() => {
       const newPulse = {

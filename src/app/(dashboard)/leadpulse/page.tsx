@@ -15,6 +15,8 @@ import JourneyVisualization from '@/components/leadpulse/JourneyVisualization';
 import VisitorInsights from '@/components/leadpulse/VisitorInsights';
 import LiveVisitorMap from '@/components/leadpulse/LiveVisitorMap';
 import HeatmapHotspots from '@/components/leadpulse/HeatmapHotspots';
+// import AdvancedAnalyticsDashboard from '@/components/analytics/AdvancedAnalyticsDashboard';
+import SessionRecordingDashboard from '@/components/dashboard/SessionRecordingDashboard';
 
 import { 
   getActiveVisitors, 

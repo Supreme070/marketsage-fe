@@ -6,11 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Globe, MapPin, Activity, Thermometer, Layers, Box, Map, ZoomIn, ZoomOut } from 'lucide-react';
-import { type VisitorLocation, getVisitorLocations } from '@/lib/leadpulse/dataProvider';
+import type { VisitorLocation } from '@/lib/leadpulse/dataProvider';
+import { getVisitorLocations } from '@/lib/leadpulse/unifiedDataProvider';
 import TimelineSlider from './TimelineSlider';
 import HeatMapOverlay from './HeatMapOverlay';
 import GeoFilterBreadcrumb from './GeoFilterBreadcrumb';
 import GlobeVisualization from './GlobeVisualization';
+import DemoModeToggle from './DemoModeToggle';
 import { 
   CONTINENT_PATHS, 
   WORLD_MAP_PATH, 
@@ -18,6 +20,7 @@ import {
   CITY_MAPPINGS, 
   getGeoHierarchy,
   ALL_REGIONS,
+  latLngToSvgCoords,
   getRegionById,
   getRegionChildren,
   getViewBoxForPath,
@@ -167,12 +170,12 @@ export default function LiveVisitorMap({
     setLoading(true);
     fetchLocations();
     
-    // Set up real-time polling every 3 seconds for live simulation updates
+    // Set up real-time polling every 30 seconds for live data updates
     refreshInterval = setInterval(() => {
       if (isActive) {
         fetchLocations();
       }
-    }, 3000);
+    }, 30000); // Optimized: 30 seconds instead of 3 seconds
     
     return () => {
       isActive = false;
@@ -417,59 +420,8 @@ export default function LiveVisitorMap({
   
   // Function to convert lat/lng to SVG coordinates with zoom support
   const convertToSVGCoordinates = (latitude: number, longitude: number) => {
-    // If we're zoomed in, use the current viewBox for coordinate calculation
-    if (geoPath.length > 0) {
-      const [vx, vy, vw, vh] = currentViewBox.split(' ').map(Number);
-      
-      // Scale coordinates to fit the zoomed viewBox
-      let x = vx + ((longitude + 180) * (vw / 360));
-      let y = vy + ((90 - latitude) * (vh / 180));
-      
-      // Apply the same calibration adjustments but scaled for zoom
-      const zoomFactor = 1000 / vw; // How zoomed in we are
-      
-      if (longitude < -30) { // Americas
-        x = x + (15 / zoomFactor);
-      } else if (longitude > 100) { // Asia/Pacific
-        x = x - (10 / zoomFactor);
-      }
-      
-      if (latitude > 60) { // Northern regions
-        y = y - (10 / zoomFactor);
-      } else if (latitude > 30) { // Mid-northern latitudes
-        y = y - (5 / zoomFactor);
-      } else if (latitude < -30) { // Southern regions
-        y = y + (10 / zoomFactor);
-      }
-      
-      return { x, y };
-    }
-    
-    // Default world view coordinates (existing logic)
-    let x = ((longitude + 180) * (1000 / 360));
-    let y = ((90 - latitude) * (500 / 180));
-    
-    // Apply corrections based on manual calibration with known cities
-    if (longitude < -30) { // Americas
-      x = x + 15; // Shift Americas right
-    } else if (longitude > 100) { // Asia/Pacific
-      x = x - 10; // Shift Asia slightly left
-    }
-    
-    // Latitude adjustments - the image has some vertical compression at higher latitudes
-    if (latitude > 60) { // Northern regions
-      y = y - 10;
-    } else if (latitude > 30) { // Mid-northern latitudes
-      y = y - 5;
-    } else if (latitude < -30) { // Southern regions
-      y = y + 10;
-    }
-    
-    // Clamp to bounds
-    x = Math.max(0, Math.min(1000, x));
-    y = Math.max(0, Math.min(500, y));
-    
-    return { x, y };
+    // Use the proper coordinate conversion function that uses Web Mercator projection
+    return latLngToSvgCoords(latitude, longitude, geoPath.length > 0 ? currentViewBox : undefined);
   };
 
   // Get regions to display based on current zoom level
@@ -556,7 +508,10 @@ export default function LiveVisitorMap({
               Real-time geographic visualization with drill-down navigation
             </CardDescription>
           </div>
-          <div className="flex gap-1">
+          <div className="flex gap-2">
+            {/* Demo Mode Toggle */}
+            <DemoModeToggle className="mr-2" showLabel={false} variant="ghost" />
+            
             {/* Zoom controls */}
             {mapView === '2d' && (
               <div className="mr-2 flex items-center bg-gray-800/50 p-1 rounded-md border border-gray-700/50">

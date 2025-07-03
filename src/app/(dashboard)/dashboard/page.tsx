@@ -22,7 +22,8 @@ const aiIntegration = {
   isActive: () => false,
   getStatus: () => ({ status: 'inactive' })
 };
-import { masterSimulation, type MasterSimulationState } from "@/lib/simulation/master-simulation-controller";
+import DemoModeToggle from "@/components/leadpulse/DemoModeToggle";
+import { getAnalyticsOverview } from "@/lib/leadpulse/unifiedDataProvider";
 
 interface DashboardOverview {
   kpis: {
@@ -94,33 +95,7 @@ export default function CommandCenterDashboard() {
   }, []);
 
   // Master simulation control functions
-  const startMasterSimulation = async () => {
-    try {
-      setIsStartingSimulation(true);
-      const simulationId = await masterSimulation.startSimulation({
-        market: 'ALL',
-        duration: 30, // 30 minutes
-        intensity: 'medium',
-        scenario: 'normal',
-        enableAI: true,
-        realTimeUpdates: true
-      });
-      
-      toast.success(`🚀 MarketSage Master Simulation Started!`);
-      console.log(`Master simulation started: ${simulationId}`);
-    } catch (error) {
-      console.error('Failed to start master simulation:', error);
-      toast.error('Failed to start simulation');
-    } finally {
-      setIsStartingSimulation(false);
-    }
-  };
-
-  const stopMasterSimulation = () => {
-    masterSimulation.stopSimulation();
-    setLiveUpdates([]); // Clear live updates
-    toast.info('🛑 Master Simulation Stopped');
-  };
+  // Simulation functions removed - now uses unified demo data provider
 
   const updateLiveActivity = (state: MasterSimulationState) => {
     if (!state.isRunning) return;
@@ -232,7 +207,6 @@ export default function CommandCenterDashboard() {
       <ConversionSubSidebar 
         isExpanded={conversionSidebarExpanded}
         onToggle={() => setConversionSidebarExpanded(!conversionSidebarExpanded)}
-        simulationState={simulationState}
       />
       
       <div className={`space-y-6 transition-all duration-300 ${conversionSidebarExpanded ? 'mr-80' : 'mr-16'}`}>
@@ -256,6 +230,9 @@ export default function CommandCenterDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Demo Mode Toggle for Marketing Presentations */}
+          <DemoModeToggle />
+          
           {!simulationState.isRunning ? (
             <Button 
               onClick={startMasterSimulation}

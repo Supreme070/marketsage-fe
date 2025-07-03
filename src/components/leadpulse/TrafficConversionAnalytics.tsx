@@ -124,19 +124,7 @@ export default function TrafficConversionAnalytics() {
     factors: []
   });
   
-  // Live simulation data integration
-  const [simulatorStatus, setSimulatorStatus] = useState<any>(null);
-  const [liveSimulationData, setLiveSimulationData] = useState<{
-    aiScoredVisitors: any[];
-    realTimeMetrics: any;
-    simulatorActive: boolean;
-    lastDataUpdate: Date;
-  }>({
-    aiScoredVisitors: [],
-    realTimeMetrics: null,
-    simulatorActive: false,
-    lastDataUpdate: new Date()
-  });
+  // Removed simulation data integration - now uses unified data provider
 
   // Fetch analytics data with AI enhancement
   useEffect(() => {
@@ -168,176 +156,7 @@ export default function TrafficConversionAnalytics() {
     fetchAnalyticsData();
   }, [timeRange]);
 
-  // Monitor live simulation data and integrate into metrics
-  useEffect(() => {
-    let simulatorInterval: NodeJS.Timeout;
-    
-    const checkSimulatorAndUpdateMetrics = async () => {
-      try {
-        // Check simulator status
-        const statusResponse = await fetch('/api/leadpulse/simulator?action=status');
-        if (statusResponse.ok) {
-          const status = await statusResponse.json();
-          setSimulatorStatus(status);
-          
-          if (status.isRunning) {
-            // Fetch AI-scored visitors from simulator
-            const visitors = await getActiveVisitors('15m'); // Last 15 minutes
-            
-            // Filter for simulator-generated visitors with AI data
-            const simulatorVisitors = visitors.filter(visitor => 
-              visitor.metadata?.simulatorGenerated && 
-              visitor.metadata?.aiPrediction &&
-              visitor.metadata?.aiEnhancement
-            );
-            
-            // Calculate real-time metrics from simulation data
-            const realTimeMetrics = calculateSimulatorMetrics(simulatorVisitors);
-            
-            setLiveSimulationData({
-              aiScoredVisitors: simulatorVisitors,
-              realTimeMetrics,
-              simulatorActive: true,
-              lastDataUpdate: new Date()
-            });
-            
-            // Update AI visitor scores with simulation data
-            const simulatorAIScores = simulatorVisitors.slice(0, 5).map(visitor => ({
-              id: visitor.id,
-              score: visitor.metadata.aiEnhancement.aiScore,
-              segment: visitor.metadata.aiEnhancement.segmentPrediction,
-              prediction: Math.round(visitor.metadata.aiPrediction.conversionProbability * 100),
-              factors: [
-                `${visitor.metadata.aiEnhancement.segmentPrediction} profile`,
-                `${visitor.location}`,
-                `${visitor.device} device`
-              ],
-              confidence: visitor.metadata.aiPrediction.confidence,
-              lastActivity: visitor.lastActive || 'now'
-            }));
-            
-            setAiVisitorScores(prev => [
-              ...simulatorAIScores,
-              ...prev.filter(score => !simulatorAIScores.find(sim => sim.id === score.id))
-            ].slice(0, 5));
-            
-            // Update AI insights with simulation insights
-            const simulatorInsights = generateSimulatorInsights(simulatorVisitors, realTimeMetrics);
-            setAiInsights(prev => [
-              ...simulatorInsights,
-              ...prev.filter(insight => !insight.title.includes('Simulator'))
-            ].slice(0, 6));
-            
-          } else {
-            setLiveSimulationData(prev => ({ ...prev, simulatorActive: false }));
-          }
-        }
-      } catch (error) {
-        console.error('Error monitoring simulation data:', error);
-        setLiveSimulationData(prev => ({ ...prev, simulatorActive: false }));
-      }
-    };
-    
-    const calculateSimulatorMetrics = (visitors: any[]) => {
-      if (visitors.length === 0) return null;
-      
-      const totalVisitors = visitors.length;
-      const highValueVisitors = visitors.filter(v => v.metadata.aiEnhancement.predictedValue > 300000).length;
-      const avgAiScore = visitors.reduce((sum, v) => sum + v.metadata.aiEnhancement.aiScore, 0) / totalVisitors;
-      const avgConversionProb = visitors.reduce((sum, v) => sum + v.metadata.aiPrediction.conversionProbability, 0) / totalVisitors;
-      const totalPredictedValue = visitors.reduce((sum, v) => sum + v.metadata.aiEnhancement.predictedValue, 0);
-      const enterpriseVisitors = visitors.filter(v => v.metadata.aiEnhancement.segmentPrediction === 'enterprise').length;
-      const urgentVisitors = visitors.filter(v => v.metadata.aiEnhancement.urgencyLevel === 'high').length;
-      
-      return {
-        totalVisitors,
-        highValueVisitors,
-        avgAiScore: Math.round(avgAiScore),
-        avgConversionProb: Math.round(avgConversionProb * 100),
-        totalPredictedValue,
-        enterpriseVisitors,
-        urgentVisitors,
-        conversionRate: avgConversionProb * 100,
-        qualityScore: avgAiScore
-      };
-    };
-    
-    const generateSimulatorInsights = (visitors: any[], metrics: any) => {
-      if (!metrics) return [];
-      
-      const insights = [];
-      
-      if (metrics.urgentVisitors > 0) {
-        insights.push({
-          type: 'alert',
-          title: 'Simulator: High-Priority Visitors',
-          description: `${metrics.urgentVisitors} high-urgency visitors detected in simulation`,
-          impact: `Immediate action required - potential ${formatCurrency(metrics.urgentVisitors * 500000)} revenue`,
-          confidence: 0.95,
-          priority: 'high'
-        });
-      }
-      
-      if (metrics.avgAiScore > 70) {
-        insights.push({
-          type: 'opportunity',
-          title: 'Simulator: High-Quality Traffic',
-          description: `Average AI score of ${metrics.avgAiScore} indicates premium visitor quality`,
-          impact: 'Optimize for enterprise conversion',
-          confidence: 0.88,
-          priority: 'medium'
-        });
-      }
-      
-      if (metrics.enterpriseVisitors / metrics.totalVisitors > 0.3) {
-        insights.push({
-          type: 'trend',
-          title: 'Simulator: Enterprise Focus',
-          description: `${Math.round(metrics.enterpriseVisitors / metrics.totalVisitors * 100)}% enterprise visitors in simulation`,
-          impact: 'Enterprise strategy validation',
-          confidence: 0.82,
-          priority: 'medium'
-        });
-      }
-      
-      return insights;
-    };
-    
-    // Start monitoring
-    checkSimulatorAndUpdateMetrics(); // Initial check
-    simulatorInterval = setInterval(checkSimulatorAndUpdateMetrics, 10000); // Check every 10 seconds
-    
-    return () => {
-      if (simulatorInterval) clearInterval(simulatorInterval);
-    };
-  }, []);
-  
-  // Update real-time conversion probabilities with simulation data
-  useEffect(() => {
-    if (liveSimulationData.simulatorActive && liveSimulationData.realTimeMetrics) {
-      const metrics = liveSimulationData.realTimeMetrics;
-      
-      // Blend simulation data with existing probability calculations
-      setRealTimeConversions(prev => ({
-        ...prev,
-        currentProbability: (prev.currentProbability + metrics.conversionRate) / 2,
-        factors: [
-          ...prev.factors.slice(0, 3), // Keep first 3 original factors
-          {
-            factor: 'Live simulator AI insights',
-            impact: (metrics.avgAiScore - 50) / 10, // Convert AI score to impact
-            trend: metrics.avgAiScore > 70 ? 'positive' : metrics.avgAiScore > 40 ? 'neutral' : 'negative'
-          },
-          {
-            factor: 'Real-time visitor quality',
-            impact: (metrics.qualityScore - 50) / 8,
-            trend: metrics.qualityScore > 60 ? 'positive' : 'neutral'
-          }
-        ],
-        lastUpdate: new Date()
-      }));
-    }
-  }, [liveSimulationData]);
+  // Removed simulation monitoring - now uses unified data provider
 
   // Real-time conversion probability updates using AI models
   useEffect(() => {
@@ -587,7 +406,6 @@ export default function TrafficConversionAnalytics() {
     <div className="space-y-6">
       {/* New Grafana-Style Cards */}
       <GrafanaStyleCards 
-        simulationData={liveSimulationData?.realTimeMetrics}
         timeRange={timeRange}
         onTimeRangeChange={setTimeRange}
       />
@@ -673,59 +491,7 @@ export default function TrafficConversionAnalytics() {
         </div>
       </div>
 
-      {/* Live Simulation Metrics */}
-      {liveSimulationData.simulatorActive && liveSimulationData.realTimeMetrics && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <Activity className="h-4 w-4 text-green-600" />
-              Live Simulation Data
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            </h4>
-            <div className="text-xs text-green-600">
-              Updated: {liveSimulationData.lastDataUpdate.toLocaleTimeString()}
-            </div>
-          </div>
-          
-          <div className="grid gap-2 grid-cols-4">
-            <div className="p-3 bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-950/30 dark:to-cyan-900/30 rounded-lg border border-cyan-200 dark:border-cyan-800 shadow-sm">
-              <div className="flex items-center justify-between mb-1">
-                <Activity className="h-3 w-3 text-cyan-600 dark:text-cyan-400" />
-                <span className="text-[10px] text-cyan-700 dark:text-cyan-300 font-medium">SIM VISITORS</span>
-              </div>
-              <div className="text-lg font-bold text-cyan-900 dark:text-cyan-100">{liveSimulationData.realTimeMetrics.totalVisitors}</div>
-              <div className="text-[10px] text-cyan-600 dark:text-cyan-400">{liveSimulationData.realTimeMetrics.enterpriseVisitors} enterprise</div>
-            </div>
-
-            <div className="p-3 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/30 dark:to-emerald-900/30 rounded-lg border border-emerald-200 dark:border-emerald-800 shadow-sm">
-              <div className="flex items-center justify-between mb-1">
-                <Brain className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-                <span className="text-[10px] text-emerald-700 dark:text-emerald-300 font-medium">AI SCORE</span>
-              </div>
-              <div className="text-lg font-bold text-emerald-900 dark:text-emerald-100">{liveSimulationData.realTimeMetrics.avgAiScore}</div>
-              <div className="text-[10px] text-emerald-600 dark:text-emerald-400">Quality rating</div>
-            </div>
-
-            <div className="p-3 bg-gradient-to-br from-violet-50 to-violet-100 dark:from-violet-950/30 dark:to-violet-900/30 rounded-lg border border-violet-200 dark:border-violet-800 shadow-sm">
-              <div className="flex items-center justify-between mb-1">
-                <Target className="h-3 w-3 text-violet-600 dark:text-violet-400" />
-                <span className="text-[10px] text-violet-700 dark:text-violet-300 font-medium">CONVERT %</span>
-              </div>
-              <div className="text-lg font-bold text-violet-900 dark:text-violet-100">{liveSimulationData.realTimeMetrics.avgConversionProb}%</div>
-              <div className="text-[10px] text-violet-600 dark:text-violet-400">{liveSimulationData.realTimeMetrics.urgentVisitors} urgent</div>
-            </div>
-
-            <div className="p-3 bg-gradient-to-br from-rose-50 to-rose-100 dark:from-rose-950/30 dark:to-rose-900/30 rounded-lg border border-rose-200 dark:border-rose-800 shadow-sm">
-              <div className="flex items-center justify-between mb-1">
-                <DollarSign className="h-3 w-3 text-rose-600 dark:text-rose-400" />
-                <span className="text-[10px] text-rose-700 dark:text-rose-300 font-medium">PREDICTED</span>
-              </div>
-              <div className="text-lg font-bold text-rose-900 dark:text-rose-100">₦{(liveSimulationData.realTimeMetrics.totalPredictedValue / 1000000).toFixed(1)}M</div>
-              <div className="text-[10px] text-rose-600 dark:text-rose-400">{liveSimulationData.realTimeMetrics.highValueVisitors} high-value</div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Simulation metrics section removed - now uses unified data provider */}
 
       {/* Live Traffic Sources */}
       <div className="space-y-3">

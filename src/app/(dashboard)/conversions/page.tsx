@@ -28,25 +28,11 @@ import TimeSeriesPanel from '@/components/panels/TimeSeriesPanel';
 import PiePanel from '@/components/panels/PiePanel';
 import BarPanel from '@/components/panels/BarPanel';
 import Panel from '@/components/panels/Panel';
-import { masterSimulation } from '@/lib/simulation/master-simulation-controller';
 
 export default function ConversionsPage() {
   const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d' | '90d'>('30d');
   const [refreshing, setRefreshing] = useState(false);
-  const [simulationState, setSimulationState] = useState(masterSimulation.getState());
 
-  // Subscribe to simulation state changes
-  useEffect(() => {
-    const handleSimulationStateChange = (newState: any) => {
-      setSimulationState(newState);
-    };
-
-    masterSimulation.onStateChange(handleSimulationStateChange);
-    
-    return () => {
-      // Cleanup handled by master simulation
-    };
-  }, []);
 
   const refreshData = async () => {
     setRefreshing(true);
@@ -55,9 +41,9 @@ export default function ConversionsPage() {
     toast.success('Conversion data refreshed');
   };
 
-  // Simulation-based time series data for charts
+  // Demo time series data for charts
   const conversionTrendData = Array.from({ length: 30 }).map((_, idx) => {
-    const baseConversions = simulationState.isRunning ? simulationState.dashboard.conversionRate : 3.5;
+    const baseConversions = 3.2;
     const dayVariation = Math.sin(idx * 0.2) * 2 + Math.random() * 1.5;
     return {
       x: `Day ${idx + 1}`,
@@ -66,8 +52,7 @@ export default function ConversionsPage() {
   });
 
   const revenueTrendData = Array.from({ length: 30 }).map((_, idx) => {
-    const baseRevenue = simulationState.isRunning ? 
-      (simulationState.dashboard.totalRevenue / 30) : 45000;
+    const baseRevenue = 45000;
     const dayVariation = Math.cos(idx * 0.15) * 8000 + Math.random() * 15000;
     return {
       x: `Day ${idx + 1}`,
@@ -75,11 +60,10 @@ export default function ConversionsPage() {
     };
   });
 
-  // Simulation-based sparkline data for stat panels
-  const currentConversionRate = simulationState.isRunning ? simulationState.dashboard.conversionRate : 3.5;
-  const currentRevenue = simulationState.isRunning ? simulationState.dashboard.totalRevenue : 580000;
-  const currentConversions = simulationState.isRunning ? 
-    Math.round(simulationState.leadpulse.totalVisitors * (currentConversionRate / 100)) : 48;
+  // Demo sparkline data for stat panels
+  const currentConversionRate = 3.2;
+  const currentRevenue = 580000;
+  const currentConversions = 45;
 
   const conversionRateSparkline = Array.from({ length: 10 }).map((_, idx) => ({
     x: idx,

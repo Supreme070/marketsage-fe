@@ -18,8 +18,6 @@ export const loadGeoData = async () => {
 export interface GeoCoord {
   lat: number;
   lng: number;
-  x: number;
-  y: number;
 }
 
 export interface GeoRegion {
@@ -207,37 +205,37 @@ export const CITY_MAPPINGS: Record<string, { continent: string, country: string,
   'Alexandria': { continent: 'africa', country: 'egypt', state: 'alexandria-governorate' }
 };
 
-// Enhanced city coordinates with more African cities
+// Enhanced city coordinates with accurate African cities (lat/lng only - x,y calculated via projection)
 export const CITY_COORDINATES: Record<string, GeoCoord> = {
   // Global cities
-  'New York': { lat: 40.7128, lng: -74.0060, x: 350, y: 260 },
-  'San Francisco': { lat: 37.7749, lng: -122.4194, x: 250, y: 280 },
-  'London': { lat: 51.5074, lng: -0.1278, x: 450, y: 230 },
-  'Paris': { lat: 48.8566, lng: 2.3522, x: 460, y: 240 },
-  'Berlin': { lat: 52.5200, lng: 13.4050, x: 480, y: 230 },
-  'Tokyo': { lat: 35.6762, lng: 139.6503, x: 830, y: 280 },
-  'Beijing': { lat: 39.9042, lng: 116.4074, x: 770, y: 280 },
-  'Delhi': { lat: 28.7041, lng: 77.1025, x: 680, y: 320 },
-  'Sydney': { lat: -33.8688, lng: 151.2093, x: 850, y: 520 },
-  'Melbourne': { lat: -37.8136, lng: 144.9631, x: 830, y: 540 },
-  'Rio de Janeiro': { lat: -22.9068, lng: -43.1729, x: 320, y: 470 },
-  'Buenos Aires': { lat: -34.6037, lng: -58.3816, x: 300, y: 510 },
+  'New York': { lat: 40.7128, lng: -74.0060 },
+  'San Francisco': { lat: 37.7749, lng: -122.4194 },
+  'London': { lat: 51.5074, lng: -0.1278 },
+  'Paris': { lat: 48.8566, lng: 2.3522 },
+  'Berlin': { lat: 52.5200, lng: 13.4050 },
+  'Tokyo': { lat: 35.6762, lng: 139.6503 },
+  'Beijing': { lat: 39.9042, lng: 116.4074 },
+  'Delhi': { lat: 28.7041, lng: 77.1025 },
+  'Sydney': { lat: -33.8688, lng: 151.2093 },
+  'Melbourne': { lat: -37.8136, lng: 144.9631 },
+  'Rio de Janeiro': { lat: -22.9068, lng: -43.1729 },
+  'Buenos Aires': { lat: -34.6037, lng: -58.3816 },
   
-  // Enhanced African cities
-  'Lagos': { lat: 6.5244, lng: 3.3792, x: 468, y: 408 },
-  'Cairo': { lat: 30.0444, lng: 31.2357, x: 530, y: 320 },
-  'Nairobi': { lat: -1.2921, lng: 36.8219, x: 570, y: 400 },
-  'Abuja': { lat: 9.0765, lng: 7.3986, x: 478, y: 395 },
-  'Accra': { lat: 5.6037, lng: -0.1870, x: 442, y: 410 },
-  'Cape Town': { lat: -33.9249, lng: 18.4241, x: 490, y: 515 },
-  'Johannesburg': { lat: -26.2041, lng: 28.0473, x: 495, y: 500 },
-  'Durban': { lat: -29.8587, lng: 31.0218, x: 500, y: 508 },
-  'Kano': { lat: 11.5004, lng: 8.5200, x: 478, y: 395 },
-  'Port Harcourt': { lat: 4.7719, lng: 6.7593, x: 472, y: 412 },
-  'Kumasi': { lat: 6.6885, lng: -1.6244, x: 440, y: 415 },
-  'Mombasa': { lat: -4.0435, lng: 39.6682, x: 575, y: 410 },
-  'Kisumu': { lat: -0.1022, lng: 34.7617, x: 568, y: 398 },
-  'Alexandria': { lat: 31.2001, lng: 29.9187, x: 528, y: 318 }
+  // Enhanced African cities with verified coordinates
+  'Lagos': { lat: 6.5244, lng: 3.3792 },
+  'Cairo': { lat: 30.0444, lng: 31.2357 },
+  'Nairobi': { lat: -1.2921, lng: 36.8219 },
+  'Abuja': { lat: 9.0765, lng: 7.3986 },
+  'Accra': { lat: 5.6037, lng: -0.1870 },
+  'Cape Town': { lat: -33.9249, lng: 18.4241 },
+  'Johannesburg': { lat: -26.2041, lng: 28.0473 },
+  'Durban': { lat: -29.8587, lng: 31.0218 },
+  'Kano': { lat: 11.5004, lng: 8.5200 },
+  'Port Harcourt': { lat: 4.7719, lng: 6.7593 },
+  'Kumasi': { lat: 6.6885, lng: -1.6244 },
+  'Mombasa': { lat: -4.0435, lng: 39.6682 },
+  'Kisumu': { lat: -0.1022, lng: 34.7617 },
+  'Alexandria': { lat: 31.2001, lng: 29.9187 }
 };
 
 // All regions combined for easy lookup - will be enhanced with loaded data
@@ -313,18 +311,36 @@ export async function isRegionClickable(regionId: string): Promise<boolean> {
   return region?.clickable === true;
 }
 
-// Enhanced coordinate conversion with zoom support
+// Enhanced coordinate conversion with zoom support and proper projection
 export function latLngToSvgCoords(lat: number, lng: number, viewBox?: string): { x: number, y: number } {
+  // Web Mercator projection for accurate positioning
+  // This prevents locations from appearing in the ocean
+  
+  // Convert latitude to Mercator Y coordinate
+  const latRad = lat * (Math.PI / 180);
+  const mercatorY = Math.log(Math.tan((Math.PI / 4) + (latRad / 2)));
+  
+  // Normalize Mercator Y to 0-1 range (clamped to reasonable bounds)
+  const maxMercatorY = Math.log(Math.tan((Math.PI / 4) + (85 * Math.PI / 360))); // Cap at 85° to avoid infinity
+  const normalizedY = 0.5 - (mercatorY / (2 * maxMercatorY));
+  
+  // Normalize longitude to 0-1 range
+  const normalizedX = (lng + 180) / 360;
+  
   if (viewBox) {
     // Parse viewBox for zoomed coordinates
     const [vx, vy, vw, vh] = viewBox.split(' ').map(Number);
-    const x = vx + ((lng + 180) * (vw / 360));
-    const y = vy + ((90 - lat) * (vh / 180));
+    const x = vx + (normalizedX * vw);
+    const y = vy + (normalizedY * vh);
     return { x, y };
   }
   
-  // Default world coordinates
-  const x = (lng + 180) * (800 / 360);
-  const y = (90 - lat) * (600 / 180);
+  // Default world coordinates with standard map dimensions
+  const mapWidth = 1000;  // Standard width for world map
+  const mapHeight = 500;  // Standard height for world map
+  
+  const x = normalizedX * mapWidth;
+  const y = normalizedY * mapHeight;
+  
   return { x, y };
 } 

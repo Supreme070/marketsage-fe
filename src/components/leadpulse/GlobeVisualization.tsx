@@ -375,12 +375,25 @@ export default function GlobeVisualization({
   
   // Helper function to convert latitude and longitude to 3D coordinates
   const latLongToVector3 = (lat: number, long: number, radius: number) => {
-    const phi = (90 - lat) * (Math.PI / 180);
-    const theta = (long + 180) * (Math.PI / 180);
+    // Convert degrees to radians
+    // Latitude: 0° at equator, +90° North Pole, -90° South Pole
+    // Longitude: 0° at Prime Meridian, +180° East, -180° West
     
-    const x = -radius * Math.sin(phi) * Math.cos(theta);
-    const z = radius * Math.sin(phi) * Math.sin(theta);
+    // Phi: angle from North Pole (0 to PI)
+    const phi = (90 - lat) * (Math.PI / 180);
+    
+    // Theta: angle around the equator (0 to 2*PI)
+    // Normalize longitude to 0-360 range for consistent mapping
+    const normalizedLong = ((long + 180) % 360 + 360) % 360;
+    const theta = normalizedLong * (Math.PI / 180);
+    
+    // Convert spherical to Cartesian coordinates
+    // X-axis points to 0° longitude, 0° latitude
+    // Y-axis points to North Pole
+    // Z-axis points to 90° East longitude
+    const x = radius * Math.sin(phi) * Math.cos(theta);
     const y = radius * Math.cos(phi);
+    const z = radius * Math.sin(phi) * Math.sin(theta);
     
     return new THREE.Vector3(x, y, z);
   };

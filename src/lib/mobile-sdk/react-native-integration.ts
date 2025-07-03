@@ -1,0 +1,464 @@
+/**
+ * React Native Integration for LeadPulse Mobile SDK
+ * ===============================================
+ * Specialized hooks and components for React Native applications
+ */
+
+import { useEffect, useRef, useCallback } from 'react';
+import { LeadPulseMobileSDK, MobileSDKConfig, createMobileSDK } from './leadpulse-mobile-sdk';
+
+// React Native specific types
+export interface ReactNativeConfig extends Omit<MobileSDKConfig, 'baseUrl'> {
+  baseUrl?: string; // Optional, can be set from build config
+}
+
+/**
+ * React Hook for LeadPulse Mobile SDK
+ */
+export function useLeadPulseSDK(config: ReactNativeConfig) {
+  const sdkRef = useRef<LeadPulseMobileSDK | null>(null);
+  const isInitialized = useRef(false);
+
+  // Initialize SDK
+  useEffect(() => {
+    if (!isInitialized.current) {
+      const fullConfig: MobileSDKConfig = {
+        baseUrl: config.baseUrl || 'https://api.marketsage.africa',
+        ...config
+      };
+
+      sdkRef.current = createMobileSDK(fullConfig);
+      sdkRef.current.initialize().catch(console.error);
+      isInitialized.current = true;
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (sdkRef.current) {
+        sdkRef.current.destroy();
+        sdkRef.current = null;
+        isInitialized.current = false;
+      }
+    };
+  }, []);
+
+  // Tracking methods
+  const trackScreen = useCallback(async (screenName: string, metadata?: Record<string, any>) => {
+    if (sdkRef.current) {
+      await sdkRef.current.trackScreen(screenName, metadata);
+    }
+  }, []);
+
+  const trackButton = useCallback(async (buttonName: string, screen: string, coordinates?: { x: number; y: number }) => {
+    if (sdkRef.current) {
+      await sdkRef.current.trackButton(buttonName, screen, coordinates);
+    }
+  }, []);
+
+  const trackPurchase = useCallback(async (amount: number, currency: string, productId: string, screen: string) => {
+    if (sdkRef.current) {
+      await sdkRef.current.trackPurchase(amount, currency, productId, screen);
+    }
+  }, []);
+
+  const trackSearch = useCallback(async (query: string, screen: string, resultsCount?: number) => {
+    if (sdkRef.current) {
+      await sdkRef.current.trackSearch(query, screen, resultsCount);
+    }
+  }, []);
+
+  const trackCustomEvent = useCallback(async (eventName: string, screen: string, value?: string | number, metadata?: Record<string, any>) => {
+    if (sdkRef.current) {
+      await sdkRef.current.trackCustomEvent(eventName, screen, value, metadata);
+    }
+  }, []);
+
+  const setUserId = useCallback((userId: string) => {
+    if (sdkRef.current) {
+      sdkRef.current.setUserId(userId);
+    }
+  }, []);
+
+  const trackCrash = useCallback(async (error: Error, breadcrumbs?: string[]) => {
+    if (sdkRef.current) {
+      await sdkRef.current.trackCrash(error, breadcrumbs);
+    }
+  }, []);
+
+  return {
+    trackScreen,
+    trackButton,
+    trackPurchase,
+    trackSearch,
+    trackCustomEvent,
+    setUserId,
+    trackCrash,
+    isInitialized: isInitialized.current,
+    sdk: sdkRef.current
+  };
+}
+
+/**
+ * Higher-Order Component for automatic screen tracking
+ */
+export function withScreenTracking<P extends object>(
+  WrappedComponent: React.ComponentType<P>,
+  screenName: string,
+  trackingOptions?: Record<string, any>
+) {
+  return function TrackedComponent(props: P) {
+    const { trackScreen } = useLeadPulseSDK({
+      apiKey: '', // This should be provided by parent
+      appName: '',
+      appVersion: '',
+      environment: 'development',
+      enableDebugLogs: false,
+      enableOfflineMode: true,
+      batchSize: 50,
+      flushInterval: 30000,
+      sessionTimeout: 300000,
+      enableCrashReporting: true,
+      enablePerformanceMonitoring: true,
+      enableUserJourneyTracking: true,
+      privacySettings: {
+        collectDeviceInfo: true,
+        collectLocationData: false,
+        collectCrashLogs: true,
+        collectPerformanceMetrics: true
+      }
+    });
+
+    useEffect(() => {
+      trackScreen(screenName, trackingOptions);
+    }, [trackScreen]);
+
+    return <WrappedComponent {...props} />;
+  };
+}
+
+/**
+ * React Native Navigation Integration
+ */
+export class NavigationTracker {
+  private sdk: LeadPulseMobileSDK | null = null;
+  private screenStack: string[] = [];
+  private screenStartTimes: Map<string, number> = new Map();
+
+  constructor(sdk: LeadPulseMobileSDK) {
+    this.sdk = sdk;
+  }
+
+  /**
+   * Track navigation to a new screen
+   */
+  async onNavigateToScreen(screenName: string, params?: Record<string, any>): Promise<void> {
+    if (!this.sdk) return;
+
+    // End time tracking for previous screen
+    const previousScreen = this.getCurrentScreen();
+    if (previousScreen) {
+      const timeSpent = this.getTimeSpentOnScreen(previousScreen);
+      await this.sdk.trackCustomEvent('screen_time', previousScreen, timeSpent, {
+        timeSpent,
+        unit: 'milliseconds'
+      });
+    }
+
+    // Start tracking new screen
+    this.screenStack.push(screenName);
+    this.screenStartTimes.set(screenName, Date.now());
+    
+    await this.sdk.trackScreen(screenName, {
+      navigationParams: params,
+      screenDepth: this.screenStack.length,
+      previousScreen
+    });
+  }
+
+  /**
+   * Track navigation back/pop
+   */
+  async onNavigateBack(): Promise<void> {
+    if (!this.sdk || this.screenStack.length === 0) return;
+
+    const currentScreen = this.screenStack.pop();
+    if (currentScreen) {
+      const timeSpent = this.getTimeSpentOnScreen(currentScreen);
+      await this.sdk.trackCustomEvent('screen_exit', currentScreen, timeSpent, {
+        exitMethod: 'back_navigation',
+        timeSpent,
+        unit: 'milliseconds'
+      });
+      
+      this.screenStartTimes.delete(currentScreen);
+    }
+
+    // Track return to previous screen
+    const previousScreen = this.getCurrentScreen();
+    if (previousScreen) {
+      await this.sdk.trackCustomEvent('screen_return', previousScreen, undefined, {
+        returnFrom: currentScreen,
+        screenDepth: this.screenStack.length
+      });
+    }
+  }
+
+  /**
+   * Get current screen name
+   */
+  getCurrentScreen(): string | undefined {
+    return this.screenStack[this.screenStack.length - 1];
+  }
+
+  /**
+   * Get time spent on a screen
+   */
+  private getTimeSpentOnScreen(screenName: string): number {
+    const startTime = this.screenStartTimes.get(screenName);
+    return startTime ? Date.now() - startTime : 0;
+  }
+
+  /**
+   * Clear all navigation history
+   */
+  reset(): void {
+    this.screenStack = [];
+    this.screenStartTimes.clear();
+  }
+}
+
+/**
+ * Performance monitoring for React Native
+ */
+export class ReactNativePerformanceMonitor {
+  private sdk: LeadPulseMobileSDK | null = null;
+  private navigationTimes: Map<string, number> = new Map();
+
+  constructor(sdk: LeadPulseMobileSDK) {
+    this.sdk = sdk;
+  }
+
+  /**
+   * Start timing a screen load
+   */
+  startScreenLoad(screenName: string): void {
+    this.navigationTimes.set(screenName, Date.now());
+  }
+
+  /**
+   * End timing a screen load
+   */
+  async endScreenLoad(screenName: string): Promise<void> {
+    if (!this.sdk) return;
+
+    const startTime = this.navigationTimes.get(screenName);
+    if (startTime) {
+      const loadTime = Date.now() - startTime;
+      await this.sdk.trackPerformance('screen_load', loadTime, 'ms', {
+        screen: screenName
+      });
+      this.navigationTimes.delete(screenName);
+    }
+  }
+
+  /**
+   * Track API call performance
+   */
+  async trackAPICall(
+    endpoint: string,
+    method: string,
+    duration: number,
+    statusCode: number,
+    responseSize?: number
+  ): Promise<void> {
+    if (!this.sdk) return;
+
+    await this.sdk.trackPerformance('api_call', duration, 'ms', {
+      apiEndpoint: endpoint,
+      method,
+      statusCode,
+      responseSize
+    });
+  }
+
+  /**
+   * Monitor memory usage
+   */
+  async trackMemoryUsage(): Promise<void> {
+    if (!this.sdk) return;
+
+    // In React Native, you would use a native module to get memory info
+    // For now, we'll simulate it
+    const memoryUsage = this.getMemoryUsage();
+    if (memoryUsage) {
+      await this.sdk.trackPerformance('memory_usage', memoryUsage, 'bytes');
+    }
+  }
+
+  private getMemoryUsage(): number | undefined {
+    // This would be implemented using a native module in React Native
+    // that calls iOS/Android APIs to get memory usage
+    return undefined;
+  }
+}
+
+/**
+ * Crash reporting integration
+ */
+export class ReactNativeCrashReporter {
+  private sdk: LeadPulseMobileSDK | null = null;
+  private breadcrumbs: string[] = [];
+  private maxBreadcrumbs = 20;
+
+  constructor(sdk: LeadPulseMobileSDK) {
+    this.sdk = sdk;
+    this.setupGlobalErrorHandler();
+  }
+
+  /**
+   * Add breadcrumb for crash context
+   */
+  addBreadcrumb(message: string, category?: string): void {
+    const timestamp = new Date().toISOString();
+    const breadcrumb = category ? `[${category}] ${message} (${timestamp})` : `${message} (${timestamp})`;
+    
+    this.breadcrumbs.push(breadcrumb);
+    
+    // Keep only the most recent breadcrumbs
+    if (this.breadcrumbs.length > this.maxBreadcrumbs) {
+      this.breadcrumbs = this.breadcrumbs.slice(-this.maxBreadcrumbs);
+    }
+  }
+
+  /**
+   * Report crash manually
+   */
+  async reportCrash(error: Error, isFatal = false): Promise<void> {
+    if (!this.sdk) return;
+
+    await this.sdk.trackCrash(error, [...this.breadcrumbs]);
+    
+    // Clear breadcrumbs after crash report
+    if (isFatal) {
+      this.breadcrumbs = [];
+    }
+  }
+
+  /**
+   * Setup global error handler
+   */
+  private setupGlobalErrorHandler(): void {
+    // JavaScript errors
+    const originalHandler = ErrorUtils.getGlobalHandler();
+    ErrorUtils.setGlobalHandler((error, isFatal) => {
+      this.reportCrash(error, isFatal);
+      originalHandler(error, isFatal);
+    });
+
+    // Promise rejections
+    const originalUnhandledRejection = global.onunhandledrejection;
+    global.onunhandledrejection = (event) => {
+      this.addBreadcrumb(`Unhandled promise rejection: ${event.reason}`, 'promise');
+      if (originalUnhandledRejection) {
+        originalUnhandledRejection(event);
+      }
+    };
+  }
+}
+
+/**
+ * User journey tracking
+ */
+export class UserJourneyTracker {
+  private sdk: LeadPulseMobileSDK | null = null;
+  private journeySteps: Array<{
+    step: string;
+    timestamp: number;
+    metadata?: Record<string, any>;
+  }> = [];
+
+  constructor(sdk: LeadPulseMobileSDK) {
+    this.sdk = sdk;
+  }
+
+  /**
+   * Track a step in the user journey
+   */
+  async trackStep(stepName: string, metadata?: Record<string, any>): Promise<void> {
+    const journeyStep = {
+      step: stepName,
+      timestamp: Date.now(),
+      metadata
+    };
+
+    this.journeySteps.push(journeyStep);
+
+    if (this.sdk) {
+      await this.sdk.trackCustomEvent('journey_step', 'user_journey', stepName, {
+        stepIndex: this.journeySteps.length,
+        totalSteps: this.journeySteps.length,
+        journeyDuration: this.getJourneyDuration(),
+        ...metadata
+      });
+    }
+  }
+
+  /**
+   * Complete a user journey
+   */
+  async completeJourney(journeyName: string, outcome: 'success' | 'abandon' | 'error'): Promise<void> {
+    if (this.sdk) {
+      await this.sdk.trackCustomEvent('journey_complete', 'user_journey', journeyName, {
+        outcome,
+        totalSteps: this.journeySteps.length,
+        journeyDuration: this.getJourneyDuration(),
+        steps: this.journeySteps.map(s => s.step)
+      });
+    }
+
+    // Reset journey
+    this.journeySteps = [];
+  }
+
+  /**
+   * Get total journey duration
+   */
+  private getJourneyDuration(): number {
+    if (this.journeySteps.length === 0) return 0;
+    
+    const firstStep = this.journeySteps[0];
+    const lastStep = this.journeySteps[this.journeySteps.length - 1];
+    
+    return lastStep.timestamp - firstStep.timestamp;
+  }
+
+  /**
+   * Get current journey progress
+   */
+  getJourneyProgress(): Array<{ step: string; timestamp: number; metadata?: Record<string, any> }> {
+    return [...this.journeySteps];
+  }
+}
+
+// Global error utilities for React Native
+declare global {
+  const ErrorUtils: {
+    getGlobalHandler(): (error: Error, isFatal?: boolean) => void;
+    setGlobalHandler(handler: (error: Error, isFatal?: boolean) => void): void;
+  };
+
+  namespace NodeJS {
+    interface Global {
+      onunhandledrejection?: (event: PromiseRejectionEvent) => void;
+    }
+  }
+}
+
+export default {
+  useLeadPulseSDK,
+  withScreenTracking,
+  NavigationTracker,
+  ReactNativePerformanceMonitor,
+  ReactNativeCrashReporter,
+  UserJourneyTracker
+};

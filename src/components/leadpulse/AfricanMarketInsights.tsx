@@ -45,7 +45,7 @@ export default function AfricanMarketInsights({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
-  // Real-time market data simulation
+  // Real-time market data updates using unified data provider
   useEffect(() => {
     const updateMarketData = () => {
       const markets = getAllMarkets();

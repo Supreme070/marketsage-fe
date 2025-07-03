@@ -20,13 +20,11 @@ import {
 import { motion } from 'framer-motion';
 
 interface GrafanaStyleCardsProps {
-  simulationData?: any;
   timeRange?: string;
   onTimeRangeChange?: (range: string) => void;
 }
 
 export default function GrafanaStyleCards({ 
-  simulationData, 
   timeRange = '24h',
   onTimeRangeChange 
 }: GrafanaStyleCardsProps) {
@@ -42,7 +40,7 @@ export default function GrafanaStyleCards({
   // Generate mock time series data based on simulation
   const generateTimeSeriesData = (points = 24) => {
     const data = [];
-    const baseValue = simulationData?.activeVisitors || 50;
+    const baseValue = 10; // Use consistent demo visitor count
     
     for (let i = 0; i < points; i++) {
       const hour = new Date();
@@ -211,7 +209,7 @@ export default function GrafanaStyleCards({
                 {/* Real-time metrics overlay */}
                 <div className="absolute top-4 right-4 bg-background/80 backdrop-blur-sm rounded-lg p-3 border">
                   <div className="text-xs text-muted-foreground mb-1">Active Now</div>
-                  <div className="text-lg font-bold text-blue-600">{simulationData?.activeVisitors || 47}</div>
+                  <div className="text-lg font-bold text-blue-600">10</div>
                 </div>
               </div>
               

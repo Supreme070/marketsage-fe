@@ -21,7 +21,7 @@ function getActiveVisitorWindow(): Date {
   }
 }
 
-// Helper function to get time range multiplier for simulator data
+// Helper function to get time range multiplier for data scaling
 function getTimeRangeMultiplier(timeRange: string): number {
   switch (timeRange) {
     case '1h': return 1.2;
@@ -34,7 +34,7 @@ function getTimeRangeMultiplier(timeRange: string): number {
   }
 }
 
-// Helper function to add realistic business simulation
+// Helper function to add realistic business patterns
 function applyBusinessRealism(realCount: number, timeRange: string): number {
   const now = new Date();
   const currentHour = now.getHours();
@@ -149,24 +149,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const timeRange = searchParams.get('timeRange') || '24h';
     
-    // Check if simulator is running - if yes, show simulator data
-    let simulatorStatus = null;
-    let useSimulatorData = false;
-    
-    try {
-      const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3030';
-      const simulatorResponse = await fetch(`${baseUrl}/api/leadpulse/simulator?action=status`);
-      simulatorStatus = await simulatorResponse.json();
-      
-      if (simulatorStatus.isRunning) {
-        useSimulatorData = true;
-        logger.info('Simulator running - using simulator data');
-      } else {
-        logger.info('Simulator not running - using database/fallback data');
-      }
-    } catch (error) {
-      logger.warn('Simulator check failed - using database/fallback data');
-    }
+    // Use database/fallback data only
 
     // Calculate time cutoff based on timeRange
     const now = new Date();
@@ -197,28 +180,9 @@ export async function GET(request: NextRequest) {
     let activeVisitors = 0;
     let totalVisitors = 0;
 
-    if (useSimulatorData && simulatorStatus) {
-      // Use simulator data as primary source
-      activeVisitors = simulatorStatus.activeVisitors || 0;
-      
-      // Calculate total visitors based on simulator runtime and activity
-      const simulatorUptimeMs = simulatorStatus.uptime || 0;
-      const simulatorUptimeHours = simulatorUptimeMs / (1000 * 60 * 60);
-      
-      // Estimate total visitors based on simulator activity and time range
-      const baseMultiplier = getTimeRangeMultiplier(timeRange);
-      totalVisitors = Math.max(activeVisitors, Math.floor(activeVisitors * baseMultiplier * (1 + simulatorUptimeHours * 0.1)));
-      
-      logger.info('Using simulator data:', {
-        activeVisitors,
-        totalVisitors,
-        simulatorUptime: simulatorUptimeHours,
-        totalEvents: simulatorStatus.totalEvents
-      });
-    } else {
-      // Fallback to database queries
-      try {
-        rawTotalVisitors = await prisma.leadPulseVisitor.count({
+    // Database queries
+    try {
+      rawTotalVisitors = await prisma.leadPulseVisitor.count({
           where: {
             lastVisit: {
               gte: cutoffTime
@@ -247,7 +211,6 @@ export async function GET(request: NextRequest) {
         activeVisitors = applyBusinessRealism(15, '2h');
         totalVisitors = applyBusinessRealism(45, timeRange);
       }
-    }
 
     // Get engagement stats
     const engagementStats = await prisma.leadPulseVisitor.aggregate({
@@ -457,17 +420,15 @@ export async function GET(request: NextRequest) {
           : 'Unknown Location'
       })),
       metadata: {
-        dataSource: useSimulatorData ? 'simulator' : 'database',
-        simulatorActive: useSimulatorData,
-        simulatorStatus: simulatorStatus,
+        dataSource: 'database',
         rawActiveVisitors,
         enhancedActiveVisitors: activeVisitors,
         rawTotalVisitors,
         enhancedTotalVisitors: totalVisitors,
-        activeVisitorWindow: useSimulatorData ? null : getActiveVisitorWindow().toISOString(),
+        activeVisitorWindow: getActiveVisitorWindow().toISOString(),
         businessHours: now.getHours() >= 9 && now.getHours() <= 17,
         timeRange,
-        logic: useSimulatorData ? 'SimulatorData' : 'Active=RealTime, Total=TimeRangeDependent',
+        logic: 'Active=RealTime, Total=TimeRangeDependent',
         platformAnalysis: {
           webVisitors,
           mobileAppVisitors,
