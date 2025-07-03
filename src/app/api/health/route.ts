@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from "@/lib/db/prisma";
+import { trace } from '@opentelemetry/api';
 import { 
   handleApiError, 
   unauthorized, 
@@ -8,63 +9,112 @@ import {
   validationError 
 } from "@/lib/errors";
 
-// Health check with Prometheus metrics format
+// Health check with Prometheus metrics format and OpenTelemetry tracing
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const format = searchParams.get('format');
-
-  try {
-    const startTime = Date.now();
-    
-    // Perform health checks
-    const healthChecks = await performHealthChecks();
-    const responseTime = Date.now() - startTime;
-
-    // Return Prometheus metrics format if requested
-    if (format === 'prometheus') {
-      return new Response(generatePrometheusMetrics(healthChecks, responseTime), {
-        headers: { 'Content-Type': 'text/plain; version=0.0.4' },
-        status: 200
+  const tracer = trace.getTracer('marketsage-health');
+  
+  return tracer.startActiveSpan('health-check-api', async (span) => {
+    try {
+      const { searchParams } = new URL(request.url);
+      const format = searchParams.get('format');
+      
+      span.setAttributes({
+        'http.method': 'GET',
+        'http.route': '/api/health',
+        'request.format': format || 'json',
+        'service.name': 'marketsage',
       });
-    }
 
-    // Return JSON format (default)
-    return NextResponse.json({
-      status: healthChecks.overall ? 'healthy' : 'unhealthy',
-      timestamp: new Date().toISOString(),
-      service: 'marketsage',
-      version: process.env.APP_VERSION || '1.0.0',
-      environment: process.env.NODE_ENV || 'development',
-      responseTime: `${responseTime}ms`,
-      checks: healthChecks,
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-      system: {
-        nodeVersion: process.version,
-        platform: process.platform,
-        arch: process.arch
+      const startTime = Date.now();
+      
+      // Perform health checks with tracing
+      const healthChecks = await performHealthChecks();
+      const responseTime = Date.now() - startTime;
+      
+      span.setAttributes({
+        'app.health.overall': healthChecks.overall,
+        'app.health.database': healthChecks.database,
+        'app.health.response_time_ms': responseTime,
+      });
+
+      // Return Prometheus metrics format if requested
+      if (format === 'prometheus') {
+        span.setStatus({ code: 1 }); // OK
+        return new Response(generatePrometheusMetrics(healthChecks, responseTime), {
+          headers: { 'Content-Type': 'text/plain; version=0.0.4' },
+          status: 200
+        });
       }
-    }, { 
-      status: healthChecks.overall ? 200 : 503 
-    });
 
-  } catch (error) {
-    console.error('Health check failed:', error);
-    
-    if (format === 'prometheus') {
-      return new Response(generateErrorMetrics(), {
-        headers: { 'Content-Type': 'text/plain; version=0.0.4' },
-        status: 500
+      // Return JSON format (default)
+      span.setStatus({ code: 1 }); // OK
+      // Prepare system info based on environment
+      const systemInfo = process.env.NODE_ENV === 'production' 
+        ? undefined  // Hide system details in production
+        : {
+            nodeVersion: process.version,
+            platform: process.platform,
+            arch: process.arch
+          };
+
+      const telemetryInfo = process.env.NODE_ENV === 'production'
+        ? { enabled: !!process.env.OTEL_ENABLED }  // Only show if enabled in production
+        : {
+            enabled: true,
+            endpoint: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://tempo:4318'
+          };
+
+      return NextResponse.json({
+        status: healthChecks.overall ? 'healthy' : 'unhealthy',
+        timestamp: new Date().toISOString(),
+        service: 'marketsage',
+        version: process.env.APP_VERSION || '1.0.0',
+        environment: process.env.NODE_ENV || 'development',
+        responseTime: `${responseTime}ms`,
+        checks: healthChecks,
+        uptime: process.uptime(),
+        memory: process.env.NODE_ENV === 'production' ? undefined : process.memoryUsage(),
+        system: systemInfo,
+        telemetry: telemetryInfo
+      }, { 
+        status: healthChecks.overall ? 200 : 503 
       });
-    }
 
-    return NextResponse.json({
-      status: 'error',
-      timestamp: new Date().toISOString(),
-      service: 'marketsage',
-      error: 'Health check failed'
-    }, { status: 500 });
-  }
+    } catch (error) {
+      console.error('Health check failed:', error);
+      
+      span.setStatus({ code: 2, message: String(error) }); // ERROR
+      span.setAttributes({
+        'error.message': String(error),
+        'app.health.status': 'error',
+      });
+      
+      const { searchParams } = new URL(request.url);
+      const format = searchParams.get('format');
+      
+      if (format === 'prometheus') {
+        return new Response(generateErrorMetrics(), {
+          headers: { 'Content-Type': 'text/plain; version=0.0.4' },
+          status: 500
+        });
+      }
+
+      return NextResponse.json({
+        status: 'error',
+        timestamp: new Date().toISOString(),
+        service: 'marketsage',
+        error: 'Health check failed',
+        telemetry: process.env.NODE_ENV === 'production'
+          ? { enabled: !!process.env.OTEL_ENABLED }
+          : {
+              enabled: true,
+              endpoint: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://tempo:4318'
+            }
+      }, { status: 500 });
+    } finally {
+      span.end();
+    }
+  });
 }
 
 async function performHealthChecks() {

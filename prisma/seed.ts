@@ -93,15 +93,15 @@ async function createContacts(createdById: string) {
   const now = new Date();
 
   for (const contact of sampleContacts) {
-    // Skip if no email or phone (need at least one)
-    if (!contact.email && !contact.phone) continue;
+    // Skip if no email (required field)
+    if (!contact.email) continue;
 
     try {
       await prisma.contact.create({
         data: {
           id: randomUUID(),
           email: contact.email,
-          phone: contact.phone,
+          phone: contact.phone || null,
           firstName: contact.firstName,
           lastName: contact.lastName,
           company: contact.company,

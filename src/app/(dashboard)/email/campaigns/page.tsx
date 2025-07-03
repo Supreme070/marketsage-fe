@@ -49,7 +49,6 @@ import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
-import { quantumEmailOptimizer } from '@/lib/ai/quantum-email-optimizer';
 
 // Define campaign type
 interface EmailCampaign {
@@ -79,11 +78,11 @@ interface EmailCampaign {
   statistics: {
     totalRecipients: number;
   };
-  quantumOptimization?: {
+  aiOptimization?: {
     subjectOptimization: number;
     contentOptimization: number;
     timingOptimization: number;
-    overallQuantumAdvantage: number;
+    overallAIAdvantage: number;
     predictedPerformance: {
       openRate: number;
       clickRate: number;
@@ -100,8 +99,6 @@ export default function EmailCampaignsPage() {
   const [campaigns, setCampaigns] = useState<EmailCampaign[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [quantumOptimizations, setQuantumOptimizations] = useState<Record<string, any>>({});
-  const [isOptimizing, setIsOptimizing] = useState<Record<string, boolean>>({});
 
   // Fetch campaigns from API
   useEffect(() => {
@@ -134,8 +131,6 @@ export default function EmailCampaignsPage() {
         setCampaigns(data);
         setError(null);
         
-        // Apply quantum optimizations to campaigns
-        await applyQuantumOptimizations(data);
       } catch (err) {
         console.error("Failed to fetch campaigns:", err);
         setError("Failed to load campaigns. Please try again later.");
@@ -152,7 +147,7 @@ export default function EmailCampaignsPage() {
     fetchCampaigns();
   }, [statusFilter, searchQuery, toast]);
 
-  // Apply quantum optimizations to campaigns
+  // Apply AI optimizations to campaigns
   const applyQuantumOptimizations = async (campaignList: EmailCampaign[]) => {
     const optimizations: Record<string, any> = {};
     
@@ -340,10 +335,10 @@ export default function EmailCampaignsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Cpu className="h-5 w-5 text-cyan-400" />
-              ⚡ Quantum Email Intelligence
+              ⚡ AI Email Intelligence
             </CardTitle>
             <CardDescription>
-              Advanced quantum optimizations improving campaign performance across African markets
+              Advanced AI optimizations improving campaign performance across African markets
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -363,7 +358,7 @@ export default function EmailCampaignsPage() {
                   <span className="font-medium text-green-300">Performance Boost</span>
                 </div>
                 <div className="text-2xl font-bold text-green-100">+{(avgQuantumAdvantage * 100).toFixed(1)}%</div>
-                <p className="text-xs text-green-200">Average quantum advantage</p>
+                <p className="text-xs text-green-200">Average AI advantage</p>
               </div>
               
               <div className="p-3 bg-purple-900/20 border border-purple-500/30 rounded-lg">
@@ -385,7 +380,7 @@ export default function EmailCampaignsPage() {
         <CardHeader className="pb-3">
           <CardTitle>All Campaigns</CardTitle>
           <CardDescription>
-            View and manage your email marketing campaigns with quantum-powered optimizations.
+            View and manage your email marketing campaigns with AI-powered optimizations.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -508,7 +503,7 @@ export default function EmailCampaignsPage() {
                           {quantumOptimizations[campaign.id] && (
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-xs text-cyan-400">
-                                +{(quantumOptimizations[campaign.id].subjectLineOptimization.quantumAdvantage * 100).toFixed(1)}% quantum boost
+                                +{(quantumOptimizations[campaign.id].subjectLineOptimization.quantumAdvantage * 100).toFixed(1)}% AI boost
                               </span>
                             </div>
                           )}

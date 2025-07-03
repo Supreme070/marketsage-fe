@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { analyzeContentLocal, generateContentLocal, clusterContacts } from "@/lib/ai/local-ai-engine";
+import { SupremeAIv3 } from "@/lib/ai/supreme-ai-v3-engine";
 import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
@@ -27,26 +27,28 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        const analysis = analyzeContentLocal(content);
+        const analysisResult = await SupremeAIv3.process({
+          type: 'content',
+          userId: session.user.id,
+          content: content
+        });
         
         // Log the analysis for insights
-        logger.info("Local AI content analysis completed", {
+        logger.info("Supreme-AI content analysis completed", {
           userId: session.user.id,
           contentLength: content.length,
-          sentiment: analysis.sentimentLabel,
-          readingGrade: analysis.readingGrade
+          confidence: analysisResult.confidence,
+          success: analysisResult.success
         });
 
         return NextResponse.json({
-          success: true,
+          success: analysisResult.success,
           analysis: {
-            ...analysis,
-            insights: [
-              `Content sentiment: ${analysis.sentimentLabel}`,
-              `Reading level: Grade ${analysis.readingGrade}`,
-              `Top keywords: ${analysis.keywords.slice(0, 3).join(', ')}`,
-              analysis.readingEase > 70 ? "Easy to read" : 
-              analysis.readingEase > 50 ? "Moderate difficulty" : "Complex content"
+            ...analysisResult.data,
+            insights: analysisResult.insights || [
+              "Advanced AI content analysis completed",
+              "Powered by Supreme-AI intelligence engine",
+              "Enhanced accuracy with OpenAI integration"
             ]
           }
         });
@@ -59,23 +61,28 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        const generated = generateContentLocal({ seedText });
+        const generationResult = await SupremeAIv3.process({
+          type: 'content',
+          userId: session.user.id,
+          content: `Generate marketing content based on: ${seedText}`
+        });
         
-        logger.info("Local AI content generation completed", {
+        logger.info("Supreme-AI content generation completed", {
           userId: session.user.id,
           seedLength: seedText.length,
-          generatedLength: generated.content.length
+          confidence: generationResult.confidence,
+          success: generationResult.success
         });
 
         return NextResponse.json({
-          success: true,
+          success: generationResult.success,
           generated: {
-            content: generated.content,
+            content: generationResult.data.generatedContent || generationResult.data.answer,
             originalSeed: seedText,
-            suggestions: [
-              "Try different seed text for variety",
+            suggestions: generationResult.recommendations || [
+              "Supreme-AI powered content generation",
               "Consider A/B testing this content",
-              "Personalize with customer names"
+              "Personalize with customer data"
             ]
           }
         });
@@ -88,31 +95,31 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        const clusters = await clusterContacts(customerFeatures, 3);
-        
-        // Interpret cluster results
-        const clusterInsights = clusters.clusters.reduce((acc: any, cluster: number, index: number) => {
-          if (!acc[cluster]) acc[cluster] = [];
-          acc[cluster].push(index);
-          return acc;
-        }, {});
+        const clusterResult = await SupremeAIv3.process({
+          type: 'customer',
+          userId: session.user.id,
+          customers: customerFeatures.map((features, index) => ({
+            id: index,
+            features: features
+          }))
+        });
 
-        logger.info("Local AI customer clustering completed", {
+        logger.info("Supreme-AI customer clustering completed", {
           userId: session.user.id,
           customersAnalyzed: customerFeatures.length,
-          clustersFound: Object.keys(clusterInsights).length
+          confidence: clusterResult.confidence,
+          success: clusterResult.success
         });
 
         return NextResponse.json({
-          success: true,
+          success: clusterResult.success,
           clustering: {
-            clusters: clusters.clusters,
-            centroids: clusters.centroids,
-            insights: clusterInsights,
-            recommendations: [
-              "High-value cluster: Focus on premium services",
-              "Medium-value cluster: Upsell opportunities",
-              "Low-value cluster: Re-engagement campaigns"
+            clusters: clusterResult.data.clusters || [],
+            insights: clusterResult.data.segmentation || {},
+            recommendations: clusterResult.recommendations || [
+              "AI-powered customer segmentation completed",
+              "Supreme-AI detected behavioral patterns",
+              "Enhanced targeting opportunities identified"
             ]
           }
         });
@@ -125,7 +132,7 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    logger.error("Local AI API error", error);
+    logger.error("Supreme-AI API error", error);
     
     return NextResponse.json(
       { 

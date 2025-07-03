@@ -50,14 +50,19 @@ export function createErrorResponse(
   details?: any,
   path?: string
 ): NextResponse<ErrorResponse> {
+  // Sanitize details for production to prevent information disclosure
+  const sanitizedDetails = process.env.NODE_ENV === 'production' 
+    ? undefined  // Remove all details in production
+    : details;
+
   // Create the error response object
   const errorResponse: ErrorResponse = {
     error: type,
     code: type,
     message,
-    details,
+    details: sanitizedDetails,
     timestamp: new Date().toISOString(),
-    path,
+    path: process.env.NODE_ENV === 'production' ? undefined : path,  // Hide paths in production
   };
 
   // Log the error using the centralized logger
@@ -72,7 +77,7 @@ export function createErrorResponse(
 }
 
 /**
- * Format Prisma errors to be more user-friendly
+ * Format Prisma errors to be more user-friendly and secure
  */
 export function formatPrismaError(error: any): { type: ErrorType; message: string; details?: any } {
   // Check if it's a Prisma error
@@ -80,7 +85,7 @@ export function formatPrismaError(error: any): { type: ErrorType; message: strin
     return {
       type: ErrorType.SERVER_ERROR,
       message: "An unexpected error occurred",
-      details: error.message,
+      details: process.env.NODE_ENV === 'production' ? undefined : error.message,
     };
   }
 
@@ -89,32 +94,40 @@ export function formatPrismaError(error: any): { type: ErrorType; message: strin
       return {
         type: ErrorType.CONFLICT,
         message: "A record with this information already exists",
-        details: `Unique constraint failed on: ${error.meta?.target || "unknown field"}`,
+        details: process.env.NODE_ENV === 'production' 
+          ? undefined 
+          : `Unique constraint failed on: ${error.meta?.target || "unknown field"}`,
       };
     case "P2003": // Foreign key constraint failed
       return {
         type: ErrorType.VALIDATION_ERROR,
         message: "Invalid reference to a related record",
-        details: error.meta?.field_name || error.message,
+        details: process.env.NODE_ENV === 'production' 
+          ? undefined 
+          : (error.meta?.field_name || error.message),
       };
     case "P2025": // Record not found
       return {
         type: ErrorType.NOT_FOUND,
         message: "The requested record does not exist",
-        details: error.meta?.cause || error.message,
+        details: process.env.NODE_ENV === 'production' 
+          ? undefined 
+          : (error.meta?.cause || error.message),
       };
     case "P2021": // Table does not exist
     case "P2022": // Column does not exist
       return {
         type: ErrorType.DATABASE_ERROR,
-        message: "Database schema is outdated",
-        details: error.message,
+        message: process.env.NODE_ENV === 'production' 
+          ? "A database error occurred" 
+          : "Database schema is outdated",
+        details: process.env.NODE_ENV === 'production' ? undefined : error.message,
       };
     default:
       return {
         type: ErrorType.DATABASE_ERROR,
         message: "A database error occurred",
-        details: error.message,
+        details: process.env.NODE_ENV === 'production' ? undefined : error.message,
       };
   }
 }
@@ -131,10 +144,19 @@ export function handleApiError(error: any, path?: string): NextResponse {
 
   // For other known error types
   if (error instanceof Error) {
+    // In production, use generic message and no stack trace
+    const message = process.env.NODE_ENV === 'production' 
+      ? "An internal server error occurred"
+      : error.message || "An unexpected error occurred";
+    
+    const details = process.env.NODE_ENV === 'production' 
+      ? undefined  // Never expose stack traces in production
+      : error.stack;
+
     return createErrorResponse(
       ErrorType.SERVER_ERROR,
-      error.message || "An unexpected error occurred",
-      error.stack,
+      message,
+      details,
       path
     );
   }

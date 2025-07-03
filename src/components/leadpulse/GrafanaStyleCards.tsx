@@ -40,7 +40,7 @@ export default function GrafanaStyleCards({
   }, [timeRange]);
 
   // Generate mock time series data based on simulation
-  const generateTimeSeriesData = (points: number = 24) => {
+  const generateTimeSeriesData = (points = 24) => {
     const data = [];
     const baseValue = simulationData?.activeVisitors || 50;
     

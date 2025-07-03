@@ -1,499 +1,361 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import type React from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Textarea } from '@/components/ui/textarea';
 import { 
-  Brain, MessageSquare, RefreshCw, Send, Sparkles, Zap, ArrowLeft, RotateCcw, Plus, 
-  TrendingUp, Target, Globe, Cpu
+  Brain, Send, ArrowLeft, RotateCcw, Plus, Copy, ThumbsUp, ThumbsDown,
+  Sparkles, Zap, MessageSquare, Bot, User, Loader2, Settings
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSupremeAI } from '@/hooks/useSupremeAI';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 export default function AIChatPage() {
   const [chatInput, setChatInput] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Supreme-AI Chat Hook
   const aiChat = useSupremeAI();
 
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [aiChat.messages]);
+
   const handleSendMessage = async () => {
-    if (!chatInput.trim()) return;
+    if (!chatInput.trim() || aiChat.isLoading) return;
     
     try {
       await aiChat.sendMessage(chatInput);
       setChatInput('');
+      // Reset textarea height
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
     } catch (error) {
       toast.error('Failed to send message to Supreme-AI');
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  const adjustTextareaHeight = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Copied to clipboard');
+  };
+
+  const quickPrompts = [
+    "Analyze customer behavior for the past month",
+    "Create a retention campaign for high-value customers",
+    "Assign task to sales team for follow-up",
+    "Generate insights on email campaign performance"
+  ];
+
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="border-b bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/ai-intelligence">
-            <Button variant="ghost" size="sm">
+          <Link href="/intelligence">
+            <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Intelligence
+              Intelligence
             </Button>
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-white mb-2">Supreme-AI Assistant</h1>
-            <p className="text-gray-400">Advanced AI assistant for African fintech automation and task execution</p>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+              <Brain className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <h1 className="font-semibold text-slate-900 dark:text-white">Supreme-AI</h1>
+              <p className="text-xs text-slate-500">Fintech automation assistant</p>
+            </div>
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-purple-400 border-purple-400 bg-purple-900/20">
-            🤖 AI Assistant
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></div>
+            Online
           </Badge>
-          <Badge variant="outline" className="text-green-400 border-green-400 bg-green-900/20">
-            Task Execution Enabled
-          </Badge>
-          {aiChat.getQuantumAdvantageScore() > 0 && (
-            <Badge variant="outline" className="text-cyan-400 border-cyan-400 bg-cyan-900/20">
-              ⚡ Quantum: +{(aiChat.getQuantumAdvantageScore() * 100).toFixed(1)}%
-            </Badge>
-          )}
-          {aiChat.currentSessionId && (
-            <Badge variant="outline" className="text-blue-400 border-blue-400 bg-blue-900/20">
-              Session: {aiChat.currentSessionId.slice(-8)}
-            </Badge>
-          )}
+          <Button variant="ghost" size="sm">
+            <Settings className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
-      {/* Supreme-AI Chat Interface */}
-      <Card className="flex flex-col" style={{ height: 'calc(100vh - 220px)' }}>
-        <CardHeader className="flex-shrink-0">
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Brain className="h-5 w-5 text-purple-400" />
-              🤖 Supreme-AI Assistant
-              <Badge variant="secondary" className="ml-2 bg-purple-900/30 text-purple-300 border-purple-700">
-                Professional
-              </Badge>
-              {aiChat.isLoadingHistory && (
-                <Badge variant="outline" className="text-orange-400 border-orange-400 bg-orange-900/20">
-                  <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-                  Loading History
-                </Badge>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {aiChat.messages.length > 0 && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={aiChat.startNewSession}
-                  className="text-xs"
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  New Session
-                </Button>
-              )}
-            </div>
-          </CardTitle>
-          <CardDescription>
-            Advanced AI assistant for workflow creation, campaign building, and automated task execution
-          </CardDescription>
-        </CardHeader>
-        
-        <CardContent className="flex-1 flex flex-col min-h-0">
-          {/* Chat Messages */}
-          <div className="flex-1 overflow-y-auto space-y-4 mb-4 p-4 border rounded-lg bg-muted/20 min-h-0">
-            {aiChat.isLoadingHistory ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <RefreshCw className="h-8 w-8 mx-auto mb-4 animate-spin text-purple-400" />
-                  <p className="text-sm text-muted-foreground">Loading your conversation history...</p>
+      {/* Chat Container */}
+      <div className="flex-1 flex">
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col">
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto px-6 py-6">
+            {aiChat.messages.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center max-w-2xl mx-auto">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center mb-6">
+                  <Sparkles className="h-8 w-8 text-white" />
                 </div>
-              </div>
-            ) : aiChat.messages.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">
-                <Brain className="h-16 w-16 mx-auto mb-4 opacity-60 text-purple-400" />
-                <h3 className="text-xl font-medium mb-3 text-purple-300">🤖 MarketSage AI Ready</h3>
-                <p className="text-lg mb-4">Professional fintech automation assistant ready to execute your business tasks.</p>
+                <h2 className="text-2xl font-semibold text-slate-900 dark:text-white mb-3">
+                  Welcome to Supreme-AI
+                </h2>
+                <p className="text-slate-600 dark:text-slate-300 mb-8 leading-relaxed">
+                  Your intelligent assistant for African fintech automation. I can help you create campaigns, 
+                  analyze customer data, assign tasks, and optimize your business operations.
+                </p>
                 
-                <div className="text-left max-w-2xl mx-auto space-y-3 text-sm">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-3 border rounded-lg bg-purple-900/20">
-                      <h4 className="font-semibold text-purple-300 mb-2">⚡ Workflow Manifestation</h4>
-                      <p>"Create Nigerian onboarding workflow with BVN verification"</p>
-                    </div>
-                    
-                    <div className="p-3 border rounded-lg bg-blue-900/20">
-                      <h4 className="font-semibold text-blue-300 mb-2">📱 Campaign Creation</h4>
-                      <p>"Build WhatsApp campaign for Kenyan diaspora"</p>
-                    </div>
-                    
-                    <div className="p-3 border rounded-lg bg-green-900/20">
-                      <h4 className="font-semibold text-green-300 mb-2">👥 Team Delegation</h4>
-                      <p>"Assign campaign review to marketing team"</p>
-                    </div>
-                    
-                    <div className="p-3 border rounded-lg bg-orange-900/20">
-                      <h4 className="font-semibold text-orange-300 mb-2">🌍 Cross-Border Automation</h4>
-                      <p>"Setup Ghana to UK remittance automation"</p>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-6 p-4 border-2 border-purple-500/30 rounded-lg bg-purple-900/10">
-                    <h4 className="font-semibold text-purple-300 mb-2">🌍 African Market Expertise:</h4>
-                    <ul className="text-xs space-y-1">
-                      <li>🇳🇬 Nigeria: CBN compliance, BVN integration, regulatory frameworks</li>
-                      <li>🇰🇪 Kenya: M-Pesa integration, Safaricom ecosystem, mobile money</li>
-                      <li>🇿🇦 South Africa: Banking regulation compliance, payment systems</li>
-                      <li>🇬🇭 Ghana: Mobile money platforms, GhIPSS integration</li>
-                    </ul>
-                  </div>
+                {/* Quick Prompts */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl">
+                  {quickPrompts.map((prompt, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setChatInput(prompt)}
+                      className="p-4 text-left bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200 group"
+                    >
+                      <div className="text-sm font-medium text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                        {prompt}
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </div>
             ) : (
-              <div className="space-y-4">
-                {aiChat.messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${
-                      message.role === "user" ? "justify-end" : "justify-start"
-                    }`}
-                  >
-                    <div
-                      className={`max-w-[85%] rounded-lg p-4 ${
-                        message.role === "user"
-                          ? "bg-blue-600 text-white"
-                          : "bg-card border border-purple-200/20"
-                      }`}
-                    >
-                      {message.role === "assistant" && (
-                        <div className="flex items-center gap-2 mb-3">
-                          <Brain className="h-5 w-5 text-purple-400" />
-                          <span className="text-sm font-medium text-purple-400">🤖 MarketSage AI</span>
-                          <Badge variant="outline" className="text-xs">
-                            Assistant
-                          </Badge>
-                        </div>
-                      )}
-                      <div className="text-sm whitespace-pre-wrap leading-relaxed">
+              <div className="max-w-4xl mx-auto space-y-6">
+                {aiChat.messages.map((message, index) => (
+                  <div key={index} className={cn(
+                    "flex gap-4",
+                    message.role === 'user' ? 'justify-end' : 'justify-start'
+                  )}>
+                    {message.role === 'assistant' && (
+                      <Avatar className="w-8 h-8 border">
+                        <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs">
+                          <Bot className="h-4 w-4" />
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+                    
+                    <div className={cn(
+                      "max-w-[70%] rounded-2xl px-4 py-3 relative group",
+                      message.role === 'user' 
+                        ? 'bg-blue-600 text-white ml-12' 
+                        : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700'
+                    )}>
+                      <div className="text-sm leading-relaxed whitespace-pre-wrap">
                         {message.content}
                       </div>
-                      {message.quantumOptimization && (
-                        <div className="mt-3 p-2 bg-cyan-900/20 border border-cyan-500/30 rounded text-xs">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Cpu className="h-3 w-3 text-cyan-400" />
-                            <span className="font-medium text-cyan-300">⚡ Quantum Enhancement</span>
-                            <Badge variant="outline" className="text-xs text-cyan-400 border-cyan-400">
-                              +{(message.quantumOptimization.quantumAdvantage * 100).toFixed(1)}%
-                            </Badge>
-                          </div>
-                          {message.quantumOptimization.culturalAdaptations.length > 0 && (
-                            <div className="mb-1">
-                              <span className="text-cyan-300">🌍 Cultural Adaptations:</span> 
-                              <span className="text-cyan-100 ml-1">
-                                {message.quantumOptimization.culturalAdaptations.slice(0, 2).join(', ')}
-                                {message.quantumOptimization.culturalAdaptations.length > 2 && '...'}
-                              </span>
-                            </div>
-                          )}
-                          {message.quantumOptimization.recommendations.length > 0 && (
-                            <div>
-                              <span className="text-cyan-300">🎯 Recommendations:</span> 
-                              <span className="text-cyan-100 ml-1">
-                                {message.quantumOptimization.recommendations.length} available
-                              </span>
-                            </div>
-                          )}
+                      
+                      {message.role === 'assistant' && (
+                        <div className="flex items-center gap-2 mt-3 pt-2 border-t border-slate-100 dark:border-slate-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-7 px-2 text-slate-500 hover:text-slate-700"
+                            onClick={() => copyToClipboard(message.content)}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-7 px-2 text-slate-500 hover:text-green-600"
+                          >
+                            <ThumbsUp className="h-3 w-3" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-7 px-2 text-slate-500 hover:text-red-600"
+                          >
+                            <ThumbsDown className="h-3 w-3" />
+                          </Button>
                         </div>
                       )}
-                      <div className="text-xs opacity-70 mt-3 flex items-center gap-2">
-                        <span>{message.timestamp.toLocaleTimeString()}</span>
-                        {message.role === "assistant" && (
-                          <Badge variant="outline" className="text-xs">
-                            <Sparkles className="h-3 w-3 mr-1" />
-                            Completed
-                          </Badge>
-                        )}
-                      </div>
                     </div>
+                    
+                    {message.role === 'user' && (
+                      <Avatar className="w-8 h-8 border">
+                        <AvatarFallback className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs">
+                          <User className="h-4 w-4" />
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
                   </div>
                 ))}
-              </div>
-            )}
-            
-            {aiChat.isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-card border border-purple-200/20 p-4 rounded-lg max-w-[85%]">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Brain className="h-5 w-5 text-purple-400 animate-pulse" />
-                    <span className="text-sm font-medium text-purple-400">🤖 Supreme-AI</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="animate-spin h-4 w-4 border-2 border-purple-400 border-t-transparent rounded-full"></div>
-                    <span className="text-sm text-muted-foreground">
-                      Processing your request and creating automation solution...
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Chat Input */}
-          <div className="border-t pt-4 flex-shrink-0">
-            <div className="flex gap-3">
-              <input
-                type="text"
-                placeholder="Ask Supreme-AI to create workflows, campaigns, segments, or automate tasks..."
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                className="flex-1 px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-background"
-                disabled={aiChat.isLoading}
-              />
-              <Button 
-                onClick={handleSendMessage}
-                disabled={aiChat.isLoading || !chatInput.trim()}
-                className="px-6 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-                size="lg"
-              >
-                {aiChat.isLoading ? (
-                  <RefreshCw className="h-5 w-5 animate-spin" />
-                ) : (
-                  <>
-                    <Send className="h-5 w-5 mr-2" />
-                    Send
-                  </>
-                )}
-              </Button>
-            </div>
-            
-            <div className="flex items-center justify-between mt-3">
-              <div className="flex items-center gap-2">
-                {aiChat.messages.length > 0 && (
-                  <>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={aiChat.clearMessages}
-                      className="text-xs"
-                    >
-                      <RotateCcw className="h-3 w-3 mr-1" />
-                      Clear Session
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={aiChat.startNewSession}
-                      className="text-xs"
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      New Session
-                    </Button>
-                  </>
-                )}
-                {aiChat.currentSessionId && (
-                  <span className="text-xs text-muted-foreground">
-                    Session: {aiChat.currentSessionId.slice(-8)}
-                  </span>
-                )}
-              </div>
-              
-              <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Zap className="h-3 w-3 text-green-400" />
-                  <span>Task Execution: Active</span>
-                </div>
-                {aiChat.getQuantumAdvantageScore() > 0 && (
-                  <div className="flex items-center gap-1">
-                    <Cpu className="h-3 w-3 text-cyan-400" />
-                    <span>Quantum: +{(aiChat.getQuantumAdvantageScore() * 100).toFixed(1)}%</span>
-                  </div>
-                )}
-                {aiChat.getCulturalAdaptations().length > 0 && (
-                  <div className="flex items-center gap-1">
-                    <Globe className="h-3 w-3 text-purple-400" />
-                    <span>{aiChat.getCulturalAdaptations().length} Adaptations</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {aiChat.error && (
-              <div className="mt-3 p-3 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-sm">
-                <div className="flex items-center gap-2">
-                  <Brain className="h-4 w-4" />
-                  <span className="font-medium">MarketSage AI - System Issue:</span>
-                </div>
-                <p className="mt-1">{aiChat.error}</p>
-                <p className="text-xs mt-2 opacity-70">Technical support is continuously monitoring system performance for optimal service delivery.</p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Quantum Insights Panel */}
-      {(aiChat.getPersonalizedRecommendations().length > 0 || aiChat.getQuantumAdvantageScore() > 0) && (
-        <Card className="bg-gradient-to-r from-cyan-950/50 to-purple-950/50 border-cyan-500/30">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Cpu className="h-5 w-5 text-cyan-400" />
-              ⚡ Quantum Intelligence Insights
-              <Badge variant="outline" className="text-cyan-400 border-cyan-400 bg-cyan-900/30">
-                Enhanced AI
-              </Badge>
-            </CardTitle>
-            <CardDescription>
-              Advanced quantum-powered recommendations and cultural adaptations for optimal results
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* Quantum Performance */}
-              {aiChat.getQuantumAdvantageScore() > 0 && (
-                <div className="p-3 bg-cyan-900/20 border border-cyan-500/30 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="h-4 w-4 text-cyan-400" />
-                    <span className="font-medium text-cyan-300">Performance Boost</span>
-                  </div>
-                  <div className="text-2xl font-bold text-cyan-100 mb-1">
-                    +{(aiChat.getQuantumAdvantageScore() * 100).toFixed(1)}%
-                  </div>
-                  <p className="text-xs text-cyan-200">
-                    Quantum optimization improving response quality and cultural relevance
-                  </p>
-                </div>
-              )}
-              
-              {/* Cultural Adaptations */}
-              {aiChat.getCulturalAdaptations().length > 0 && (
-                <div className="p-3 bg-purple-900/20 border border-purple-500/30 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Globe className="h-4 w-4 text-purple-400" />
-                    <span className="font-medium text-purple-300">Cultural Intelligence</span>
-                  </div>
-                  <div className="text-2xl font-bold text-purple-100 mb-1">
-                    {aiChat.getCulturalAdaptations().length}
-                  </div>
-                  <p className="text-xs text-purple-200">
-                    Active cultural adaptations: {aiChat.getCulturalAdaptations().slice(0, 2).join(', ')}
-                    {aiChat.getCulturalAdaptations().length > 2 && '...'}
-                  </p>
-                </div>
-              )}
-              
-              {/* Personalized Recommendations */}
-              {aiChat.getPersonalizedRecommendations().length > 0 && (
-                <div className="p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Target className="h-4 w-4 text-green-400" />
-                    <span className="font-medium text-green-300">Smart Recommendations</span>
-                  </div>
-                  <div className="text-2xl font-bold text-green-100 mb-1">
-                    {aiChat.getPersonalizedRecommendations().length}
-                  </div>
-                  <p className="text-xs text-green-200">
-                    High-priority actionable insights available for implementation
-                  </p>
-                </div>
-              )}
-            </div>
-            
-            {/* Recommendations List */}
-            {aiChat.getPersonalizedRecommendations().length > 0 && (
-              <div className="mt-4">
-                <h4 className="font-medium text-cyan-300 mb-3 flex items-center gap-2">
-                  <Target className="h-4 w-4" />
-                  🎯 Priority Recommendations
-                </h4>
-                <div className="space-y-2">
-                  {aiChat.getPersonalizedRecommendations().slice(0, 3).map((rec, index) => (
-                    <div key={index} className="p-2 bg-slate-900/50 border border-slate-700/50 rounded text-sm">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-medium text-slate-200">{rec.title}</span>
-                        <Badge variant="outline" className={
-                          rec.priority === 'critical' 
-                            ? 'text-red-400 border-red-400' 
-                            : rec.priority === 'high'
-                            ? 'text-orange-400 border-orange-400'
-                            : 'text-blue-400 border-blue-400'
-                        }>
-                          {rec.priority}
-                        </Badge>
+                
+                {aiChat.isLoading && (
+                  <div className="flex gap-4 justify-start">
+                    <Avatar className="w-8 h-8 border">
+                      <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs">
+                        <Bot className="h-4 w-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 max-w-[70%]">
+                      <div className="flex items-center gap-2 text-slate-500">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-sm">Supreme-AI is thinking...</span>
                       </div>
-                      <p className="text-xs text-slate-400">{rec.description}</p>
-                      {rec.estimatedImpact > 0 && (
-                        <div className="text-xs text-cyan-400 mt-1">
-                          Estimated Impact: {(rec.estimatedImpact * 100).toFixed(0)}%
-                        </div>
-                      )}
                     </div>
-                  ))}
-                  {aiChat.getPersonalizedRecommendations().length > 3 && (
-                    <p className="text-xs text-slate-400 text-center pt-2">
-                      +{aiChat.getPersonalizedRecommendations().length - 3} more recommendations available
-                    </p>
-                  )}
-                </div>
+                  </div>
+                )}
+                
+                <div ref={messagesEndRef} />
               </div>
             )}
-          </CardContent>
-        </Card>
-      )}
+          </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="cursor-pointer hover:bg-muted/20 transition-colors border-2 border-transparent hover:border-cyan-500/30" 
-              onClick={() => setChatInput("Create Nigerian fintech onboarding workflow with BVN verification")}>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl mb-2">🇳🇬</div>
-            <div className="font-medium text-sm">Nigeria Onboarding</div>
-            <div className="text-xs text-muted-foreground mt-1">BVN + CBN Compliance</div>
-            <Badge variant="outline" className="mt-2 text-cyan-400 border-cyan-400 bg-cyan-900/20 text-xs">
-              ⚡ Quantum Enhanced
-            </Badge>
-          </CardContent>
-        </Card>
-        
-        <Card className="cursor-pointer hover:bg-muted/20 transition-colors border-2 border-transparent hover:border-cyan-500/30"
-              onClick={() => setChatInput("Build WhatsApp marketing campaign for Kenyan diaspora in Canada")}>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl mb-2">🇰🇪</div>
-            <div className="font-medium text-sm">Kenya WhatsApp</div>
-            <div className="text-xs text-muted-foreground mt-1">M-Pesa Integration</div>
-            <Badge variant="outline" className="mt-2 text-cyan-400 border-cyan-400 bg-cyan-900/20 text-xs">
-              ⚡ Cultural AI
-            </Badge>
-          </CardContent>
-        </Card>
-        
-        <Card className="cursor-pointer hover:bg-muted/20 transition-colors border-2 border-transparent hover:border-cyan-500/30"
-              onClick={() => setChatInput("Create cross-border remittance automation from Ghana to UK")}>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl mb-2">🌍</div>
-            <div className="font-medium text-sm">Cross-Border</div>
-            <div className="text-xs text-muted-foreground mt-1">Ghana → UK Flow</div>
-            <Badge variant="outline" className="mt-2 text-cyan-400 border-cyan-400 bg-cyan-900/20 text-xs">
-              ⚡ Optimized
-            </Badge>
-          </CardContent>
-        </Card>
-        
-        <Card className="cursor-pointer hover:bg-muted/20 transition-colors border-2 border-transparent hover:border-cyan-500/30"
-              onClick={() => setChatInput("Assign urgent campaign optimization task to marketing team lead")}>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl mb-2">👥</div>
-            <div className="font-medium text-sm">Team Delegation</div>
-            <div className="text-xs text-muted-foreground mt-1">Task Assignment</div>
-            <Badge variant="outline" className="mt-2 text-cyan-400 border-cyan-400 bg-cyan-900/20 text-xs">
-              ⚡ Smart Tasks
-            </Badge>
-          </CardContent>
-        </Card>
+          {/* Input Area */}
+          <div className="border-t bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm px-6 py-4">
+            <div className="max-w-4xl mx-auto">
+              <div className="relative">
+                <Textarea
+                  ref={textareaRef}
+                  value={chatInput}
+                  onChange={(e) => {
+                    setChatInput(e.target.value);
+                    adjustTextareaHeight();
+                  }}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Message Supreme-AI..."
+                  className="min-h-[52px] max-h-[200px] resize-none border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl pr-12 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled={aiChat.isLoading}
+                />
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={!chatInput.trim() || aiChat.isLoading}
+                  size="sm"
+                  className="absolute right-2 bottom-2 w-8 h-8 p-0 bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {aiChat.isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              
+              <div className="flex items-center justify-between mt-3 text-xs text-slate-500">
+                <span>Supreme-AI can make mistakes. Verify important information.</span>
+                <div className="flex items-center gap-4">
+                  <Button variant="ghost" size="sm" className="h-6 text-xs">
+                    <Plus className="h-3 w-3 mr-1" />
+                    New Chat
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-6 text-xs"
+                    onClick={aiChat.clearMessages}
+                  >
+                    <RotateCcw className="h-3 w-3 mr-1" />
+                    Clear
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Sidebar */}
+        <div className="w-80 border-l bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm p-6 hidden xl:block">
+          <div className="space-y-6">
+            {/* AI Capabilities */}
+            <div>
+              <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Capabilities</h3>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                  <Zap className="h-4 w-4 text-blue-500" />
+                  Task automation & execution
+                </div>
+                <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                  <Brain className="h-4 w-4 text-purple-500" />
+                  Customer behavior analysis
+                </div>
+                <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                  <MessageSquare className="h-4 w-4 text-green-500" />
+                  Campaign creation & optimization
+                </div>
+              </div>
+            </div>
+
+            {/* Model Info */}
+            <div>
+              <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Model Info</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600 dark:text-slate-300">Version</span>
+                  <Badge variant="outline" className="text-xs">Supreme-AI v3</Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600 dark:text-slate-300">Status</span>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-xs text-green-600">Active</span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600 dark:text-slate-300">Response Time</span>
+                  <span className="text-xs text-slate-500">~2.1s avg</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div>
+              <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Quick Actions</h3>
+              <div className="space-y-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start text-sm h-9"
+                  onClick={() => setChatInput("Analyze top performing customers this month")}
+                >
+                  <Brain className="h-4 w-4 mr-2" />
+                  Analyze Customers
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start text-sm h-9"
+                  onClick={() => setChatInput("Create a WhatsApp campaign for new product launch")}
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Create Campaign
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start text-sm h-9"
+                  onClick={() => setChatInput("Assign follow-up tasks to sales team")}
+                >
+                  <Zap className="h-4 w-4 mr-2" />
+                  Assign Tasks
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
-} 
+}

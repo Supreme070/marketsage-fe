@@ -2,6 +2,7 @@ import type { NextAuthOptions, DefaultSession } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcrypt';
 import prisma from '@/lib/db/prisma';
+import { authRateLimiter } from '@/lib/security/auth-rate-limiter';
 
 // Extend NextAuth types for our custom fields
 declare module 'next-auth' {
@@ -43,10 +44,22 @@ export const authOptions: NextAuthOptions = {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         // Validate credentials are provided
         if (!credentials?.email || !credentials?.password) {
           console.warn('Authentication failed: Missing credentials');
+          return null;
+        }
+
+        // Check authentication rate limiting
+        const clientIP = req?.headers?.['x-forwarded-for'] || 
+                        req?.headers?.['x-real-ip'] || 
+                        'unknown';
+        const identifier = `${clientIP}:${credentials.email}`;
+        const rateLimitResult = authRateLimiter.check(identifier, '/api/auth/signin');
+        
+        if (!rateLimitResult.allowed) {
+          console.warn(`Authentication rate limited for ${credentials.email} from ${clientIP}`);
           return null;
         }
 
@@ -83,9 +96,14 @@ export const authOptions: NextAuthOptions = {
           // Verify password
           const passwordMatch = await bcrypt.compare(credentials.password, user.password);
           if (!passwordMatch) {
+            // Record failed attempt for rate limiting
+            authRateLimiter.recordFailedAttempt(identifier, '/api/auth/signin');
             console.warn('Authentication failed: Invalid password', { email: credentials.email });
             return null;
           }
+
+          // Record successful attempt (clears rate limit)
+          authRateLimiter.recordSuccessfulAttempt(identifier, '/api/auth/signin');
 
           // Return user with tenant context (handle migration case)
           return {
@@ -100,18 +118,8 @@ export const authOptions: NextAuthOptions = {
         } catch (error) {
           console.error('Authentication error:', error);
           
-          // Fallback to development mode if database unavailable
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('Database unavailable, using development fallback authentication');
-            return {
-              id: 'dev-user-1',
-              name: 'Development User',
-              email: credentials.email,
-              role: 'SUPER_ADMIN',
-              organizationId: 'dev-org-1',
-              organizationName: 'Development Organization',
-            };
-          }
+          // SECURITY: No fallbacks allowed in any environment
+          // All authentication must go through proper database validation
           
           return null;
         }

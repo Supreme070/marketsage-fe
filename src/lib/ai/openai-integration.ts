@@ -1380,8 +1380,7 @@ What would you like to tackle first?`
   }
 }
 
-// Import LocalAI integration
-import { LocalAIIntegration } from './localai-integration';
+// LocalAI integration removed - using OpenAI only
 
 // Export the appropriate AI instance based on configuration
 export const getAIInstance = () => {
@@ -1411,10 +1410,6 @@ export const getAIInstance = () => {
   const aiProvider = process.env.AI_PROVIDER?.toLowerCase() || 'auto';
   
   switch (aiProvider) {
-    case 'localai':
-      console.log('🏠 Using LocalAI for AI processing');
-      return new LocalAIIntegration();
-    
     case 'openai':
       if (process.env.OPENAI_API_KEY) {
         console.log('🌐 Using OpenAI for AI processing');
@@ -1428,14 +1423,10 @@ export const getAIInstance = () => {
       console.log('🔧 Using Fallback AI for AI processing');
       return new FallbackAI();
     
-    default: // 'auto' - intelligent selection
-      // Priority: OpenAI -> LocalAI -> Fallback (OpenAI first for better performance)
+    default: // 'auto' - intelligent selection (OpenAI first, then fallback)
       if (process.env.OPENAI_API_KEY) {
         console.log('🌐 Auto-selected OpenAI for AI processing');
         return new OpenAIIntegration();
-      } else if (process.env.LOCALAI_API_BASE_URL || process.env.ENABLE_LOCALAI === 'true') {
-        console.log('🏠 Auto-selected LocalAI for AI processing');
-        return new LocalAIIntegration();
       } else {
         console.log('🔧 Auto-selected Fallback AI for AI processing');
         return new FallbackAI();

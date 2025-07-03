@@ -2,6 +2,8 @@
 const nextConfig = {
   output: 'standalone',
   
+  // OpenTelemetry instrumentation is now enabled by default via instrumentation.ts
+  
   // Updated to use the correct serverExternalPackages instead of experimental
   serverExternalPackages: [
     '@prisma/client',

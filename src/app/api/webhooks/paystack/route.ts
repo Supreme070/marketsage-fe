@@ -3,7 +3,11 @@ import { headers } from "next/headers";
 import crypto from "crypto";
 import prisma from "@/lib/db/prisma";
 
-const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || 'sk_test_6163652dff5c670d55907f429ea732ef22a98cf9';
+const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
+
+if (!PAYSTACK_SECRET) {
+  throw new Error('PAYSTACK_SECRET_KEY environment variable is required');
+}
 
 // Verify Paystack webhook signature
 const verifySignature = (payload: string, signature: string) => {

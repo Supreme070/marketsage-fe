@@ -127,10 +127,10 @@ export default function LocalAIWidget() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Brain className="h-5 w-5 text-blue-600" />
-          Local AI Assistant
+          Supreme-AI Assistant
         </CardTitle>
         <CardDescription>
-          Analyze content and generate marketing copy without external APIs
+          Analyze content and generate marketing copy with advanced AI intelligence
         </CardDescription>
       </CardHeader>
       <CardContent>

@@ -48,7 +48,23 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSMSCampaigns } from "@/lib/api";
 import toast from "react-hot-toast";
-import { quantumSMSOptimizer } from '@/lib/ai/quantum-sms-optimizer';
+// Quantum SMS optimizer replaced with mock implementation
+const quantumSMSOptimizer = {
+  optimizeSMSCampaign: async (campaign: any) => {
+    // Mock implementation
+    return {
+      messageOptimization: {
+        quantumAdvantage: 0.15,
+        optimizedMessage: campaign.message
+      },
+      performancePrediction: {
+        estimatedDeliveryRate: 0.95,
+        estimatedResponseRate: 0.12,
+        estimatedCostPerMessage: 0.05
+      }
+    };
+  }
+};
 
 // Define interface for SMS Campaign
 interface SMSCampaign {

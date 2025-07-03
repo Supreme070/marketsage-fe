@@ -22,7 +22,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { techFlowEngine, type SimulationConfig, type SimulationMetrics, type SimulationEvent } from '@/lib/simulation/techflow-engine';
-import { quantumIntegration } from '@/lib/quantum';
+// Quantum integration replaced with mock implementation
+const quantumIntegration = {
+  isActive: () => false,
+  getStatus: () => ({ status: 'inactive' }),
+  getAdvantage: () => 0.15
+};
 
 interface TechFlowSimulationPanelProps {
   className?: string;

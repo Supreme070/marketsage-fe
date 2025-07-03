@@ -47,7 +47,24 @@ import Link from "next/link";
 import { getWhatsAppCampaigns, getWhatsAppTemplates } from "@/lib/api";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import { quantumWhatsAppOptimizer } from '@/lib/ai/quantum-whatsapp-optimizer';
+// Quantum WhatsApp optimizer replaced with mock implementation
+const quantumWhatsAppOptimizer = {
+  optimizeWhatsAppCampaign: async (campaign: any) => {
+    // Mock implementation
+    return {
+      templateOptimization: {
+        quantumAdvantage: 0.18,
+        businessMessagingCompliance: {
+          complianceScore: 0.9
+        }
+      },
+      performancePrediction: {
+        estimatedOpenRate: 0.78,
+        estimatedResponseRate: 0.35
+      }
+    };
+  }
+};
 
 export default function WhatsAppCampaignsPage() {
   const router = useRouter();

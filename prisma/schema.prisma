@@ -60,6 +60,11 @@ model Organization {
   smsProviders   SMSProvider[]
   whatsappConfigs WhatsAppBusinessConfig[]
   emailDomainConfigs EmailDomainConfig[]
+  
+  // AI Intelligence Relations
+  customerProfiles CustomerProfile[]
+  aiActionPlans    AIActionPlan[]
+  customerEvents   CustomerEvent[]
 }
 
 // User model for authentication and platform access
@@ -124,6 +129,10 @@ model User {
   securityEvents LeadPulseSecurityEvent[]
   auditLogs      LeadPulseAuditLog[]
   consents       LeadPulseConsent[] @relation("UserConsents")
+  
+  // AI Action Plan relations
+  approvedActions AIActionPlan[] @relation("AIActionApprover")
+  executedActions AIActionPlan[] @relation("AIActionExecutor")
 
   @@index([email])
 }
@@ -267,8 +276,153 @@ model Contact {
   // LeadPulse Form Builder relations
   formSubmissions LeadPulseFormSubmission[]
   leadPulseConsents LeadPulseConsent[]
+  
+  // AI and Analytics relations
+  customerProfile CustomerProfile?
+  customerEvents  CustomerEvent[]
 
   @@index([organizationId])
+}
+
+// Central Customer Profile - The Brain's Memory for AI Intelligence
+model CustomerProfile {
+  id                  String    @id @default(cuid())
+  contactId           String    @unique
+  organizationId      String
+  
+  // --- Core Transaction Metrics (Updated by batch jobs) ---
+  totalTransactions   Int       @default(0)
+  totalValue          Float     @default(0) // Total monetary value
+  firstTransactionDate DateTime?
+  lastTransactionDate  DateTime?
+  avgTimeBetweenTransactions Float? // in days
+  avgTransactionValue Float     @default(0)
+  
+  // --- Engagement Metrics (From LeadPulse & Activities) ---
+  engagementScore     Int       @default(0) // 0-100 composite score
+  lastSeenDate        DateTime?
+  totalPageViews      Int       @default(0)
+  totalEmailOpens     Int       @default(0)
+  totalEmailClicks    Int       @default(0)
+  totalSMSResponses   Int       @default(0)
+  mostVisitedPage     String?
+  preferredChannel    String?   // email, sms, whatsapp
+  optimalContactTime  String?   // JSON: {"day": "Tuesday", "hour": 14}
+  
+  // --- Behavioral Patterns ---
+  communicationFrequency String? // daily, weekly, monthly
+  purchasePattern     String?   // seasonal, regular, impulse
+  engagementTrend     String?   // increasing, stable, declining
+  
+  // --- AI/ML Predictions (Updated by Supreme-AI) ---
+  churnProbability    Float?    @default(0) // 0.0 to 1.0
+  churnRiskLevel      String?   // LOW, MEDIUM, HIGH, CRITICAL
+  predictedLtv        Float?    // Predicted Lifetime Value
+  customerSegment     String?   // VIP, At-Risk, New, Champion, Loyal
+  healthScore         Int?      @default(50) // 0-100 overall health
+  
+  // --- Next Best Actions (AI Decisions) ---
+  nextBestAction      Json?     // ActionPlan from Supreme-AI
+  lastActionDate      DateTime?
+  actionHistory       Json?     // Array of recent actions and outcomes
+  
+  // --- Birthday & Special Events ---
+  hasBirthday         Boolean   @default(false)
+  nextBirthdayAction  DateTime?
+  specialDates        Json?     // Anniversary, membership, etc.
+  
+  // --- Risk & Opportunity Flags ---
+  riskFactors         Json?     // Array of current risk indicators
+  opportunities       Json?     // Array of upsell/cross-sell opportunities
+  
+  // --- AI Learning Data ---
+  aiConfidence        Float?    @default(0.5) // AI confidence in predictions
+  modelVersion        String?   @default("1.0") // Track which model version
+  lastPredictionDate  DateTime?
+  
+  // --- Timestamps ---
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  lastCalculated      DateTime? // When metrics were last updated
+  
+  // Relations
+  contact             Contact      @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  organization        Organization @relation(fields: [organizationId], references: [id])
+  aiActions           AIActionPlan[]
+  events              CustomerEvent[]
+  
+  @@index([organizationId])
+  @@index([churnProbability])
+  @@index([healthScore])
+  @@index([customerSegment])
+  @@index([lastCalculated])
+}
+
+// AI Action Plans & Execution History
+model AIActionPlan {
+  id                  String    @id @default(cuid())
+  customerProfileId   String
+  organizationId      String
+  
+  // Action Details
+  actionType          String    // SEND_EMAIL, CREATE_TASK, APPLY_DISCOUNT, etc.
+  confidence          Float     // 0.0 to 1.0
+  reasoning           String    // Human-readable explanation
+  payload             Json      // Action-specific data
+  
+  // Execution Status
+  status              String    @default("PENDING") // PENDING, APPROVED, EXECUTED, FAILED
+  scheduledFor        DateTime?
+  executedAt          DateTime?
+  executedBy          String?   // user ID or "system"
+  
+  // Results & Learning
+  executionResult     Json?     // Outcome data
+  success             Boolean?
+  customerResponse    Json?     // How customer responded
+  impactMeasured      Json?     // Measured business impact
+  
+  // Governance
+  requiresApproval    Boolean   @default(false)
+  approvedBy          String?
+  approvedAt          DateTime?
+  riskLevel           String    @default("MEDIUM") // LOW, MEDIUM, HIGH
+  
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  
+  // Relations
+  customerProfile     CustomerProfile @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
+  organization        Organization    @relation(fields: [organizationId], references: [id])
+  approver            User?           @relation("AIActionApprover", fields: [approvedBy], references: [id])
+  executor            User?           @relation("AIActionExecutor", fields: [executedBy], references: [id])
+  
+  @@index([organizationId, status])
+  @@index([customerProfileId])
+  @@index([scheduledFor])
+}
+
+// Real-time Customer Events for Event Bus
+model CustomerEvent {
+  id                  String    @id @default(cuid())
+  contactId           String
+  customerProfileId   String?
+  organizationId      String
+  
+  eventType           String    // page_view, email_open, purchase, etc.
+  eventData           Json      // Event-specific payload
+  timestamp           DateTime  @default(now())
+  source              String    // leadpulse, email, sms, api, etc.
+  processed           Boolean   @default(false)
+  
+  // Relations
+  contact             Contact         @relation(fields: [contactId], references: [id])
+  customerProfile     CustomerProfile? @relation(fields: [customerProfileId], references: [id])
+  organization        Organization    @relation(fields: [organizationId], references: [id])
+  
+  @@index([organizationId, processed])
+  @@index([contactId])
+  @@index([timestamp])
 }
 
 model List {

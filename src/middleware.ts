@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server';
 import { handleApiError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { setTenantContext, clearTenantContext } from '@/lib/tenant/edge-tenant-context';
+import { applyCorsHeaders, handlePreflightRequest, validateCors } from '@/lib/security/cors-config';
 
 /**
  * Middleware for the MarketSage application
@@ -15,17 +16,63 @@ export async function middleware(request: NextRequest) {
   try {
     // Process API routes with consistent headers and tenant context
     if (request.nextUrl.pathname.startsWith('/api')) {
+      // Handle CORS preflight requests
+      if (request.method === 'OPTIONS') {
+        return handlePreflightRequest(request);
+      }
+
+      // Validate CORS for actual requests
+      const corsValidation = validateCors(request);
+      if (!corsValidation.isValid) {
+        return NextResponse.json(
+          { error: 'CORS policy violation', message: corsValidation.error },
+          { status: 403 }
+        );
+      }
+
       // Get token for tenant context
       const token = await getToken({
         req: request,
         secret: process.env.NEXTAUTH_SECRET,
       });
 
-      // Add security headers
+      // Add comprehensive security headers
       const response = NextResponse.next();
+      
+      // Prevent MIME type sniffing
       response.headers.set('X-Content-Type-Options', 'nosniff');
+      
+      // Enhanced XSS Protection
       response.headers.set('X-XSS-Protection', '1; mode=block');
+      
+      // Clickjacking protection
       response.headers.set('X-Frame-Options', 'DENY');
+      
+      // Referrer policy
+      response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+      
+      // Content Security Policy
+      const cspDirectives = [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com",
+        "img-src 'self' data: https: blob:",
+        "connect-src 'self' https://api.openai.com https://api.paystack.co",
+        "frame-src 'none'",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "form-action 'self'"
+      ].join('; ');
+      response.headers.set('Content-Security-Policy', cspDirectives);
+      
+      // HSTS (HTTP Strict Transport Security)
+      if (process.env.NODE_ENV === 'production') {
+        response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+      }
+      
+      // Permissions Policy (Feature Policy)
+      response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
       
       // Add tenant context to request headers and environment for database middleware
       if (token?.organizationId) {
@@ -54,7 +101,11 @@ export async function middleware(request: NextRequest) {
         tenantId: token?.organizationId || 'anonymous',
       });
       
-      return response;
+      // Apply CORS headers to the response
+      const origin = request.headers.get('Origin');
+      const corsResponse = applyCorsHeaders(response, origin || undefined);
+      
+      return corsResponse;
     }
 
     // For non-API routes, handle authentication and authorization

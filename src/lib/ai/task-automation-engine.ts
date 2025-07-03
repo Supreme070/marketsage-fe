@@ -105,6 +105,17 @@ export class AITaskAutomationEngine {
   }
 
   /**
+   * Create task with specific assignee hint
+   */
+  async createTaskWithAssignee(
+    suggestion: AITaskSuggestion, 
+    context: TaskContext, 
+    assigneeHint?: string
+  ): Promise<string | null> {
+    return await this.createAndExecuteTask(suggestion, context, assigneeHint);
+  }
+
+  /**
    * Automatically create and execute high-confidence tasks
    */
   async executeAutomaticTasks(context: TaskContext): Promise<string[]> {
@@ -377,16 +388,41 @@ export class AITaskAutomationEngine {
 
   private async createAndExecuteTask(
     suggestion: AITaskSuggestion, 
-    context: TaskContext
+    context: TaskContext,
+    assigneeHint?: string
   ): Promise<string | null> {
     try {
-      // Find appropriate assignee (Admin or IT_Admin for automated tasks)
-      const assignee = await prisma.user.findFirst({
-        where: {
-          role: { in: ['ADMIN', 'IT_ADMIN'] },
-          isActive: true
-        }
-      });
+      // Find appropriate assignee based on hint or default to sales team
+      let assignee;
+      
+      if (assigneeHint) {
+        assignee = await this.findUserByName(assigneeHint);
+      }
+      
+      if (!assignee) {
+        // Default to sales team members instead of admins
+        assignee = await prisma.user.findFirst({
+          where: {
+            role: { in: ['USER'] }, // Regular team members
+            isActive: true,
+            OR: [
+              { email: { contains: 'sales' } },
+              { name: { contains: 'Sales' } },
+              { role: 'USER' }
+            ]
+          }
+        });
+      }
+      
+      // Fallback to any active user if no sales team found
+      if (!assignee) {
+        assignee = await prisma.user.findFirst({
+          where: {
+            isActive: true,
+            role: { not: 'SUPER_ADMIN' } // Avoid super admin
+          }
+        });
+      }
 
       if (!assignee) {
         logger.warn('No suitable assignee found for automatic task');
@@ -411,12 +447,52 @@ export class AITaskAutomationEngine {
         await this.executeAutomatedTask(task.id, suggestion, context);
       }
 
-      logger.info('Created AI task', { taskId: task.id, suggestion: suggestion.title });
+      logger.info('Created AI task', { taskId: task.id, suggestion: suggestion.title, assignee: assignee.name });
       return task.id;
     } catch (error) {
       logger.error('Failed to create AI task', { error, suggestion });
       return null;
     }
+  }
+
+  /**
+   * Find user by name with fuzzy matching
+   */
+  private async findUserByName(nameHint: string): Promise<any> {
+    const normalizedHint = nameHint.toLowerCase().trim();
+    
+    // Try exact match first
+    let user = await prisma.user.findFirst({
+      where: {
+        isActive: true,
+        OR: [
+          { name: { contains: nameHint, mode: 'insensitive' } },
+          { email: { contains: nameHint, mode: 'insensitive' } }
+        ]
+      }
+    });
+    
+    if (user) return user;
+    
+    // Try fuzzy matching by parts
+    const nameParts = normalizedHint.split(' ');
+    for (const part of nameParts) {
+      if (part.length > 2) {
+        user = await prisma.user.findFirst({
+          where: {
+            isActive: true,
+            OR: [
+              { name: { contains: part, mode: 'insensitive' } },
+              { email: { contains: part, mode: 'insensitive' } }
+            ]
+          }
+        });
+        
+        if (user) return user;
+      }
+    }
+    
+    return null;
   }
 
   private async executeAutomatedTask(

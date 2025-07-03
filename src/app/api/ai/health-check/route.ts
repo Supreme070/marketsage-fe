@@ -78,12 +78,12 @@ export async function GET(request: NextRequest) {
     const monitoringStats = taskExecutionMonitor.getOverallMetrics();
     const healthStatus = taskExecutionMonitor.getHealthStatus();
 
-    // AI system configuration validation
+    // AI system configuration validation - OpenAI Only
     const aiSystemConfig = {
-      taskExecutionEnabled: !envConfig.useOpenAiOnly && envConfig.supremeAiMode === 'enabled',
+      taskExecutionEnabled: envConfig.openAiApiKey && envConfig.supremeAiMode === 'enabled',
       taskExecutionForRole: hasAdminPrivileges,
-      localAiEnabled: envConfig.supremeAiMode === 'enabled',
-      fallbackToOpenAi: envConfig.useOpenAiOnly || envConfig.supremeAiMode === 'disabled'
+      openAiEnabled: !!envConfig.openAiApiKey,
+      supremeAiEnabled: envConfig.supremeAiMode === 'enabled'
     };
 
     // Overall system health
@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
       },
       recommendations: [
         ...(!systemHealthy ? ['Fix database connectivity issues'] : []),
-        ...(!aiSystemConfig.taskExecutionEnabled ? ['Enable AI task execution by setting USE_OPENAI_ONLY=false and SUPREME_AI_MODE=enabled'] : []),
+        ...(!aiSystemConfig.taskExecutionEnabled ? ['Enable AI task execution by setting OPENAI_API_KEY and SUPREME_AI_MODE=enabled'] : []),
         ...(!hasAdminPrivileges && isAuthenticated ? ['Current user needs ADMIN, IT_ADMIN, or SUPER_ADMIN role for task execution'] : []),
         ...(!isAuthenticated ? ['User must be authenticated to use AI task execution'] : []),
         ...healthStatus.recommendations

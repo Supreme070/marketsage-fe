@@ -17,7 +17,11 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import ConversionSubSidebar from "@/components/dashboard/ConversionSubSidebar";
-import { quantumIntegration } from "@/lib/quantum";
+// AI integration mock implementation
+const aiIntegration = {
+  isActive: () => false,
+  getStatus: () => ({ status: 'inactive' })
+};
 import { masterSimulation, type MasterSimulationState } from "@/lib/simulation/master-simulation-controller";
 
 interface DashboardOverview {
@@ -98,7 +102,7 @@ export default function CommandCenterDashboard() {
         duration: 30, // 30 minutes
         intensity: 'medium',
         scenario: 'normal',
-        enableQuantum: true,
+        enableAI: true,
         realTimeUpdates: true
       });
       
@@ -151,7 +155,7 @@ export default function CommandCenterDashboard() {
         id: `ai_${Date.now()}`,
         type: 'ai',
         title: 'AI Processing',
-        description: `${state.ai.tasksProcessed} quantum tasks processed, ${(state.ai.quantumAdvantage * 100).toFixed(1)}% advantage`,
+        description: `${state.ai.tasksProcessed} AI tasks processed, ${(state.ai.successRate * 100).toFixed(1)}% success rate`,
         timestamp: new Date().toISOString(),
         href: '/ai-chat'
       });
@@ -372,16 +376,16 @@ export default function CommandCenterDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border bg-gradient-to-br from-purple-500/5 to-blue-500/5 border-purple-500/20">
+        <Card className="border bg-gradient-to-br from-blue-500/5 to-green-500/5 border-blue-500/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Quantum Enhancement
+              AI Enhancement
             </CardTitle>
-            <Atom className="h-4 w-4 text-purple-400" />
+            <Atom className="h-4 w-4 text-blue-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-400">
-              {(simulationState.dashboard.quantumAdvantage * 100).toFixed(1)}%
+            <div className="text-2xl font-bold text-blue-400">
+              {(simulationState.dashboard.aiAdvantage * 100).toFixed(1)}%
             </div>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <div className={`w-2 h-2 rounded-full ${
@@ -621,13 +625,13 @@ export default function CommandCenterDashboard() {
         </Link>
       </div>
 
-      {/* Quantum Intelligence Panel */}
+      {/* AI Intelligence Panel */}
       <Card className="border bg-gradient-to-br from-purple-500/5 to-blue-500/5 border-purple-500/20">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-medium flex items-center gap-2">
               <Atom className="h-5 w-5 text-purple-400" />
-              Quantum Intelligence
+              AI Intelligence
             </CardTitle>
             <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/20">
               {simulationState.isRunning ? 'AI Enhanced' : 'Ready'}
@@ -635,8 +639,8 @@ export default function CommandCenterDashboard() {
           </div>
           <CardDescription>
             {simulationState.isRunning 
-              ? 'Real-time quantum optimization across all MarketSage components'
-              : 'Quantum-enhanced AI, campaigns, and contact intelligence ready to activate'
+              ? 'Real-time AI optimization across all MarketSage components'
+              : 'AI-enhanced campaigns, contacts, and intelligence ready to activate'
             }
           </CardDescription>
         </CardHeader>
@@ -646,13 +650,13 @@ export default function CommandCenterDashboard() {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Campaign Optimization</span>
                 <span className="text-sm font-medium text-green-400">
-                  +{(simulationState.ai.quantumAdvantage * 100).toFixed(1)}%
+                  +{(simulationState.ai.aiAdvantage * 100).toFixed(1)}%
                 </span>
               </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full transition-all duration-500" 
-                  style={{ width: `${simulationState.ai.quantumAdvantage * 100}%` }}
+                  style={{ width: `${simulationState.ai.aiAdvantage * 100}%` }}
                 ></div>
               </div>
               <div className="text-xs text-muted-foreground">Email, SMS, WhatsApp enhanced</div>
@@ -662,13 +666,13 @@ export default function CommandCenterDashboard() {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Contact Intelligence</span>
                 <span className="text-sm font-medium text-blue-400">
-                  +{(Math.min(1, simulationState.ai.quantumAdvantage + 0.12) * 100).toFixed(1)}%
+                  +{(Math.min(1, simulationState.ai.aiAdvantage + 0.12) * 100).toFixed(1)}%
                 </span>
               </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-500" 
-                  style={{ width: `${Math.min(1, simulationState.ai.quantumAdvantage + 0.12) * 100}%` }}
+                  style={{ width: `${Math.min(1, simulationState.ai.aiAdvantage + 0.12) * 100}%` }}
                 ></div>
               </div>
               <div className="text-xs text-muted-foreground">Lead scoring & behavioral prediction</div>
@@ -691,12 +695,12 @@ export default function CommandCenterDashboard() {
             </div>
           </div>
 
-          {/* Quantum Performance Monitoring Cards */}
+          {/* AI Performance Monitoring Cards */}
           <div className="mt-6 grid gap-4 grid-cols-2">
             <div className="p-4 bg-purple-900/20 border border-purple-500/30 rounded-lg">
               <div className="flex items-center gap-2 mb-3">
                 <Cpu className="h-4 w-4 text-purple-400" />
-                <span className="font-medium text-purple-300">Quantum Processing</span>
+                <span className="font-medium text-purple-300">AI Processing</span>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
@@ -746,8 +750,8 @@ export default function CommandCenterDashboard() {
           
           <div className="mt-4 p-3 bg-gray-800/20 rounded-lg border border-gray-700/30">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-300">Overall Quantum Advantage</span>
-              <span className="font-medium text-emerald-400">+{(simulationState.ai.quantumAdvantage * 100).toFixed(1)}% performance boost</span>
+              <span className="text-gray-300">Overall AI Advantage</span>
+              <span className="font-medium text-emerald-400">+{(simulationState.ai.aiAdvantage * 100).toFixed(1)}% performance boost</span>
             </div>
             <div className="flex items-center justify-between text-sm mt-2">
               <span className="text-gray-300">Components Enhanced</span>

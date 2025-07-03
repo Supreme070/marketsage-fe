@@ -371,40 +371,62 @@ class IntelligentExecutionEngine {
    */
   private async createTask(taskData: TaskData, userId: string): Promise<ExecutionResult> {
     try {
-      // Find assignee
+      // Find assignee - avoid super admin as default
       let assigneeId = userId; // Default to creator
+      let assigneeFound = false;
       
       if (taskData.assignee) {
-        // Map common role descriptions to actual UserRole enum values
-        const roleMapping: Record<string, string> = {
-          'marketing team lead': 'ADMIN',
-          'marketing lead': 'ADMIN',
-          'team lead': 'ADMIN',
-          'admin': 'ADMIN',
-          'super admin': 'SUPER_ADMIN',
-          'it admin': 'IT_ADMIN',
-          'user': 'USER'
-        };
-        
-        const normalizedAssignee = taskData.assignee.toLowerCase();
-        const mappedRole = roleMapping[normalizedAssignee];
-        
-        const assignee = await prisma.user.findFirst({
+        // First try fuzzy name matching
+        const assignee = await this.findUserByName(taskData.assignee);
+        if (assignee) {
+          assigneeId = assignee.id;
+          assigneeFound = true;
+        } else {
+          // Map common role descriptions to actual UserRole enum values
+          const roleMapping: Record<string, string> = {
+            'sales team': 'USER',
+            'sales': 'USER', 
+            'marketing team': 'USER',
+            'marketing': 'USER',
+            'team': 'USER',
+            'marketing team lead': 'ADMIN',
+            'marketing lead': 'ADMIN',
+            'team lead': 'ADMIN',
+            'admin': 'ADMIN',
+            'it admin': 'IT_ADMIN'
+          };
+          
+          const normalizedAssignee = taskData.assignee.toLowerCase();
+          const mappedRole = roleMapping[normalizedAssignee];
+          
+          if (mappedRole) {
+            const roleAssignee = await prisma.user.findFirst({
+              where: {
+                role: mappedRole as any,
+                isActive: true,
+                NOT: { role: 'SUPER_ADMIN' } // Avoid super admin
+              }
+            });
+            
+            if (roleAssignee) {
+              assigneeId = roleAssignee.id;
+              assigneeFound = true;
+            }
+          }
+        }
+      }
+      
+      // If no specific assignee found, default to a regular team member instead of creator
+      if (!assigneeFound && !taskData.assignee) {
+        const teamMember = await prisma.user.findFirst({
           where: {
-            OR: [
-              { name: { contains: taskData.assignee, mode: 'insensitive' } },
-              { email: { contains: taskData.assignee, mode: 'insensitive' } },
-              // Also search by last name for partial matches like "okafor" -> "Ngozi Okafor"
-              { name: { endsWith: ` ${taskData.assignee}`, mode: 'insensitive' } },
-              { name: { startsWith: `${taskData.assignee} `, mode: 'insensitive' } },
-              ...(mappedRole ? [{ role: mappedRole as any }] : [])
-            ],
+            role: 'USER',
             isActive: true
           }
         });
         
-        if (assignee) {
-          assigneeId = assignee.id;
+        if (teamMember) {
+          assigneeId = teamMember.id;
         }
       }
 
@@ -453,8 +475,67 @@ class IntelligentExecutionEngine {
    * Execute assignment tasks
    */
   private async executeAssignment(intent: IntelligentIntent, userId: string): Promise<ExecutionResult> {
-    // For now, treat assignments as task creation
-    return await this.createTask(intent.data as TaskData, userId);
+    try {
+      const taskData = intent.data as TaskData;
+      const assigneeHint = intent.context?.assignee || taskData.assignee;
+      
+      if (assigneeHint) {
+        // Find user by name with fuzzy matching
+        const assignee = await this.findUserByName(assigneeHint);
+        if (assignee) {
+          taskData.assignee = assignee.id;
+          taskData.assigneeName = assignee.name;
+        }
+      }
+      
+      return await this.createTask(taskData, userId);
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to assign task due to a system error.',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Find user by name with fuzzy matching
+   */
+  private async findUserByName(nameHint: string): Promise<any> {
+    const normalizedHint = nameHint.toLowerCase().trim();
+    
+    // Try exact match first
+    let user = await prisma.user.findFirst({
+      where: {
+        isActive: true,
+        OR: [
+          { name: { contains: nameHint, mode: 'insensitive' } },
+          { email: { contains: nameHint, mode: 'insensitive' } }
+        ]
+      }
+    });
+    
+    if (user) return user;
+    
+    // Try fuzzy matching by parts (for cases like "okafor" -> "Okafor Ngozi") 
+    const nameParts = normalizedHint.split(' ');
+    for (const part of nameParts) {
+      if (part.length > 2) {
+        user = await prisma.user.findFirst({
+          where: {
+            isActive: true,
+            OR: [
+              { name: { contains: part, mode: 'insensitive' } },
+              { email: { contains: part, mode: 'insensitive' } }
+            ]
+          }
+        });
+        
+        if (user) return user;
+      }
+    }
+    
+    return null;
   }
 
   /**

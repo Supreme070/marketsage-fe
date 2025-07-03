@@ -9,19 +9,14 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { useSession } from 'next-auth/react';
-import { quantumAIChatOptimizer } from '@/lib/ai/quantum-ai-chat-optimizer';
+// Quantum AI removed - using Supreme-AI v3 directly
 
 interface ChatMessage {
   id: string;
   content: string;
   role: 'user' | 'assistant';
   timestamp: Date;
-  quantumOptimization?: {
-    improvementScore: number;
-    culturalAdaptations: string[];
-    quantumAdvantage: number;
-    recommendations: any[];
-  };
+  // Quantum optimization removed - using Supreme-AI v3 direct processing
 }
 
 interface SupremeAIResponse {
@@ -49,7 +44,7 @@ export const useSupremeAI = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const [quantumOptimizations, setQuantumOptimizations] = useState<any[]>([]);
+  // Quantum optimizations removed - direct Supreme-AI processing
   const [chatSession, setChatSession] = useState<any>(null);
   const { data: session } = useSession();
 
@@ -65,8 +60,8 @@ export const useSupremeAI = () => {
     }
     setCurrentSessionId(sessionId);
 
-    // Initialize quantum chat session
-    const quantumSession = {
+    // Initialize Supreme-AI chat session
+    const supremeSession = {
       sessionId,
       userId: session.user.id,
       messages: [],
@@ -81,7 +76,7 @@ export const useSupremeAI = () => {
         interaction_history: []
       }
     };
-    setChatSession(quantumSession);
+    setChatSession(supremeSession);
 
     // Load chat history
     loadChatHistory(sessionId);
@@ -215,23 +210,15 @@ export const useSupremeAI = () => {
       // Detect the appropriate task type
       const { type, taskType } = detectTaskType(content.trim());
       
-      // Enhance intent recognition using quantum optimization
-      const intentAnalysis = await quantumAIChatOptimizer.enhanceIntentRecognition(
-        content.trim(),
-        chatSession.messages,
-        chatSession.userProfile
-      );
-      
-      console.log('🔮 Quantum intent analysis:', intentAnalysis);
+      // Enhanced intent recognition via Supreme-AI v3 built-in intelligence
+      console.log('🧠 Supreme-AI v3 processing intent for:', content.trim());
       
       const requestBody: any = {
         type,
         question: content.trim(),
         userId: session.user.id,
         enableTaskExecution: hasAdminPrivileges,
-        forceLocal: false,
-        quantumIntents: intentAnalysis.intents,
-        quantumAdvantage: intentAnalysis.quantumAdvantage
+        forceLocal: false
       };
       
       // Add taskType if it's a task request
@@ -239,7 +226,7 @@ export const useSupremeAI = () => {
         requestBody.taskType = taskType;
       }
       
-      console.log('🔍 Detected task type:', { type, taskType, content: content.trim(), hasAdminPrivileges, userRole: session?.user?.role, quantumAdvantage: intentAnalysis.quantumAdvantage });
+      console.log('🔍 Detected task type:', { type, taskType, content: content.trim(), hasAdminPrivileges, userRole: session?.user?.role });
       
       // Show user feedback about task execution capabilities
       if (type === 'task' && !hasAdminPrivileges) {
@@ -264,42 +251,24 @@ export const useSupremeAI = () => {
         throw new Error('Supreme-AI request failed');
       }
 
-      // Apply quantum optimization to the AI response
+      // Update chat session with new message
       const updatedChatSession = {
         ...chatSession,
         messages: [...chatSession.messages, userMessage],
         lastActivity: new Date()
       };
       
-      const quantumOptimization = await quantumAIChatOptimizer.optimizeChatResponse(
-        content.trim(),
-        data.data.answer,
-        updatedChatSession,
-        {
-          confidence: data.confidence,
-          processingTime: data.processingTime,
-          source: data.data.source,
-          taskExecution: data.data.taskExecution
-        }
-      );
-      
-      console.log('⚡ Quantum optimization result:', quantumOptimization);
+      console.log('✅ Supreme-AI v3 response received:', data.data.answer);
       
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
-        content: quantumOptimization.responseOptimization.optimizedResponse || data.data.answer,
+        content: data.data.answer,
         role: 'assistant',
-        timestamp: new Date(),
-        quantumOptimization: {
-          improvementScore: quantumOptimization.responseOptimization.improvementScore,
-          culturalAdaptations: quantumOptimization.responseOptimization.culturalAdaptations,
-          quantumAdvantage: quantumOptimization.responseOptimization.quantumAdvantage,
-          recommendations: quantumOptimization.personalizedRecommendations
-        }
+        timestamp: new Date()
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-      setQuantumOptimizations(prev => [...prev, quantumOptimization]);
+      // Supreme-AI v3 handles all optimizations internally
       
       // Update chat session
       setChatSession({
@@ -313,13 +282,12 @@ export const useSupremeAI = () => {
         confidence: data.confidence,
         processingTime: data.processingTime,
         source: data.data.source,
-        taskExecution: data.data.taskExecution,
-        quantumOptimization: quantumOptimization
+        taskExecution: data.data.taskExecution
       });
       
-      // Show quantum optimization feedback
-      if (quantumOptimization.responseOptimization.quantumAdvantage > 0.15) {
-        toast.success(`⚡ Quantum optimization applied (+${(quantumOptimization.responseOptimization.quantumAdvantage * 100).toFixed(1)}% improvement)`);
+      // Show Supreme-AI feedback
+      if (data.confidence && data.confidence > 0.8) {
+        toast.success(`🧠 Supreme-AI v3 high confidence response (${(data.confidence * 100).toFixed(1)}%)`);
       }
       
       // Show task execution feedback if available
@@ -330,16 +298,11 @@ export const useSupremeAI = () => {
         }
       }
       
-      // Show personalized recommendations
-      if (quantumOptimization.personalizedRecommendations.length > 0) {
-        const highPriorityRecs = quantumOptimization.personalizedRecommendations.filter(
-          rec => rec.priority === 'high' || rec.priority === 'critical'
-        );
-        if (highPriorityRecs.length > 0) {
-          setTimeout(() => {
-            toast.success(`🎯 ${highPriorityRecs.length} personalized recommendations available`);
-          }, 2000);
-        }
+      // Show recommendations if available from Supreme-AI
+      if (data.data.recommendations && data.data.recommendations.length > 0) {
+        setTimeout(() => {
+          toast.success(`🎯 ${data.data.recommendations.length} AI recommendations available`);
+        }, 2000);
       }
 
     } catch (error) {
@@ -379,9 +342,9 @@ export const useSupremeAI = () => {
     localStorage.setItem('chatSessionId', sessionId);
     setCurrentSessionId(sessionId);
     
-    // Initialize new quantum chat session
+    // Initialize new Supreme-AI chat session
     if (session?.user) {
-      const quantumSession = {
+      const supremeSession = {
         sessionId,
         userId: session.user.id,
         messages: [],
@@ -396,15 +359,14 @@ export const useSupremeAI = () => {
           interaction_history: []
         }
       };
-      setChatSession(quantumSession);
+      setChatSession(supremeSession);
     }
     
-    // Clear current messages and optimizations
+    // Clear current messages
     setMessages([]);
-    setQuantumOptimizations([]);
     setError(null);
     
-    toast.success('⚡ New quantum-enhanced chat session started');
+    toast.success('🧠 New Supreme-AI chat session started');
   }, [session?.user]);
 
   return {
@@ -416,26 +378,6 @@ export const useSupremeAI = () => {
     clearMessages,
     startNewSession,
     currentSessionId,
-    quantumOptimizations,
-    chatSession,
-    // Quantum-specific methods
-    getPersonalizedRecommendations: () => {
-      const allRecs = quantumOptimizations.flatMap(opt => opt.personalizedRecommendations || []);
-      return allRecs.filter(rec => rec.priority === 'high' || rec.priority === 'critical');
-    },
-    getQuantumAdvantageScore: () => {
-      if (quantumOptimizations.length === 0) return 0;
-      const avgAdvantage = quantumOptimizations.reduce(
-        (sum, opt) => sum + (opt.responseOptimization?.quantumAdvantage || 0), 
-        0
-      ) / quantumOptimizations.length;
-      return Math.round(avgAdvantage * 100) / 100;
-    },
-    getCulturalAdaptations: () => {
-      const allAdaptations = quantumOptimizations.flatMap(
-        opt => opt.responseOptimization?.culturalAdaptations || []
-      );
-      return [...new Set(allAdaptations)];
-    }
+    chatSession
   };
 }; 

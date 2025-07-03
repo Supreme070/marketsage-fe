@@ -17,7 +17,7 @@ export interface MasterSimulationState {
     activeVisitors: number;
     conversionRate: number;
     activeCampaigns: number;
-    quantumAdvantage: number;
+    aiAdvantage: number;
   };
   
   // LeadPulse Analytics
@@ -47,7 +47,7 @@ export interface MasterSimulationState {
   ai: {
     tasksProcessed: number;
     successRate: number;
-    quantumAdvantage: number;
+    aiAdvantage: number;
     chatInteractions: number;
     predictions: number;
   };
@@ -94,7 +94,7 @@ class MasterSimulationController {
         activeVisitors: 0,
         conversionRate: 0,
         activeCampaigns: 0,
-        quantumAdvantage: 0,
+        aiAdvantage: 0,
       },
       
       leadpulse: {
@@ -121,7 +121,7 @@ class MasterSimulationController {
       ai: {
         tasksProcessed: 0,
         successRate: 0.95, // This can start at base level
-        quantumAdvantage: 0,
+        aiAdvantage: 0,
         chatInteractions: 0,
         predictions: 0,
       },
@@ -269,11 +269,11 @@ class MasterSimulationController {
       }
     }
 
-    // Update AI metrics (quantum processing for transactions)
-    if (event.quantumPredicted) {
+    // Update AI metrics (processing for transactions)
+    if (event.data?.aiPredicted) {
       this.state.ai.tasksProcessed += 1;
-      this.state.ai.quantumAdvantage = Math.min(0.95, this.state.ai.quantumAdvantage + 0.01);
-      this.state.dashboard.quantumAdvantage = this.state.ai.quantumAdvantage;
+      this.state.ai.aiAdvantage = Math.min(0.95, this.state.ai.aiAdvantage + 0.01);
+      this.state.dashboard.aiAdvantage = this.state.ai.aiAdvantage;
     }
   }
 

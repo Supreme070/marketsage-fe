@@ -27,6 +27,10 @@ import {
   Eye,
   Route,
   CheckCircle,
+  Crown,
+  Cpu,
+  ThumbsUp,
+  Gift,
   type LucideIcon
 } from "lucide-react";
 
@@ -66,9 +70,24 @@ const sidebarNavItems: NavItem[] = [
         icon: MessageCircle,
       },
       {
-        title: "Automation Monitor",
-        href: "/ai-intelligence/automation-monitor",
-        icon: Zap,
+        title: "Customer Intelligence",
+        href: "/intelligence",
+        icon: Brain,
+      },
+      {
+        title: "AI Approvals",
+        href: "/approvals",
+        icon: CheckCircle,
+      },
+      {
+        title: "AI Feedback",
+        href: "/ai-intelligence/feedback",
+        icon: ThumbsUp,
+      },
+      {
+        title: "Model Training",
+        href: "/ai-intelligence/model-training",
+        icon: Cpu,
       },
       {
         title: "Performance Monitor",
@@ -86,6 +105,11 @@ const sidebarNavItems: NavItem[] = [
         title: "All Contacts",
         href: "/contacts",
         icon: Users,
+      },
+      {
+        title: "High-Value Customers",
+        href: "/customers/high-value",
+        icon: Crown,
       },
       {
         title: "Lists",
@@ -145,6 +169,11 @@ const sidebarNavItems: NavItem[] = [
         title: "WhatsApp Campaigns",
         href: "/whatsapp/campaigns",
         icon: MessageCircle,
+      },
+      {
+        title: "Birthday Campaigns",
+        href: "/campaigns/birthday",
+        icon: Gift,
       },
       {
         title: "Templates",

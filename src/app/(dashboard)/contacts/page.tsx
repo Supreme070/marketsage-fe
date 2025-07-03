@@ -47,7 +47,29 @@ import ContactFormModal from "@/components/contacts/ContactFormModal";
 import ImportModal from "@/components/contacts/ImportModal";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import ContactForm from "@/components/contacts/ContactForm";
-import { quantumContactOptimizer } from '@/lib/ai/quantum-contact-optimizer';
+
+// Quantum contact optimizer replaced with mock implementation
+const quantumContactOptimizer = {
+  optimizeContact: async (contact: any) => {
+    // Mock implementation
+    return {
+      leadScoring: {
+        quantumScore: Math.random() * 100,
+        quantumAdvantage: 0.15,
+        conversionProbability: Math.random()
+      },
+      behaviorPrediction: {
+        churnRisk: {
+          riskLevel: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)]
+        },
+        preferredChannels: [
+          { channel: 'email', score: 0.8 },
+          { channel: 'whatsapp', score: 0.6 }
+        ]
+      }
+    };
+  }
+};
 
 // Add the interface for form values
 interface ContactFormData {
@@ -145,8 +167,6 @@ export default function ContactsPage() {
       setContacts(data);
       setError(null);
       
-      // Apply quantum optimizations to contacts
-      await applyContactQuantumOptimizations(data);
     } catch (err) {
       console.error('Error fetching contacts:', err);
       setError('Failed to load contacts. Please try again.');
@@ -177,8 +197,6 @@ export default function ContactsPage() {
         setContacts(sampleContacts);
         toast.error('Using sample data as API request failed');
         
-        // Apply quantum optimizations to sample contacts
-        await applyContactQuantumOptimizations(sampleContacts);
       });
     } finally {
       setLoading(false);
