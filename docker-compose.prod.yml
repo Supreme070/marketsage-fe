@@ -30,17 +30,21 @@ services:
       - PAYMENT_CANCEL_URL=http://localhost:3030/dashboard/billing/cancel
       
       # AI Configuration - Enable Local Task Execution
-      - OPENAI_API_KEY=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
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
       - AI_FALLBACK_MODE=false
       - DISABLE_ONNX=true
       - SUPREME_AI_MODE=enabled
       - USE_OPENAI_ONLY=false
       - OPENAI_MODEL=gpt-4o-mini
       
-      # Mailtrap Email Configuration - SANDBOX (Testing)
-      - MAILTRAP_TEST_USER=your-mailtrap-user
-      - MAILTRAP_TEST_PASS=your-mailtrap-pass
-      - NEXT_PUBLIC_EMAIL_FROM=test@example.com
+      # Email Configuration - Zoho Pro SMTP (Production)
+      - EMAIL_PROVIDER=smtp
+      - SMTP_HOST=smtppro.zoho.com
+      - SMTP_PORT=465
+      - SMTP_SECURE=true
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - NEXT_PUBLIC_EMAIL_FROM=info@marketsage.africa
       - NEXT_PUBLIC_EMAIL_FROM_NAME=MarketSage
       - NEXT_PUBLIC_APP_URL=http://localhost:3030
       
@@ -118,10 +122,14 @@ services:
       - NODE_ENV=development
       - SKIP_CONTACT_DELETE=true
       
-      # API Configuration for Seeding - SANDBOX (Testing)
-      - MAILTRAP_TEST_USER=your-mailtrap-user
-      - MAILTRAP_TEST_PASS=your-mailtrap-pass
-      - NEXT_PUBLIC_EMAIL_FROM=test@example.com
+      # Email Configuration for Seeding - Zoho Pro SMTP (Production)
+      - EMAIL_PROVIDER=smtp
+      - SMTP_HOST=smtppro.zoho.com
+      - SMTP_PORT=465
+      - SMTP_SECURE=true
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - NEXT_PUBLIC_EMAIL_FROM=info@marketsage.africa
       - NEXT_PUBLIC_EMAIL_FROM_NAME=MarketSage
       - PAYSTACK_SECRET_KEY=your-paystack-secret-key
       - PAYSTACK_PUBLIC_KEY=your-paystack-public-key

@@ -22,6 +22,265 @@ const prisma = new PrismaClient({
 // Sample workflow definitions
 const sampleWorkflows = [
   {
+    name: "VIP TESTS - Comprehensive Email Journey",
+    description: "7-step VIP workflow with email tracking, responses, and multiple touchpoints for testing MarketSage functionality",
+    status: "ACTIVE",
+    definition: JSON.stringify({
+      nodes: [
+        {
+          id: "trigger-vip",
+          type: "manualTriggerNode", 
+          position: { x: 50, y: 50 },
+          data: {
+            label: "Manual VIP Workflow Start",
+            description: "Manually triggered VIP workflow for testing - targets VIP TESTS list",
+            icon: "Play",
+            properties: {
+              triggerType: "manual",
+              targetListId: "vip-tests-list",
+              targetListName: "VIP TESTS",
+              allowedRoles: ["SUPER_ADMIN", "ADMIN", "IT_ADMIN"],
+              requireConfirmation: true,
+              confirmationMessage: "Start VIP workflow for all 6 contacts in VIP TESTS list?"
+            }
+          }
+        },
+        {
+          id: "step1-welcome",
+          type: "actionNode",
+          position: { x: 50, y: 150 },
+          data: {
+            label: "Step 1: VIP Welcome Email",
+            description: "Send personalized welcome email with tracking",
+            icon: "Mail",
+            properties: {
+              emailType: "welcome",
+              subject: "🌟 Welcome to MarketSage VIP Program, {{firstName}}!",
+              template: "vip-welcome",
+              trackOpens: true,
+              trackClicks: true,
+              delay: "0 minutes"
+            }
+          }
+        },
+        {
+          id: "condition1-opened",
+          type: "conditionNode",
+          position: { x: 50, y: 250 },
+          data: {
+            label: "Email Opened?",
+            description: "Check if welcome email was opened within 24 hours",
+            icon: "Eye",
+            properties: {
+              condition: "email_opened",
+              timeframe: "24 hours",
+              emailId: "step1-welcome"
+            }
+          }
+        },
+        {
+          id: "step2a-engaged",
+          type: "actionNode",
+          position: { x: -100, y: 350 },
+          data: {
+            label: "Step 2A: Engagement Follow-up",
+            description: "Send feature showcase email to engaged users",
+            icon: "Star",
+            properties: {
+              emailType: "feature-showcase",
+              subject: "🚀 Exclusive: Advanced MarketSage Features for {{firstName}}",
+              template: "vip-features",
+              trackOpens: true,
+              trackClicks: true,
+              delay: "2 hours"
+            }
+          }
+        },
+        {
+          id: "step2b-reminder",
+          type: "actionNode",
+          position: { x: 200, y: 350 },
+          data: {
+            label: "Step 2B: Gentle Reminder",
+            description: "Send reminder email to non-openers",
+            icon: "Bell",
+            properties: {
+              emailType: "reminder",
+              subject: "Don't miss out: Your VIP MarketSage access awaits, {{firstName}}",
+              template: "vip-reminder",
+              trackOpens: true,
+              trackClicks: true,
+              delay: "24 hours"
+            }
+          }
+        },
+        {
+          id: "step3-survey",
+          type: "actionNode",
+          position: { x: 50, y: 450 },
+          data: {
+            label: "Step 3: VIP Feedback Survey",
+            description: "Send survey requesting feedback and preferences",
+            icon: "MessageSquare",
+            properties: {
+              emailType: "survey",
+              subject: "📊 Help us serve you better - 2-minute VIP survey",
+              template: "vip-survey",
+              trackOpens: true,
+              trackClicks: true,
+              requireResponse: true,
+              surveyUrl: "https://surveys.marketsage.africa/vip-feedback",
+              delay: "3 days"
+            }
+          }
+        },
+        {
+          id: "condition2-responded",
+          type: "conditionNode",
+          position: { x: 50, y: 550 },
+          data: {
+            label: "Survey Responded?",
+            description: "Check if contact completed the survey within 7 days",
+            icon: "CheckCircle",
+            properties: {
+              condition: "survey_completed",
+              timeframe: "7 days",
+              surveyId: "vip-feedback"
+            }
+          }
+        },
+        {
+          id: "step4a-thankyou",
+          type: "actionNode",
+          position: { x: -100, y: 650 },
+          data: {
+            label: "Step 4A: Thank You + Bonus",
+            description: "Thank responders and offer exclusive bonus content",
+            icon: "Gift",
+            properties: {
+              emailType: "thank-you",
+              subject: "🎁 Thank you {{firstName}}! Here's your exclusive bonus",
+              template: "vip-thankyou-bonus",
+              trackOpens: true,
+              trackClicks: true,
+              bonusContent: "VIP Strategy Guide PDF",
+              delay: "1 hour"
+            }
+          }
+        },
+        {
+          id: "step4b-followup",
+          type: "actionNode",
+          position: { x: 200, y: 650 },
+          data: {
+            label: "Step 4B: Alternative Engagement",
+            description: "Offer different engagement option for non-responders",
+            icon: "MessageCircle",
+            properties: {
+              emailType: "alternative-engagement",
+              subject: "{{firstName}}, would you prefer a quick call instead?",
+              template: "vip-call-offer",
+              trackOpens: true,
+              trackClicks: true,
+              callBookingUrl: "https://calendly.com/marketsage-vip",
+              delay: "3 days"
+            }
+          }
+        },
+        {
+          id: "step5-personalization",
+          type: "actionNode",
+          position: { x: 50, y: 750 },
+          data: {
+            label: "Step 5: AI-Personalized Content",
+            description: "Send AI-generated personalized recommendations",
+            icon: "Brain",
+            properties: {
+              emailType: "ai-personalized",
+              subject: "🤖 Custom MarketSage recommendations for {{firstName}}",
+              template: "vip-ai-recommendations",
+              trackOpens: true,
+              trackClicks: true,
+              aiPersonalization: true,
+              contentBased: "survey_responses",
+              delay: "5 days"
+            }
+          }
+        },
+        {
+          id: "step6-social-proof",
+          type: "actionNode",
+          position: { x: 50, y: 850 },
+          data: {
+            label: "Step 6: Success Stories & Social Proof",
+            description: "Share case studies and success stories from similar VIPs",
+            icon: "Trophy",
+            properties: {
+              emailType: "social-proof",
+              subject: "🏆 How {{firstName}}'s peers are winning with MarketSage",
+              template: "vip-success-stories",
+              trackOpens: true,
+              trackClicks: true,
+              socialProofType: "case_studies",
+              delay: "7 days"
+            }
+          }
+        },
+        {
+          id: "step7-action-call",
+          type: "actionNode",
+          position: { x: 50, y: 950 },
+          data: {
+            label: "Step 7: Strategic Action Call",
+            description: "Final email with clear call-to-action and next steps",
+            icon: "Target",
+            properties: {
+              emailType: "action-call",
+              subject: "🎯 {{firstName}}, ready to maximize your MarketSage ROI?",
+              template: "vip-action-call",
+              trackOpens: true,
+              trackClicks: true,
+              primaryCTA: "Book Strategy Session",
+              secondaryCTA: "Download Advanced Guide",
+              urgency: true,
+              delay: "10 days"
+            }
+          }
+        }
+      ],
+      connections: [
+        { source: "trigger-vip", target: "step1-welcome" },
+        { source: "step1-welcome", target: "condition1-opened" },
+        { source: "condition1-opened", target: "step2a-engaged", condition: "opened" },
+        { source: "condition1-opened", target: "step2b-reminder", condition: "not_opened" },
+        { source: "step2a-engaged", target: "step3-survey" },
+        { source: "step2b-reminder", target: "step3-survey" },
+        { source: "step3-survey", target: "condition2-responded" },
+        { source: "condition2-responded", target: "step4a-thankyou", condition: "responded" },
+        { source: "condition2-responded", target: "step4b-followup", condition: "not_responded" },
+        { source: "step4a-thankyou", target: "step5-personalization" },
+        { source: "step4b-followup", target: "step5-personalization" },
+        { source: "step5-personalization", target: "step6-social-proof" },
+        { source: "step6-social-proof", target: "step7-action-call" }
+      ],
+      settings: {
+        timezone: "Africa/Lagos",
+        businessHours: {
+          start: "09:00",
+          end: "17:00",
+          days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+        },
+        respectUnsubscribes: true,
+        trackingEnabled: true,
+        aiPersonalizationEnabled: true,
+        manualTriggerOnly: true,
+        requiresApproval: false,
+        allowMultipleExecutions: true,
+        executionMode: "immediate"
+      }
+    })
+  },
+  {
     name: "Simple Welcome Sequence",
     description: "Basic 3-step welcome series for new subscribers",
     status: "ACTIVE", // Use string instead of enum

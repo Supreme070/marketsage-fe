@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import prisma from "@/lib/db/prisma";
 import { generateRegistrationId, generatePin, storePendingRegistration } from "@/lib/registration";
-import { sendEmail } from "@/lib/email"; // You'll need to implement this
+import { sendTrackedEmail } from "@/lib/email-service";
 
 const initialRegisterSchema = z.object({
   name: z.string().min(2),
@@ -44,8 +44,15 @@ export async function POST(request: Request) {
 
     // Send PIN via email
     try {
-      await sendEmail({
-        to: email,
+      const contact = {
+        id: registrationId,
+        email: email,
+        firstName: name,
+        lastName: ''
+      };
+      
+      await sendTrackedEmail(contact, `registration-${registrationId}`, {
+        from: process.env.NEXT_PUBLIC_EMAIL_FROM || 'info@marketsage.africa',
         subject: "Your MarketSage Verification PIN",
         text: `Your verification PIN is: ${pin}. This PIN will expire in 10 minutes.`,
         html: `

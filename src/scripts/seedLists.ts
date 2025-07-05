@@ -17,6 +17,11 @@ const prisma = new PrismaClient({
 // Sample list data
 const sampleLists = [
   {
+    name: "VIP TESTS",
+    description: "VIP Test contacts for email workflow testing - includes Supreme Oye, Kola Olatunde, Anita Oyewumi, Mayowa Ade, MyHomeCulture, and MarketSage Ltd",
+    type: ListType.STATIC,
+  },
+  {
     name: "Nigerian Businesses",
     description: "Business contacts from Nigeria",
     type: ListType.STATIC,
@@ -215,6 +220,45 @@ async function seedLists() {
       } catch (error) {
         console.error(`Error adding contact ${contact.id} to list:`, error);
       }
+    }
+  }
+
+  // VIP TESTS list - Add specific VIP test contacts
+  const vipTestsList = createdLists.find(list => list.name === "VIP TESTS");
+  if (vipTestsList) {
+    const vipTestEmails = [
+      'supremeoye@outlook.com',
+      'kolajosph87@gmail.com', 
+      'anitaoyewumi@gmail.com',
+      'myhomeculture@gmail.com',
+      'marketsageltd@gmail.com',
+      'adewolemayowa@gmail.com'
+    ];
+    
+    const vipTestContacts = contacts.filter(contact => 
+      vipTestEmails.includes(contact.email)
+    );
+    
+    console.log(`Adding ${vipTestContacts.length} VIP test contacts to VIP TESTS list`);
+    
+    for (const contact of vipTestContacts) {
+      try {
+        const member = await prisma.listMember.create({
+          data: {
+            id: randomUUID(),
+            listId: vipTestsList.id,
+            contactId: contact.id,
+          },
+        });
+        memberAssignments.push(member);
+        console.log(`  ✅ Added ${contact.firstName} ${contact.lastName} (${contact.email}) to VIP TESTS`);
+      } catch (error) {
+        console.error(`Error adding VIP contact ${contact.id} to list:`, error);
+      }
+    }
+    
+    if (vipTestContacts.length < vipTestEmails.length) {
+      console.log(`⚠️ Only found ${vipTestContacts.length} out of ${vipTestEmails.length} VIP test contacts. Make sure contacts are seeded first.`);
     }
   }
 

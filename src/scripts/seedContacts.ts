@@ -223,6 +223,68 @@ function tagsToString(tags: string[] | undefined): string | null {
 async function seedContacts() {
   console.log("Starting to seed contacts...");
 
+  // First, add VIP Test Contacts
+  console.log("🌟 Adding VIP Test Contacts...");
+  
+  const vipContacts = [
+    {
+      email: 'supremeoye@outlook.com',
+      firstName: 'Supreme',
+      lastName: 'Oye',
+      jobTitle: 'Founder & CEO',
+      notes: 'VIP Test Contact - Supreme Oye',
+      tags: ['VIP', 'Test', 'Founder'],
+      source: 'manual'
+    },
+    {
+      email: 'kolajosph87@gmail.com',
+      firstName: 'Kola',
+      lastName: 'Olatunde',
+      jobTitle: 'Lead Developer',
+      notes: 'VIP Test Contact - Kola Olatunde',
+      tags: ['VIP', 'Test', 'Developer'],
+      source: 'manual'
+    },
+    {
+      email: 'anitaoyewumi@gmail.com',
+      firstName: 'Anita',
+      lastName: 'Oyewumi',
+      jobTitle: 'Product Manager',
+      notes: 'VIP Test Contact - Anita Oyewumi',
+      tags: ['VIP', 'Test', 'Manager'],
+      source: 'manual'
+    },
+    {
+      email: 'myhomeculture@gmail.com',
+      firstName: 'MyHomeCulture',
+      lastName: 'Team',
+      company: 'MyHomeCulture',
+      jobTitle: 'Business Contact',
+      notes: 'VIP Test Business Contact - MyHomeCulture',
+      tags: ['VIP', 'Test', 'Business', 'Culture'],
+      source: 'manual'
+    },
+    {
+      email: 'marketsageltd@gmail.com',
+      firstName: 'MarketSage',
+      lastName: 'Ltd',
+      company: 'MarketSage Ltd',
+      jobTitle: 'Business Contact',
+      notes: 'VIP Test Business Contact - MarketSage Ltd',
+      tags: ['VIP', 'Test', 'Business', 'MarketSage'],
+      source: 'manual'
+    },
+    {
+      email: 'adewolemayowa@gmail.com',
+      firstName: 'Mayowa',
+      lastName: 'Ade',
+      jobTitle: 'VIP Contact',
+      notes: 'VIP Test Contact - Mayowa Ade',
+      tags: ['VIP', 'Test', 'Contact'],
+      source: 'manual'
+    }
+  ];
+
   // Delete existing contacts to avoid duplicates
   try {
     // Check if we should skip contact deletion
@@ -276,8 +338,22 @@ async function seedContacts() {
     // Generate 10 company contacts
     const companyContacts = Array.from({ length: 10 }, () => generateCompanyContact());
     
+    // Add VIP contacts first (check if they exist to avoid duplicates)
+    const vipContactsToCreate = [];
+    for (const vipContact of vipContacts) {
+      const existingContact = await prisma.contact.findUnique({
+        where: { email: vipContact.email }
+      });
+      
+      if (!existingContact) {
+        vipContactsToCreate.push(vipContact);
+      } else {
+        console.log(`  ℹ️ VIP contact ${vipContact.firstName} ${vipContact.lastName} already exists`);
+      }
+    }
+
     // Combine all contacts
-    const allContacts = [...nigerianPersonContacts, ...otherAfricanPersonContacts, ...companyContacts];
+    const allContacts = [...vipContactsToCreate, ...nigerianPersonContacts, ...otherAfricanPersonContacts, ...companyContacts];
     
     // Create contacts in database
     const createdContacts = [];

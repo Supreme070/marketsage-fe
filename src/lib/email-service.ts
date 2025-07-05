@@ -13,6 +13,7 @@ import { logger } from '@/lib/logger';
 import { randomUUID } from 'crypto';
 import { getBestSendTime } from '@/lib/engagement-tracking';
 import { stringify } from 'querystring';
+import nodemailer from 'nodemailer';
 
 interface EmailProvider {
   sendEmail: (options: EmailOptions) => Promise<EmailSendResult>;
@@ -75,11 +76,8 @@ class SmtpEmailProvider implements EmailProvider {
   
   async sendEmail(options: EmailOptions): Promise<EmailSendResult> {
     try {
-      // Dynamic import of nodemailer for actual email sending
-      const nodemailer = await import('nodemailer');
-      
       // Create transporter
-      const transporter = nodemailer.createTransporter({
+      const transporter = nodemailer.createTransport({
         host: this.config.host,
         port: this.config.port,
         secure: this.config.secure, // true for 465, false for other ports
@@ -88,7 +86,7 @@ class SmtpEmailProvider implements EmailProvider {
           pass: this.config.auth.pass,
         },
         tls: {
-          rejectUnauthorized: false // For development
+          rejectUnauthorized: process.env.NODE_ENV !== 'production'
         }
       });
 
@@ -222,21 +220,47 @@ export async function sendTrackedEmail(
       text: personalizedText,
     });
     
-    // Record the send activity if successful
+    // Record the send activity if successful (only if campaignId corresponds to a real campaign)
     if (result.success) {
-      await prisma.emailActivity.create({
-        data: {
-          id: randomUUID(),
-          campaignId,
-          contactId: contact.id,
-          type: ActivityType.SENT,
-          metadata: JSON.stringify({
+      try {
+        // Check if this is a real campaign or a test
+        const campaignExists = await prisma.emailCampaign.findUnique({
+          where: { id: campaignId },
+          select: { id: true }
+        });
+
+        // Only create activity record for real campaigns
+        if (campaignExists) {
+          await prisma.emailActivity.create({
+            data: {
+              id: randomUUID(),
+              campaignId,
+              contactId: contact.id,
+              type: ActivityType.SENT,
+              metadata: JSON.stringify({
+                messageId: result.messageId,
+                provider: provider.name,
+                ...options.metadata,
+              }),
+            },
+          });
+        } else {
+          // For test emails, just log the success
+          logger.info('Test email sent successfully (no activity record created)', {
+            contactId: contact.id,
+            testCampaignId: campaignId,
             messageId: result.messageId,
-            provider: provider.name,
-            ...options.metadata,
-          }),
-        },
-      });
+          });
+        }
+      } catch (activityError) {
+        // Don't fail the email send if activity recording fails
+        logger.warn('Failed to record email activity, but email was sent successfully', {
+          contactId: contact.id,
+          campaignId,
+          messageId: result.messageId,
+          error: activityError
+        });
+      }
       
       logger.info('Email sent and activity recorded', {
         contactId: contact.id,
