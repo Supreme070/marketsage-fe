@@ -87,6 +87,13 @@ export default function ConversionsPage() {
 
   // Simulation-based Conversion Funnel Panel
   const ConversionFunnelPanel = () => {
+    // Mock simulation state for demonstration
+    const simulationState = {
+      isRunning: true,
+      leadpulse: {
+        totalVisitors: 1245
+      }
+    };
     const totalVisitors = simulationState.isRunning ? simulationState.leadpulse.totalVisitors : 1245;
     const leads = Math.round(totalVisitors * 0.424);
     const opportunities = Math.round(totalVisitors * 0.149);

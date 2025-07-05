@@ -136,6 +136,12 @@ model User {
   // AI Action Plan relations
   approvedActions AIActionPlan[] @relation("AIActionApprover")
   executedActions AIActionPlan[] @relation("AIActionExecutor")
+  
+  // Safety & Approval System relations
+  approvalRequests ApprovalRequest[] @relation("ApprovalRequester")
+  approvedRequests ApprovalRequest[] @relation("ApprovalApprover")
+  safetyViolations SafetyViolation[]
+  resolvedViolations SafetyViolation[] @relation("ViolationResolver")
 
   @@index([email])
 }
@@ -2537,4 +2543,53 @@ model EmailDomainConfig {
   organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   
   @@index([organizationId])
+}
+
+// Safety & Approval System Models
+model ApprovalRequest {
+  id                String    @id @default(cuid())
+  operationId       String    @unique
+  requesterId       String
+  approvalLevel     String    // admin, super_admin, multi_admin
+  operationData     Json      // Stores the OperationRequest
+  justification     String
+  status            String    @default("pending") // pending, approved, rejected, expired
+  expiresAt         DateTime
+  approvedBy        String?
+  approvedAt        DateTime?
+  rejectionReason   String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  requester         User      @relation("ApprovalRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  approver          User?     @relation("ApprovalApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
+  
+  @@index([requesterId])
+  @@index([approvedBy])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model SafetyViolation {
+  id            String    @id @default(cuid())
+  userId        String
+  ruleId        String
+  operationId   String
+  riskLevel     String    // low, medium, high, critical
+  details       Json      // Stores operation and assessment details
+  resolved      Boolean   @default(false)
+  resolvedAt    DateTime?
+  resolvedBy    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resolver      User?     @relation("ViolationResolver", fields: [resolvedBy], references: [id], onDelete: SetNull)
+  
+  @@index([userId])
+  @@index([ruleId])
+  @@index([riskLevel])
+  @@index([resolved])
 }

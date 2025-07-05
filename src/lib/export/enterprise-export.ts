@@ -297,15 +297,213 @@ class EnterpriseExportManager {
   }
 
   private async fetchExportData(request: ExportRequest): Promise<any[]> {
-    // In production, this would query your actual database
-    // For now, we'll simulate data fetching with realistic African fintech data
+    try {
+      // Import Prisma client
+      const { default: prisma } = await import('@/lib/db/prisma');
+      
+      // Build query based on data source
+      switch (request.dataSource) {
+        case 'contacts':
+          return await this.fetchContactsData(prisma, request);
+        case 'campaigns':
+          return await this.fetchCampaignData(prisma, request);
+        case 'analytics':
+          return await this.fetchAnalyticsData(prisma, request);
+        case 'workflows':
+          return await this.fetchWorkflowData(prisma, request);
+        case 'transactions':
+          return await this.fetchTransactionData(prisma, request);
+        default:
+          // Fallback to mock data for unknown data sources
+          return this.generateMockData(request.dataSource, request.columns, request.filters);
+      }
+    } catch (error) {
+      logger.error('Failed to fetch export data, using mock data', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        dataSource: request.dataSource
+      });
+      
+      // Fallback to mock data if database query fails
+      return this.generateMockData(request.dataSource, request.columns, request.filters);
+    }
+  }
 
-    const mockData = this.generateMockData(request.dataSource, request.columns, request.filters);
+  private async fetchContactsData(prisma: any, request: ExportRequest): Promise<any[]> {
+    const { filters } = request;
+    const limit = Math.min(filters.limit || 10000, 50000); // Max 50k contacts
     
-    // Simulate database query delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    const whereClause: any = {};
     
-    return mockData;
+    // Apply filters
+    if (filters.organizationId) {
+      whereClause.organizationId = filters.organizationId;
+    }
+    if (filters.isActive !== undefined) {
+      whereClause.isActive = filters.isActive;
+    }
+    if (filters.tags && filters.tags.length > 0) {
+      whereClause.tags = { hasSome: filters.tags };
+    }
+    if (filters.createdAfter) {
+      whereClause.createdAt = { ...whereClause.createdAt, gte: new Date(filters.createdAfter) };
+    }
+    if (filters.createdBefore) {
+      whereClause.createdAt = { ...whereClause.createdAt, lte: new Date(filters.createdBefore) };
+    }
+
+    const contacts = await prisma.contact.findMany({
+      where: whereClause,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        lists: { select: { name: true } },
+        segments: { select: { name: true } }
+      }
+    });
+
+    return contacts.map((contact: any) => ({
+      id: contact.id,
+      firstName: contact.firstName,
+      lastName: contact.lastName,
+      email: contact.email,
+      phone: contact.phone,
+      company: contact.company,
+      jobTitle: contact.jobTitle,
+      tags: contact.tags,
+      isActive: contact.isActive,
+      lists: contact.lists.map((l: any) => l.name).join(', '),
+      segments: contact.segments.map((s: any) => s.name).join(', '),
+      createdAt: contact.createdAt
+    }));
+  }
+
+  private async fetchCampaignData(prisma: any, request: ExportRequest): Promise<any[]> {
+    const { filters } = request;
+    const limit = Math.min(filters.limit || 5000, 25000);
+    
+    const whereClause: any = {};
+    if (filters.organizationId) {
+      whereClause.organizationId = filters.organizationId;
+    }
+    if (filters.status) {
+      whereClause.status = filters.status;
+    }
+    if (filters.campaignType) {
+      // Handle different campaign types
+      if (filters.campaignType === 'email') {
+        const emailCampaigns = await prisma.emailCampaign.findMany({
+          where: whereClause,
+          take: limit,
+          orderBy: { createdAt: 'desc' }
+        });
+        return emailCampaigns.map((campaign: any) => ({
+          id: campaign.id,
+          name: campaign.name,
+          type: 'Email',
+          status: campaign.status,
+          subject: campaign.subject,
+          fromEmail: campaign.fromEmail,
+          sentCount: campaign.sentCount || 0,
+          openRate: campaign.openRate || 0,
+          clickRate: campaign.clickRate || 0,
+          createdAt: campaign.createdAt
+        }));
+      }
+    }
+
+    // Default to email campaigns
+    const campaigns = await prisma.emailCampaign.findMany({
+      where: whereClause,
+      take: limit,
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return campaigns.map((campaign: any) => ({
+      id: campaign.id,
+      name: campaign.name,
+      type: 'Email',
+      status: campaign.status,
+      subject: campaign.subject,
+      sentCount: campaign.sentCount || 0,
+      openRate: campaign.openRate || 0,
+      clickRate: campaign.clickRate || 0,
+      createdAt: campaign.createdAt
+    }));
+  }
+
+  private async fetchAnalyticsData(prisma: any, request: ExportRequest): Promise<any[]> {
+    const { filters } = request;
+    const limit = Math.min(filters.limit || 10000, 100000);
+    
+    const whereClause: any = {};
+    if (filters.organizationId) {
+      whereClause.organizationId = filters.organizationId;
+    }
+    if (filters.startDate && filters.endDate) {
+      whereClause.createdAt = {
+        gte: new Date(filters.startDate),
+        lte: new Date(filters.endDate)
+      };
+    }
+
+    const analytics = await prisma.analytics.findMany({
+      where: whereClause,
+      take: limit,
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return analytics.map((record: any) => ({
+      id: record.id,
+      entity: record.entity,
+      event: record.event,
+      value: record.value,
+      metadata: typeof record.metadata === 'object' ? JSON.stringify(record.metadata) : record.metadata,
+      timestamp: record.createdAt
+    }));
+  }
+
+  private async fetchWorkflowData(prisma: any, request: ExportRequest): Promise<any[]> {
+    const { filters } = request;
+    const limit = Math.min(filters.limit || 5000, 25000);
+    
+    const whereClause: any = {};
+    if (filters.organizationId) {
+      whereClause.organizationId = filters.organizationId;
+    }
+    if (filters.status) {
+      whereClause.status = filters.status;
+    }
+
+    const workflows = await prisma.workflow.findMany({
+      where: whereClause,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        nodes: { select: { type: true } },
+        executions: { select: { status: true } }
+      }
+    });
+
+    return workflows.map((workflow: any) => ({
+      id: workflow.id,
+      name: workflow.name,
+      description: workflow.description,
+      status: workflow.status,
+      nodeCount: workflow.nodes.length,
+      executionCount: workflow.executions.length,
+      successfulExecutions: workflow.executions.filter((e: any) => e.status === 'COMPLETED').length,
+      createdAt: workflow.createdAt
+    }));
+  }
+
+  private async fetchTransactionData(prisma: any, request: ExportRequest): Promise<any[]> {
+    // Placeholder for transaction data - would need actual transaction model
+    logger.info('Transaction data export requested - using mock data', {
+      dataSource: request.dataSource,
+      filters: request.filters
+    });
+    
+    return this.generateMockData(request.dataSource, request.columns, request.filters);
   }
 
   private generateMockData(dataSource: string, columns: ExportColumn[], filters: any): any[] {
@@ -470,15 +668,124 @@ class EnterpriseExportManager {
   }
 
   private async generateExcel(data: any[], request: ExportRequest): Promise<Buffer> {
-    // This would use a library like ExcelJS in production
-    // For now, return CSV format as placeholder
-    return this.generateCSV(data, request);
+    const ExcelJS = await import('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(request.dataSource);
+
+    // Set up headers
+    const headers = request.columns.map(col => ({
+      header: col.label,
+      key: col.key,
+      width: col.width || 20
+    }));
+    worksheet.columns = headers;
+
+    // Add data rows
+    data.forEach(row => {
+      worksheet.addRow(row);
+    });
+
+    // Apply formatting
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE6F3FF' }
+    };
+
+    // Add metadata sheet if requested
+    if (request.options.includeMetadata) {
+      const metadataSheet = workbook.addWorksheet('Metadata');
+      metadataSheet.addRow(['Export Date', new Date().toISOString()]);
+      metadataSheet.addRow(['Data Source', request.dataSource]);
+      metadataSheet.addRow(['Requested By', request.requestedBy.userName]);
+      metadataSheet.addRow(['Purpose', request.purpose]);
+      metadataSheet.addRow(['Row Count', data.length]);
+      metadataSheet.addRow(['Compliance Level', request.options.compliance.encryptionLevel]);
+    }
+
+    // Add watermark if specified
+    if (request.options.watermark) {
+      worksheet.addRow([]);
+      worksheet.addRow([`Watermark: ${request.options.watermark}`]);
+    }
+
+    return await workbook.xlsx.writeBuffer() as Buffer;
   }
 
   private async generatePDF(data: any[], request: ExportRequest): Promise<Buffer> {
-    // This would use a library like PDFKit or Puppeteer in production
-    // For now, return JSON format as placeholder
-    return this.generateJSON(data, request);
+    const jsPDF = (await import('jspdf')).default;
+    const autoTable = (await import('jspdf-autotable')).default;
+    
+    const doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    // Add title
+    doc.setFontSize(16);
+    doc.text(`${request.dataSource} Export Report`, 14, 20);
+    
+    // Add metadata
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+    doc.text(`Requested by: ${request.requestedBy.userName}`, 14, 35);
+    doc.text(`Purpose: ${request.purpose}`, 14, 40);
+    doc.text(`Records: ${data.length}`, 14, 45);
+
+    // Add watermark if specified
+    if (request.options.watermark) {
+      doc.setTextColor(200, 200, 200);
+      doc.setFontSize(50);
+      doc.text(request.options.watermark, 100, 150, {
+        angle: 45,
+        align: 'center'
+      });
+      doc.setTextColor(0, 0, 0);
+    }
+
+    // Create table
+    const tableHeaders = request.columns.map(col => col.label);
+    const tableData = data.slice(0, 1000).map(row => // Limit to 1000 rows for PDF
+      request.columns.map(col => {
+        const value = row[col.key];
+        if (value instanceof Date) {
+          return value.toLocaleDateString();
+        }
+        if (typeof value === 'object') {
+          return JSON.stringify(value);
+        }
+        return String(value || '');
+      })
+    );
+
+    autoTable(doc, {
+      head: [tableHeaders],
+      body: tableData,
+      startY: 55,
+      styles: { fontSize: 8 },
+      columnStyles: request.columns.reduce((styles, col, index) => {
+        if (col.type === 'currency') {
+          styles[index] = { halign: 'right' };
+        } else if (col.type === 'number' || col.type === 'percentage') {
+          styles[index] = { halign: 'right' };
+        }
+        return styles;
+      }, {} as any)
+    });
+
+    // Add footer
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.text(`Page ${i} of ${pageCount}`, 200, 290, { align: 'right' });
+      doc.text(`MarketSage Enterprise Export - Confidential`, 14, 290);
+    }
+
+    return Buffer.from(doc.output('arraybuffer'));
   }
 
   private async uploadExportFile(

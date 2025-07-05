@@ -7,7 +7,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { SupremeAIv3 } from '@/lib/ai/supreme-ai-v3-engine';
 import { logger } from '@/lib/logger';
 
 // Force dynamic to avoid caching
@@ -122,6 +121,7 @@ async function getBusinessIntelligenceOverview(
   const days = Math.floor((timeRange.to.getTime() - timeRange.from.getTime()) / (1000 * 60 * 60 * 24));
   const timeRangeStr = days <= 7 ? '7d' : days <= 90 ? '30d' : '90d';
   
+  const { SupremeAIv3 } = await import('@/lib/ai/supreme-ai-v3-engine');
   const result = await SupremeAIv3.process({
     type: 'leadpulse_insights',
     userId,
@@ -149,6 +149,7 @@ async function getBusinessIntelligenceOverview(
 }
 
 async function getVisitorBehaviorAnalysis(userId: string, visitorId?: string) {
+  const { SupremeAIv3 } = await import('@/lib/ai/supreme-ai-v3-engine');
   const result = await SupremeAIv3.process({
     type: 'leadpulse_visitors',
     userId,
@@ -180,6 +181,7 @@ async function getPerformancePredictions(
   predictionType: 'TRAFFIC' | 'CONVERSIONS' | 'REVENUE' | 'ENGAGEMENT',
   timeframe: number
 ) {
+  const { SupremeAIv3 } = await import('@/lib/ai/supreme-ai-v3-engine');
   const result = await SupremeAIv3.process({
     type: 'leadpulse_predict',
     userId,
@@ -202,6 +204,7 @@ async function getPerformancePredictions(
 }
 
 async function getFunnelOptimization(userId: string, formId?: string) {
+  const { SupremeAIv3 } = await import('@/lib/ai/supreme-ai-v3-engine');
   const result = await SupremeAIv3.process({
     type: 'leadpulse_optimize',
     userId,
@@ -230,6 +233,7 @@ async function getSmartSegments(userId: string, searchParams: URLSearchParams) {
     engagementBased: searchParams.get('engagementBased') === 'true'
   };
 
+  const { SupremeAIv3 } = await import('@/lib/ai/supreme-ai-v3-engine');
   const result = await SupremeAIv3.process({
     type: 'leadpulse_segments',
     userId,
@@ -249,6 +253,7 @@ async function getSmartSegments(userId: string, searchParams: URLSearchParams) {
 }
 
 async function getAnomalyDetection(userId: string, metrics: string[]) {
+  const { SupremeAIv3 } = await import('@/lib/ai/supreme-ai-v3-engine');
   const result = await SupremeAIv3.process({
     type: 'leadpulse_predict',
     userId,
@@ -279,6 +284,7 @@ async function generateCustomInsights(userId: string, data: any) {
   const days = Math.floor((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24));
   const timeRangeStr = days <= 7 ? '7d' : days <= 90 ? '30d' : '90d';
   
+  const { SupremeAIv3 } = await import('@/lib/ai/supreme-ai-v3-engine');
   const result = await SupremeAIv3.process({
     type: 'leadpulse_insights',
     userId,
@@ -330,6 +336,7 @@ async function analyzeSpecificVisitor(userId: string, data: any) {
     }, { status: 400 });
   }
   
+  const { SupremeAIv3 } = await import('@/lib/ai/supreme-ai-v3-engine');
   const result = await SupremeAIv3.process({
     type: 'leadpulse_visitors',
     userId,

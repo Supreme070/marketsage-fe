@@ -64,7 +64,7 @@ class DevelopmentEmailProvider implements EmailProvider {
   }
 }
 
-// Configurable SMTP provider
+// Configurable SMTP provider with Nodemailer
 class SmtpEmailProvider implements EmailProvider {
   name = 'smtp';
   private config: Record<string, any>;
@@ -75,17 +75,48 @@ class SmtpEmailProvider implements EmailProvider {
   
   async sendEmail(options: EmailOptions): Promise<EmailSendResult> {
     try {
-      // In a real implementation, this would use nodemailer or similar
-      logger.info('SMTP email provider - email would be sent', {
-        to: options.to,
-        from: options.from,
+      // Dynamic import of nodemailer for actual email sending
+      const nodemailer = await import('nodemailer');
+      
+      // Create transporter
+      const transporter = nodemailer.createTransporter({
+        host: this.config.host,
+        port: this.config.port,
+        secure: this.config.secure, // true for 465, false for other ports
+        auth: {
+          user: this.config.auth.user,
+          pass: this.config.auth.pass,
+        },
+        tls: {
+          rejectUnauthorized: false // For development
+        }
+      });
+
+      // Send email
+      const info = await transporter.sendMail({
+        from: `"${options.from || 'MarketSage'}" <${this.config.auth.user}>`,
+        to: Array.isArray(options.to) ? options.to.join(', ') : options.to,
         subject: options.subject,
+        text: options.text,
+        html: options.html,
+        replyTo: options.replyTo,
+        attachments: options.attachments?.map(att => ({
+          filename: att.filename,
+          content: att.content,
+          contentType: att.contentType,
+        })),
+      });
+
+      logger.info('Email sent successfully via SMTP', {
+        to: options.to,
+        subject: options.subject,
+        messageId: info.messageId,
         smtpHost: this.config.host,
       });
       
       return {
         success: true,
-        messageId: `smtp-${randomUUID()}`,
+        messageId: info.messageId,
         provider: this.name,
       };
     } catch (error) {

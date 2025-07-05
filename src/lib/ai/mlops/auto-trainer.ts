@@ -3,11 +3,12 @@
  * Handles automated training, retraining, and continuous model improvement
  */
 
+import { EventEmitter } from 'events';
 import { logger } from '@/lib/logger';
 import { errorBoundary } from '../utils/error-boundary';
 import { NeuralNetworkPredictor, type NetworkConfig } from '../supreme-ai-engine';
-import type { ModelRegistry } from './model-registry';
-import type { PerformanceMonitor } from './performance-monitor';
+import { modelRegistry, type ModelRegistry } from './model-registry';
+import { performanceMonitor, type PerformanceMonitor } from './performance-monitor';
 
 interface TrainingConfig {
   modelId: string;
@@ -50,7 +51,7 @@ interface TrainingResult {
   error?: string;
 }
 
-export class AutoTrainer {
+export class AutoTrainer extends EventEmitter {
   private registry: ModelRegistry;
   private monitor: PerformanceMonitor;
   private trainingConfigs: Map<string, TrainingConfig> = new Map();
@@ -58,6 +59,7 @@ export class AutoTrainer {
   private scheduledJobs: Map<string, NodeJS.Timeout> = new Map();
 
   constructor(registry: ModelRegistry, monitor: PerformanceMonitor) {
+    super();
     this.registry = registry;
     this.monitor = monitor;
   }
@@ -122,7 +124,7 @@ export class AutoTrainer {
           tags: ['auto-trained']
         });
 
-        return {
+        const result = {
           success: true,
           modelVersion: version,
           metrics: {
@@ -131,6 +133,15 @@ export class AutoTrainer {
             dataPoints: await this.getTrainingDataPoints(modelId)
           }
         };
+
+        // Emit training completion event
+        this.emit('trainingCompleted', {
+          modelId,
+          result,
+          trainedModel: trainedModel
+        });
+
+        return result;
       }
 
       return {
@@ -244,4 +255,7 @@ export class AutoTrainer {
       this.scheduledJobs.delete(modelId);
     }
   }
-} 
+}
+
+// Create and export singleton instance
+export const autoTrainer = new AutoTrainer(modelRegistry, performanceMonitor); 

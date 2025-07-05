@@ -200,4 +200,10 @@ function getDefaultContentInsights(): ContentInsight[] {
       actionable: true
     }
   ];
-} 
+}
+
+// Create and export singleton instance
+export const contentIntelligenceEngine = {
+  analyzeContent,
+  getDefaultContentInsights
+}; 

@@ -1,9 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { getServerSession } from 'next-auth';
-import { realTimeDecisionEngine } from '@/lib/ai/realtime-decision-engine';
-import { SupremeAIv3 } from '@/lib/ai/supreme-ai-v3-engine';
-import { supremeAutoML } from '@/lib/ai/automl-engine';
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,6 +42,8 @@ async function handleRealtimeDecision(data: any) {
       }
     };
 
+    // Dynamic import
+    const { realTimeDecisionEngine } = await import('@/lib/ai/realtime-decision-engine');
     const decision = await realTimeDecisionEngine.makeInstantDecision(interaction);
 
     return NextResponse.json({
@@ -76,6 +75,8 @@ async function handleRealtimeDecision(data: any) {
 
 async function handleAIAnalysis(data: any) {
   try {
+    // Dynamic import
+    const { SupremeAIv3 } = await import('@/lib/ai/supreme-ai-v3-engine');
     const analysis = await SupremeAIv3.process({
       type: 'question',
       userId: data.userId || 'demo-user',
@@ -111,6 +112,9 @@ async function handleAIAnalysis(data: any) {
 
 async function handlePerformanceMonitor() {
   try {
+    // Dynamic import
+    const { realTimeDecisionEngine } = await import('@/lib/ai/realtime-decision-engine');
+    
     const [decisionMetrics, aiMetrics] = await Promise.all([
       realTimeDecisionEngine.monitorDecisionPerformance(),
       getAISystemMetrics()

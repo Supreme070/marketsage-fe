@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { multiModalIntelligence } from '@/lib/ai/multimodal-intelligence';
 import { logger } from '@/lib/logger';
 
 /**
@@ -18,6 +17,9 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Dynamic import to prevent circular dependencies
+    const { multiModalIntelligence } = await import('@/lib/ai/multimodal-intelligence');
+    
     const verification = await multiModalIntelligence.verifyKYCDocument(
       imageBase64,
       documentType

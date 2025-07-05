@@ -699,3 +699,20 @@ export const AlertTemplates = {
 export function generateAlertId(): string {
   return `alert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
+
+// Export instance for direct use with default config
+const defaultConfig: AlertConfig = {
+  email: {
+    enabled: false,
+    recipients: [],
+    smtpConfig: {
+      host: 'localhost',
+      port: 587,
+      secure: false,
+      auth: { user: '', pass: '' }
+    },
+    templates: { subject: '', body: '' }
+  }
+};
+
+export const alertingSystem = new AlertingSystem(defaultConfig);

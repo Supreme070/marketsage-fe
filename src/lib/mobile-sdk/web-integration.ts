@@ -4,7 +4,7 @@
  * Specialized implementation for mobile web applications and PWAs
  */
 
-import { LeadPulseMobileSDK, MobileSDKConfig, createMobileSDK } from './leadpulse-mobile-sdk';
+import { type LeadPulseMobileSDK, type MobileSDKConfig, createMobileSDK } from './leadpulse-mobile-sdk';
 
 /**
  * Progressive Web App (PWA) Integration
@@ -548,7 +548,7 @@ export function autoInitMobileWebSDK(apiKey: string, options: Partial<MobileSDKC
   const originalPushState = history.pushState;
   const originalReplaceState = history.replaceState;
 
-  history.pushState = function(...args) {
+  history.pushState = (...args) => {
     originalPushState.apply(history, args);
     const newPath = window.location.pathname;
     if (newPath !== currentPath) {
@@ -557,7 +557,7 @@ export function autoInitMobileWebSDK(apiKey: string, options: Partial<MobileSDKC
     }
   };
 
-  history.replaceState = function(...args) {
+  history.replaceState = (...args) => {
     originalReplaceState.apply(history, args);
     const newPath = window.location.pathname;
     if (newPath !== currentPath) {

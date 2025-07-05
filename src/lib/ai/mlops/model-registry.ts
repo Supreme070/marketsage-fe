@@ -3,6 +3,7 @@
  * Handles model versioning, metadata tracking, and lifecycle management
  */
 
+import { EventEmitter } from 'events';
 import { logger } from '@/lib/logger';
 import { errorBoundary } from '../utils/error-boundary';
 import type { NeuralNetworkPredictor, NetworkConfig } from '../supreme-ai-engine';
@@ -37,11 +38,12 @@ interface VersioningConfig {
   };
 }
 
-export class ModelRegistry {
+export class ModelRegistry extends EventEmitter {
   private versions: Map<string, ModelVersion[]> = new Map();
   private config: VersioningConfig;
 
   constructor(config: VersioningConfig) {
+    super();
     this.config = config;
   }
 
@@ -119,6 +121,14 @@ export class ModelRegistry {
         version,
         status: targetStatus
       });
+
+      // Emit promotion event
+      this.emit('modelPromoted', {
+        modelId,
+        version,
+        status: targetStatus,
+        modelVersion
+      });
     } catch (error) {
       throw errorBoundary.handleError(error, 'ModelRegistry.promoteVersion');
     }
@@ -178,4 +188,14 @@ export class ModelRegistry {
       this.versions.set(modelId, toKeep);
     }
   }
-} 
+}
+
+// Create and export singleton instance
+export const modelRegistry = new ModelRegistry({
+  autoIncrementPatch: true,
+  keepVersions: 5,
+  promotionThresholds: {
+    staging: 0.85,
+    production: 0.90
+  }
+}); 

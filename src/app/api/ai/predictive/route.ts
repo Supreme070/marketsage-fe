@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { predictiveAnalytics } from '@/lib/ai/predictive-analytics-engine';
 import { logger } from '@/lib/logger';
 
 /**
@@ -18,6 +17,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Dynamic import
+    const { predictiveAnalytics } = await import('@/lib/ai/predictive-analytics-engine');
     const forecast = await predictiveAnalytics.generateMarketForecast(
       market,
       timeframe,
@@ -55,6 +56,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Dynamic import
+    const { predictiveAnalytics } = await import('@/lib/ai/predictive-analytics-engine');
     const prediction = await predictiveAnalytics.predictCustomerBehavior(customerId);
 
     return NextResponse.json({
@@ -88,6 +91,8 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Dynamic import
+    const { predictiveAnalytics } = await import('@/lib/ai/predictive-analytics-engine');
     const forecast = await predictiveAnalytics.generateRevenueForecast(
       period,
       periods

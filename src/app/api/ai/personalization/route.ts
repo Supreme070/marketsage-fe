@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { advancedPersonalization } from '@/lib/ai/advanced-personalization-engine';
 import { logger } from '@/lib/logger';
 
 /**
@@ -18,6 +17,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Dynamic import
+    const { advancedPersonalization } = await import('@/lib/ai/advanced-personalization-engine');
     const profile = await advancedPersonalization.buildPersonalizationProfile(customerId);
 
     return NextResponse.json({
@@ -51,6 +52,8 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Dynamic import
+    const { advancedPersonalization } = await import('@/lib/ai/advanced-personalization-engine');
     const content = await advancedPersonalization.generatePersonalizedContent(
       customerId,
       contentType,
@@ -99,6 +102,8 @@ export async function GET(request: NextRequest) {
       limit: limit ? Number.parseInt(limit) : undefined
     };
 
+    // Dynamic import
+    const { advancedPersonalization } = await import('@/lib/ai/advanced-personalization-engine');
     const recommendations = await advancedPersonalization.generatePersonalizedRecommendations(
       customerId,
       context

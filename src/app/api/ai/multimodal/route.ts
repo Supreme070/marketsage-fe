@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { multiModalIntelligence } from '@/lib/ai/multimodal-intelligence';
 import { logger } from '@/lib/logger';
 
 /**
@@ -39,6 +38,7 @@ export async function POST(request: NextRequest) {
       }
     };
 
+    const { multiModalIntelligence } = await import('@/lib/ai/multimodal-intelligence');
     const analysis = await multiModalIntelligence.analyzeMultiModal(input);
 
     return NextResponse.json({

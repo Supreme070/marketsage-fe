@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { ragQuery } from '@/lib/ai/rag-engine';
 import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
@@ -16,6 +15,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'question is required' }, { status: 400 });
     }
 
+    // Dynamic import
+    const { ragQuery } = await import('@/lib/ai/rag-engine');
     const result = await ragQuery(question);
     return NextResponse.json({ success: true, ...result });
   } catch (error) {

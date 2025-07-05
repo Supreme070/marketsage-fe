@@ -21,6 +21,9 @@ import { logger } from '@/lib/logger';
 import prisma from '@/lib/db/prisma';
 import { recordTaskExecution } from '@/lib/ai/task-execution-monitor';
 import { intelligentExecutionEngine } from '@/lib/ai/intelligent-execution-engine';
+import { universalTaskExecutionEngine } from '@/lib/ai/universal-task-execution-engine';
+import { enhancedNLPParser, type CommandContext } from '@/lib/ai/enhanced-nlp-parser';
+import { safetyApprovalSystem, type OperationRequest } from '@/lib/ai/safety-approval-system';
 
 // -----------------------------
 // Request / Response Typings
@@ -283,7 +286,333 @@ ${taskExecutionResult && taskExecutionResult.success ? `\n🚀 **TASK EXECUTION 
     }
 
     try {
-      // Use intelligent execution engine
+      // First try the universal execution engine for comprehensive operations
+      let executionResult;
+      
+      try {
+        // Get user context for execution
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { organization: true },
+        });
+        
+        // Build enhanced context for NLP parsing
+        const commandContext: Partial<CommandContext> = {
+          userId,
+          businessContext: {
+            industry: user?.organization?.industry || 'fintech',
+            market: user?.organization?.country || 'Nigeria',
+            organizationSize: 'medium',
+            currentGoals: []
+          },
+          userPreferences: {
+            communicationStyle: 'professional',
+            riskTolerance: 'medium',
+            automationLevel: 'high'
+          }
+        };
+
+        // Try enhanced NLP parser for complex commands first
+        const nlpResult = await enhancedNLPParser.parseCommand(question, commandContext);
+        
+        if (nlpResult.success && nlpResult.command) {
+          // Handle complex multi-step commands
+          if (nlpResult.command.complexity !== 'simple') {
+            logger.info('Complex command detected, using enhanced execution', {
+              userId,
+              complexity: nlpResult.command.complexity,
+              stepCount: nlpResult.command.executionPlan.length,
+              riskLevel: nlpResult.command.riskLevel
+            });
+
+            // Check if approval is needed for high-risk operations
+            if (nlpResult.command.riskLevel === 'high' || nlpResult.command.riskLevel === 'critical') {
+              return {
+                success: true,
+                timestamp: new Date(),
+                taskType: 'task',
+                data: {
+                  answer: `⚠️ **High-Risk Operation Detected**\n\n${nlpResult.command.executionPlan.map((step, i) => `${i + 1}. ${step.description}`).join('\n')}\n\n**Risk Level**: ${nlpResult.command.riskLevel.toUpperCase()}\n**Estimated Time**: ${Math.ceil(nlpResult.command.estimatedTime / 60)} minutes\n\nThis operation requires approval before execution. Please confirm if you want to proceed.`,
+                  requiresApproval: true,
+                  executionPlan: nlpResult.command.executionPlan,
+                  riskLevel: nlpResult.command.riskLevel
+                },
+                confidence: nlpResult.command.confidence,
+                debug: {
+                  enhancedNLP: true,
+                  complexity: nlpResult.command.complexity,
+                  stepCount: nlpResult.command.executionPlan.length
+                }
+              };
+            }
+
+            // Execute each step in the plan with safety checks
+            const stepResults = [];
+            for (const step of nlpResult.command.executionPlan) {
+              try {
+                // Create operation request for safety assessment
+                const operationRequest: OperationRequest = {
+                  id: `op_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                  userId,
+                  userRole: user?.role || 'USER',
+                  operationType: `${step.action.toLowerCase()}_${step.entity.toLowerCase()}`,
+                  entity: step.entity,
+                  action: step.action,
+                  parameters: step.parameters,
+                  affectedRecords: step.parameters.affectedRecords || 1,
+                  context: {
+                    sessionId: `session_${Date.now()}`,
+                    timestamp: new Date(),
+                    ipAddress: 'system',
+                    userAgent: 'Supreme-AI-v3'
+                  }
+                };
+
+                // Assess safety of the operation
+                const safetyAssessment = await safetyApprovalSystem.assessOperation(operationRequest);
+                
+                // Add operation to history for rate limiting
+                safetyApprovalSystem.addToHistory(operationRequest);
+
+                // If operation cannot proceed due to safety concerns
+                if (!safetyAssessment.canProceed) {
+                  if (safetyAssessment.requiredApprovals.length > 0) {
+                    // Request approval
+                    const approvalRequest = await safetyApprovalSystem.requestApproval(
+                      operationRequest,
+                      safetyAssessment,
+                      `Multi-step operation: ${step.description}`
+                    );
+
+                    return {
+                      success: false,
+                      timestamp: new Date(),
+                      taskType: 'task',
+                      data: {
+                        answer: `⚠️ **Step ${step.order} requires approval**\n\n**Step**: ${step.description}\n**Risk Level**: ${safetyAssessment.riskLevel.toUpperCase()}\n**Approval ID**: ${approvalRequest.id}\n\n**Safety Concerns**:\n${safetyAssessment.warnings.join('\n')}\n\nPlease approve this operation to continue.`,
+                        requiresApproval: true,
+                        approvalId: approvalRequest.id,
+                        safetyAssessment,
+                        stepResults
+                      },
+                      confidence: 0.8,
+                      debug: {
+                        safetyBlocked: true,
+                        riskLevel: safetyAssessment.riskLevel,
+                        stepNumber: step.order
+                      }
+                    };
+                  } else {
+                    return {
+                      success: false,
+                      timestamp: new Date(),
+                      taskType: 'task',
+                      data: {
+                        answer: `🚫 **Step ${step.order} blocked by safety system**\n\n**Step**: ${step.description}\n**Restrictions**:\n${safetyAssessment.restrictions.join('\n')}\n\n**Warnings**:\n${safetyAssessment.warnings.join('\n')}`,
+                        safetyBlocked: true,
+                        safetyAssessment,
+                        stepResults
+                      },
+                      confidence: 0.8,
+                      debug: {
+                        safetyBlocked: true,
+                        riskLevel: safetyAssessment.riskLevel,
+                        stepNumber: step.order
+                      }
+                    };
+                  }
+                }
+
+                // If step requires approval but is already approved, proceed
+                if (safetyAssessment.requiredApprovals.length > 0) {
+                  const isApproved = await safetyApprovalSystem.isOperationApproved(operationRequest.id);
+                  if (!isApproved) {
+                    const approvalRequest = await safetyApprovalSystem.requestApproval(
+                      operationRequest,
+                      safetyAssessment,
+                      `Multi-step operation: ${step.description}`
+                    );
+
+                    return {
+                      success: false,
+                      timestamp: new Date(),
+                      taskType: 'task',
+                      data: {
+                        answer: `⏳ **Approval required for step ${step.order}**\n\n**Step**: ${step.description}\n**Risk Level**: ${safetyAssessment.riskLevel.toUpperCase()}\n**Approval ID**: ${approvalRequest.id}\n\nOperation will proceed once approved.`,
+                        requiresApproval: true,
+                        approvalId: approvalRequest.id,
+                        safetyAssessment
+                      },
+                      confidence: 0.8
+                    };
+                  }
+                }
+
+                const stepContext = {
+                  userId,
+                  userRole: user?.role || 'USER',
+                  organizationId: user?.organizationId || '',
+                };
+                
+                const stepResult = await universalTaskExecutionEngine.execute({
+                  operationId: `${step.action.toLowerCase()}_${step.entity.toLowerCase()}`,
+                  params: step.parameters
+                }, stepContext);
+
+                stepResults.push({
+                  step: step.description,
+                  success: stepResult.success,
+                  message: stepResult.message,
+                  data: stepResult.data
+                });
+
+                if (!stepResult.success) {
+                  return {
+                    success: false,
+                    timestamp: new Date(),
+                    taskType: 'task',
+                    data: {
+                      answer: `❌ **Multi-step execution failed at step ${step.order}**\n\n**Failed Step**: ${step.description}\n**Error**: ${stepResult.error}\n\n**Completed Steps**:\n${stepResults.slice(0, -1).map(r => `✅ ${r.step}`).join('\n')}`,
+                      partialResults: stepResults,
+                      failedAt: step.order
+                    },
+                    confidence: 0.8,
+                    debug: {
+                      enhancedNLP: true,
+                      multiStepExecution: true,
+                      failedStep: step.order
+                    }
+                  };
+                }
+              } catch (stepError) {
+                logger.error('Step execution failed', {
+                  step: step.description,
+                  error: stepError instanceof Error ? stepError.message : String(stepError)
+                });
+              }
+            }
+
+            return {
+              success: true,
+              timestamp: new Date(),
+              taskType: 'task',
+              data: {
+                answer: `✅ **Multi-step operation completed successfully!**\n\n${stepResults.map(r => `✅ ${r.step}: ${r.message}`).join('\n')}\n\n**Total steps executed**: ${stepResults.length}\n**Estimated time**: ${Math.ceil(nlpResult.command.estimatedTime / 60)} minutes`,
+                stepResults,
+                executionPlan: nlpResult.command.executionPlan
+              },
+              confidence: nlpResult.command.confidence,
+              debug: {
+                enhancedNLP: true,
+                multiStepExecution: true,
+                complexity: nlpResult.command.complexity,
+                stepCount: stepResults.length
+              }
+            };
+          }
+        }
+
+        // For simple commands or if enhanced NLP fails, fall back to universal engine
+        const context = {
+          userId,
+          userRole: user?.role || 'USER',
+          organizationId: user?.organizationId || '',
+        };
+        
+        // Try universal execution engine
+        executionResult = await universalTaskExecutionEngine.execute(question, context);
+        
+        // If universal engine finds an operation, use its result
+        if (executionResult.operationId !== 'unknown') {
+          if (executionResult.success) {
+            const executionTime = executionResult.executionTime || (Date.now() - startTime);
+            
+            logger.info('Universal task execution successful', { 
+              userId, 
+              operationId: executionResult.operationId,
+              category: executionResult.category,
+              message: executionResult.message,
+              executionTime
+            });
+
+            // Record successful execution
+            recordTaskExecution(
+              executionResult.operationId,
+              userId,
+              userRole,
+              true,
+              executionTime
+            );
+
+            return {
+              success: true,
+              timestamp: new Date(),
+              taskType: 'task',
+              data: {
+                answer: `✅ **Task Executed Successfully**\n\n${executionResult.message}${executionResult.data ? '\n\n**Details:**\n' + JSON.stringify(executionResult.data, null, 2) : ''}`,
+                taskExecution: executionResult,
+                executionMode: 'universal-supreme-ai',
+                confidence: 0.98
+              },
+              confidence: 0.98,
+              debug: { 
+                taskExecuted: true,
+                executionMode: 'universal-supreme-ai',
+                operationId: executionResult.operationId,
+                category: executionResult.category,
+                executionTime
+              }
+            };
+          } else {
+            // Handle universal execution failures
+            const executionTime = executionResult.executionTime || (Date.now() - startTime);
+            
+            logger.warn('Universal task execution failed', {
+              userId,
+              operationId: executionResult.operationId,
+              error: executionResult.error,
+              message: executionResult.message
+            });
+
+            // Record failed execution
+            recordTaskExecution(
+              executionResult.operationId,
+              userId,
+              userRole,
+              false,
+              executionTime,
+              'execution_error',
+              executionResult.error
+            );
+
+            return {
+              success: true, // Still successful response, but task failed
+              timestamp: new Date(),
+              taskType: 'task',
+              data: {
+                answer: `⚠️ **Task Execution Issue**\n\n${executionResult.message}${executionResult.suggestions ? '\n\n**Suggestions:**\n' + executionResult.suggestions.join('\n') : ''}`,
+                taskExecution: executionResult,
+                executionMode: 'universal-supreme-ai',
+                suggestions: executionResult.suggestions
+              },
+              confidence: 0.7,
+              debug: { 
+                taskExecuted: false,
+                executionMode: 'universal-supreme-ai',
+                operationId: executionResult.operationId,
+                error: executionResult.error,
+                executionTime
+              }
+            };
+          }
+        }
+      } catch (universalError) {
+        logger.warn('Universal execution engine error, falling back to intelligent engine', {
+          error: universalError instanceof Error ? universalError.message : String(universalError)
+        });
+      }
+      
+      // Fall back to intelligent execution engine if universal engine doesn't find a match
       const taskExecutionResult = await intelligentExecutionEngine.executeUserRequest(question, userId);
       
       if (taskExecutionResult && taskExecutionResult.success) {
@@ -3192,4 +3521,6 @@ Deliver professional, efficient automation solutions that drive business growth 
 // Export singleton for application-wide consumption
 // ----------------------------------------------------
 
-export const SupremeAIv3 = new SupremeAIV3Core(); 
+export const SupremeAIv3 = new SupremeAIV3Core();
+export const supremeAIv3 = SupremeAIv3;
+export const supremeAI = SupremeAIv3; 

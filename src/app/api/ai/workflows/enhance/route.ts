@@ -2,9 +2,6 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { getServerSession } from 'next-auth';
 import prisma from '@/lib/db/prisma';
-import { FallbackAI } from '@/lib/ai/openai-integration';
-
-const fallbackAI = new FallbackAI();
 
 export async function POST(request: NextRequest) {
   try {
@@ -175,6 +172,8 @@ async function generateWorkflowInsights(workflow: any, analytics: any) {
     Status: ${workflow.status}
   `;
 
+  const { FallbackAI } = await import('@/lib/ai/openai-integration');
+  const fallbackAI = new FallbackAI();
   const response = await fallbackAI.generateResponse(
     'Analyze this workflow performance and provide insights and recommendations for improvement.',
     context

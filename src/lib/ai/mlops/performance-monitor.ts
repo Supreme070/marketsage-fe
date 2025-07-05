@@ -3,6 +3,7 @@
  * Real-time monitoring and alerting for ML models
  */
 
+import { EventEmitter } from 'events';
 import { logger } from '@/lib/logger';
 import { errorBoundary } from '../utils/error-boundary';
 import { NeuralNetworkPredictor } from '../supreme-ai-engine';
@@ -43,7 +44,7 @@ interface Alert {
   timestamp: Date;
 }
 
-export class PerformanceMonitor {
+export class PerformanceMonitor extends EventEmitter {
   private metrics: Map<string, PerformanceMetrics[]> = new Map();
   private driftMetrics: Map<string, DataDriftMetrics[]> = new Map();
   private alertConfigs: Map<string, AlertConfig> = new Map();
@@ -51,6 +52,7 @@ export class PerformanceMonitor {
   private readonly metricsRetention = 30 * 24 * 60 * 60 * 1000; // 30 days
 
   constructor() {
+    super();
     // Start periodic cleanup
     setInterval(() => this.cleanupOldMetrics(), 24 * 60 * 60 * 1000);
   }
@@ -233,6 +235,16 @@ export class PerformanceMonitor {
     if (alerts.length > 0) {
       await this.sendAlerts(alerts, config.alertChannels);
       this.lastAlerts.set(modelId, new Date());
+      
+      // Emit performance degradation event
+      const performanceAlert = alerts.find(a => a.type === 'performance');
+      if (performanceAlert) {
+        this.emit('performanceDegraded', {
+          modelId,
+          metrics: avgMetrics,
+          alert: performanceAlert
+        });
+      }
     }
   }
 
@@ -296,4 +308,7 @@ export class PerformanceMonitor {
       );
     }
   }
-} 
+}
+
+// Create and export singleton instance
+export const performanceMonitor = new PerformanceMonitor(); 

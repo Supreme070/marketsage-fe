@@ -840,4 +840,5 @@ export class PredictiveAnalyticsEngine {
 }
 
 // Export singleton instance
-export const predictiveAnalytics = new PredictiveAnalyticsEngine(); 
+export const predictiveAnalytics = new PredictiveAnalyticsEngine();
+export const predictiveAnalyticsEngine = predictiveAnalytics; 

@@ -12,11 +12,21 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { SupremeAIv3, type SupremeAIv3Task } from '@/lib/ai/supreme-ai-v3-engine';
 import { logger } from '@/lib/logger';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db/prisma';
+
+// Dynamic import type for SupremeAIv3Task
+type SupremeAIv3Task = {
+  type: string;
+  userId: string;
+  organizationId?: string;
+  context?: any;
+  enableTaskExecution?: boolean;
+  culturalContext?: any;
+  metadata?: any;
+};
 
 // Rate limiting (simple in-memory store)
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -290,8 +300,8 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Process with Supreme-AI v3 engine
-    const supremeAI = SupremeAIv3;
+    // Process with Supreme-AI v3 engine (dynamic import to prevent circular dependencies)
+    const { SupremeAIv3 } = await import('@/lib/ai/supreme-ai-v3-engine');
     
     // Ensure task execution is enabled if requested
     if (enableTaskExecution && task.type === 'question') {
@@ -299,7 +309,7 @@ export async function POST(request: NextRequest) {
       (task as any).enableTaskExecution = true;
     }
     
-    const result = await supremeAI.process(task);
+    const result = await SupremeAIv3.process(task);
     const processingTime = Date.now() - startTime;
     
     // Log successful request

@@ -7,9 +7,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { getBatchScheduler } from '@/lib/batch/scheduler';
-import { CustomerProfileProcessor } from '@/lib/batch/customer-profile-processor';
+import { authOptions } from '@/lib/auth/auth-options';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
@@ -70,7 +68,8 @@ export async function POST(request: NextRequest) {
     });
 
     if (immediate) {
-      // Execute immediately
+      // Execute immediately - dynamic import to prevent circular dependencies
+      const { CustomerProfileProcessor } = await import('@/lib/batch/customer-profile-processor');
       const result = await CustomerProfileProcessor.processBatch(targetOrgId);
       
       return NextResponse.json({
@@ -82,7 +81,8 @@ export async function POST(request: NextRequest) {
         }
       });
     } else {
-      // Schedule for next run
+      // Schedule for next run - dynamic import to prevent circular dependencies
+      const { getBatchScheduler } = await import('@/lib/batch/scheduler');
       const scheduler = getBatchScheduler();
       const execution = await scheduler.runJobNow('customer-profile-batch', targetOrgId);
       
@@ -127,7 +127,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const jobId = searchParams.get('jobId') || 'customer-profile-batch';
 
-    // Get batch job status
+    // Get batch job status - dynamic import to prevent circular dependencies
+    const { getBatchScheduler } = await import('@/lib/batch/scheduler');
     const scheduler = getBatchScheduler();
     const status = scheduler.getJobStatus(jobId);
 

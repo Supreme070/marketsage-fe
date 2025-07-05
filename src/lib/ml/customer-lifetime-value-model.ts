@@ -1204,3 +1204,6 @@ export async function trainCLVModel(
   const model = getCLVPredictionModel();
   return model.trainModel(organizationId, timeHorizon, sampleSize);
 }
+
+// Export alias for compatibility
+export const getCustomerLifetimeValueModel = getCLVPredictionModel;

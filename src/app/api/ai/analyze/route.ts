@@ -1,8 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { SupremeAIv3 } from "@/lib/ai/supreme-ai-v3-engine";
 import { logger } from "@/lib/logger";
+
+// Dynamic import to prevent circular dependencies
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,6 +28,9 @@ export async function POST(request: NextRequest) {
           );
         }
 
+        // Dynamic import to prevent circular dependencies
+        const { SupremeAIv3 } = await import('@/lib/ai/supreme-ai-v3-engine');
+        
         const analysisResult = await SupremeAIv3.process({
           type: 'content',
           userId: session.user.id,

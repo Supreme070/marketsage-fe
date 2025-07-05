@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { aiTaskEngine } from '@/lib/ai/task-automation-engine';
 import { logger } from '@/lib/logger';
 import { getServerSession } from 'next-auth';
 
@@ -32,7 +31,8 @@ export async function POST(request: NextRequest) {
       behaviorData: {}
     };
 
-    // Generate AI task suggestions
+    // Dynamic import and generate AI task suggestions
+    const { aiTaskEngine } = await import('@/lib/ai/task-automation-engine');
     const suggestions = await aiTaskEngine.generateTaskSuggestions(context);
 
     logger.info('Generated AI task suggestions', {
@@ -84,6 +84,9 @@ export async function PUT(request: NextRequest) {
       behaviorData: {}
     };
 
+    // Dynamic import
+    const { aiTaskEngine } = await import('@/lib/ai/task-automation-engine');
+    
     let result;
     if (executeAutomatic) {
       // Execute high-confidence automatic tasks

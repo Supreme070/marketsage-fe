@@ -8,9 +8,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { getCustomerEventBus, CustomerEventType, initializeCustomerEventBus } from '@/lib/events/event-bus';
-import { AIDecisionHandler } from '@/lib/events/handlers/ai-decision-handler';
+import { authOptions } from '@/lib/auth/auth-options';
 import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
@@ -29,6 +27,10 @@ export async function POST(request: NextRequest) {
       userId: session.user.id,
       userRole: session.user.role
     });
+
+    // Dynamic imports to prevent circular dependencies
+    const { initializeCustomerEventBus, CustomerEventType } = await import('@/lib/events/event-bus');
+    const { AIDecisionHandler } = await import('@/lib/events/handlers/ai-decision-handler');
 
     // Initialize the event bus connection
     const eventBus = await initializeCustomerEventBus();
@@ -120,6 +122,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Dynamic import to prevent circular dependencies
+    const { getCustomerEventBus } = await import('@/lib/events/event-bus');
+    
     // Get current event bus status
     const eventBus = getCustomerEventBus();
     const stats = await eventBus.getEventStats();

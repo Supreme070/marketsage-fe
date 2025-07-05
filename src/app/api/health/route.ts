@@ -151,12 +151,27 @@ async function performHealthChecks() {
       console.error('AI health check failed:', error);
     }
 
-    // External APIs health check
+    // External APIs health check - Enhanced with AI integration testing
     try {
-      // Check email, SMS, WhatsApp services
-      checks.external_apis = true; // Placeholder
+      // Import integration testing engine
+      const { integrationTestingEngine } = await import('@/lib/ai/integration-testing-engine');
+      const integrationHealth = await integrationTestingEngine.performIntegrationHealthCheck();
+      
+      // Consider external APIs healthy if overall score > 70
+      checks.external_apis = integrationHealth.overall.score > 70;
+      
+      // Add detailed integration metrics to response
+      checks.integration_details = {
+        overallScore: integrationHealth.overall.score,
+        healthyCount: integrationHealth.metrics.healthyCount,
+        unhealthyCount: integrationHealth.metrics.unhealthyCount,
+        averageResponseTime: integrationHealth.metrics.averageResponseTime,
+        riskLevel: integrationHealth.insights.riskLevel,
+        trending: integrationHealth.insights.trending
+      };
     } catch (error) {
-      console.error('External APIs health check failed:', error);
+      console.error('AI Integration testing failed:', error);
+      checks.external_apis = false;
     }
 
     // Overall health

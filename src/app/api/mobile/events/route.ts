@@ -4,7 +4,7 @@
  * Handles event ingestion from LeadPulse Mobile SDK
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { prisma } from '@/lib/db/prisma';
 import { logger } from '@/lib/logger';
@@ -384,7 +384,7 @@ async function trackMobileConversion(event: any, baseData: any) {
         id: `mobile_${baseData.id}`,
         visitor_fingerprint: baseData.deviceId,
         event_type: 'purchase',
-        event_value: parseFloat(event.value?.toString() || '0'),
+        event_value: Number.parseFloat(event.value?.toString() || '0'),
         currency: event.metadata?.currency || 'USD',
         timestamp: baseData.timestamp,
         metadata: {

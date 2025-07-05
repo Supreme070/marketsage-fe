@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db/prisma';
 import { logger } from '@/lib/logger';
-import { AITaskAutomationEngine } from '@/lib/ai/task-automation-engine';
 
 /**
  * AI Task Execution API
@@ -31,6 +30,8 @@ export async function POST(request: NextRequest) {
       parametersCount: Object.keys(parameters || {}).length
     });
 
+    // Dynamic import
+    const { AITaskAutomationEngine } = await import('@/lib/ai/task-automation-engine');
     const taskEngine = new AITaskAutomationEngine();
     let result;
 

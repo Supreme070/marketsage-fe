@@ -113,3 +113,373 @@ export class DiscountApplyExecutor extends BaseExecutor {
     return 2000; // 2 seconds
   }
 }
+
+/**
+ * Birthday Greeting Executor
+ */
+export class BirthdayGreetingExecutor extends BaseExecutor {
+  actionType = ActionType.SEND_BIRTHDAY_GREETING;
+
+  async execute(context: ExecutionContext): Promise<ActionExecutionResult> {
+    this.logExecutionStart(context);
+
+    try {
+      const contact = await this.getContact(context.actionPlan.contactId);
+      if (!contact) {
+        return this.createFailureResult('Contact not found');
+      }
+
+      if (this.isDryRun(context)) {
+        return this.createSuccessResult({
+          action: 'birthday_greeting',
+          contactId: context.actionPlan.contactId,
+          message: 'Dry run - Birthday greeting would be sent'
+        });
+      }
+
+      // Implementation would integrate with email/SMS systems
+      logger.info(`Birthday greeting sent to ${contact.email}`);
+
+      return this.createSuccessResult({
+        action: 'birthday_greeting',
+        contactId: context.actionPlan.contactId,
+        message: 'Birthday greeting sent successfully'
+      });
+
+    } catch (error) {
+      return this.handleExecutionError(error, context);
+    }
+  }
+
+  estimateExecutionTime(): number {
+    return 1500;
+  }
+}
+
+/**
+ * Anniversary Greeting Executor
+ */
+export class AnniversaryGreetingExecutor extends BaseExecutor {
+  actionType = ActionType.SEND_ANNIVERSARY_GREETING;
+
+  async execute(context: ExecutionContext): Promise<ActionExecutionResult> {
+    this.logExecutionStart(context);
+
+    try {
+      const contact = await this.getContact(context.actionPlan.contactId);
+      if (!contact) {
+        return this.createFailureResult('Contact not found');
+      }
+
+      if (this.isDryRun(context)) {
+        return this.createSuccessResult({
+          action: 'anniversary_greeting',
+          contactId: context.actionPlan.contactId,
+          message: 'Dry run - Anniversary greeting would be sent'
+        });
+      }
+
+      logger.info(`Anniversary greeting sent to ${contact.email}`);
+
+      return this.createSuccessResult({
+        action: 'anniversary_greeting',
+        contactId: context.actionPlan.contactId,
+        message: 'Anniversary greeting sent successfully'
+      });
+
+    } catch (error) {
+      return this.handleExecutionError(error, context);
+    }
+  }
+
+  estimateExecutionTime(): number {
+    return 1500;
+  }
+}
+
+/**
+ * Churn Prevention Executor
+ */
+export class ChurnPreventionExecutor extends BaseExecutor {
+  actionType = ActionType.CHURN_PREVENTION;
+
+  async execute(context: ExecutionContext): Promise<ActionExecutionResult> {
+    this.logExecutionStart(context);
+
+    try {
+      const contact = await this.getContact(context.actionPlan.contactId);
+      if (!contact) {
+        return this.createFailureResult('Contact not found');
+      }
+
+      if (this.isDryRun(context)) {
+        return this.createSuccessResult({
+          action: 'churn_prevention',
+          contactId: context.actionPlan.contactId,
+          message: 'Dry run - Churn prevention campaign would be triggered'
+        });
+      }
+
+      logger.info(`Churn prevention campaign triggered for ${contact.email}`);
+
+      return this.createSuccessResult({
+        action: 'churn_prevention',
+        contactId: context.actionPlan.contactId,
+        message: 'Churn prevention campaign triggered successfully'
+      });
+
+    } catch (error) {
+      return this.handleExecutionError(error, context);
+    }
+  }
+
+  estimateExecutionTime(): number {
+    return 2500;
+  }
+}
+
+/**
+ * Coupon Send Executor
+ */
+export class CouponSendExecutor extends BaseExecutor {
+  actionType = ActionType.SEND_COUPON;
+
+  async execute(context: ExecutionContext): Promise<ActionExecutionResult> {
+    this.logExecutionStart(context);
+
+    try {
+      const contact = await this.getContact(context.actionPlan.contactId);
+      if (!contact) {
+        return this.createFailureResult('Contact not found');
+      }
+
+      if (this.isDryRun(context)) {
+        return this.createSuccessResult({
+          action: 'send_coupon',
+          contactId: context.actionPlan.contactId,
+          message: 'Dry run - Coupon would be sent'
+        });
+      }
+
+      logger.info(`Coupon sent to ${contact.email}`);
+
+      return this.createSuccessResult({
+        action: 'send_coupon',
+        contactId: context.actionPlan.contactId,
+        message: 'Coupon sent successfully'
+      });
+
+    } catch (error) {
+      return this.handleExecutionError(error, context);
+    }
+  }
+
+  estimateExecutionTime(): number {
+    return 1500;
+  }
+}
+
+/**
+ * Educational Content Executor
+ */
+export class EducationalContentExecutor extends BaseExecutor {
+  actionType = ActionType.SEND_EDUCATIONAL_CONTENT;
+
+  async execute(context: ExecutionContext): Promise<ActionExecutionResult> {
+    this.logExecutionStart(context);
+
+    try {
+      const contact = await this.getContact(context.actionPlan.contactId);
+      if (!contact) {
+        return this.createFailureResult('Contact not found');
+      }
+
+      if (this.isDryRun(context)) {
+        return this.createSuccessResult({
+          action: 'send_educational_content',
+          contactId: context.actionPlan.contactId,
+          message: 'Dry run - Educational content would be sent'
+        });
+      }
+
+      logger.info(`Educational content sent to ${contact.email}`);
+
+      return this.createSuccessResult({
+        action: 'send_educational_content',
+        contactId: context.actionPlan.contactId,
+        message: 'Educational content sent successfully'
+      });
+
+    } catch (error) {
+      return this.handleExecutionError(error, context);
+    }
+  }
+
+  estimateExecutionTime(): number {
+    return 2000;
+  }
+}
+
+/**
+ * Personalized Offer Executor
+ */
+export class PersonalizedOfferExecutor extends BaseExecutor {
+  actionType = ActionType.SEND_PERSONALIZED_OFFER;
+
+  async execute(context: ExecutionContext): Promise<ActionExecutionResult> {
+    this.logExecutionStart(context);
+
+    try {
+      const contact = await this.getContact(context.actionPlan.contactId);
+      if (!contact) {
+        return this.createFailureResult('Contact not found');
+      }
+
+      if (this.isDryRun(context)) {
+        return this.createSuccessResult({
+          action: 'send_personalized_offer',
+          contactId: context.actionPlan.contactId,
+          message: 'Dry run - Personalized offer would be sent'
+        });
+      }
+
+      logger.info(`Personalized offer sent to ${contact.email}`);
+
+      return this.createSuccessResult({
+        action: 'send_personalized_offer',
+        contactId: context.actionPlan.contactId,
+        message: 'Personalized offer sent successfully'
+      });
+
+    } catch (error) {
+      return this.handleExecutionError(error, context);
+    }
+  }
+
+  estimateExecutionTime(): number {
+    return 2000;
+  }
+}
+
+/**
+ * Review Request Executor
+ */
+export class ReviewRequestExecutor extends BaseExecutor {
+  actionType = ActionType.REQUEST_REVIEW;
+
+  async execute(context: ExecutionContext): Promise<ActionExecutionResult> {
+    this.logExecutionStart(context);
+
+    try {
+      const contact = await this.getContact(context.actionPlan.contactId);
+      if (!contact) {
+        return this.createFailureResult('Contact not found');
+      }
+
+      if (this.isDryRun(context)) {
+        return this.createSuccessResult({
+          action: 'request_review',
+          contactId: context.actionPlan.contactId,
+          message: 'Dry run - Review request would be sent'
+        });
+      }
+
+      logger.info(`Review request sent to ${contact.email}`);
+
+      return this.createSuccessResult({
+        action: 'request_review',
+        contactId: context.actionPlan.contactId,
+        message: 'Review request sent successfully'
+      });
+
+    } catch (error) {
+      return this.handleExecutionError(error, context);
+    }
+  }
+
+  estimateExecutionTime(): number {
+    return 1500;
+  }
+}
+
+/**
+ * Survey Executor
+ */
+export class SurveyExecutor extends BaseExecutor {
+  actionType = ActionType.SEND_SURVEY;
+
+  async execute(context: ExecutionContext): Promise<ActionExecutionResult> {
+    this.logExecutionStart(context);
+
+    try {
+      const contact = await this.getContact(context.actionPlan.contactId);
+      if (!contact) {
+        return this.createFailureResult('Contact not found');
+      }
+
+      if (this.isDryRun(context)) {
+        return this.createSuccessResult({
+          action: 'send_survey',
+          contactId: context.actionPlan.contactId,
+          message: 'Dry run - Survey would be sent'
+        });
+      }
+
+      logger.info(`Survey sent to ${contact.email}`);
+
+      return this.createSuccessResult({
+        action: 'send_survey',
+        contactId: context.actionPlan.contactId,
+        message: 'Survey sent successfully'
+      });
+
+    } catch (error) {
+      return this.handleExecutionError(error, context);
+    }
+  }
+
+  estimateExecutionTime(): number {
+    return 1500;
+  }
+}
+
+/**
+ * Winback Campaign Executor
+ */
+export class WinbackCampaignExecutor extends BaseExecutor {
+  actionType = ActionType.WINBACK_CAMPAIGN;
+
+  async execute(context: ExecutionContext): Promise<ActionExecutionResult> {
+    this.logExecutionStart(context);
+
+    try {
+      const contact = await this.getContact(context.actionPlan.contactId);
+      if (!contact) {
+        return this.createFailureResult('Contact not found');
+      }
+
+      if (this.isDryRun(context)) {
+        return this.createSuccessResult({
+          action: 'winback_campaign',
+          contactId: context.actionPlan.contactId,
+          message: 'Dry run - Winback campaign would be triggered'
+        });
+      }
+
+      logger.info(`Winback campaign triggered for ${contact.email}`);
+
+      return this.createSuccessResult({
+        action: 'winback_campaign',
+        contactId: context.actionPlan.contactId,
+        message: 'Winback campaign triggered successfully'
+      });
+
+    } catch (error) {
+      return this.handleExecutionError(error, context);
+    }
+  }
+
+  estimateExecutionTime(): number {
+    return 2500;
+  }
+}

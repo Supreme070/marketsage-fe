@@ -621,4 +621,5 @@ export class RealTimeDecisionEngine {
 }
 
 // Export singleton instance
-export const realTimeDecisionEngine = new RealTimeDecisionEngine(); 
+export const realTimeDecisionEngine = new RealTimeDecisionEngine();
+export const realtimeDecisionEngine = realTimeDecisionEngine; 

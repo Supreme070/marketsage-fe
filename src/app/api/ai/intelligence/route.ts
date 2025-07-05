@@ -5,9 +5,6 @@ import prisma from '@/lib/db/prisma';
 import { logger } from '@/lib/logger';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { analyzeContent } from '@/lib/ai/content-intelligence';
-import { generateAIInsights } from '@/lib/ai/market-intelligence';
-import { calculatePredictiveScores } from '@/lib/ai/predictive-analytics';
 
 /**
  * AI Intelligence API Endpoint
@@ -95,7 +92,7 @@ async function getAIIntelligenceOverview(userId: string, startDate: Date, endDat
   const realMetrics = calculateRealMetrics(contacts, analytics);
   
   // 4. Generate AI-powered insights
-  const aiInsights = await generateAIInsights(contacts, realMetrics);
+  const aiInsights = await generateLocalAIInsights(contacts, realMetrics);
 
   // 5. Combine real data with AI intelligence
   return {
@@ -182,7 +179,7 @@ function calculateRealMetrics(contacts: any[], analytics: any[]) {
   };
 }
 
-async function generateAIInsights(contacts: any[], metrics: any) {
+async function generateLocalAIInsights(contacts: any[], metrics: any) {
   // Generate AI-powered insights based on real data patterns
   const insights = [];
 
@@ -709,6 +706,7 @@ async function getContentPerformanceAnalytics(userId: string, startDate: Date, e
     ]);
 
     // Generate AI-powered content insights
+    const { analyzeContent } = await import('@/lib/ai/content-intelligence');
     const aiContentInsights = await analyzeContent(
       [...emailCampaigns, ...smsCampaigns, ...whatsappCampaigns]
     );
@@ -776,6 +774,7 @@ async function getConversionAnalytics(userId: string, startDate: Date, endDate: 
     };
 
     // Generate predictive conversion insights
+    const { calculatePredictiveScores } = await import('@/lib/ai/predictive-analytics');
     const predictiveInsights = await calculatePredictiveScores(filteredConversions, contactsData);
 
     return NextResponse.json({
@@ -802,6 +801,7 @@ async function getMarketAnalysis(userId: string, startDate: Date, endDate: Date)
       getIndustryBenchmarks()
     ]);
 
+    const { generateAIInsights } = await import('@/lib/ai/market-intelligence');
     const marketInsights = await generateAIInsights({
       customerSegments: customerData,
       performance: performanceData,
@@ -965,6 +965,7 @@ async function getIndustryBenchmarks() {
 async function generateMarketOpportunities(customerData: any[], campaignData: any, conversions: any[]) {
   try {
     // AI-powered opportunity detection
+    const { generateAIInsights } = await import('@/lib/ai/market-intelligence');
     const opportunities = await generateAIInsights({
       customers: customerData,
       campaigns: campaignData,

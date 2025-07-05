@@ -30,7 +30,7 @@ services:
       - PAYMENT_CANCEL_URL=http://localhost:3030/dashboard/billing/cancel
       
       # AI Configuration - Enable Local Task Execution
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_KEY=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
       - AI_FALLBACK_MODE=false
       - DISABLE_ONNX=true
       - SUPREME_AI_MODE=enabled
@@ -38,15 +38,15 @@ services:
       - OPENAI_MODEL=gpt-4o-mini
       
       # Mailtrap Email Configuration - SANDBOX (Testing)
-      - MAILTRAP_TEST_USER=${MAILTRAP_TEST_USER}
-      - MAILTRAP_TEST_PASS=${MAILTRAP_TEST_PASS}
+      - MAILTRAP_TEST_USER=your-mailtrap-user
+      - MAILTRAP_TEST_PASS=your-mailtrap-pass
       - NEXT_PUBLIC_EMAIL_FROM=test@example.com
       - NEXT_PUBLIC_EMAIL_FROM_NAME=MarketSage
       - NEXT_PUBLIC_APP_URL=http://localhost:3030
       
       # Paystack Payment Configuration (Test Mode)
-      - PAYSTACK_SECRET_KEY=${PAYSTACK_SECRET_KEY}
-      - PAYSTACK_PUBLIC_KEY=${PAYSTACK_PUBLIC_KEY}
+      - PAYSTACK_SECRET_KEY=your-paystack-secret-key
+      - PAYSTACK_PUBLIC_KEY=your-paystack-public-key
       
       # Redis Configuration
       - REDIS_HOST=marketsage-valkey
@@ -56,7 +56,7 @@ services:
       
       # Security Configuration
       - ALLOW_DEV_FALLBACK=false
-      - FIELD_ENCRYPTION_KEY=${FIELD_ENCRYPTION_KEY}
+      - FIELD_ENCRYPTION_KEY=your-32-char-encryption-key-here
       
       # OpenTelemetry Tracing Configuration
       - OTEL_ENABLED=true
@@ -119,12 +119,12 @@ services:
       - SKIP_CONTACT_DELETE=true
       
       # API Configuration for Seeding - SANDBOX (Testing)
-      - MAILTRAP_TEST_USER=${MAILTRAP_TEST_USER}
-      - MAILTRAP_TEST_PASS=${MAILTRAP_TEST_PASS}
+      - MAILTRAP_TEST_USER=your-mailtrap-user
+      - MAILTRAP_TEST_PASS=your-mailtrap-pass
       - NEXT_PUBLIC_EMAIL_FROM=test@example.com
       - NEXT_PUBLIC_EMAIL_FROM_NAME=MarketSage
-      - PAYSTACK_SECRET_KEY=${PAYSTACK_SECRET_KEY}
-      - PAYSTACK_PUBLIC_KEY=${PAYSTACK_PUBLIC_KEY}
+      - PAYSTACK_SECRET_KEY=your-paystack-secret-key
+      - PAYSTACK_PUBLIC_KEY=your-paystack-public-key
       
       # Redis Configuration for Seeding
       - REDIS_HOST=marketsage-valkey
@@ -150,23 +150,23 @@ services:
         echo '👤 Creating admin users...' &&
         PGPASSWORD=marketsage_password psql -h marketsage-db -U marketsage -d marketsage -c \"
         INSERT INTO \\\"User\\\" (id, name, email, \\\"emailVerified\\\", password, role, \\\"createdAt\\\", \\\"updatedAt\\\") 
-        VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d047', 'Admin User', 'admin@example.com', NOW(), '\$2b\$10\$hY2LZWafLwwv3BUHWvVUd.d5v2QkM89ugdbHx9qiGLD1UuuyWmG3u', 'ADMIN', NOW(), NOW()) 
+        VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d047', 'Admin User', 'admin@example.com', NOW(), '\$$2b\$$10\$$hY2LZWafLwwv3BUHWvVUd.d5v2QkM89ugdbHx9qiGLD1UuuyWmG3u', 'ADMIN', NOW(), NOW()) 
         ON CONFLICT (email) DO NOTHING;
         
         INSERT INTO \\\"User\\\" (id, name, email, \\\"emailVerified\\\", password, role, \\\"createdAt\\\", \\\"updatedAt\\\") 
-        VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d111', 'Supreme Admin', 'supreme@marketsage.africa', NOW(), '\$2b\$10\$lnlDmDQP7EKFBshOI9XeE.6z1b7I1j9XmU/s/cCqMC9yhdKTPFrlq', 'SUPER_ADMIN', NOW(), NOW())
+        VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d111', 'Supreme Admin', 'supreme@marketsage.africa', NOW(), '\$$2b\$$10\$$lnlDmDQP7EKFBshOI9XeE.6z1b7I1j9XmU/s/cCqMC9yhdKTPFrlq', 'SUPER_ADMIN', NOW(), NOW())
         ON CONFLICT (email) DO NOTHING;
         
         INSERT INTO \\\"User\\\" (id, name, email, \\\"emailVerified\\\", password, role, \\\"createdAt\\\", \\\"updatedAt\\\") 
-        VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d222', 'Anita Manager', 'anita@marketsage.africa', NOW(), '\$2b\$10\$tRF2m2u2DGNTHmhf30pyuOizDtqoYPLSkIwTHyId9cpvw.3UUxotO', 'ADMIN', NOW(), NOW())
+        VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d222', 'Anita Manager', 'anita@marketsage.africa', NOW(), '\$$2b\$$10\$$tRF2m2u2DGNTHmhf30pyuOizDtqoYPLSkIwTHyId9cpvw.3UUxotO', 'ADMIN', NOW(), NOW())
         ON CONFLICT (email) DO NOTHING;
         
         INSERT INTO \\\"User\\\" (id, name, email, \\\"emailVerified\\\", password, role, \\\"createdAt\\\", \\\"updatedAt\\\") 
-        VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d333', 'Kola Techleads', 'kola@marketsage.africa', NOW(), '\$2b\$10\$DHwQi1SaR3uurW8Z4wtNoegNwwjG2NEN4GWZ3GPdpoKpdBX9cyD56', 'IT_ADMIN', NOW(), NOW())
+        VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d333', 'Kola Techleads', 'kola@marketsage.africa', NOW(), '\$$2b\$$10\$$DHwQi1SaR3uurW8Z4wtNoegNwwjG2NEN4GWZ3GPdpoKpdBX9cyD56', 'IT_ADMIN', NOW(), NOW())
         ON CONFLICT (email) DO NOTHING;
         
         INSERT INTO \\\"User\\\" (id, name, email, \\\"emailVerified\\\", password, role, \\\"createdAt\\\", \\\"updatedAt\\\") 
-        VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d444', 'Regular User', 'user@marketsage.africa', NOW(), '\$2b\$10\$lSvc2S5hrOTDcRcOP6O2hOo7JAnw5kk33NeJfwQHagHaGoZbmUhOy', 'USER', NOW(), NOW())
+        VALUES ('574c1069-9130-4fdc-9e1c-a02994e4d444', 'Regular User', 'user@marketsage.africa', NOW(), '\$$2b\$$10\$$lSvc2S5hrOTDcRcOP6O2hOo7JAnw5kk33NeJfwQHagHaGoZbmUhOy', 'USER', NOW(), NOW())
         ON CONFLICT (email) DO NOTHING;\" || echo '⚠️ User creation had issues, continuing...' &&
         
         echo '🌱 Running seed scripts...' &&

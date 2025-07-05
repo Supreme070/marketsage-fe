@@ -7,8 +7,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { getBatchScheduler, startBatchScheduler, stopBatchScheduler } from '@/lib/batch/scheduler';
+import { authOptions } from '@/lib/auth/auth-options';
 import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
@@ -22,6 +21,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Dynamic import to prevent circular dependencies
+    const { getBatchScheduler } = await import('@/lib/batch/scheduler');
     const scheduler = getBatchScheduler();
     const jobs = scheduler.getJobs();
     const executions = scheduler.getExecutions();
@@ -99,6 +100,9 @@ export async function POST(request: NextRequest) {
       userId: session.user.id,
       userRole: session.user.role
     });
+
+    // Dynamic import to prevent circular dependencies
+    const { startBatchScheduler, stopBatchScheduler } = await import('@/lib/batch/scheduler');
 
     switch (action) {
       case 'start':
