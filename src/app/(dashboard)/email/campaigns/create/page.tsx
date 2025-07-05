@@ -97,7 +97,7 @@ export default function CreateCampaignPage() {
       name: "",
       description: "",
       subject: "",
-      from: "marketing@marketsage.com",
+      from: "info@marketsage.africa",
       replyTo: "",
       templateId: "",
       content: "",

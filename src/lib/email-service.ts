@@ -302,17 +302,17 @@ export async function sendCampaign(
     const campaign = await prisma.emailCampaign.findUnique({
       where: { id: campaignId },
       include: {
-        EmailTemplate: true,
-        List: {
+        template: true,
+        lists: {
           include: {
-            ListMember: {
+            members: {
               include: {
-                Contact: true,
+                contact: true,
               },
             },
           },
         },
-        Segment: true,
+        segments: true,
       },
     });
     
@@ -324,9 +324,9 @@ export async function sendCampaign(
     const uniqueContacts = new Map();
     
     // Add contacts from lists
-    for (const list of campaign.List) {
-      for (const member of list.ListMember) {
-        uniqueContacts.set(member.Contact.id, member.Contact);
+    for (const list of campaign.lists) {
+      for (const member of list.members) {
+        uniqueContacts.set(member.contact.id, member.contact);
       }
     }
     
@@ -337,7 +337,7 @@ export async function sendCampaign(
     const baseOptions: Omit<EmailOptions, 'to'> = {
       from: campaign.from,
       subject: campaign.subject,
-      html: campaign.content || (campaign.EmailTemplate?.content || ''),
+      html: campaign.content || (campaign.template?.content || ''),
       replyTo: campaign.replyTo || undefined,
       metadata: {
         campaignId,

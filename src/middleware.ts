@@ -189,10 +189,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   } catch (error) {
     // Global error handling
-    console.error('Middleware error:', error);
+    console.error('Middleware error for path:', request.nextUrl.pathname, 'Error:', error);
+    
+    // Skip error handling for send endpoint to debug
+    if (request.nextUrl.pathname.includes('/send')) {
+      console.error('SKIPPING middleware error handling for send endpoint:', error);
+      throw error; // Let the actual endpoint handle it
+    }
     
     // Only handle errors for API routes
     if (request.nextUrl.pathname.startsWith('/api')) {
+      console.error('Handling API error in middleware for:', request.nextUrl.pathname);
       return handleApiError(error, request.nextUrl.pathname);
     }
 

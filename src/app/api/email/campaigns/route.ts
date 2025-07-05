@@ -19,7 +19,7 @@ const campaignSchema = z.object({
   description: z.string().optional(),
   subject: z.string().min(1, "Subject line is required"),
   from: z.string().min(1, "From address is required"),
-  replyTo: z.string().email().optional(),
+  replyTo: z.string().optional().refine(val => !val || val === "" || z.string().email().safeParse(val).success, "Must be a valid email address"),
   templateId: z.string().optional(),
   content: z.string().optional(),
   design: z.string().optional(), // JSON string

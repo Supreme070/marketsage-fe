@@ -1,4 +1,4 @@
-import { type NextAuthOptions, getServerSession } from "next-auth";
+import { type NextAuthOptions, getServerSession, type DefaultSession } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { PrismaClient } from "@prisma/client";
 import CredentialsProvider from "next-auth/providers/credentials";
@@ -6,6 +6,28 @@ import GoogleProvider from "next-auth/providers/google";
 // Temporarily comment out bcrypt
 // import { compare } from "bcrypt";
 import { randomUUID } from "crypto";
+
+// Extend NextAuth types for our custom fields
+declare module 'next-auth' {
+  interface User {
+    id: string;
+    role: string;
+  }
+  
+  interface Session {
+    user: {
+      id: string;
+      role: string;
+    } & DefaultSession['user'];
+  }
+}
+
+declare module 'next-auth/jwt' {
+  interface JWT {
+    id: string;
+    role: string;
+  }
+}
 
 // Define UserRole enum to match Prisma schema
 export enum UserRole {
@@ -232,6 +254,9 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
+  session: {
+    strategy: 'jwt',
+  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
@@ -243,7 +268,7 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
-      if (token) {
+      if (token && session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
         session.user.email = token.email as string;
@@ -251,6 +276,10 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
+  },
+  pages: {
+    signIn: '/login',
+    error: '/login',
   },
 };
 

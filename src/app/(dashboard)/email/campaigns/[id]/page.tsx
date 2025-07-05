@@ -76,6 +76,7 @@ export default function CampaignDetailPage() {
   const { toast } = useToast();
   const [campaign, setCampaign] = useState<EmailCampaign | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const campaignId = params.id as string;
 
@@ -191,6 +192,46 @@ export default function CampaignDetailPage() {
     }
   };
 
+  const handleSend = async () => {
+    if (!campaign) return;
+    
+    try {
+      setIsSending(true);
+      
+      const response = await fetch(`/api/email/campaigns/${campaignId}/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to send campaign: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      toast({
+        title: "Success",
+        description: `Campaign sent successfully! ${result.summary?.sentCount || 0} emails sent.`,
+      });
+      
+      // Update the campaign status in the UI
+      setCampaign(prev => prev ? { ...prev, status: "SENT" } : null);
+      
+    } catch (err) {
+      console.error("Error sending campaign:", err);
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to send campaign. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "—";
     return format(new Date(dateString), "MMM d, yyyy 'at' h:mm a");
@@ -247,9 +288,13 @@ export default function CampaignDetailPage() {
                 <Edit className="mr-2 h-4 w-4" />
                 Edit
               </Button>
-              <Button>
-                <Send className="mr-2 h-4 w-4" />
-                Send
+              <Button onClick={handleSend} disabled={isSending}>
+                {isSending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="mr-2 h-4 w-4" />
+                )}
+                {isSending ? "Sending..." : "Send"}
               </Button>
             </>
           )}

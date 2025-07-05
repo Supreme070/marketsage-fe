@@ -24,7 +24,7 @@ const sampleWorkflows = [
   {
     name: "VIP TESTS - Comprehensive Email Journey",
     description: "7-step VIP workflow with email tracking, responses, and multiple touchpoints for testing MarketSage functionality",
-    status: "ACTIVE",
+    status: "DRAFT",
     definition: JSON.stringify({
       nodes: [
         {
@@ -283,7 +283,7 @@ const sampleWorkflows = [
   {
     name: "Simple Welcome Sequence",
     description: "Basic 3-step welcome series for new subscribers",
-    status: "ACTIVE", // Use string instead of enum
+    status: "DRAFT", // Use string instead of enum
     definition: JSON.stringify({
       nodes: [
         {
@@ -374,7 +374,7 @@ const sampleWorkflows = [
   {
     name: "Lead Nurturing Sequence",
     description: "Multi-step nurturing workflow for new leads with engagement tracking",
-    status: "ACTIVE", // Use string instead of enum
+    status: "DRAFT", // Use string instead of enum
     definition: JSON.stringify({
       nodes: [
         {
@@ -583,7 +583,7 @@ const sampleWorkflows = [
   {
     name: "Advanced Re-Engagement Campaign",
     description: "Complex workflow to win back inactive customers with multiple touchpoints and conditions",
-    status: "INACTIVE", // Use string instead of enum
+    status: "DRAFT", // Use string instead of enum
     definition: JSON.stringify({
       nodes: [
         {
