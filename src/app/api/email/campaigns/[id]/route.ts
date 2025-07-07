@@ -66,11 +66,29 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Format the response to include activity counts
+    // Calculate actual recipient count from lists and segments
+    const uniqueContactIds = new Set<string>();
+    
+    // Add contacts from lists
+    for (const list of campaign.lists) {
+      const listMembers = await prisma.listMember.findMany({
+        where: { listId: list.id },
+        select: { contactId: true },
+      });
+      listMembers.forEach(member => uniqueContactIds.add(member.contactId));
+    }
+    
+    // For segments, we'd add those contacts too (simplified for now)
+    // In a full implementation, you'd resolve segment criteria here
+    
+    const actualRecipientCount = uniqueContactIds.size;
+
+    // Format the response to include proper recipient counts
     const formattedCampaign = {
       ...campaign,
       statistics: {
-        totalRecipients: campaign._count.activities,
+        totalRecipients: actualRecipientCount,
+        activitiesCount: campaign._count.activities,
       }
     };
 

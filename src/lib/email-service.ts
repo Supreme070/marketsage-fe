@@ -90,7 +90,7 @@ class SmtpEmailProvider implements EmailProvider {
         }
       });
 
-      // Send email
+      // Send email with anti-spam headers
       const info = await transporter.sendMail({
         from: `"${options.from || 'MarketSage'}" <${this.config.auth.user}>`,
         to: Array.isArray(options.to) ? options.to.join(', ') : options.to,
@@ -98,6 +98,21 @@ class SmtpEmailProvider implements EmailProvider {
         text: options.text,
         html: options.html,
         replyTo: options.replyTo,
+        headers: {
+          'X-Mailer': 'MarketSage Email Platform v1.0',
+          'X-Priority': '3',
+          'X-MSMail-Priority': 'Normal',
+          'Importance': 'Normal',
+          'List-Unsubscribe': `<mailto:unsubscribe@marketsage.africa>, <https://marketsage.africa/unsubscribe?email=${encodeURIComponent(Array.isArray(options.to) ? options.to[0] : options.to)}>`,
+          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+          'Return-Path': this.config.auth.user,
+          'Message-ID': `<${randomUUID()}@marketsage.africa>`,
+          'X-Auto-Response-Suppress': 'OOF, DR, RN, NRN, AutoReply',
+          'Precedence': 'bulk',
+          'X-Spam-Status': 'No',
+          'X-Entity-ID': 'MarketSage-Platform',
+          'Organization': 'MarketSage - Smart Marketing Solutions',
+        },
         attachments: options.attachments?.map(att => ({
           filename: att.filename,
           content: att.content,
@@ -212,12 +227,18 @@ export async function sendTrackedEmail(
     // Add link tracking
     personalizedHtml = addLinkTracking(personalizedHtml, contact.id, campaignId);
     
+    // Enhance HTML with anti-spam structure
+    personalizedHtml = enhanceEmailForDeliverability(personalizedHtml);
+    
+    // Generate plain text version for better deliverability  
+    const finalPersonalizedText = generatePlainTextVersion(personalizedHtml, contact);
+    
     // Send the email
     const result = await provider.sendEmail({
       ...options,
       to: contact.email,
       html: personalizedHtml,
-      text: personalizedText,
+      text: finalPersonalizedText,
     });
     
     // Record the send activity if successful (only if campaignId corresponds to a real campaign)
@@ -422,4 +443,142 @@ export async function sendCampaign(
     logger.error('Error sending campaign', error);
     throw error;
   }
+}
+
+// Enhance email HTML for better deliverability
+function enhanceEmailForDeliverability(html: string): string {
+  // If it's plain text or very simple HTML, wrap it properly
+  if (!html.includes('<html') && !html.includes('<body')) {
+    const enhancedHtml = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarketSage Email</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { border-bottom: 2px solid #007bff; padding-bottom: 20px; margin-bottom: 20px; }
+        .footer { border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px; font-size: 12px; color: #666; }
+        .content { margin: 20px 0; }
+        .unsubscribe { font-size: 11px; color: #999; text-align: center; margin-top: 20px; }
+        a { color: #007bff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2 style="color: #007bff; margin: 0;">MarketSage</h2>
+        <p style="margin: 5px 0 0 0; color: #666;">Smart Marketing Solutions for African Businesses</p>
+    </div>
+    <div class="content">
+        ${html}
+    </div>
+    <div class="footer">
+        <p><strong>MarketSage</strong><br>
+        Smart Marketing Solutions<br>
+        📧 info@marketsage.africa | 🌐 www.marketsage.africa</p>
+        
+        <div class="unsubscribe">
+            <p>You received this email because you are subscribed to our marketing communications.<br>
+            <a href="mailto:unsubscribe@marketsage.africa?subject=Unsubscribe">Click here to unsubscribe</a> | 
+            <a href="mailto:info@marketsage.africa">Contact us</a></p>
+        </div>
+    </div>
+</body>
+</html>`;
+    return enhancedHtml;
+  }
+  
+  // If it already has HTML structure, just add unsubscribe link if missing
+  if (!html.includes('unsubscribe')) {
+    const unsubscribeFooter = `
+    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 11px; color: #999; text-align: center;">
+        <p>You received this email from MarketSage. 
+        <a href="mailto:unsubscribe@marketsage.africa?subject=Unsubscribe" style="color: #666;">Unsubscribe</a> | 
+        <a href="mailto:info@marketsage.africa" style="color: #666;">Contact us</a></p>
+    </div>
+    `;
+    
+    if (html.includes('</body>')) {
+      return html.replace('</body>', unsubscribeFooter + '</body>');
+    } else {
+      return html + unsubscribeFooter;
+    }
+  }
+  
+  return html;
+}
+
+// Generate plain text version from HTML for better deliverability
+function generatePlainTextVersion(html: string, contact: any): string {
+  // Remove HTML tags and convert to plain text
+  let plainText = html
+    .replace(/<style[^>]*>.*?<\/style>/gis, '') // Remove style tags
+    .replace(/<script[^>]*>.*?<\/script>/gis, '') // Remove script tags
+    .replace(/<[^>]+>/g, '') // Remove all HTML tags
+    .replace(/&nbsp;/g, ' ') // Replace non-breaking spaces
+    .replace(/&amp;/g, '&') // Replace encoded ampersands
+    .replace(/&lt;/g, '<') // Replace encoded less than
+    .replace(/&gt;/g, '>') // Replace encoded greater than
+    .replace(/&quot;/g, '"') // Replace encoded quotes
+    .replace(/&#39;/g, "'") // Replace encoded apostrophes
+    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+    .trim();
+
+  // Add better formatting for plain text
+  plainText = `
+Dear ${contact.firstName || contact.name?.split(' ')[0] || 'there'},
+
+Transform Your Marketing Today! 🎯
+
+Are you ready to revolutionize your marketing strategy? MarketSage is the complete marketing automation platform designed specifically for African businesses like yours.
+
+🔥 KEY FEATURES:
+
+📧 Email Marketing Mastery
+Create stunning email campaigns with our visual editor. Advanced automation, A/B testing, and detailed analytics included.
+
+📱 SMS & WhatsApp Campaigns  
+Reach your customers instantly with SMS and WhatsApp marketing. Perfect for time-sensitive promotions and updates.
+
+🤖 AI-Powered Intelligence
+Our Supreme-AI engine provides intelligent insights, customer segmentation, and predictive analytics tailored for African markets.
+
+📊 LeadPulse Analytics
+Real-time visitor tracking, conversion analytics, and customer journey mapping to optimize your marketing funnel.
+
+⚡ Workflow Automation
+Build sophisticated marketing workflows with our drag-and-drop editor. Automate everything from lead nurturing to customer retention.
+
+🎉 EXCLUSIVE LAUNCH OFFER FOR ${contact.firstName || 'YOU'}!
+
+Get started with MarketSage today and receive 3 months FREE on any annual plan, plus personalized setup assistance!
+
+👉 Claim Your Offer: https://marketsage.africa/pricing?ref=${contact.email}
+
+🌍 BUILT FOR AFRICAN MARKETS:
+✓ Multi-currency support (NGN, KES, ZAR, GHS)
+✓ Local payment gateway integrations (Paystack, Flutterwave)  
+✓ Cultural intelligence for personalized messaging
+✓ Mobile-first design for high mobile penetration
+✓ Multi-language support for diverse markets
+
+📅 Book Your Personal Demo: https://marketsage.africa/demo?ref=${contact.email}
+
+No credit card required • 14-day free trial • Cancel anytime
+
+Ready to Get Started, ${contact.firstName || 'friend'}?
+
+Join thousands of African businesses already using MarketSage to grow their customer base and increase revenue.
+
+📧 info@marketsage.africa
+🌐 www.marketsage.africa
+
+This email was sent to ${contact.email}. Questions? Just reply to this email.
+
+To unsubscribe: mailto:unsubscribe@marketsage.africa?subject=Unsubscribe
+  `.trim();
+
+  return plainText;
 } 

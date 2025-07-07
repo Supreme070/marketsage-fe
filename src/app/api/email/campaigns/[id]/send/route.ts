@@ -6,7 +6,6 @@ import prisma from "@/lib/db/prisma";
 import { logger } from "@/lib/logger";
 import { sendCampaign } from "@/lib/email-service";
 import { CampaignStatus } from "@prisma/client";
-import { initializeAIFeatures } from "@/lib/ai-features-init";
 
 const sendOptionsSchema = z.object({
   useOptimalSendTime: z.boolean().optional().default(false),
@@ -17,25 +16,45 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  console.log("=== SEND ENDPOINT ENTRY POINT ===");
+  
   try {
+    console.log("Send endpoint called");
+    
     // Authentication check
     const session = await getServerSession(authOptions);
+    console.log("Session:", session ? "exists" : "null");
+    
     if (!session) {
+      console.log("No session, returning 401");
       return NextResponse.json(
         { error: "You must be signed in to send campaigns" },
         { status: 401 }
       );
     }
     
-    // Initialize AI features if needed (for optimal send times)
-    await initializeAIFeatures();
-    
     // Get campaign ID from params
     const { id: campaignId } = await params;
+    console.log("Campaign ID:", campaignId);
     
     // Get request body for send options
-    const body = await request.json();
+    let body = {};
+    try {
+      const text = await request.text();
+      if (text && text.trim() !== '') {
+        body = JSON.parse(text);
+      }
+      console.log("Request body:", body);
+    } catch (jsonError) {
+      console.error("Failed to parse JSON body:", jsonError);
+      return NextResponse.json(
+        { error: "Invalid JSON in request body" },
+        { status: 400 }
+      );
+    }
+    
     const validationResult = sendOptionsSchema.safeParse(body);
+    console.log("Validation result:", validationResult);
     
     if (!validationResult.success) {
       return NextResponse.json(
@@ -77,7 +96,9 @@ export async function POST(
     
     try {
       // Send the campaign
+      console.log("Calling sendCampaign function...");
       const result = await sendCampaign(campaignId, useOptimalSendTime);
+      console.log("Campaign send result:", result);
       
       return NextResponse.json(result);
     } catch (error) {
@@ -95,11 +116,16 @@ export async function POST(
       );
     }
   } catch (error) {
-    logger.error("Error in campaign send endpoint", error);
+    console.error("Error in campaign send endpoint:", error);
+    logger.error("Error in campaign send endpoint", { 
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      campaignId: (await params).id
+    });
     
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
-} 
+}

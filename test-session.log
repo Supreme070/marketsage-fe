@@ -1,0 +1,241 @@
+
+> marketsage@0.1.0 dev
+> next dev -H 0.0.0.0
+
+   ▲ Next.js 15.3.4
+   - Local:        http://localhost:3000
+   - Network:      http://0.0.0.0:3000
+   - Environments: .env.local, .env
+
+ ✓ Starting...
+ ✓ Ready in 1784ms
+   Reload env: .env
+ ✓ Compiled /middleware in 192ms (256 modules)
+[2025-07-07T13:40:06.525Z] INFO: API Request: GET /api/auth/session {"method":"GET","path":"/api/auth/session","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 557ms (627 modules)
+ GET /api/auth/session 200 in 1033ms
+[2025-07-07T13:41:08.235Z] INFO: API Request: GET /api/auth/csrf {"method":"GET","path":"/api/auth/csrf","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ GET /api/auth/csrf 200 in 22ms
+[2025-07-07T13:41:08.273Z] INFO: API Request: POST /api/auth/callback/credentials {"method":"POST","path":"/api/auth/callback/credentials","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ POST /api/auth/callback/credentials 200 in 87ms
+[2025-07-07T13:41:08.370Z] INFO: API Request: GET /api/auth/session {"method":"GET","path":"/api/auth/session","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ GET /api/auth/session 200 in 9ms
+[2025-07-07T13:41:08.384Z] INFO: API Request: GET /api/lists {"method":"GET","path":"/api/lists","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ ✓ Compiled /api/lists in 442ms (648 modules)
+Creating new Prisma client instance
+Successfully connected to database
+ GET /api/lists 200 in 592ms
+[2025-07-07T13:41:08.986Z] INFO: API Request: POST /api/email/campaigns {"method":"POST","path":"/api/email/campaigns","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ ✓ Compiled /api/email/campaigns in 142ms (650 modules)
+Using existing Prisma client instance
+Successfully connected to database
+Campaign creation request body: {
+  "name": "Test Campaign 2025-07-07T13:41:08",
+  "subject": "Test Email Campaign Subject",
+  "from": "info@marketsage.africa",
+  "replyTo": "",
+  "content": "<h1>Test Email</h1><p>This is a test email campaign from MarketSage sent to Supreme.</p><p>If you receive this, the email system is working correctly!</p>",
+  "listIds": [
+    "test-list-001"
+  ]
+}
+Slow database operation: undefined.queryRaw (5005ms)
+Slow database operation: undefined.queryRaw (5005ms)
+prisma:error 
+Invalid `prisma.emailCampaign.create()` invocation:
+
+
+Transaction API error: Transaction already closed: A query cannot be executed on an expired transaction. The timeout for this transaction was 5000 ms, however 5009 ms passed since the start of the transaction. Consider increasing the interactive transaction timeout or doing less work in the transaction.
+Schema mismatch error detected: 
+Invalid `prisma.emailCampaign.create()` invocation:
+
+
+Transaction API error: Transaction already closed: A query cannot be executed on an expired transaction. The timeout for this transaction was 5000 ms, however 5009 ms passed since the start of the transaction. Consider increasing the interactive transaction timeout or doing less work in the transaction.
+Schema mismatch error detected: 
+Invalid `prisma.emailCampaign.create()` invocation:
+
+
+Transaction API error: Transaction already closed: A query cannot be executed on an expired transaction. The timeout for this transaction was 5000 ms, however 5009 ms passed since the start of the transaction. Consider increasing the interactive transaction timeout or doing less work in the transaction.
+Error creating email campaign: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.emailCampaign.create()` invocation:
+
+
+Transaction API error: Transaction already closed: A query cannot be executed on an expired transaction. The timeout for this transaction was 5000 ms, however 5009 ms passed since the start of the transaction. Consider increasing the interactive transaction timeout or doing less work in the transaction.
+    at async runWithRetry (src/lib/db/prisma.ts:155:21)
+    at async runWithRetry (src/lib/db/prisma.ts:155:21)
+    at async eval (src/app/api/email/campaigns/route.ts:215:23)
+    at async POST (src/app/api/email/campaigns/route.ts:213:24)
+  153 |       attempts++;
+  154 |       const startTime = Date.now();
+> 155 |       const result = await next(params);
+      |                     ^
+  156 |       const duration = Date.now() - startTime;
+  157 |       
+  158 |       // Log slow queries (only in development) {
+  code: 'P2028',
+  meta: [Object],
+  clientVersion: '6.9.0'
+}
+ POST /api/email/campaigns 500 in 5324ms
+ ✓ Compiled in 218ms (371 modules)
+ ✓ Compiled in 84ms (371 modules)
+[2025-07-07T13:42:05.201Z] INFO: API Request: GET /api/auth/csrf {"method":"GET","path":"/api/auth/csrf","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ GET /api/auth/csrf 200 in 62ms
+[2025-07-07T13:42:05.273Z] INFO: API Request: POST /api/auth/callback/credentials {"method":"POST","path":"/api/auth/callback/credentials","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ POST /api/auth/callback/credentials 200 in 66ms
+[2025-07-07T13:42:05.351Z] INFO: API Request: GET /api/auth/session {"method":"GET","path":"/api/auth/session","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ GET /api/auth/session 200 in 8ms
+[2025-07-07T13:42:05.364Z] INFO: API Request: GET /api/lists {"method":"GET","path":"/api/lists","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+Using existing Prisma client instance
+Successfully connected to database
+ GET /api/lists 200 in 27ms
+[2025-07-07T13:42:05.395Z] INFO: API Request: POST /api/email/campaigns {"method":"POST","path":"/api/email/campaigns","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+Campaign creation request body: {
+  "name": "Test Campaign 2025-07-07T13:42:05",
+  "subject": "Test Email Campaign Subject",
+  "from": "info@marketsage.africa",
+  "replyTo": "",
+  "content": "<h1>Test Email</h1><p>This is a test email campaign from MarketSage sent to Supreme.</p><p>If you receive this, the email system is working correctly!</p>",
+  "listIds": [
+    "test-list-001"
+  ]
+}
+prisma:error 
+Invalid `prisma.$queryRaw()` invocation:
+
+
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 10, connection limit: 1)
+Schema mismatch error detected: 
+Invalid `prisma.$queryRaw()` invocation:
+
+
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 10, connection limit: 1)
+Schema mismatch error detected: 
+Invalid `prisma.$queryRaw()` invocation:
+
+
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 10, connection limit: 1)
+Schema mismatch error detected: 
+Invalid `prisma.$queryRaw()` invocation:
+
+
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 10, connection limit: 1)
+Database health check failed: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.$queryRaw()` invocation:
+
+
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 10, connection limit: 1)
+    at async runWithRetry (src/lib/db/prisma.ts:155:21)
+    at async runWithRetry (src/lib/db/prisma.ts:155:21)
+    at async runWithRetry (src/lib/db/prisma.ts:155:21)
+    at async client.$healthCheck (src/lib/db/prisma.ts:47:8)
+    at async eval (src/lib/db/prisma.ts:293:22)
+    at async runWithRetry (src/lib/db/prisma.ts:155:21)
+    at async POST._lib_db_prisma__WEBPACK_IMPORTED_MODULE_5__.default.$transaction.timeout (src/app/api/email/campaigns/route.ts:215:23)
+    at async POST (src/app/api/email/campaigns/route.ts:213:24)
+  153 |       attempts++;
+  154 |       const startTime = Date.now();
+> 155 |       const result = await next(params);
+      |                     ^
+  156 |       const duration = Date.now() - startTime;
+  157 |       
+  158 |       // Log slow queries (only in development) {
+  code: 'P2024',
+  meta: [Object],
+  clientVersion: '6.9.0'
+}
+prisma:error 
+Invalid `prisma.$queryRaw()` invocation:
+
+
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 10, connection limit: 1)
+Schema mismatch error detected: 
+Invalid `prisma.$queryRaw()` invocation:
+
+
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 10, connection limit: 1)
+Schema mismatch error detected: 
+Invalid `prisma.$queryRaw()` invocation:
+
+
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 10, connection limit: 1)
+Schema mismatch error detected: 
+Invalid `prisma.$queryRaw()` invocation:
+
+
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 10, connection limit: 1)
+Database health check failed: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.$queryRaw()` invocation:
+
+
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 10, connection limit: 1)
+    at async runWithRetry (src/lib/db/prisma.ts:155:21)
+    at async runWithRetry (src/lib/db/prisma.ts:155:21)
+    at async runWithRetry (src/lib/db/prisma.ts:155:21)
+    at async client.$healthCheck (src/lib/db/prisma.ts:47:8)
+    at async eval (src/lib/db/prisma.ts:293:22)
+    at async runWithRetry (src/lib/db/prisma.ts:155:21)
+    at async runWithRetry (src/lib/db/prisma.ts:155:21)
+    at async POST._lib_db_prisma__WEBPACK_IMPORTED_MODULE_5__.default.$transaction.timeout (src/app/api/email/campaigns/route.ts:215:23)
+    at async POST (src/app/api/email/campaigns/route.ts:213:24)
+  153 |       attempts++;
+  154 |       const startTime = Date.now();
+> 155 |       const result = await next(params);
+      |                     ^
+  156 |       const duration = Date.now() - startTime;
+  157 |       
+  158 |       // Log slow queries (only in development) {
+  code: 'P2024',
+  meta: [Object],
+  clientVersion: '6.9.0'
+}
+Slow database operation: undefined.queryRaw (9834ms)
+Slow database operation: undefined.queryRaw (9834ms)
+Slow database operation: undefined.queryRaw (9835ms)
+prisma:error 
+Invalid `prisma.emailCampaign.create()` invocation:
+
+
+Transaction API error: Transaction already closed: A query cannot be executed on an expired transaction. The timeout for this transaction was 30000 ms, however 30010 ms passed since the start of the transaction. Consider increasing the interactive transaction timeout or doing less work in the transaction.
+Schema mismatch error detected: 
+Invalid `prisma.emailCampaign.create()` invocation:
+
+
+Transaction API error: Transaction already closed: A query cannot be executed on an expired transaction. The timeout for this transaction was 30000 ms, however 30010 ms passed since the start of the transaction. Consider increasing the interactive transaction timeout or doing less work in the transaction.
+Schema mismatch error detected: 
+Invalid `prisma.emailCampaign.create()` invocation:
+
+
+Transaction API error: Transaction already closed: A query cannot be executed on an expired transaction. The timeout for this transaction was 30000 ms, however 30010 ms passed since the start of the transaction. Consider increasing the interactive transaction timeout or doing less work in the transaction.
+Schema mismatch error detected: 
+Invalid `prisma.emailCampaign.create()` invocation:
+
+
+Transaction API error: Transaction already closed: A query cannot be executed on an expired transaction. The timeout for this transaction was 30000 ms, however 30010 ms passed since the start of the transaction. Consider increasing the interactive transaction timeout or doing less work in the transaction.
+Error creating email campaign: Error [PrismaClientKnownRequestError]: 
+Invalid `prisma.emailCampaign.create()` invocation:
+
+
+Transaction API error: Transaction already closed: A query cannot be executed on an expired transaction. The timeout for this transaction was 30000 ms, however 30010 ms passed since the start of the transaction. Consider increasing the interactive transaction timeout or doing less work in the transaction.
+    at async runWithRetry (src/lib/db/prisma.ts:155:21)
+    at async runWithRetry (src/lib/db/prisma.ts:155:21)
+    at async runWithRetry (src/lib/db/prisma.ts:155:21)
+    at async POST._lib_db_prisma__WEBPACK_IMPORTED_MODULE_5__.default.$transaction.timeout (src/app/api/email/campaigns/route.ts:215:23)
+    at async POST (src/app/api/email/campaigns/route.ts:213:24)
+  153 |       attempts++;
+  154 |       const startTime = Date.now();
+> 155 |       const result = await next(params);
+      |                     ^
+  156 |       const duration = Date.now() - startTime;
+  157 |       
+  158 |       // Log slow queries (only in development) {
+  code: 'P2028',
+  meta: [Object],
+  clientVersion: '6.9.0'
+}
+ POST /api/email/campaigns 500 in 30090ms
+   Reload env: .env
+ ✓ Compiled in 191ms (906 modules)
+ ✓ Compiled in 64ms (371 modules)
+[?25h

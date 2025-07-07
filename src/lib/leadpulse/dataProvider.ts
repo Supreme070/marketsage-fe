@@ -254,17 +254,16 @@ export const getVisitorInsights = cache(async (): Promise<InsightItem[]> => {
  */
 export const getActiveVisitors = cache(async (timeRange = '24h'): Promise<VisitorJourney[]> => {
   try {
-    // First check if simulation is running
+    // Check if demo mode is enabled
+    const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || true; // Default to demo for now
     
-    
-    
-    // If simulation is NOT running, return empty array (no visitors)
-    if (!true) {
-      console.log('getActiveVisitors: Simulation OFF - returning empty visitor list');
+    // If demo mode is OFF, return empty array (no visitors)
+    if (!isDemoMode) {
+      console.log('getActiveVisitors: Demo mode OFF - returning empty visitor list');
       return [];
     }
     
-    console.log('getActiveVisitors: Simulation ACTIVE - generating visitor data');
+    console.log('getActiveVisitors: Demo mode ACTIVE - generating visitor data');
     const targetActiveCount = 25;
 
     // Generate visitors based on simulation data only
@@ -305,10 +304,12 @@ export const getActiveVisitors = cache(async (timeRange = '24h'): Promise<Visito
                        platform === 'react-native' ? 'React Native WebView' : 'Mobile App';
         }
         
+        // Use stable IDs that persist across refreshes
+        const stableId = `visitor_demo_${i}`;
         const syntheticVisitor = {
-          id: `synthetic_${Date.now()}_${i}`,
-          visitorId: `synthetic_${Date.now()}_${i}`,
-          fingerprint: `fp_${Math.random().toString(36).substr(2, 9)}`,
+          id: stableId,
+          visitorId: stableId,
+          fingerprint: `fp_demo_${i}`,
           location: `${cities[Math.floor(Math.random() * cities.length)]}, Nigeria`,
           device: deviceType,
           browser: browserType,
@@ -361,38 +362,15 @@ export const getEnhancedOverview = cache(async (timeRange = '24h'): Promise<{
   metadata?: any;
 }> => {
   try {
-    // First check if simulation is running via master simulation state
+    // Check if demo mode is enabled (you can control this via env variable or setting)
+    const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || true; // Default to demo for now
     
-    
-    
-    // If simulation is NOT running, return all zeros (production ready state)
-    if (!true) {
-      console.log('getEnhancedOverview: Simulation OFF - returning zero state');
-      return {
-        activeVisitors: 0,
-        totalVisitors: 0,
-        conversionRate: 0,
-        platformBreakdown: {
-          web: { count: 0, percentage: 0 },
-          mobile: { count: 0, percentage: 0 },
-          reactNative: { count: 0, percentage: 0 },
-          nativeApps: { count: 0, percentage: 0 },
-          hybrid: { count: 0, percentage: 0 }
-        },
-        metadata: { 
-          simulationRunning: false,
-          dataSource: 'master-simulation',
-          timeRange,
-          lastUpdated: new Date().toISOString()
-        }
-      };
-    }
-    
-    // Simulation IS running - return data from master simulation
-    console.log('getEnhancedOverview: Simulation ACTIVE - using simulation data');
-    const activeVisitors = simulationState.dashboard.activeVisitors;
-    const totalVisitors = simulationState.leadpulse.totalVisitors;
-    const conversionRate = simulationState.dashboard.conversionRate;
+    if (isDemoMode) {
+      console.log('getEnhancedOverview: Demo mode - returning demo data');
+      // Return realistic demo data
+      const activeVisitors = 42;
+      const totalVisitors = 1250;
+      const conversionRate = 3.2;
     
     return {
       activeVisitors,
@@ -406,16 +384,37 @@ export const getEnhancedOverview = cache(async (timeRange = '24h'): Promise<{
         hybrid: { count: Math.round(totalVisitors * 0.02), percentage: 2 }
       },
       metadata: { 
-        simulationRunning: true,
-        simulationId: simulationState.simulationId,
-        dataSource: 'master-simulation',
+        demoMode: true,
+        dataSource: 'demo-data',
         timeRange,
         lastUpdated: new Date().toISOString()
       }
     };
+    } else {
+      // Production mode - return real data (zeros for now until connected to real analytics)
+      console.log('getEnhancedOverview: Production mode - returning real data');
+      return {
+        activeVisitors: 0,
+        totalVisitors: 0,
+        conversionRate: 0,
+        platformBreakdown: {
+          web: { count: 0, percentage: 0 },
+          mobile: { count: 0, percentage: 0 },
+          reactNative: { count: 0, percentage: 0 },
+          nativeApps: { count: 0, percentage: 0 },
+          hybrid: { count: 0, percentage: 0 }
+        },
+        metadata: { 
+          demoMode: false,
+          dataSource: 'production',
+          timeRange,
+          lastUpdated: new Date().toISOString()
+        }
+      };
+    }
     
   } catch (error) {
-    console.error('Error checking simulation state:', error);
+    console.error('Error fetching overview data:', error);
     // Fallback to zero state if error
     return {
       activeVisitors: 0,

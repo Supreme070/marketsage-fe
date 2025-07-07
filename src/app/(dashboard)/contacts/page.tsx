@@ -45,6 +45,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import ContactFormModal from "@/components/contacts/ContactFormModal";
 import ImportModal from "@/components/contacts/ImportModal";
+import { EmailComposeModal } from "@/components/contacts/email-compose-modal";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import ContactForm from "@/components/contacts/ContactForm";
 
@@ -152,6 +153,8 @@ export default function ContactsPage() {
   const [exportLoading, setExportLoading] = useState(false);
   const [quantumOptimizations, setQuantumOptimizations] = useState<Record<string, any>>({});
   const [isOptimizing, setIsOptimizing] = useState<Record<string, boolean>>({});
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [selectedContactForEmail, setSelectedContactForEmail] = useState<Contact | null>(null);
   
   // Function to fetch contacts from the API
   const fetchContacts = async () => {
@@ -282,6 +285,18 @@ export default function ContactsPage() {
     } finally {
       setIsOptimizing(prev => ({ ...prev, [contact.id]: false }));
     }
+  };
+
+  // Handle sending email to individual contact
+  const handleSendEmail = (contact: Contact) => {
+    setSelectedContactForEmail(contact);
+    setEmailModalOpen(true);
+  };
+
+  // Handle closing email modal
+  const handleCloseEmailModal = () => {
+    setEmailModalOpen(false);
+    setSelectedContactForEmail(null);
   };
 
   // Load contacts when the component mounts
@@ -842,7 +857,9 @@ export default function ContactsPage() {
                                 {isOptimizing[contact.id] ? 'Optimizing...' : '⚡ Quantum Optimize'}
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleSendEmail(contact)}
+                            >
                               <Mail className="mr-2 h-4 w-4" /> Send Email
                             </DropdownMenuItem>
                             <DropdownMenuItem>
@@ -949,6 +966,22 @@ export default function ContactsPage() {
             />
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* Email Compose Modal */}
+      {selectedContactForEmail && (
+        <EmailComposeModal
+          isOpen={emailModalOpen}
+          onClose={handleCloseEmailModal}
+          contact={{
+            id: selectedContactForEmail.id,
+            firstName: selectedContactForEmail.firstName || '',
+            lastName: selectedContactForEmail.lastName || '',
+            email: selectedContactForEmail.email || '',
+            company: selectedContactForEmail.company || '',
+            jobTitle: selectedContactForEmail.jobTitle || '',
+          }}
+        />
       )}
     </div>
   );

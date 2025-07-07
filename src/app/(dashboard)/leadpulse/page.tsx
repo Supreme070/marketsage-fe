@@ -15,6 +15,7 @@ import JourneyVisualization from '@/components/leadpulse/JourneyVisualization';
 import VisitorInsights from '@/components/leadpulse/VisitorInsights';
 import LiveVisitorMap from '@/components/leadpulse/LiveVisitorMap';
 import HeatmapHotspots from '@/components/leadpulse/HeatmapHotspots';
+import VisitorJourneyFlow from '@/components/leadpulse/VisitorJourneyFlow';
 // import AdvancedAnalyticsDashboard from '@/components/analytics/AdvancedAnalyticsDashboard';
 import SessionRecordingDashboard from '@/components/dashboard/SessionRecordingDashboard';
 
@@ -31,37 +32,37 @@ import {
   type VisitorSegment,
   type VisitorLocation
 } from '@/lib/leadpulse/dataProvider';
-// Quantum optimizer replaced with mock implementation
+// Lead optimizer types
 type VisitorBehaviorData = any;
-type QuantumLeadPulseOptimization = {
+type LeadPulseOptimization = {
   visitorSegmentation: {
     segments: any[];
-    quantumAdvantage: number;
+    improvementScore: number;
   };
   conversionPrediction: {
     modelAccuracy: number;
     predictions: any[];
-    quantumAdvantage: number;
+    improvementScore: number;
   };
   heatmapOptimization: {
     optimizedElements: any[];
-    quantumAdvantage: number;
+    improvementScore: number;
   };
   africanMarketInsights: {
     marketPerformance: Record<string, any>;
-    quantumAdvantage: number;
+    improvementScore: number;
   };
   realTimeRecommendations: Array<{
     type: string;
     priority: string;
     description: string;
     expectedImpact: number;
-    quantumConfidence: number;
+    confidence: number;
   }>;
 };
 
-const quantumLeadPulseOptimizer = {
-  analyzeVisitorBehavior: async (behaviorData: VisitorBehaviorData[], segments: any[], markets: string[]): Promise<QuantumLeadPulseOptimization> => {
+const leadPulseOptimizer = {
+  analyzeVisitorBehavior: async (behaviorData: VisitorBehaviorData[], segments: any[], markets: string[]): Promise<LeadPulseOptimization> => {
     // Mock implementation
     return {
       visitorSegmentation: {
@@ -156,10 +157,10 @@ export default function LeadPulseDashboard() {
   const [segmentData, setSegmentData] = useState<VisitorSegment[]>([]);
   const [locationData, setLocationData] = useState<VisitorLocation[]>([]);
   
-  // Quantum optimization state
-  const [quantumOptimization, setQuantumOptimization] = useState<QuantumLeadPulseOptimization | null>(null);
+  // Lead optimization state (quantum features removed)
+  const [leadOptimization, setLeadOptimization] = useState<LeadPulseOptimization | null>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
-  const [quantumInsights, setQuantumInsights] = useState<any[]>([]);
+  const [leadInsights, setLeadInsights] = useState<any[]>([]);
   const [visitorScores, setVisitorScores] = useState<Record<string, any>>({});
   
   // Add simulator integration
@@ -499,8 +500,8 @@ export default function LeadPulseDashboard() {
     }
   };
 
-  // Quantum optimization functions
-  const optimizeLeadPulseWithQuantum = async () => {
+  // Lead optimization functions
+  const optimizeLeadPulse = async () => {
     setIsOptimizing(true);
     
     try {
@@ -645,9 +646,9 @@ export default function LeadPulseDashboard() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold tracking-tight">LeadPulse</h1>
-            <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/20">
-              <Atom className="h-3 w-3 mr-1" />
-              Quantum Enhanced
+            <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20">
+              <Activity className="h-3 w-3 mr-1" />
+              Real-Time Analytics
             </Badge>
             {simulatorConnected && (
               <div className="flex items-center gap-2 px-3 py-1 bg-green-50 border border-green-200 rounded-full">
@@ -696,19 +697,6 @@ export default function LeadPulseDashboard() {
           </div>
           
           <div className="flex items-center gap-2">
-            <Button
-              onClick={optimizeLeadPulseWithQuantum}
-              disabled={isOptimizing}
-              className="bg-purple-600 hover:bg-purple-700"
-            >
-              {isOptimizing ? (
-                <Zap className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Atom className="mr-2 h-4 w-4" />
-              )}
-              Quantum Optimize
-            </Button>
-            
             <Button 
               variant="outline" 
               onClick={() => router.push('/leadpulse/setup')}
@@ -783,8 +771,8 @@ export default function LeadPulseDashboard() {
         </Card>
       </div>
 
-      {/* Quantum Insights Panel */}
-      {quantumOptimization && (
+      {/* Lead Optimization Panel - Removed quantum references */}
+      {false && (
         <Card className="border bg-gradient-to-br from-purple-500/5 to-blue-500/5 border-purple-500/20">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -1343,11 +1331,17 @@ export default function LeadPulseDashboard() {
             </CardHeader>
             <CardContent>
               {selectedVisitorId ? (
-                <JourneyVisualization
-                  data={journeyData}
-                  selectedVisitorId={selectedVisitorId}
-                  isLoading={loading}
-                />
+                <div className="space-y-6">
+                  <JourneyVisualization
+                    data={journeyData}
+                    selectedVisitorId={selectedVisitorId}
+                    isLoading={loading}
+                  />
+                  <VisitorJourneyFlow
+                    visitorId={selectedVisitorId}
+                    isRealTime={true}
+                  />
+                </div>
               ) : (
                 <div className="flex items-center justify-center p-12 border rounded-md">
                   <div className="text-center">
@@ -1603,7 +1597,7 @@ function RecentVisitorsTable({ visitors = [], onSelectVisitor, selectedVisitors,
             <th scope="col" className="px-6 py-3">Device</th>
             <th scope="col" className="px-6 py-3">Last Active</th>
             <th scope="col" className="px-6 py-3">Engagement</th>
-            <th scope="col" className="px-6 py-3">Quantum Score</th>
+            <th scope="col" className="px-6 py-3">Lead Score</th>
             <th scope="col" className="px-6 py-3">Actions</th>
           </tr>
         </thead>

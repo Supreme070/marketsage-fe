@@ -1,0 +1,21 @@
+
+> marketsage@0.1.0 dev
+> next dev -H 0.0.0.0
+
+ ⚠ Port 3000 is in use, using available port 3001 instead.
+   ▲ Next.js 15.3.4
+   - Local:        http://localhost:3001
+   - Network:      http://0.0.0.0:3001
+   - Environments: .env.local, .env
+
+ ✓ Starting...
+ ✓ Ready in 1829ms
+ ✓ Compiled /middleware in 181ms (256 modules)
+[2025-07-07T13:30:23.802Z] INFO: API Request: POST /api/email/campaigns {"method":"POST","path":"/api/email/campaigns","query":{},"ip":"127.0.0.1","userAgent":"node","tenantId":"anonymous"}
+ ○ Compiling /api/email/campaigns ...
+ ✓ Compiled /api/email/campaigns in 503ms (646 modules)
+Creating new Prisma client instance
+[2025-07-07T13:30:24.489Z] WARN: UNAUTHORIZED: Unauthorized
+ POST /api/email/campaigns 401 in 687ms
+Successfully connected to database
+[?25h

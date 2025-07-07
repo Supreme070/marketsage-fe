@@ -67,7 +67,35 @@ interface EmailCampaign {
   }[];
   statistics: {
     totalRecipients: number;
+    activitiesCount?: number;
   };
+}
+
+interface CampaignAnalytics {
+  summary: {
+    totalRecipients: number;
+    sent: number;
+    delivered: number;
+    opened: number;
+    clicked: number;
+    bounced: number;
+    unsubscribed: number;
+    openRate: number;
+    clickRate: number;
+    bounceRate: number;
+    unsubscribeRate: number;
+    deliveryRate: number;
+  };
+  topClickedUrls: {
+    url: string;
+    clicks: number;
+  }[];
+  opensOverTime: {
+    time: string;
+    opens: number;
+  }[];
+  activityBreakdown: Record<string, number>;
+  lastUpdated: string;
 }
 
 export default function CampaignDetailPage() {
@@ -75,7 +103,9 @@ export default function CampaignDetailPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [campaign, setCampaign] = useState<EmailCampaign | null>(null);
+  const [analytics, setAnalytics] = useState<CampaignAnalytics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const campaignId = params.id as string;
@@ -130,6 +160,31 @@ export default function CampaignDetailPage() {
       fetchCampaign();
     }
   }, [campaignId, toast]);
+
+  // Fetch analytics when campaign is loaded and sent
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      if (!campaign || campaign.status !== 'SENT') return;
+      
+      try {
+        setAnalyticsLoading(true);
+        const response = await fetch(`/api/email/campaigns/${campaignId}/analytics`);
+        
+        if (response.ok) {
+          const analyticsData = await response.json();
+          setAnalytics(analyticsData);
+        } else {
+          console.error('Failed to fetch analytics:', response.statusText);
+        }
+      } catch (err) {
+        console.error('Error fetching analytics:', err);
+      } finally {
+        setAnalyticsLoading(false);
+      }
+    };
+
+    fetchAnalytics();
+  }, [campaign, campaignId]);
 
   const handleBack = () => {
     router.back();
@@ -407,17 +462,41 @@ export default function CampaignDetailPage() {
                   </div>
                   <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-lg">
                     <Mail className="h-5 w-5 text-muted-foreground mb-2" />
-                    <p className="text-2xl font-bold">32%</p>
+                    <p className="text-2xl font-bold">
+                      {analyticsLoading ? (
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                      ) : analytics ? (
+                        `${analytics.summary.openRate.toFixed(1)}%`
+                      ) : (
+                        campaign.status === 'SENT' ? '--' : 'N/A'
+                      )}
+                    </p>
                     <p className="text-sm text-muted-foreground">Open Rate</p>
                   </div>
                   <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-lg">
                     <BarChart className="h-5 w-5 text-muted-foreground mb-2" />
-                    <p className="text-2xl font-bold">18%</p>
+                    <p className="text-2xl font-bold">
+                      {analyticsLoading ? (
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                      ) : analytics ? (
+                        `${analytics.summary.clickRate.toFixed(1)}%`
+                      ) : (
+                        campaign.status === 'SENT' ? '--' : 'N/A'
+                      )}
+                    </p>
                     <p className="text-sm text-muted-foreground">Click Rate</p>
                   </div>
                   <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-lg">
                     <User className="h-5 w-5 text-muted-foreground mb-2" />
-                    <p className="text-2xl font-bold">2%</p>
+                    <p className="text-2xl font-bold">
+                      {analyticsLoading ? (
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                      ) : analytics ? (
+                        `${analytics.summary.unsubscribeRate.toFixed(1)}%`
+                      ) : (
+                        campaign.status === 'SENT' ? '--' : 'N/A'
+                      )}
+                    </p>
                     <p className="text-sm text-muted-foreground">Unsubscribes</p>
                   </div>
                 </div>
@@ -553,30 +632,77 @@ export default function CampaignDetailPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col p-4 border rounded-lg">
                       <span className="text-sm text-muted-foreground">Sent</span>
-                      <span className="text-2xl font-bold">{campaign.statistics.totalRecipients}</span>
+                      <span className="text-2xl font-bold">
+                        {analyticsLoading ? (
+                          <Loader2 className="h-6 w-6 animate-spin" />
+                        ) : analytics ? (
+                          analytics.summary.sent
+                        ) : (
+                          campaign.statistics.activitiesCount || 0
+                        )}
+                      </span>
                       <div className="mt-2 bg-muted rounded-full h-2">
                         <div className="bg-primary h-2 w-full rounded-full"></div>
                       </div>
                     </div>
                     <div className="flex flex-col p-4 border rounded-lg">
                       <span className="text-sm text-muted-foreground">Delivered</span>
-                      <span className="text-2xl font-bold">{Math.floor(campaign.statistics.totalRecipients * 0.98)}</span>
+                      <span className="text-2xl font-bold">
+                        {analyticsLoading ? (
+                          <Loader2 className="h-6 w-6 animate-spin" />
+                        ) : analytics ? (
+                          analytics.summary.delivered
+                        ) : (
+                          campaign.statistics.activitiesCount || 0
+                        )}
+                      </span>
                       <div className="mt-2 bg-muted rounded-full h-2">
-                        <div className="bg-primary h-2 rounded-full" style={{ width: '98%' }}></div>
+                        <div 
+                          className="bg-primary h-2 rounded-full" 
+                          style={{ 
+                            width: analytics ? `${analytics.summary.deliveryRate}%` : '100%' 
+                          }}
+                        ></div>
                       </div>
                     </div>
                     <div className="flex flex-col p-4 border rounded-lg">
                       <span className="text-sm text-muted-foreground">Opens</span>
-                      <span className="text-2xl font-bold">{Math.floor(campaign.statistics.totalRecipients * 0.32)}</span>
+                      <span className="text-2xl font-bold">
+                        {analyticsLoading ? (
+                          <Loader2 className="h-6 w-6 animate-spin" />
+                        ) : analytics ? (
+                          analytics.summary.opened
+                        ) : (
+                          '--'
+                        )}
+                      </span>
                       <div className="mt-2 bg-muted rounded-full h-2">
-                        <div className="bg-primary h-2 rounded-full" style={{ width: '32%' }}></div>
+                        <div 
+                          className="bg-primary h-2 rounded-full" 
+                          style={{ 
+                            width: analytics ? `${analytics.summary.openRate}%` : '0%' 
+                          }}
+                        ></div>
                       </div>
                     </div>
                     <div className="flex flex-col p-4 border rounded-lg">
                       <span className="text-sm text-muted-foreground">Clicks</span>
-                      <span className="text-2xl font-bold">{Math.floor(campaign.statistics.totalRecipients * 0.18)}</span>
+                      <span className="text-2xl font-bold">
+                        {analyticsLoading ? (
+                          <Loader2 className="h-6 w-6 animate-spin" />
+                        ) : analytics ? (
+                          analytics.summary.clicked
+                        ) : (
+                          '--'
+                        )}
+                      </span>
                       <div className="mt-2 bg-muted rounded-full h-2">
-                        <div className="bg-primary h-2 rounded-full" style={{ width: '18%' }}></div>
+                        <div 
+                          className="bg-primary h-2 rounded-full" 
+                          style={{ 
+                            width: analytics ? `${analytics.summary.clickRate}%` : '0%' 
+                          }}
+                        ></div>
                       </div>
                     </div>
                   </div>
@@ -595,18 +721,22 @@ export default function CampaignDetailPage() {
                   <div>
                     <h3 className="text-lg font-medium mb-4">Top Link Clicks</h3>
                     <div className="space-y-2">
-                      <div className="flex justify-between items-center p-2 bg-muted rounded-md">
-                        <span>example.com/page1</span>
-                        <span className="font-medium">42 clicks</span>
-                      </div>
-                      <div className="flex justify-between items-center p-2 bg-muted rounded-md">
-                        <span>example.com/page2</span>
-                        <span className="font-medium">28 clicks</span>
-                      </div>
-                      <div className="flex justify-between items-center p-2 bg-muted rounded-md">
-                        <span>example.com/page3</span>
-                        <span className="font-medium">15 clicks</span>
-                      </div>
+                      {analyticsLoading ? (
+                        <div className="flex items-center justify-center p-4">
+                          <Loader2 className="h-6 w-6 animate-spin" />
+                        </div>
+                      ) : analytics?.topClickedUrls.length ? (
+                        analytics.topClickedUrls.map((link, index) => (
+                          <div key={index} className="flex justify-between items-center p-2 bg-muted rounded-md">
+                            <span className="truncate mr-2">{link.url}</span>
+                            <span className="font-medium">{link.clicks} click{link.clicks !== 1 ? 's' : ''}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center p-4 text-muted-foreground">
+                          {campaign.status === 'SENT' ? 'No link clicks recorded yet' : 'No clicks available for unsent campaigns'}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -1,0 +1,203 @@
+
+> marketsage@0.1.0 dev
+> next dev -H 0.0.0.0
+
+   ▲ Next.js 15.3.4
+   - Local:        http://localhost:3000
+   - Network:      http://0.0.0.0:3000
+   - Environments: .env.local, .env
+
+ ✓ Starting...
+ ✓ Ready in 1559ms
+ ✓ Compiled /middleware in 212ms (256 modules)
+[2025-07-07T14:08:14.720Z] INFO: API Request: GET /api/auth/csrf {"method":"GET","path":"/api/auth/csrf","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ ✓ Compiled /api/auth/[...nextauth] in 443ms (627 modules)
+ GET /api/auth/csrf 200 in 910ms
+[2025-07-07T14:08:15.644Z] INFO: API Request: POST /api/auth/callback/credentials {"method":"POST","path":"/api/auth/callback/credentials","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ POST /api/auth/callback/credentials 200 in 85ms
+[2025-07-07T14:08:15.742Z] INFO: API Request: GET /api/auth/session {"method":"GET","path":"/api/auth/session","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ GET /api/auth/session 200 in 11ms
+[2025-07-07T14:08:15.760Z] INFO: API Request: GET /api/contacts {"method":"GET","path":"/api/contacts","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ ⨯ ./src/lib/email-service.ts
+Module parse failed: Identifier 'personalizeContent' has already been declared (362:9)
+| }
+| // Helper function to personalize content with contact details
+> function personalizeContent(content, contact) {
+|     return content.replace(/\{\{firstName\}\}/g, contact.firstName || contact.name?.split(' ')[0] || 'there').replace(/\{\{lastName\}\}/g, contact.lastName || contact.name?.split(' ').slice(1).join(' ') || '').replace(/\{\{name\}\}/g, contact.name || `${contact.firstName || ''} ${contact.lastName || ''}`.trim() || 'there').replace(/\{\{email\}\}/g, contact.email || '');
+| }
+
+Import trace for requested module:
+./src/lib/email-service.ts
+./src/lib/workflow/execution-engine.ts
+./src/lib/workflow/trigger-manager.ts
+./src/app/api/contacts/route.ts
+ ○ Compiling /_not-found ...
+ ⨯ ./src/lib/email-service.ts
+Module parse failed: Identifier 'personalizeContent' has already been declared (362:9)
+| }
+| // Helper function to personalize content with contact details
+> function personalizeContent(content, contact) {
+|     return content.replace(/\{\{firstName\}\}/g, contact.firstName || contact.name?.split(' ')[0] || 'there').replace(/\{\{lastName\}\}/g, contact.lastName || contact.name?.split(' ').slice(1).join(' ') || '').replace(/\{\{name\}\}/g, contact.name || `${contact.firstName || ''} ${contact.lastName || ''}`.trim() || 'there').replace(/\{\{email\}\}/g, contact.email || '');
+| }
+
+Import trace for requested module:
+./src/lib/email-service.ts
+./src/lib/workflow/execution-engine.ts
+./src/lib/workflow/trigger-manager.ts
+./src/app/api/contacts/route.ts
+ ✓ Compiled /_not-found in 343ms (455 modules)
+ ○ Compiling /_error ...
+ ⨯ ./src/lib/email-service.ts
+Module parse failed: Identifier 'personalizeContent' has already been declared (362:9)
+| }
+| // Helper function to personalize content with contact details
+> function personalizeContent(content, contact) {
+|     return content.replace(/\{\{firstName\}\}/g, contact.firstName || contact.name?.split(' ')[0] || 'there').replace(/\{\{lastName\}\}/g, contact.lastName || contact.name?.split(' ').slice(1).join(' ') || '').replace(/\{\{name\}\}/g, contact.name || `${contact.firstName || ''} ${contact.lastName || ''}`.trim() || 'there').replace(/\{\{email\}\}/g, contact.email || '');
+| }
+
+Import trace for requested module:
+./src/lib/email-service.ts
+./src/lib/workflow/execution-engine.ts
+./src/lib/workflow/trigger-manager.ts
+./src/app/api/contacts/route.ts
+ GET /api/contacts 500 in 5697ms
+[2025-07-07T14:08:21.466Z] INFO: API Request: GET /api/lists {"method":"GET","path":"/api/lists","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ ⨯ ./src/lib/email-service.ts
+Module parse failed: Identifier 'personalizeContent' has already been declared (362:9)
+| }
+| // Helper function to personalize content with contact details
+> function personalizeContent(content, contact) {
+|     return content.replace(/\{\{firstName\}\}/g, contact.firstName || contact.name?.split(' ')[0] || 'there').replace(/\{\{lastName\}\}/g, contact.lastName || contact.name?.split(' ').slice(1).join(' ') || '').replace(/\{\{name\}\}/g, contact.name || `${contact.firstName || ''} ${contact.lastName || ''}`.trim() || 'there').replace(/\{\{email\}\}/g, contact.email || '');
+| }
+
+Import trace for requested module:
+./src/lib/email-service.ts
+./src/lib/workflow/execution-engine.ts
+./src/lib/workflow/trigger-manager.ts
+./src/app/api/contacts/route.ts
+ GET /api/lists 500 in 430ms
+ ✓ Compiled /api/lists in 751ms (1869 modules)
+[2025-07-07T14:09:16.171Z] INFO: API Request: GET /api/auth/csrf {"method":"GET","path":"/api/auth/csrf","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ GET /api/auth/csrf 200 in 140ms
+[2025-07-07T14:09:16.322Z] INFO: API Request: POST /api/auth/callback/credentials {"method":"POST","path":"/api/auth/callback/credentials","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ POST /api/auth/callback/credentials 200 in 75ms
+[2025-07-07T14:09:16.402Z] INFO: API Request: GET /api/auth/session {"method":"GET","path":"/api/auth/session","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ GET /api/auth/session 200 in 9ms
+[2025-07-07T14:09:16.415Z] INFO: API Request: GET /api/contacts {"method":"GET","path":"/api/contacts","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+Creating new Prisma client instance
+Successfully connected to database
+ GET /api/contacts 200 in 77ms
+[2025-07-07T14:09:16.496Z] INFO: API Request: GET /api/lists {"method":"GET","path":"/api/lists","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ GET /api/lists 200 in 19ms
+[2025-07-07T14:09:16.519Z] INFO: API Request: GET /api/lists/test-list-001/members {"method":"GET","path":"/api/lists/test-list-001/members","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ ✓ Compiled /api/lists/[id]/members in 212ms (1857 modules)
+Using existing Prisma client instance
+Successfully connected to database
+Creating new Prisma client instance
+Successfully connected to database
+ GET /api/lists/test-list-001/members 200 in 602ms
+[2025-07-07T14:09:35.803Z] INFO: API Request: GET /api/auth/csrf {"method":"GET","path":"/api/auth/csrf","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ GET /api/auth/csrf 200 in 35ms
+[2025-07-07T14:09:35.850Z] INFO: API Request: POST /api/auth/callback/credentials {"method":"POST","path":"/api/auth/callback/credentials","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ POST /api/auth/callback/credentials 200 in 75ms
+[2025-07-07T14:09:35.931Z] INFO: API Request: GET /api/auth/session {"method":"GET","path":"/api/auth/session","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ GET /api/auth/session 200 in 13ms
+[2025-07-07T14:09:35.949Z] INFO: API Request: GET /api/contacts {"method":"GET","path":"/api/contacts","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ GET /api/contacts 200 in 16ms
+[2025-07-07T14:09:35.970Z] INFO: API Request: GET /api/lists {"method":"GET","path":"/api/lists","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ GET /api/lists 200 in 16ms
+[2025-07-07T14:09:35.989Z] INFO: API Request: GET /api/lists/test-list-001/members {"method":"GET","path":"/api/lists/test-list-001/members","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ GET /api/lists/test-list-001/members 200 in 15ms
+[2025-07-07T14:09:36.010Z] INFO: API Request: POST /api/lists/test-list-001/members {"method":"POST","path":"/api/lists/test-list-001/members","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ POST /api/lists/test-list-001/members 400 in 20ms
+[2025-07-07T14:09:36.034Z] INFO: API Request: POST /api/email/campaigns {"method":"POST","path":"/api/email/campaigns","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ ✓ Compiled /api/email/campaigns in 299ms (1350 modules)
+Creating new Prisma client instance
+Using existing Prisma client instance
+Successfully connected to database
+Successfully connected to database
+Campaign creation request body: {
+  "name": "MarketSage Launch Campaign - 2025-07-07",
+  "subject": "🚀 Transform Your Marketing with MarketSage - Special Launch Offer Inside!",
+  "from": "info@marketsage.africa",
+  "replyTo": "hello@marketsage.africa",
+  "content": "\n<div style=\"font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; overflow: hidden;\">\n  \n  <!-- Header -->\n  <div style=\"background: rgba(255,255,255,0.95); padding: 30px; text-align: center;\">\n    <h1 style=\"color: #2c3e50; margin: 0; font-size: 28px; font-weight: 700;\">\n      🚀 Welcome to MarketSage\n    </h1>\n    <p style=\"color: #7f8c8d; margin: 10px 0 0 0; font-size: 16px;\">\n      Smart Marketing Solutions for African Businesses\n    </p>\n  </div>\n\n  <!-- Main Content -->\n  <div style=\"background: white; padding: 40px 30px;\">\n    \n    <h2 style=\"color: #2c3e50; margin-bottom: 20px; font-size: 24px;\">\n      Transform Your Marketing Today! 🎯\n    </h2>\n    \n    <p style=\"color: #34495e; line-height: 1.6; font-size: 16px; margin-bottom: 25px;\">\n      Dear {{name}},\n    </p>\n    \n    <p style=\"color: #34495e; line-height: 1.6; font-size: 16px; margin-bottom: 25px;\">\n      Are you ready to revolutionize your marketing strategy? MarketSage is the complete marketing automation platform designed specifically for African businesses like yours.\n    </p>\n\n    <!-- Features Grid -->\n    <div style=\"margin: 30px 0;\">\n      \n      <div style=\"background: #f8f9fa; padding: 20px; margin: 15px 0; border-radius: 8px; border-left: 4px solid #3498db;\">\n        <h3 style=\"color: #2c3e50; margin: 0 0 10px 0; font-size: 18px;\">📧 Email Marketing Mastery</h3>\n        <p style=\"color: #34495e; margin: 0; line-height: 1.5;\">\n          Create stunning email campaigns with our visual editor. Advanced automation, A/B testing, and detailed analytics included.\n        </p>\n      </div>\n\n      <div style=\"background: #f8f9fa; padding: 20px; margin: 15px 0; border-radius: 8px; border-left: 4px solid #e74c3c;\">\n        <h3 style=\"color: #2c3e50; margin: 0 0 10px 0; font-size: 18px;\">📱 SMS & WhatsApp Campaigns</h3>\n        <p style=\"color: #34495e; margin: 0; line-height: 1.5;\">\n          Reach your customers instantly with SMS and WhatsApp marketing. Perfect for time-sensitive promotions and updates.\n        </p>\n      </div>\n\n      <div style=\"background: #f8f9fa; padding: 20px; margin: 15px 0; border-radius: 8px; border-left: 4px solid #f39c12;\">\n        <h3 style=\"color: #2c3e50; margin: 0 0 10px 0; font-size: 18px;\">🤖 AI-Powered Intelligence</h3>\n        <p style=\"color: #34495e; margin: 0; line-height: 1.5;\">\n          Our Supreme-AI engine provides intelligent insights, customer segmentation, and predictive analytics tailored for African markets.\n        </p>\n      </div>\n\n      <div style=\"background: #f8f9fa; padding: 20px; margin: 15px 0; border-radius: 8px; border-left: 4px solid #27ae60;\">\n        <h3 style=\"color: #2c3e50; margin: 0 0 10px 0; font-size: 18px;\">📊 LeadPulse Analytics</h3>\n        <p style=\"color: #34495e; margin: 0; line-height: 1.5;\">\n          Real-time visitor tracking, conversion analytics, and customer journey mapping to optimize your marketing funnel.\n        </p>\n      </div>\n\n      <div style=\"background: #f8f9fa; padding: 20px; margin: 15px 0; border-radius: 8px; border-left: 4px solid #9b59b6;\">\n        <h3 style=\"color: #2c3e50; margin: 0 0 10px 0; font-size: 18px;\">⚡ Workflow Automation</h3>\n        <p style=\"color: #34495e; margin: 0; line-height: 1.5;\">\n          Build sophisticated marketing workflows with our drag-and-drop editor. Automate everything from lead nurturing to customer retention.\n        </p>\n      </div>\n\n    </div>\n\n    <!-- Special Offer -->\n    <div style=\"background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 10px; text-align: center; margin: 30px 0; color: white;\">\n      <h3 style=\"margin: 0 0 15px 0; font-size: 20px;\">🎉 Special Launch Offer</h3>\n      <p style=\"margin: 0 0 20px 0; font-size: 16px; opacity: 0.9;\">\n        Get started with MarketSage today and receive <strong>3 months FREE</strong> on any annual plan!\n      </p>\n      <a href=\"https://marketsage.africa/pricing\" style=\"display: inline-block; background: white; color: #667eea; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: 600; font-size: 16px;\">\n        Start Your Free Trial 🚀\n      </a>\n    </div>\n\n    <!-- Testimonial -->\n    <div style=\"background: #ecf0f1; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #34495e;\">\n      <p style=\"color: #2c3e50; font-style: italic; margin: 0 0 10px 0; line-height: 1.6;\">\n        \"MarketSage transformed our customer engagement. We saw a 300% increase in email open rates and 150% boost in conversions within the first month!\"\n      </p>\n      <p style=\"color: #7f8c8d; margin: 0; font-size: 14px;\">\n        — Adaora Okafor, Marketing Director, Lagos Tech Hub\n      </p>\n    </div>\n\n    <!-- African Markets Focus -->\n    <div style=\"margin: 30px 0;\">\n      <h3 style=\"color: #2c3e50; margin-bottom: 15px; font-size: 20px;\">🌍 Built for African Markets</h3>\n      <p style=\"color: #34495e; line-height: 1.6; margin-bottom: 15px;\">\n        MarketSage understands the unique challenges and opportunities in African markets:\n      </p>\n      <ul style=\"color: #34495e; line-height: 1.8; padding-left: 20px;\">\n        <li>Multi-currency support (NGN, KES, ZAR, GHS)</li>\n        <li>Local payment gateway integrations (Paystack, Flutterwave)</li>\n        <li>Cultural intelligence for personalized messaging</li>\n        <li>Mobile-first design for high mobile penetration</li>\n        <li>Multi-language support for diverse markets</li>\n      </ul>\n    </div>\n\n    <!-- Call to Action -->\n    <div style=\"text-align: center; margin: 40px 0 20px 0;\">\n      <a href=\"https://marketsage.africa/demo\" style=\"display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 30px; font-weight: 600; font-size: 18px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);\">\n        Book Your Free Demo 📅\n      </a>\n    </div>\n\n    <p style=\"color: #7f8c8d; text-align: center; font-size: 14px; margin: 20px 0;\">\n      No credit card required • 14-day free trial • Cancel anytime\n    </p>\n\n  </div>\n\n  <!-- Footer -->\n  <div style=\"background: #2c3e50; color: white; padding: 30px; text-align: center;\">\n    <h4 style=\"margin: 0 0 15px 0; color: #3498db;\">Ready to Get Started?</h4>\n    <p style=\"margin: 0 0 20px 0; opacity: 0.8; line-height: 1.6;\">\n      Join thousands of African businesses already using MarketSage to grow their customer base and increase revenue.\n    </p>\n    \n    <div style=\"margin: 20px 0;\">\n      <a href=\"mailto:info@marketsage.africa\" style=\"color: #3498db; text-decoration: none; margin: 0 15px;\">📧 info@marketsage.africa</a>\n      <a href=\"https://marketsage.africa\" style=\"color: #3498db; text-decoration: none; margin: 0 15px;\">🌐 www.marketsage.africa</a>\n    </div>\n  </div>\n\n</div>\n",
+  "listIds": [
+    "test-list-001"
+  ]
+}
+ POST /api/email/campaigns 201 in 454ms
+[2025-07-07T14:09:36.492Z] INFO: API Request: POST /api/email/campaigns/3b98c83a-d4e3-4bc4-b648-1cab52b4b8f0/send {"method":"POST","path":"/api/email/campaigns/3b98c83a-d4e3-4bc4-b648-1cab52b4b8f0/send","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ ✓ Compiled /api/email/campaigns/[id]/send in 100ms (1352 modules)
+Using existing Prisma client instance
+Successfully connected to database
+Creating new Prisma client instance
+=== SEND ENDPOINT ENTRY POINT ===
+Send endpoint called
+Session: exists
+Campaign ID: 3b98c83a-d4e3-4bc4-b648-1cab52b4b8f0
+Request body: {}
+Validation result: { success: true, data: { useOptimalSendTime: false } }
+Successfully connected to database
+Calling sendCampaign function...
+[2025-07-07T14:09:39.755Z] INFO: Email sent successfully via SMTP {"to":"supremeoye@outlook.com","subject":"🚀 Transform Your Marketing with MarketSage - Special Launch Offer Inside!","messageId":"<66f52fb9-7434-4317-8a09-8b6c51ff6e58@marketsage.africa>","smtpHost":"smtppro.zoho.com"}
+[2025-07-07T14:09:39.768Z] INFO: Email sent and activity recorded {"contactId":"28125882-ffe4-4cf4-82c2-a322814b4876","campaignId":"3b98c83a-d4e3-4bc4-b648-1cab52b4b8f0","messageId":"<66f52fb9-7434-4317-8a09-8b6c51ff6e58@marketsage.africa>"}
+Campaign send result: {
+  success: true,
+  totalContacts: 1,
+  sentCount: 1,
+  failedCount: 0,
+  details: {}
+}
+ POST /api/email/campaigns/3b98c83a-d4e3-4bc4-b648-1cab52b4b8f0/send 200 in 3286ms
+[2025-07-07T14:10:17.267Z] INFO: API Request: GET /api/auth/csrf {"method":"GET","path":"/api/auth/csrf","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ GET /api/auth/csrf 200 in 28ms
+[2025-07-07T14:10:17.314Z] INFO: API Request: POST /api/auth/callback/credentials {"method":"POST","path":"/api/auth/callback/credentials","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ POST /api/auth/callback/credentials 200 in 66ms
+[2025-07-07T14:10:17.386Z] INFO: API Request: GET /api/auth/session {"method":"GET","path":"/api/auth/session","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ GET /api/auth/session 200 in 9ms
+[2025-07-07T14:10:17.399Z] INFO: API Request: GET /api/contacts {"method":"GET","path":"/api/contacts","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ GET /api/contacts 200 in 25ms
+[2025-07-07T14:10:17.428Z] INFO: API Request: GET /api/lists {"method":"GET","path":"/api/lists","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ GET /api/lists 200 in 18ms
+[2025-07-07T14:10:17.449Z] INFO: API Request: GET /api/lists/test-list-001/members {"method":"GET","path":"/api/lists/test-list-001/members","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ GET /api/lists/test-list-001/members 200 in 18ms
+[2025-07-07T14:10:17.475Z] INFO: API Request: POST /api/lists/test-list-001/members {"method":"POST","path":"/api/lists/test-list-001/members","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ POST /api/lists/test-list-001/members 200 in 28ms
+[2025-07-07T14:10:17.508Z] INFO: API Request: POST /api/email/campaigns {"method":"POST","path":"/api/email/campaigns","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+Campaign creation request body: {
+  "name": "MarketSage Launch Campaign - 2025-07-07",
+  "subject": "🚀 Transform Your Marketing with MarketSage - Special Launch Offer Inside!",
+  "from": "info@marketsage.africa",
+  "replyTo": "hello@marketsage.africa",
+  "content": "\n<div style=\"font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; overflow: hidden;\">\n  \n  <!-- Header -->\n  <div style=\"background: rgba(255,255,255,0.95); padding: 30px; text-align: center;\">\n    <h1 style=\"color: #2c3e50; margin: 0; font-size: 28px; font-weight: 700;\">\n      🚀 Welcome to MarketSage\n    </h1>\n    <p style=\"color: #7f8c8d; margin: 10px 0 0 0; font-size: 16px;\">\n      Smart Marketing Solutions for African Businesses\n    </p>\n  </div>\n\n  <!-- Main Content -->\n  <div style=\"background: white; padding: 40px 30px;\">\n    \n    <h2 style=\"color: #2c3e50; margin-bottom: 20px; font-size: 24px;\">\n      Transform Your Marketing Today! 🎯\n    </h2>\n    \n    <p style=\"color: #34495e; line-height: 1.6; font-size: 16px; margin-bottom: 25px;\">\n      Dear {{name}},\n    </p>\n    \n    <p style=\"color: #34495e; line-height: 1.6; font-size: 16px; margin-bottom: 25px;\">\n      Are you ready to revolutionize your marketing strategy? MarketSage is the complete marketing automation platform designed specifically for African businesses like yours.\n    </p>\n\n    <!-- Features Grid -->\n    <div style=\"margin: 30px 0;\">\n      \n      <div style=\"background: #f8f9fa; padding: 20px; margin: 15px 0; border-radius: 8px; border-left: 4px solid #3498db;\">\n        <h3 style=\"color: #2c3e50; margin: 0 0 10px 0; font-size: 18px;\">📧 Email Marketing Mastery</h3>\n        <p style=\"color: #34495e; margin: 0; line-height: 1.5;\">\n          Create stunning email campaigns with our visual editor. Advanced automation, A/B testing, and detailed analytics included.\n        </p>\n      </div>\n\n      <div style=\"background: #f8f9fa; padding: 20px; margin: 15px 0; border-radius: 8px; border-left: 4px solid #e74c3c;\">\n        <h3 style=\"color: #2c3e50; margin: 0 0 10px 0; font-size: 18px;\">📱 SMS & WhatsApp Campaigns</h3>\n        <p style=\"color: #34495e; margin: 0; line-height: 1.5;\">\n          Reach your customers instantly with SMS and WhatsApp marketing. Perfect for time-sensitive promotions and updates.\n        </p>\n      </div>\n\n      <div style=\"background: #f8f9fa; padding: 20px; margin: 15px 0; border-radius: 8px; border-left: 4px solid #f39c12;\">\n        <h3 style=\"color: #2c3e50; margin: 0 0 10px 0; font-size: 18px;\">🤖 AI-Powered Intelligence</h3>\n        <p style=\"color: #34495e; margin: 0; line-height: 1.5;\">\n          Our Supreme-AI engine provides intelligent insights, customer segmentation, and predictive analytics tailored for African markets.\n        </p>\n      </div>\n\n      <div style=\"background: #f8f9fa; padding: 20px; margin: 15px 0; border-radius: 8px; border-left: 4px solid #27ae60;\">\n        <h3 style=\"color: #2c3e50; margin: 0 0 10px 0; font-size: 18px;\">📊 LeadPulse Analytics</h3>\n        <p style=\"color: #34495e; margin: 0; line-height: 1.5;\">\n          Real-time visitor tracking, conversion analytics, and customer journey mapping to optimize your marketing funnel.\n        </p>\n      </div>\n\n      <div style=\"background: #f8f9fa; padding: 20px; margin: 15px 0; border-radius: 8px; border-left: 4px solid #9b59b6;\">\n        <h3 style=\"color: #2c3e50; margin: 0 0 10px 0; font-size: 18px;\">⚡ Workflow Automation</h3>\n        <p style=\"color: #34495e; margin: 0; line-height: 1.5;\">\n          Build sophisticated marketing workflows with our drag-and-drop editor. Automate everything from lead nurturing to customer retention.\n        </p>\n      </div>\n\n    </div>\n\n    <!-- Special Offer -->\n    <div style=\"background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 10px; text-align: center; margin: 30px 0; color: white;\">\n      <h3 style=\"margin: 0 0 15px 0; font-size: 20px;\">🎉 Special Launch Offer</h3>\n      <p style=\"margin: 0 0 20px 0; font-size: 16px; opacity: 0.9;\">\n        Get started with MarketSage today and receive <strong>3 months FREE</strong> on any annual plan!\n      </p>\n      <a href=\"https://marketsage.africa/pricing\" style=\"display: inline-block; background: white; color: #667eea; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: 600; font-size: 16px;\">\n        Start Your Free Trial 🚀\n      </a>\n    </div>\n\n    <!-- Testimonial -->\n    <div style=\"background: #ecf0f1; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #34495e;\">\n      <p style=\"color: #2c3e50; font-style: italic; margin: 0 0 10px 0; line-height: 1.6;\">\n        \"MarketSage transformed our customer engagement. We saw a 300% increase in email open rates and 150% boost in conversions within the first month!\"\n      </p>\n      <p style=\"color: #7f8c8d; margin: 0; font-size: 14px;\">\n        — Adaora Okafor, Marketing Director, Lagos Tech Hub\n      </p>\n    </div>\n\n    <!-- African Markets Focus -->\n    <div style=\"margin: 30px 0;\">\n      <h3 style=\"color: #2c3e50; margin-bottom: 15px; font-size: 20px;\">🌍 Built for African Markets</h3>\n      <p style=\"color: #34495e; line-height: 1.6; margin-bottom: 15px;\">\n        MarketSage understands the unique challenges and opportunities in African markets:\n      </p>\n      <ul style=\"color: #34495e; line-height: 1.8; padding-left: 20px;\">\n        <li>Multi-currency support (NGN, KES, ZAR, GHS)</li>\n        <li>Local payment gateway integrations (Paystack, Flutterwave)</li>\n        <li>Cultural intelligence for personalized messaging</li>\n        <li>Mobile-first design for high mobile penetration</li>\n        <li>Multi-language support for diverse markets</li>\n      </ul>\n    </div>\n\n    <!-- Call to Action -->\n    <div style=\"text-align: center; margin: 40px 0 20px 0;\">\n      <a href=\"https://marketsage.africa/demo\" style=\"display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 30px; font-weight: 600; font-size: 18px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);\">\n        Book Your Free Demo 📅\n      </a>\n    </div>\n\n    <p style=\"color: #7f8c8d; text-align: center; font-size: 14px; margin: 20px 0;\">\n      No credit card required • 14-day free trial • Cancel anytime\n    </p>\n\n  </div>\n\n  <!-- Footer -->\n  <div style=\"background: #2c3e50; color: white; padding: 30px; text-align: center;\">\n    <h4 style=\"margin: 0 0 15px 0; color: #3498db;\">Ready to Get Started?</h4>\n    <p style=\"margin: 0 0 20px 0; opacity: 0.8; line-height: 1.6;\">\n      Join thousands of African businesses already using MarketSage to grow their customer base and increase revenue.\n    </p>\n    \n    <div style=\"margin: 20px 0;\">\n      <a href=\"mailto:info@marketsage.africa\" style=\"color: #3498db; text-decoration: none; margin: 0 15px;\">📧 info@marketsage.africa</a>\n      <a href=\"https://marketsage.africa\" style=\"color: #3498db; text-decoration: none; margin: 0 15px;\">🌐 www.marketsage.africa</a>\n    </div>\n  </div>\n\n</div>\n",
+  "listIds": [
+    "test-list-001"
+  ]
+}
+ POST /api/email/campaigns 201 in 24ms
+[2025-07-07T14:10:17.536Z] INFO: API Request: POST /api/email/campaigns/9a9f5c6e-1136-4878-9cdb-0a3272d3f589/send {"method":"POST","path":"/api/email/campaigns/9a9f5c6e-1136-4878-9cdb-0a3272d3f589/send","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+=== SEND ENDPOINT ENTRY POINT ===
+Send endpoint called
+Session: exists
+Campaign ID: 9a9f5c6e-1136-4878-9cdb-0a3272d3f589
+Request body: {}
+Validation result: { success: true, data: { useOptimalSendTime: false } }
+Calling sendCampaign function...
+Creating new Prisma client instance
+Successfully connected to database
+Creating new Prisma client instance
+Successfully connected to database
+[2025-07-07T14:10:20.309Z] INFO: Email sent successfully via SMTP {"to":"supremeoye@outlook.com","subject":"🚀 Transform Your Marketing with MarketSage - Special Launch Offer Inside!","messageId":"<9a46f90d-d53a-4387-b7c1-88ee1bac44a9@marketsage.africa>","smtpHost":"smtppro.zoho.com"}
+[2025-07-07T14:10:20.323Z] INFO: Email sent and activity recorded {"contactId":"28125882-ffe4-4cf4-82c2-a322814b4876","campaignId":"9a9f5c6e-1136-4878-9cdb-0a3272d3f589","messageId":"<9a46f90d-d53a-4387-b7c1-88ee1bac44a9@marketsage.africa>"}
+[2025-07-07T14:10:23.389Z] INFO: Email sent successfully via SMTP {"to":"kolajosph87@gmail.com","subject":"🚀 Transform Your Marketing with MarketSage - Special Launch Offer Inside!","messageId":"<a77e8c07-381d-42f2-a31f-da2b7e3fb332@marketsage.africa>","smtpHost":"smtppro.zoho.com"}
+[2025-07-07T14:10:23.403Z] INFO: Email sent and activity recorded {"contactId":"479dd5a2-4b73-49e6-891d-2ab9f718f44d","campaignId":"9a9f5c6e-1136-4878-9cdb-0a3272d3f589","messageId":"<a77e8c07-381d-42f2-a31f-da2b7e3fb332@marketsage.africa>"}
+Campaign send result: {
+  success: true,
+  totalContacts: 2,
+  sentCount: 2,
+  failedCount: 0,
+  details: {}
+}
+ POST /api/email/campaigns/9a9f5c6e-1136-4878-9cdb-0a3272d3f589/send 200 in 5877ms
+[?25h

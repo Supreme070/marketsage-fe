@@ -23,7 +23,7 @@ const campaignSchema = z.object({
   templateId: z.string().optional(),
   content: z.string().optional(),
   design: z.string().optional(), // JSON string
-  listIds: z.array(z.string()).optional(),
+  listIds: z.array(z.string()).min(1, "At least one list is required"),
   segmentIds: z.array(z.string()).optional(),
 });
 
@@ -138,11 +138,13 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
+    console.log("Campaign creation request body:", JSON.stringify(body, null, 2));
     
     // Validate input
     const validation = campaignSchema.safeParse(body);
     
     if (!validation.success) {
+      console.error("Validation failed:", validation.error.format());
       return NextResponse.json(
         { error: "Invalid campaign data", details: validation.error.format() },
         { status: 400 }
@@ -185,38 +187,55 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Transaction to create campaign with relationships
-    const newCampaign = await prisma.$transaction(async (tx) => {
-      // Create the email campaign
-      const campaign = await tx.emailCampaign.create({
-        data: {
-          id: randomUUID(),
-          ...mainData,
-          createdById: session.user.id,
-          status: CampaignStatus.DRAFT,
-          createdAt: now,
-          updatedAt: now,
-          // Connect lists if provided
-          ...(listIds && listIds.length > 0 ? {
-            lists: {
-              connect: listIds.map(id => ({ id })),
-            },
-          } : {}),
-          // Connect segments if provided
-          ...(segmentIds && segmentIds.length > 0 ? {
-            segments: {
-              connect: segmentIds.map(id => ({ id })),
-            },
-          } : {}),
+    // Validate that all lists exist and user has access
+    if (listIds && listIds.length > 0) {
+      const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN";
+      const accessibleLists = await prisma.list.findMany({
+        where: {
+          id: { in: listIds },
+          ...(isAdmin ? {} : { createdById: session.user.id })
         },
-        include: {
-          template: true,
-          lists: true,
-          segments: true,
-        },
+        select: { id: true }
       });
       
-      return campaign;
+      if (accessibleLists.length !== listIds.length) {
+        const foundIds = accessibleLists.map(l => l.id);
+        const missingIds = listIds.filter(id => !foundIds.includes(id));
+        console.error("Lists not found or no access:", missingIds);
+        return NextResponse.json(
+          { error: `Lists not found or no access: ${missingIds.join(", ")}` },
+          { status: 400 }
+        );
+      }
+    }
+    
+    // Create campaign directly (without transaction for now)
+    const newCampaign = await prisma.emailCampaign.create({
+      data: {
+        id: randomUUID(),
+        ...mainData,
+        createdById: session.user.id,
+        status: CampaignStatus.DRAFT,
+        createdAt: now,
+        updatedAt: now,
+        // Connect lists if provided
+        ...(listIds && listIds.length > 0 ? {
+          lists: {
+            connect: listIds.map(id => ({ id })),
+          },
+        } : {}),
+        // Connect segments if provided
+        ...(segmentIds && segmentIds.length > 0 ? {
+          segments: {
+            connect: segmentIds.map(id => ({ id })),
+          },
+        } : {}),
+      },
+      include: {
+        template: true,
+        lists: true,
+        segments: true,
+      },
     });
 
     return NextResponse.json(newCampaign, { status: 201 });

@@ -1,0 +1,63 @@
+
+> marketsage@0.1.0 dev
+> next dev -H 0.0.0.0
+
+   ▲ Next.js 15.3.4
+   - Local:        http://localhost:3000
+   - Network:      http://0.0.0.0:3000
+   - Environments: .env.local, .env
+
+ ✓ Starting...
+ ✓ Ready in 1518ms
+ ✓ Compiled /middleware in 150ms (256 modules)
+[2025-07-07T13:43:55.399Z] INFO: API Request: GET /api/auth/csrf {"method":"GET","path":"/api/auth/csrf","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ ✓ Compiled /api/auth/[...nextauth] in 462ms (627 modules)
+ GET /api/auth/csrf 200 in 939ms
+[2025-07-07T13:43:56.356Z] INFO: API Request: POST /api/auth/callback/credentials {"method":"POST","path":"/api/auth/callback/credentials","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ POST /api/auth/callback/credentials 200 in 84ms
+[2025-07-07T13:43:56.455Z] INFO: API Request: GET /api/auth/session {"method":"GET","path":"/api/auth/session","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ GET /api/auth/session 200 in 13ms
+[2025-07-07T13:43:56.473Z] INFO: API Request: GET /api/lists {"method":"GET","path":"/api/lists","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ ✓ Compiled /api/lists in 190ms (648 modules)
+Creating new Prisma client instance
+Successfully connected to database
+ GET /api/lists 200 in 362ms
+[2025-07-07T13:43:56.842Z] INFO: API Request: POST /api/email/campaigns {"method":"POST","path":"/api/email/campaigns","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ ✓ Compiled /api/email/campaigns in 159ms (650 modules)
+Using existing Prisma client instance
+Successfully connected to database
+Campaign creation request body: {
+  "name": "Test Campaign 2025-07-07T13:43:56",
+  "subject": "Test Email Campaign Subject",
+  "from": "info@marketsage.africa",
+  "replyTo": "",
+  "content": "<h1>Test Email</h1><p>This is a test email campaign from MarketSage sent to Supreme.</p><p>If you receive this, the email system is working correctly!</p>",
+  "listIds": [
+    "test-list-001"
+  ]
+}
+ POST /api/email/campaigns 201 in 280ms
+[2025-07-07T13:43:57.130Z] INFO: API Request: POST /api/email/campaigns/f5132d28-e09f-40c4-94d4-9a61c0f39923/send {"method":"POST","path":"/api/email/campaigns/f5132d28-e09f-40c4-94d4-9a61c0f39923/send","query":{},"ip":"127.0.0.1","userAgent":"node-fetch/1.0 (+https://github.com/bitinn/node-fetch)","tenantId":"anonymous"}
+ ✓ Compiled /api/email/campaigns/[id]/send in 279ms (718 modules)
+Using existing Prisma client instance
+Successfully connected to database
+Creating new Prisma client instance
+=== SEND ENDPOINT ENTRY POINT ===
+Send endpoint called
+Session: exists
+Campaign ID: f5132d28-e09f-40c4-94d4-9a61c0f39923
+Request body: {}
+Validation result: { success: true, data: { useOptimalSendTime: false } }
+Calling sendCampaign function...
+Successfully connected to database
+[2025-07-07T13:44:01.349Z] INFO: Email sent successfully via SMTP {"to":"supremeoye@outlook.com","subject":"Test Email Campaign Subject","messageId":"<17c81640-bc42-ef79-d5fd-2d603c3d2b4d@marketsage.africa>","smtpHost":"smtppro.zoho.com"}
+[2025-07-07T13:44:01.365Z] INFO: Email sent and activity recorded {"contactId":"28125882-ffe4-4cf4-82c2-a322814b4876","campaignId":"f5132d28-e09f-40c4-94d4-9a61c0f39923","messageId":"<17c81640-bc42-ef79-d5fd-2d603c3d2b4d@marketsage.africa>"}
+Campaign send result: {
+  success: true,
+  totalContacts: 1,
+  sentCount: 1,
+  failedCount: 0,
+  details: {}
+}
+ POST /api/email/campaigns/f5132d28-e09f-40c4-94d4-9a61c0f39923/send 200 in 4245ms
+[?25h
