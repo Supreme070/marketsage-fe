@@ -40,8 +40,6 @@ import {
   Loader2,
   Search,
   Filter,
-  Cpu,
-  Zap,
   TrendingUp,
   Target
 } from "lucide-react";
@@ -99,28 +97,8 @@ export default function EmailCampaignsPage() {
   const [campaigns, setCampaigns] = useState<EmailCampaign[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [quantumOptimizations, setQuantumOptimizations] = useState<Record<string, any>>({});
-  const [isOptimizing, setIsOptimizing] = useState<Record<string, boolean>>({});
-
-  // Mock quantum email optimizer for demonstration
-  const quantumEmailOptimizer = {
-    optimizeEmailCampaign: async (campaign: any) => {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock optimization results
-      return {
-        subjectLineOptimization: {
-          optimizedSubject: `✨ ${campaign.subject} - AI Enhanced`,
-          quantumAdvantage: Math.random() * 0.3 + 0.1, // 10-40% improvement
-        },
-        performancePrediction: {
-          estimatedOpenRate: Math.random() * 0.3 + 0.2, // 20-50% open rate
-          estimatedClickRate: Math.random() * 0.1 + 0.05, // 5-15% click rate
-        }
-      };
-    }
-  };
+  const [campaignAnalytics, setCampaignAnalytics] = useState<Record<string, any>>({});
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState<Record<string, boolean>>({});
 
   // Fetch campaigns from API
   useEffect(() => {
@@ -153,6 +131,9 @@ export default function EmailCampaignsPage() {
         setCampaigns(data);
         setError(null);
         
+        // Load real analytics for email campaigns
+        await loadEmailCampaignAnalytics(data);
+        
       } catch (err) {
         console.error("Failed to fetch campaigns:", err);
         setError("Failed to load campaigns. Please try again later.");
@@ -169,75 +150,56 @@ export default function EmailCampaignsPage() {
     fetchCampaigns();
   }, [statusFilter, searchQuery, toast]);
 
-  // Apply AI optimizations to campaigns
-  const applyQuantumOptimizations = async (campaignList: EmailCampaign[]) => {
-    const optimizations: Record<string, any> = {};
+  // Load real analytics for email campaigns
+  const loadEmailCampaignAnalytics = async (campaignList: EmailCampaign[]) => {
+    const analytics: Record<string, any> = {};
     
-    for (const campaign of campaignList.slice(0, 5)) { // Optimize first 5 campaigns
-      if (campaign.status === 'DRAFT' || campaign.status === 'SCHEDULED') {
-        setIsOptimizing(prev => ({ ...prev, [campaign.id]: true }));
+    for (const campaign of campaignList) {
+      if (campaign.status === 'SENT' || campaign.status === 'SENDING') {
+        setIsLoadingAnalytics(prev => ({ ...prev, [campaign.id]: true }));
         
         try {
-          const quantum = await quantumEmailOptimizer.optimizeEmailCampaign({
-            id: campaign.id,
-            name: campaign.name,
-            subject: campaign.subject,
-            content: campaign.description || '',
-            from: campaign.from,
-            replyTo: campaign.replyTo || undefined,
-            status: campaign.status as any,
-            scheduledFor: campaign.scheduledFor ? new Date(campaign.scheduledFor) : undefined,
-            lists: campaign.lists.map(l => l.id),
-            segments: campaign.segments.map(s => s.id),
-            market: 'NGN' // Default to Nigerian market
-          });
-          
-          optimizations[campaign.id] = quantum;
+          const response = await fetch(`/api/email/campaigns/${campaign.id}/analytics`);
+          if (response.ok) {
+            const data = await response.json();
+            analytics[campaign.id] = data;
+          }
         } catch (error) {
-          console.warn(`Quantum optimization failed for campaign ${campaign.id}:`, error);
+          console.warn(`Failed to load analytics for email campaign ${campaign.id}:`, error);
         } finally {
-          setIsOptimizing(prev => ({ ...prev, [campaign.id]: false }));
+          setIsLoadingAnalytics(prev => ({ ...prev, [campaign.id]: false }));
         }
       }
     }
     
-    setQuantumOptimizations(optimizations);
+    setCampaignAnalytics(analytics);
   };
 
-  // Handle quantum optimization for individual campaign
-  const handleOptimizeCampaign = async (campaign: EmailCampaign) => {
-    setIsOptimizing(prev => ({ ...prev, [campaign.id]: true }));
+  // Refresh analytics for individual email campaign
+  const handleRefreshAnalytics = async (campaign: EmailCampaign) => {
+    setIsLoadingAnalytics(prev => ({ ...prev, [campaign.id]: true }));
     
     try {
-      const quantum = await quantumEmailOptimizer.optimizeEmailCampaign({
-        id: campaign.id,
-        name: campaign.name,
-        subject: campaign.subject,
-        content: campaign.description || '',
-        from: campaign.from,
-        replyTo: campaign.replyTo || undefined,
-        status: campaign.status as any,
-        scheduledFor: campaign.scheduledFor ? new Date(campaign.scheduledFor) : undefined,
-        lists: campaign.lists.map(l => l.id),
-        segments: campaign.segments.map(s => s.id),
-        market: 'NGN'
-      });
-      
-      setQuantumOptimizations(prev => ({ ...prev, [campaign.id]: quantum }));
-      
-      toast({
-        title: "⚡ Quantum Optimization Complete",
-        description: `Campaign optimized with +${(quantum.subjectLineOptimization.quantumAdvantage * 100).toFixed(1)}% quantum advantage`,
-      });
+      const response = await fetch(`/api/email/campaigns/${campaign.id}/analytics`);
+      if (response.ok) {
+        const data = await response.json();
+        setCampaignAnalytics(prev => ({ ...prev, [campaign.id]: data }));
+        toast({
+          title: "Analytics Refreshed",
+          description: "Campaign analytics updated successfully",
+        });
+      } else {
+        throw new Error('Failed to fetch analytics');
+      }
     } catch (error) {
-      console.error('Quantum optimization failed:', error);
+      console.error('Failed to refresh analytics:', error);
       toast({
-        title: "Optimization Error",
-        description: "Quantum optimization failed. Using classical methods.",
+        title: "Error",
+        description: "Failed to refresh analytics",
         variant: "destructive"
       });
     } finally {
-      setIsOptimizing(prev => ({ ...prev, [campaign.id]: false }));
+      setIsLoadingAnalytics(prev => ({ ...prev, [campaign.id]: false }));
     }
   };
 
@@ -315,32 +277,39 @@ export default function EmailCampaignsPage() {
     return format(new Date(dateString), "MMM d, yyyy");
   };
 
-  // Get quantum optimization summary
-  const getQuantumSummary = () => {
-    const optimizedCampaigns = Object.keys(quantumOptimizations).length;
-    const avgQuantumAdvantage = optimizedCampaigns > 0 
-      ? Object.values(quantumOptimizations).reduce((sum, opt: any) => 
-          sum + opt.subjectLineOptimization.quantumAdvantage, 0) / optimizedCampaigns
+  // Get analytics summary
+  const getAnalyticsSummary = () => {
+    const campaignsWithAnalytics = Object.keys(campaignAnalytics).length;
+    const avgOpenRate = campaignsWithAnalytics > 0 
+      ? Object.values(campaignAnalytics).reduce((sum, analytics: any) => 
+          sum + (analytics.openRate || 0), 0) / campaignsWithAnalytics
       : 0;
-    return { optimizedCampaigns, avgQuantumAdvantage };
+    const avgClickRate = campaignsWithAnalytics > 0 
+      ? Object.values(campaignAnalytics).reduce((sum, analytics: any) => 
+          sum + (analytics.clickRate || 0), 0) / campaignsWithAnalytics
+      : 0;
+    return { campaignsWithAnalytics, avgOpenRate, avgClickRate };
   };
   
-  const { optimizedCampaigns, avgQuantumAdvantage } = getQuantumSummary();
+  const { campaignsWithAnalytics, avgOpenRate, avgClickRate } = getAnalyticsSummary();
 
   return (
     <div className="flex flex-col space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Email Campaigns</h2>
-          {optimizedCampaigns > 0 && (
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage email marketing campaigns with real-time analytics and performance tracking.
+          </p>
+          {campaignsWithAnalytics > 0 && (
             <div className="flex items-center gap-2 mt-2">
-              <Badge variant="outline" className="text-cyan-400 border-cyan-400 bg-cyan-900/20">
-                <Cpu className="h-3 w-3 mr-1" />
-                ⚡ {optimizedCampaigns} Quantum Optimized
+              <Badge variant="outline" className="text-blue-400 border-blue-400 bg-blue-900/20">
+                <BarChart className="h-3 w-3 mr-1" />
+                {campaignsWithAnalytics} Campaigns with Analytics
               </Badge>
               <Badge variant="outline" className="text-green-400 border-green-400 bg-green-900/20">
                 <TrendingUp className="h-3 w-3 mr-1" />
-                +{(avgQuantumAdvantage * 100).toFixed(1)}% Avg Improvement
+                {avgOpenRate.toFixed(1)}% Avg Open Rate
               </Badge>
             </div>
           )}
@@ -351,47 +320,57 @@ export default function EmailCampaignsPage() {
         </Button>
       </div>
 
-      {/* Quantum Optimization Overview */}
-      {optimizedCampaigns > 0 && (
-        <Card className="bg-gradient-to-r from-cyan-950/50 to-purple-950/50 border-cyan-500/30">
+      {/* Email Analytics Overview */}
+      {campaignsWithAnalytics > 0 && (
+        <Card className="bg-gradient-to-r from-blue-950/50 to-green-950/50 border-blue-500/30">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Cpu className="h-5 w-5 text-cyan-400" />
-              ⚡ AI Email Intelligence
+              <BarChart className="h-5 w-5 text-blue-400" />
+              Email Campaign Analytics
             </CardTitle>
             <CardDescription>
-              Advanced AI optimizations improving campaign performance across African markets
+              Real-time performance data from your email marketing campaigns
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-3 bg-cyan-900/20 border border-cyan-500/30 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
-                  <Zap className="h-4 w-4 text-cyan-400" />
-                  <span className="font-medium text-cyan-300">Campaigns Optimized</span>
+                  <BarChart className="h-4 w-4 text-blue-400" />
+                  <span className="font-medium text-blue-300">Active Campaigns</span>
                 </div>
-                <div className="text-2xl font-bold text-cyan-100">{optimizedCampaigns}</div>
-                <p className="text-xs text-cyan-200">Quantum-enhanced email campaigns</p>
+                <div className="text-2xl font-bold text-blue-100">{campaignsWithAnalytics}</div>
+                <p className="text-xs text-blue-200">Campaigns with analytics data</p>
               </div>
               
               <div className="p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <TrendingUp className="h-4 w-4 text-green-400" />
-                  <span className="font-medium text-green-300">Performance Boost</span>
+                  <span className="font-medium text-green-300">Open Rate</span>
                 </div>
-                <div className="text-2xl font-bold text-green-100">+{(avgQuantumAdvantage * 100).toFixed(1)}%</div>
-                <p className="text-xs text-green-200">Average AI advantage</p>
+                <div className="text-2xl font-bold text-green-100">{avgOpenRate.toFixed(1)}%</div>
+                <p className="text-xs text-green-200">Average email open rate</p>
               </div>
               
               <div className="p-3 bg-purple-900/20 border border-purple-500/30 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <Target className="h-4 w-4 text-purple-400" />
-                  <span className="font-medium text-purple-300">Predicted Impact</span>
+                  <span className="font-medium text-purple-300">Click Rate</span>
                 </div>
-                <div className="text-2xl font-bold text-purple-100">
-                  +{((avgQuantumAdvantage * 0.25) * 100).toFixed(0)}%
+                <div className="text-2xl font-bold text-purple-100">{avgClickRate.toFixed(1)}%</div>
+                <p className="text-xs text-purple-200">Average click-through rate</p>
+              </div>
+              
+              <div className="p-3 bg-orange-900/20 border border-orange-500/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Send className="h-4 w-4 text-orange-400" />
+                  <span className="font-medium text-orange-300">Total Sent</span>
                 </div>
-                <p className="text-xs text-purple-200">Expected open rate improvement</p>
+                <div className="text-2xl font-bold text-orange-100">
+                  {Object.values(campaignAnalytics).reduce((sum, analytics: any) => 
+                    sum + (analytics.sent || 0), 0).toLocaleString()}
+                </div>
+                <p className="text-xs text-orange-200">Total emails delivered</p>
               </div>
             </div>
           </CardContent>
@@ -402,7 +381,7 @@ export default function EmailCampaignsPage() {
         <CardHeader className="pb-3">
           <CardTitle>All Campaigns</CardTitle>
           <CardDescription>
-            View and manage your email marketing campaigns with AI-powered optimizations.
+            View and manage your email marketing campaigns with real-time analytics.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -504,29 +483,28 @@ export default function EmailCampaignsPage() {
                         <div className="flex flex-col">
                           <div className="flex items-center gap-2">
                             <span>{campaign.name}</span>
-                            {quantumOptimizations[campaign.id] && (
-                              <Badge variant="outline" className="text-cyan-400 border-cyan-400 bg-cyan-900/20 text-xs">
-                                <Cpu className="h-3 w-3 mr-1" />
-                                ⚡ Optimized
+                            {campaignAnalytics[campaign.id] && (
+                              <Badge variant="outline" className="text-green-400 border-green-400 bg-green-900/20 text-xs">
+                                <BarChart className="h-3 w-3 mr-1" />
+                                Analytics
                               </Badge>
                             )}
-                            {isOptimizing[campaign.id] && (
-                              <Badge variant="outline" className="text-orange-400 border-orange-400 bg-orange-900/20 text-xs">
+                            {isLoadingAnalytics[campaign.id] && (
+                              <Badge variant="outline" className="text-blue-400 border-blue-400 bg-blue-900/20 text-xs">
                                 <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                Optimizing...
+                                Loading...
                               </Badge>
                             )}
                           </div>
-                          <span className="text-sm text-muted-foreground">
-                            {quantumOptimizations[campaign.id] 
-                              ? quantumOptimizations[campaign.id].subjectLineOptimization.optimizedSubject
-                              : campaign.subject}
-                          </span>
-                          {quantumOptimizations[campaign.id] && (
+                          <span className="text-sm text-muted-foreground">{campaign.subject}</span>
+                          {campaignAnalytics[campaign.id] && (
                             <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs text-cyan-400">
-                                +{(quantumOptimizations[campaign.id].subjectLineOptimization.quantumAdvantage * 100).toFixed(1)}% AI boost
+                              <span className="text-xs text-green-400">
+                                {campaignAnalytics[campaign.id].openRate}% open rate
                               </span>
+                              <Badge variant="outline" className="text-xs text-blue-400 border-blue-400">
+                                {campaignAnalytics[campaign.id].sent || 0} sent
+                              </Badge>
                             </div>
                           )}
                         </div>
@@ -552,20 +530,27 @@ export default function EmailCampaignsPage() {
                           : "-"}
                       </TableCell>
                       <TableCell>
-                        {quantumOptimizations[campaign.id] ? (
+                        {campaignAnalytics[campaign.id] ? (
                           <div className="space-y-1">
                             <div className="flex items-center gap-2 text-xs">
                               <span className="text-muted-foreground">Open Rate:</span>
                               <Badge variant="outline" className="text-green-400 border-green-400">
-                                {(quantumOptimizations[campaign.id].performancePrediction.estimatedOpenRate * 100).toFixed(1)}%
+                                {campaignAnalytics[campaign.id].openRate || 0}%
                               </Badge>
                             </div>
                             <div className="flex items-center gap-2 text-xs">
                               <span className="text-muted-foreground">Click Rate:</span>
                               <Badge variant="outline" className="text-blue-400 border-blue-400">
-                                {(quantumOptimizations[campaign.id].performancePrediction.estimatedClickRate * 100).toFixed(1)}%
+                                {campaignAnalytics[campaign.id].clickRate || 0}%
                               </Badge>
                             </div>
+                          </div>
+                        ) : campaign.status === 'DRAFT' || campaign.status === 'SCHEDULED' ? (
+                          <span className="text-xs text-muted-foreground">Not sent yet</span>
+                        ) : isLoadingAnalytics[campaign.id] ? (
+                          <div className="flex items-center gap-2 text-xs">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            <span className="text-muted-foreground">Loading...</span>
                           </div>
                         ) : (
                           <div className="text-sm text-muted-foreground">
@@ -597,13 +582,13 @@ export default function EmailCampaignsPage() {
                             <DropdownMenuItem onClick={() => handleViewCampaign(campaign.id)}>
                               <Eye className="mr-2 h-4 w-4" /> View
                             </DropdownMenuItem>
-                            {(campaign.status === "DRAFT" || campaign.status === "SCHEDULED") && !quantumOptimizations[campaign.id] && (
+                            {(campaign.status === 'SENT' || campaign.status === 'SENDING') && (
                               <DropdownMenuItem 
-                                onClick={() => handleOptimizeCampaign(campaign)}
-                                disabled={isOptimizing[campaign.id]}
+                                onClick={() => handleRefreshAnalytics(campaign)}
+                                disabled={isLoadingAnalytics[campaign.id]}
                               >
-                                <Cpu className="mr-2 h-4 w-4" /> 
-                                {isOptimizing[campaign.id] ? 'Optimizing...' : '⚡ Quantum Optimize'}
+                                <BarChart className="mr-2 h-4 w-4" /> 
+                                {isLoadingAnalytics[campaign.id] ? 'Loading...' : 'Refresh Analytics'}
                               </DropdownMenuItem>
                             )}
                             {campaign.status === "DRAFT" && (
@@ -635,9 +620,9 @@ export default function EmailCampaignsPage() {
                             <DropdownMenuItem>
                               <Copy className="mr-2 h-4 w-4" /> Duplicate
                             </DropdownMenuItem>
-                            {quantumOptimizations[campaign.id] && (
-                              <DropdownMenuItem>
-                                <Target className="mr-2 h-4 w-4" /> View Optimization
+                            {campaignAnalytics[campaign.id] && (
+                              <DropdownMenuItem onClick={() => router.push(`/email/campaigns/${campaign.id}/analytics`)}>
+                                <BarChart className="mr-2 h-4 w-4" /> View Analytics
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator />

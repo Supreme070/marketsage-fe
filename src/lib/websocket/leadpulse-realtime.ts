@@ -13,6 +13,7 @@ import { NextApiRequest } from 'next';
 import { NextApiResponseServerIO } from '@/types/socket';
 import prisma from '@/lib/db/prisma';
 import { logger } from '@/lib/logger';
+import { selectiveBroadcastManager, type SelectiveUpdate } from './selective-broadcast';
 
 export interface VisitorUpdate {
   id: string;
@@ -32,7 +33,11 @@ export interface AnalyticsUpdate {
 
 class LeadPulseRealtimeService {
   private io: SocketServer | null = null;
-  private activeConnections = new Set<string>();
+  private activeConnections = new Map<string, { lastSeen: Date; subscriptions: Set<string> }>();
+  private broadcastThrottle = new Map<string, number>();
+  private analyticsCache: AnalyticsUpdate | null = null;
+  private analyticsCacheExpiry: number = 0;
+  private selectiveBroadcastEnabled = true; // Feature flag for selective broadcasting
   
   initialize(io: SocketServer) {
     this.io = io;
@@ -44,55 +49,117 @@ class LeadPulseRealtimeService {
     if (!this.io) return;
 
     this.io.on('connection', (socket) => {
-      this.activeConnections.add(socket.id);
+      this.activeConnections.set(socket.id, {
+        lastSeen: new Date(),
+        subscriptions: new Set()
+      });
       logger.info(`LeadPulse client connected: ${socket.id}`);
 
-      // Send initial data to new connection
-      this.sendInitialData(socket);
+      // Register client with selective broadcast manager
+      if (this.selectiveBroadcastEnabled) {
+        // Extract user context from socket handshake or auth
+        const userId = socket.handshake.auth?.userId;
+        const organizationId = socket.handshake.auth?.organizationId;
+        const permissions = socket.handshake.auth?.permissions || ['view_analytics'];
+        
+        selectiveBroadcastManager.registerClient(socket, userId, organizationId, permissions);
+      }
 
-      // Handle client subscription to specific data types
-      socket.on('subscribe', (dataType: string) => {
+      // Send initial data to new connection (throttled)
+      this.sendInitialDataThrottled(socket);
+
+      // Handle client subscription to specific data types with selective filtering
+      socket.on('subscribe', (data: { dataType: string; filter?: any }) => {
+        const { dataType, filter } = typeof data === 'string' ? { dataType: data, filter: undefined } : data;
+        
+        const connection = this.activeConnections.get(socket.id);
+        if (connection) {
+          connection.subscriptions.add(dataType);
+          connection.lastSeen = new Date();
+        }
         socket.join(dataType);
-        logger.info(`Client ${socket.id} subscribed to ${dataType}`);
+        
+        // Register selective subscription if enabled
+        if (this.selectiveBroadcastEnabled) {
+          selectiveBroadcastManager.updateClientSubscription(socket.id, dataType, filter);
+        }
+        
+        logger.info(`Client ${socket.id} subscribed to ${dataType}`, { filter });
       });
 
       socket.on('unsubscribe', (dataType: string) => {
+        const connection = this.activeConnections.get(socket.id);
+        if (connection) {
+          connection.subscriptions.delete(dataType);
+          connection.lastSeen = new Date();
+        }
         socket.leave(dataType);
+        
+        // Remove selective subscription if enabled
+        if (this.selectiveBroadcastEnabled) {
+          selectiveBroadcastManager.removeClientSubscription(socket.id, dataType);
+        }
+        
         logger.info(`Client ${socket.id} unsubscribed from ${dataType}`);
       });
 
-      socket.on('disconnect', () => {
+      socket.on('disconnect', (reason) => {
         this.activeConnections.delete(socket.id);
-        logger.info(`LeadPulse client disconnected: ${socket.id}`);
+        
+        // Unregister from selective broadcast manager
+        if (this.selectiveBroadcastEnabled) {
+          selectiveBroadcastManager.unregisterClient(socket.id);
+        }
+        
+        logger.info(`LeadPulse client disconnected: ${socket.id}, reason: ${reason}`);
+        this.cleanupConnectionResources(socket.id);
       });
 
-      // Handle ping for connection health
+      // Handle ping for connection health with heartbeat
       socket.on('ping', () => {
-        socket.emit('pong', { timestamp: new Date().toISOString() });
+        const connection = this.activeConnections.get(socket.id);
+        if (connection) {
+          connection.lastSeen = new Date();
+        }
+        socket.emit('pong', { 
+          timestamp: new Date().toISOString(),
+          connectionCount: this.activeConnections.size
+        });
+      });
+
+      // Handle client errors to prevent connection leaks
+      socket.on('error', (error) => {
+        logger.error(`Socket error for ${socket.id}:`, error);
+        this.handleSocketError(socket.id, error);
       });
     });
   }
 
-  private async sendInitialData(socket: any) {
+  private async sendInitialDataThrottled(socket: any) {
     try {
-      // Send current analytics overview
-      const analytics = await this.getCurrentAnalytics();
+      // Use cached analytics if available and fresh
+      let analytics = this.getCachedAnalytics();
+      if (!analytics) {
+        analytics = await this.getCurrentAnalyticsOptimized();
+      }
       socket.emit('analytics_update', analytics);
 
-      // Send recent visitors
-      const recentVisitors = await this.getRecentVisitors();
+      // Send optimized recent visitors (limited data)
+      const recentVisitors = await this.getRecentVisitorsOptimized();
       socket.emit('recent_visitors', recentVisitors);
 
-      // Send active visitors
-      const activeVisitors = await this.getActiveVisitors();
+      // Send optimized active visitors
+      const activeVisitors = await this.getActiveVisitorsOptimized();
       socket.emit('active_visitors', activeVisitors);
 
     } catch (error) {
       logger.error('Error sending initial data to client:', error);
+      // Send fallback minimal data to prevent client hanging
+      socket.emit('analytics_update', this.getFallbackAnalytics());
     }
   }
 
-  // Broadcast new visitor to all connected clients
+  // Broadcast new visitor using selective broadcasting
   async broadcastNewVisitor(visitor: any) {
     if (!this.io) return;
 
@@ -103,43 +170,96 @@ class LeadPulseRealtimeService {
       timestamp: new Date()
     };
 
-    this.io.emit('visitor_update', update);
-    this.io.to('visitors').emit('new_visitor', visitor);
+    if (this.selectiveBroadcastEnabled) {
+      // Use selective broadcasting
+      const selectiveUpdate: SelectiveUpdate = {
+        type: 'new_visitor',
+        data: { visitor },
+        metadata: {
+          timestamp: new Date(),
+          relevanceScore: this.calculateRelevanceScore(visitor),
+          visitorId: visitor.id,
+          pixelId: visitor.metadata?.pixelId,
+          organizationId: visitor.metadata?.organizationId,
+          priority: 'medium',
+        },
+      };
+      
+      await selectiveBroadcastManager.broadcastSelective(this.io, selectiveUpdate);
+    } else {
+      // Fallback to traditional broadcasting
+      this.io.emit('visitor_update', update);
+      this.io.to('visitors').emit('new_visitor', visitor);
+    }
     
-    // Update analytics
-    const analytics = await this.getCurrentAnalytics();
-    this.io.emit('analytics_update', analytics);
+    // Update analytics with selective broadcasting
+    await this.broadcastAnalyticsUpdateSelective();
 
     logger.info(`Broadcasted new visitor: ${visitor.id}`);
   }
 
-  // Broadcast visitor activity update
+  // Broadcast visitor activity update using selective broadcasting
   async broadcastVisitorActivity(visitorId: string, touchpoint: any) {
     if (!this.io) return;
 
+    // Throttle broadcasts per visitor (max 1 per 2 seconds)
+    const throttleKey = `activity_${visitorId}`;
+    const now = Date.now();
+    const lastBroadcast = this.broadcastThrottle.get(throttleKey) || 0;
+    
+    if (now - lastBroadcast < 2000) {
+      return; // Skip if too frequent
+    }
+    this.broadcastThrottle.set(throttleKey, now);
+
     try {
+      // Optimized: Get visitor without includes to avoid N+1
       const visitor = await prisma.leadPulseVisitor.findUnique({
         where: { id: visitorId },
-        include: {
-          touchpoints: {
-            orderBy: { timestamp: 'desc' },
-            take: 1
-          }
+        select: {
+          id: true,
+          fingerprint: true,
+          city: true,
+          country: true,
+          device: true,
+          browser: true,
+          isActive: true,
+          lastVisit: true,
+          engagementScore: true
         }
       });
 
       if (!visitor) return;
 
-      const update: VisitorUpdate = {
-        id: visitorId,
-        type: 'touchpoint_added',
-        visitor,
-        touchpoint,
-        timestamp: new Date()
-      };
+      if (this.selectiveBroadcastEnabled) {
+        // Use selective broadcasting for visitor activity
+        const selectiveUpdate: SelectiveUpdate = {
+          type: 'visitor_activity',
+          data: { visitor, touchpoint },
+          metadata: {
+            timestamp: new Date(),
+            relevanceScore: this.calculateActivityRelevanceScore(visitor, touchpoint),
+            visitorId: visitor.id,
+            pixelId: visitor.metadata?.pixelId,
+            organizationId: visitor.metadata?.organizationId,
+            priority: this.getActivityPriority(touchpoint.type),
+          },
+        };
+        
+        await selectiveBroadcastManager.broadcastSelective(this.io, selectiveUpdate);
+      } else {
+        // Fallback to traditional broadcasting
+        const update: VisitorUpdate = {
+          id: visitorId,
+          type: 'touchpoint_added',
+          visitor,
+          touchpoint,
+          timestamp: new Date()
+        };
 
-      this.io.emit('visitor_activity', update);
-      this.io.to('activity').emit('touchpoint_added', { visitor, touchpoint });
+        this.io.to('activity').emit('touchpoint_added', { visitor, touchpoint });
+        this.io.to('visitors').emit('visitor_activity', update);
+      }
 
       logger.info(`Broadcasted visitor activity: ${visitorId}`);
     } catch (error) {
@@ -147,14 +267,52 @@ class LeadPulseRealtimeService {
     }
   }
 
-  // Broadcast analytics updates
+  // Broadcast analytics updates using selective broadcasting
   async broadcastAnalyticsUpdate() {
     if (!this.io) return;
 
+    // Throttle analytics broadcasts (max 1 per 10 seconds)
+    const throttleKey = 'analytics_broadcast';
+    const now = Date.now();
+    const lastBroadcast = this.broadcastThrottle.get(throttleKey) || 0;
+    
+    if (now - lastBroadcast < 10000) {
+      return; // Skip if too frequent
+    }
+    this.broadcastThrottle.set(throttleKey, now);
+
+    await this.broadcastAnalyticsUpdateSelective();
+  }
+
+  // Selective analytics broadcasting
+  private async broadcastAnalyticsUpdateSelective() {
+    if (!this.io) return;
+
     try {
-      const analytics = await this.getCurrentAnalytics();
-      this.io.emit('analytics_update', analytics);
-      this.io.to('analytics').emit('analytics_data', analytics);
+      const analytics = await this.getCurrentAnalyticsOptimized();
+      
+      if (this.selectiveBroadcastEnabled) {
+        // Use selective broadcasting for analytics
+        const selectiveUpdate: SelectiveUpdate = {
+          type: 'analytics_update',
+          data: analytics,
+          metadata: {
+            timestamp: new Date(),
+            relevanceScore: 80, // Analytics are generally high relevance
+            priority: 'medium',
+          },
+        };
+        
+        await selectiveBroadcastManager.broadcastSelective(this.io, selectiveUpdate);
+      } else {
+        // Fallback to traditional broadcasting
+        const analyticsRoom = this.io.sockets.adapter.rooms.get('analytics');
+        if (analyticsRoom && analyticsRoom.size > 0) {
+          this.io.to('analytics').emit('analytics_data', analytics);
+        }
+        
+        this.io.emit('analytics_update', analytics);
+      }
 
       logger.info('Broadcasted analytics update');
     } catch (error) {
@@ -162,109 +320,385 @@ class LeadPulseRealtimeService {
     }
   }
 
-  // Broadcast visitor going offline
+  // Broadcast visitor going offline using selective broadcasting
   async broadcastVisitorOffline(visitorId: string) {
     if (!this.io) return;
 
-    const update: VisitorUpdate = {
-      id: visitorId,
-      type: 'visitor_offline',
-      visitor: { id: visitorId },
-      timestamp: new Date()
-    };
+    if (this.selectiveBroadcastEnabled) {
+      // Use selective broadcasting
+      const selectiveUpdate: SelectiveUpdate = {
+        type: 'visitor_offline',
+        data: { visitorId },
+        metadata: {
+          timestamp: new Date(),
+          relevanceScore: 30, // Lower relevance for offline events
+          visitorId,
+          priority: 'low',
+        },
+      };
+      
+      await selectiveBroadcastManager.broadcastSelective(this.io, selectiveUpdate);
+    } else {
+      // Fallback to traditional broadcasting
+      const update: VisitorUpdate = {
+        id: visitorId,
+        type: 'visitor_offline',
+        visitor: { id: visitorId },
+        timestamp: new Date()
+      };
 
-    this.io.emit('visitor_offline', update);
-    this.io.to('visitors').emit('visitor_offline', { visitorId });
+      this.io.emit('visitor_offline', update);
+      this.io.to('visitors').emit('visitor_offline', { visitorId });
+    }
 
     logger.info(`Broadcasted visitor offline: ${visitorId}`);
   }
 
-  // Get current analytics data
-  private async getCurrentAnalytics(): Promise<AnalyticsUpdate> {
-    const [totalVisitors, activeVisitors, recentTouchpoints] = await Promise.all([
-      prisma.leadPulseVisitor.count(),
-      prisma.leadPulseVisitor.count({
-        where: { isActive: true }
-      }),
-      prisma.leadPulseTouchpoint.findMany({
-        where: {
-          timestamp: {
-            gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
+  // Get current analytics data (optimized to avoid N+1 queries)
+  private async getCurrentAnalyticsOptimized(): Promise<AnalyticsUpdate> {
+    const cacheKey = 'analytics';
+    const now = Date.now();
+    
+    // Return cached data if still fresh (30 seconds)
+    if (this.analyticsCache && now < this.analyticsCacheExpiry) {
+      return this.analyticsCache;
+    }
+
+    try {
+      // Use parallel queries but avoid includes
+      const [totalVisitors, activeVisitors, conversions, countryData, recentTouchpoints] = await Promise.all([
+        prisma.leadPulseVisitor.count(),
+        prisma.leadPulseVisitor.count({
+          where: { isActive: true }
+        }),
+        prisma.leadPulseTouchpoint.count({
+          where: {
+            type: 'CONVERSION',
+            timestamp: {
+              gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
+            }
+          }
+        }),
+        prisma.leadPulseVisitor.groupBy({
+          by: ['country'],
+          _count: { country: true },
+          where: {
+            country: { not: null }
+          },
+          orderBy: { _count: { country: 'desc' } },
+          take: 5
+        }),
+        // Optimized: Get touchpoints without visitor includes
+        prisma.leadPulseTouchpoint.findMany({
+          where: {
+            timestamp: {
+              gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
+            }
+          },
+          select: {
+            id: true,
+            type: true,
+            url: true,
+            timestamp: true,
+            visitorId: true
+          },
+          orderBy: { timestamp: 'desc' },
+          take: 10
+        })
+      ]);
+
+      const conversionRate = totalVisitors > 0 ? (conversions / totalVisitors) * 100 : 0;
+      
+      const topCountries = countryData.map(item => ({
+        country: item.country || 'Unknown',
+        count: item._count.country
+      }));
+
+      const analytics: AnalyticsUpdate = {
+        totalVisitors,
+        activeVisitors,
+        conversionRate: Math.round(conversionRate * 100) / 100,
+        topCountries,
+        recentActivity: recentTouchpoints
+      };
+
+      // Cache the result for 30 seconds
+      this.analyticsCache = analytics;
+      this.analyticsCacheExpiry = now + 30000;
+
+      return analytics;
+    } catch (error) {
+      logger.error('Error in getCurrentAnalyticsOptimized:', error);
+      return this.getFallbackAnalytics();
+    }
+  }
+
+  // Get recent visitors (optimized)
+  private async getRecentVisitorsOptimized() {
+    try {
+      // First get visitors without includes
+      const visitors = await prisma.leadPulseVisitor.findMany({
+        orderBy: { lastVisit: 'desc' },
+        take: 20,
+        select: {
+          id: true,
+          fingerprint: true,
+          city: true,
+          country: true,
+          device: true,
+          browser: true,
+          isActive: true,
+          lastVisit: true,
+          engagementScore: true
+        }
+      });
+
+      // Get touchpoints separately to avoid N+1
+      if (visitors.length > 0) {
+        const visitorIds = visitors.map(v => v.id);
+        const touchpoints = await prisma.leadPulseTouchpoint.findMany({
+          where: {
+            visitorId: { in: visitorIds }
+          },
+          select: {
+            id: true,
+            visitorId: true,
+            type: true,
+            url: true,
+            timestamp: true
+          },
+          orderBy: { timestamp: 'desc' }
+        });
+
+        // Group touchpoints by visitor ID (limit 3 per visitor)
+        const touchpointsMap = new Map();
+        touchpoints.forEach(tp => {
+          if (!touchpointsMap.has(tp.visitorId)) {
+            touchpointsMap.set(tp.visitorId, []);
+          }
+          const visitorTouchpoints = touchpointsMap.get(tp.visitorId);
+          if (visitorTouchpoints.length < 3) {
+            visitorTouchpoints.push(tp);
+          }
+        });
+
+        // Add touchpoints to visitors
+        return visitors.map(visitor => ({
+          ...visitor,
+          touchpoints: touchpointsMap.get(visitor.id) || []
+        }));
+      }
+
+      return visitors;
+    } catch (error) {
+      logger.error('Error in getRecentVisitorsOptimized:', error);
+      return [];
+    }
+  }
+
+  // Get active visitors (optimized)
+  private async getActiveVisitorsOptimized() {
+    try {
+      // Limit active visitors to prevent overwhelming real-time updates
+      const visitors = await prisma.leadPulseVisitor.findMany({
+        where: { 
+          isActive: true,
+          lastVisit: {
+            gte: new Date(Date.now() - 30 * 60 * 1000) // Last 30 minutes
           }
         },
-        include: { visitor: true },
-        orderBy: { timestamp: 'desc' },
-        take: 10
-      })
-    ]);
+        select: {
+          id: true,
+          fingerprint: true,
+          city: true,
+          country: true,
+          device: true,
+          browser: true,
+          lastVisit: true,
+          engagementScore: true
+        },
+        orderBy: { lastVisit: 'desc' },
+        take: 50 // Limit to prevent performance issues
+      });
 
-    // Calculate conversion rate
-    const conversions = await prisma.leadPulseTouchpoint.count({
-      where: {
-        type: 'CONVERSION',
-        timestamp: {
-          gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
-        }
-      }
-    });
+      return visitors;
+    } catch (error) {
+      logger.error('Error in getActiveVisitorsOptimized:', error);
+      return [];
+    }
+  }
 
-    const conversionRate = totalVisitors > 0 ? (conversions / totalVisitors) * 100 : 0;
+  // Calculate relevance score for visitor updates
+  private calculateRelevanceScore(visitor: any): number {
+    let score = 50; // Base score
+    
+    // Higher score for engaged visitors
+    if (visitor.engagementScore > 10) score += 20;
+    if (visitor.engagementScore > 50) score += 15;
+    
+    // Higher score for new visitors
+    if (visitor.isNew) score += 25;
+    
+    // Higher score for visitors with location data
+    if (visitor.country && visitor.city) score += 10;
+    
+    return Math.min(100, score);
+  }
 
-    // Get top countries
-    const countryData = await prisma.leadPulseVisitor.groupBy({
-      by: ['country'],
-      _count: { country: true },
-      orderBy: { _count: { country: 'desc' } },
-      take: 5
-    });
+  // Calculate relevance score for activity updates
+  private calculateActivityRelevanceScore(visitor: any, touchpoint: any): number {
+    let score = 40; // Base score for activity
+    
+    // Higher score for important touchpoint types
+    const highValueTypes = ['FORM_SUBMIT', 'CONVERSION', 'CTA_CLICK'];
+    if (highValueTypes.includes(touchpoint.type)) score += 30;
+    
+    // Higher score for engaged visitors
+    if (visitor.engagementScore > 20) score += 15;
+    
+    // Higher score for form-related activities
+    if (touchpoint.type.includes('FORM')) score += 10;
+    
+    return Math.min(100, score);
+  }
 
-    const topCountries = countryData.map(item => ({
-      country: item.country || 'Unknown',
-      count: item._count.country
-    }));
+  // Get activity priority based on touchpoint type
+  private getActivityPriority(touchpointType: string): 'low' | 'medium' | 'high' | 'critical' {
+    const priorityMap: Record<string, 'low' | 'medium' | 'high' | 'critical'> = {
+      'CONVERSION': 'critical',
+      'FORM_SUBMIT': 'high',
+      'CTA_CLICK': 'high',
+      'FORM_START': 'medium',
+      'FORM_VIEW': 'medium',
+      'CLICK': 'low',
+      'PAGEVIEW': 'low',
+    };
+    
+    return priorityMap[touchpointType] || 'low';
+  }
 
+  // Enable or disable selective broadcasting
+  setSelectiveBroadcastEnabled(enabled: boolean): void {
+    this.selectiveBroadcastEnabled = enabled;
+    logger.info(`Selective broadcasting ${enabled ? 'enabled' : 'disabled'}`);
+  }
+
+  // Get selective broadcast statistics
+  getSelectiveBroadcastStats() {
+    if (!this.selectiveBroadcastEnabled) {
+      return { enabled: false };
+    }
+    
     return {
-      totalVisitors,
-      activeVisitors,
-      conversionRate: Math.round(conversionRate * 100) / 100,
-      topCountries,
-      recentActivity: recentTouchpoints
+      enabled: true,
+      ...selectiveBroadcastManager.getClientStats(),
+      healthCheck: selectiveBroadcastManager.healthCheck(),
     };
   }
 
-  // Get recent visitors
-  private async getRecentVisitors() {
-    return await prisma.leadPulseVisitor.findMany({
-      orderBy: { lastVisit: 'desc' },
-      take: 20,
-      include: {
-        touchpoints: {
-          orderBy: { timestamp: 'desc' },
-          take: 3
-        }
-      }
-    });
-  }
-
-  // Get active visitors
-  private async getActiveVisitors() {
-    return await prisma.leadPulseVisitor.findMany({
-      where: { isActive: true },
-      include: {
-        touchpoints: {
-          orderBy: { timestamp: 'desc' },
-          take: 5
-        }
-      }
-    });
-  }
-
-  // Health check
+  // Health check and connection management
   getConnectionCount(): number {
     return this.activeConnections.size;
   }
 
-  // Cleanup inactive visitors (run periodically)
+  getConnectionStats() {
+    const stats = {
+      totalConnections: this.activeConnections.size,
+      subscriptions: {} as Record<string, number>,
+      oldestConnection: null as Date | null,
+      newestConnection: null as Date | null,
+      selectiveBroadcast: this.getSelectiveBroadcastStats(),
+    };
+
+    let oldest: Date | null = null;
+    let newest: Date | null = null;
+
+    this.activeConnections.forEach((connection) => {
+      connection.subscriptions.forEach(sub => {
+        stats.subscriptions[sub] = (stats.subscriptions[sub] || 0) + 1;
+      });
+
+      if (!oldest || connection.lastSeen < oldest) {
+        oldest = connection.lastSeen;
+      }
+      if (!newest || connection.lastSeen > newest) {
+        newest = connection.lastSeen;
+      }
+    });
+
+    stats.oldestConnection = oldest;
+    stats.newestConnection = newest;
+
+    return stats;
+  }
+
+  // Clean up resources for a specific connection
+  private cleanupConnectionResources(socketId: string) {
+    // Remove from throttle maps to prevent memory leaks
+    this.broadcastThrottle.forEach((timestamp, key) => {
+      if (key.includes(socketId)) {
+        this.broadcastThrottle.delete(key);
+      }
+    });
+  }
+
+  // Clean up stale connections
+  private cleanupStaleConnections() {
+    const staleThreshold = new Date(Date.now() - 5 * 60 * 1000); // 5 minutes
+    let cleaned = 0;
+
+    this.activeConnections.forEach((connection, socketId) => {
+      if (connection.lastSeen < staleThreshold) {
+        this.activeConnections.delete(socketId);
+        this.cleanupConnectionResources(socketId);
+        cleaned++;
+      }
+    });
+
+    if (cleaned > 0) {
+      logger.info(`Cleaned up ${cleaned} stale WebSocket connections`);
+    }
+  }
+
+  // Handle socket errors
+  private handleSocketError(socketId: string, error: any) {
+    logger.error(`Socket ${socketId} error:`, error);
+    this.activeConnections.delete(socketId);
+    this.cleanupConnectionResources(socketId);
+  }
+
+  // Get cached analytics or fallback
+  private getCachedAnalytics(): AnalyticsUpdate | null {
+    if (this.analyticsCache && Date.now() < this.analyticsCacheExpiry) {
+      return this.analyticsCache;
+    }
+    return null;
+  }
+
+  // Fallback analytics data when database is unavailable
+  private getFallbackAnalytics(): AnalyticsUpdate {
+    return {
+      totalVisitors: 0,
+      activeVisitors: 0,
+      conversionRate: 0,
+      topCountries: [],
+      recentActivity: []
+    };
+  }
+
+  // Clean up throttle maps periodically
+  private cleanupThrottleMaps() {
+    const now = Date.now();
+    const expiry = 5 * 60 * 1000; // 5 minutes
+
+    this.broadcastThrottle.forEach((timestamp, key) => {
+      if (now - timestamp > expiry) {
+        this.broadcastThrottle.delete(key);
+      }
+    });
+  }
+
+  // Cleanup inactive visitors (run periodically) - optimized
   async cleanupInactiveVisitors() {
     const inactiveThreshold = new Date(Date.now() - 30 * 60 * 1000); // 30 minutes
 
@@ -279,18 +713,71 @@ class LeadPulseRealtimeService {
 
       if (result.count > 0) {
         logger.info(`Marked ${result.count} visitors as inactive`);
+        // Invalidate analytics cache to force refresh
+        this.analyticsCache = null;
+        this.analyticsCacheExpiry = 0;
+        // Throttled broadcast
         await this.broadcastAnalyticsUpdate();
       }
+
+      // Also cleanup stale connections and throttle maps
+      this.cleanupStaleConnections();
+      this.cleanupThrottleMaps();
     } catch (error) {
       logger.error('Error cleaning up inactive visitors:', error);
     }
+  }
+
+  // Shutdown cleanup
+  shutdown() {
+    if (this.io) {
+      this.io.close();
+    }
+    this.activeConnections.clear();
+    this.broadcastThrottle.clear();
+    this.analyticsCache = null;
+    
+    // Cleanup selective broadcast manager
+    if (this.selectiveBroadcastEnabled) {
+      selectiveBroadcastManager.cleanup();
+    }
+    
+    logger.info('LeadPulse realtime service shut down');
   }
 }
 
 // Singleton instance
 export const leadPulseRealtimeService = new LeadPulseRealtimeService();
 
-// Periodic cleanup (every 5 minutes)
-setInterval(() => {
-  leadPulseRealtimeService.cleanupInactiveVisitors();
-}, 5 * 60 * 1000);
+// Enhanced periodic cleanup with error handling (every 5 minutes)
+let cleanupInterval: NodeJS.Timeout | null = null;
+
+function startPeriodicCleanup() {
+  if (cleanupInterval) {
+    clearInterval(cleanupInterval);
+  }
+  
+  cleanupInterval = setInterval(async () => {
+    try {
+      await leadPulseRealtimeService.cleanupInactiveVisitors();
+    } catch (error) {
+      logger.error('Periodic cleanup failed:', error);
+    }
+  }, 5 * 60 * 1000);
+  
+  logger.info('LeadPulse periodic cleanup started');
+}
+
+function stopPeriodicCleanup() {
+  if (cleanupInterval) {
+    clearInterval(cleanupInterval);
+    cleanupInterval = null;
+    logger.info('LeadPulse periodic cleanup stopped');
+  }
+}
+
+// Start cleanup when module loads
+startPeriodicCleanup();
+
+// Export cleanup controls
+export { startPeriodicCleanup, stopPeriodicCleanup };

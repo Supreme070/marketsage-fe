@@ -12,12 +12,18 @@ import {
   notFound,
   validationError 
 } from "@/lib/errors";
+import { smsService } from "@/lib/sms-providers/sms-service";
 
-//  Schema for SMS campaign validation
+//  Schema for SMS campaign validation with phone number validation
 const campaignSchema = z.object({
   name: z.string().min(1, "Campaign name is required"),
   description: z.string().optional(),
-  from: z.string().min(1, "From number is required"),
+  from: z.string().min(1, "From number is required").refine(
+    (phone) => smsService.validatePhoneNumber(phone),
+    {
+      message: "Invalid sender phone number format. Must be a valid African phone number (e.g., +234XXXXXXXXX, 0XXXXXXXXXX)"
+    }
+  ),
   templateId: z.string().optional(),
   content: z.string().optional(),
   listIds: z.array(z.string()).optional(),
@@ -35,12 +41,17 @@ export async function GET(request: NextRequest) {
 
   try {
     // Different filters based on user role
-    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN";
+    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN" || session.user.role === "IT_ADMIN";
     
     // Parse query parameters
     const url = new URL(request.url);
     const statusParam = url.searchParams.get("status");
     const searchQuery = url.searchParams.get("search");
+    
+    // Pagination parameters
+    const page = Math.max(1, Number.parseInt(url.searchParams.get("page") || "1"));
+    const limit = Math.min(100, Math.max(1, Number.parseInt(url.searchParams.get("limit") || "20")));
+    const offset = (page - 1) * limit;
     
     // Convert status string to CampaignStatus enum if provided
     let status: CampaignStatus | undefined;
@@ -55,21 +66,27 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    const campaigns = await prisma.sMSCampaign.findMany({
-      where: {
-        ...(isAdmin ? {} : { createdById: session.user.id }),
-        ...(status ? { status } : {}),
-        ...(searchQuery ? {
-          OR: [
-            { name: { contains: searchQuery, mode: 'insensitive' } },
-            { description: { contains: searchQuery, mode: 'insensitive' } },
-          ]
-        } : {}),
-      },
-      orderBy: {
-        updatedAt: "desc",
-      },
-      include: {
+    const whereClause = {
+      ...(isAdmin ? {} : { createdById: session.user.id }),
+      ...(status ? { status } : {}),
+      ...(searchQuery ? {
+        OR: [
+          { name: { contains: searchQuery, mode: 'insensitive' } },
+          { description: { contains: searchQuery, mode: 'insensitive' } },
+        ]
+      } : {}),
+    };
+
+    // Get total count and campaigns in parallel
+    const [campaigns, totalCount] = await Promise.all([
+      prisma.sMSCampaign.findMany({
+        where: whereClause,
+        orderBy: {
+          updatedAt: "desc",
+        },
+        skip: offset,
+        take: limit,
+        include: {
         template: {
           select: {
             id: true,
@@ -93,8 +110,10 @@ export async function GET(request: NextRequest) {
             activities: true 
           }
         }
-      },
-    });
+        }
+      }),
+      prisma.sMSCampaign.count({ where: whereClause })
+    ]);
 
     // Transform the response
     const formattedCampaigns = campaigns.map(campaign => ({
@@ -115,7 +134,22 @@ export async function GET(request: NextRequest) {
       }
     }));
 
-    return NextResponse.json(formattedCampaigns);
+    // Calculate pagination metadata
+    const totalPages = Math.ceil(totalCount / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+
+    return NextResponse.json({
+      campaigns: formattedCampaigns,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages,
+        hasNextPage,
+        hasPrevPage
+      }
+    });
   } catch (error) {
     return handleApiError(error, "/api/sms/campaigns/route.ts");
   }
@@ -160,7 +194,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Check if user has access to this template
-      const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN";
+      const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN" || session.user.role === "IT_ADMIN";
       if (!isAdmin && template.createdById !== session.user.id) {
         return NextResponse.json({ error: "No access to the selected template" }, { status: 403 });
       }

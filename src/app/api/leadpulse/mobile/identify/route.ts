@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/prisma';
 import { generateVisitorFingerprint } from '@/lib/leadpulse/visitorTracking';
+import { validateMobileIdentify, createValidationErrorResponse, validateTimestamp } from '@/lib/leadpulse/validation';
+import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,15 +12,41 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    
-    // Validate required fields
-    if (!body.deviceId || !body.deviceData) {
+    // Parse and validate request body
+    let body: any;
+    try {
+      body = await request.json();
+    } catch (error) {
+      logger.warn('Invalid JSON in mobile identify request', {
+        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+        userAgent: request.headers.get('user-agent'),
+      });
+      
       return NextResponse.json(
-        { error: 'Missing required fields: deviceId and deviceData' },
+        { error: 'Invalid JSON in request body' },
         { status: 400 }
       );
     }
+    
+    // Comprehensive data validation
+    const validation = validateMobileIdentify(body);
+    if (!validation.success) {
+      logger.warn('Invalid mobile identify data', {
+        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+        userAgent: request.headers.get('user-agent'),
+        error: validation.error,
+        field: validation.error?.field,
+        deviceId: body.deviceId,
+      });
+      
+      return NextResponse.json(
+        createValidationErrorResponse(validation),
+        { status: 400 }
+      );
+    }
+    
+    // Use validated and sanitized data
+    body = validation.data;
 
     const { 
       deviceId, 
@@ -28,6 +56,31 @@ export async function POST(request: NextRequest) {
       appInstallTime, 
       lastLaunchTime 
     } = body;
+    
+    // Additional timestamp validations
+    if (appInstallTime && !validateTimestamp(appInstallTime)) {
+      logger.warn('Invalid app install time', {
+        deviceId,
+        appInstallTime,
+      });
+      
+      return NextResponse.json(
+        { error: 'Invalid app install time format' },
+        { status: 400 }
+      );
+    }
+    
+    if (lastLaunchTime && !validateTimestamp(lastLaunchTime)) {
+      logger.warn('Invalid last launch time', {
+        deviceId,
+        lastLaunchTime,
+      });
+      
+      return NextResponse.json(
+        { error: 'Invalid last launch time format' },
+        { status: 400 }
+      );
+    }
 
     // Check if we have an existing visitor
     let visitor = null;
@@ -92,11 +145,12 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      console.log('Created new mobile visitor:', {
+      logger.info('Created new mobile visitor', {
         visitorId: visitor.id,
         platform: deviceData.platform,
         appId: deviceData.appId,
-        deviceModel: deviceData.deviceModel
+        deviceModel: deviceData.deviceModel,
+        validated: true,
       });
     } else {
       // Update existing visitor
@@ -121,11 +175,12 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      console.log('Updated existing mobile visitor:', {
+      logger.info('Updated existing mobile visitor', {
         visitorId: visitor.id,
         platform: deviceData.platform,
         totalVisits: visitor.totalVisits,
-        lastVisit: visitor.lastVisit
+        lastVisit: visitor.lastVisit,
+        validated: true,
       });
     }
 
@@ -139,7 +194,11 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error in mobile visitor identification:', error);
+    logger.error('Error in mobile visitor identification', {
+      error,
+      deviceId: body?.deviceId,
+      platform: body?.deviceData?.platform,
+    });
     
     return NextResponse.json(
       { error: 'Failed to identify mobile visitor' },

@@ -47,42 +47,78 @@ export async function POST(request: Request) {
       case "charge.success": {
         const { reference, status, amount, customer, authorization } = event.data;
 
-        // Update transaction status
-        const transaction = await prisma.transaction.update({
-          where: { paystackReference: reference },
-          data: {
-            status: "SUCCESS",
-            paystackTransactionId: event.data.id.toString(),
-          },
-          include: {
-            subscription: true
-          }
-        });
+        // Check if this is a credit purchase transaction
+        if (reference.startsWith('credit_')) {
+          // Handle credit purchase
+          const creditTransaction = await prisma.creditTransaction.findFirst({
+            where: { paymentId: reference },
+          });
 
-        if (transaction.subscription) {
-          // Update subscription status
-          await prisma.subscription.update({
-            where: { id: transaction.subscription.id },
+          if (creditTransaction && creditTransaction.status === 'pending') {
+            await prisma.$transaction(async (prisma) => {
+              // Update credit transaction status
+              await prisma.creditTransaction.update({
+                where: { id: creditTransaction.id },
+                data: {
+                  status: 'completed',
+                  metadata: {
+                    ...creditTransaction.metadata,
+                    paystackTransactionId: event.data.id.toString(),
+                    paystackStatus: status,
+                    webhookDate: new Date().toISOString(),
+                  },
+                },
+              });
+
+              // Update organization credit balance
+              await prisma.organization.update({
+                where: { id: creditTransaction.organizationId },
+                data: {
+                  creditBalance: {
+                    increment: creditTransaction.amount,
+                  },
+                },
+              });
+            });
+          }
+        } else {
+          // Handle subscription transaction
+          const transaction = await prisma.transaction.update({
+            where: { paystackReference: reference },
             data: {
-              status: "ACTIVE",
-              paystackCustomerId: customer.customer_code,
-              // If it's a card payment, save the authorization
-              ...(authorization && {
-                paymentMethods: {
-                  create: {
-                    type: "CARD",
-                    last4: authorization.last4,
-                    expMonth: authorization.exp_month,
-                    expYear: authorization.exp_year,
-                    brand: authorization.card_type,
-                    isDefault: true,
-                    paystackAuthorizationCode: authorization.authorization_code,
-                    organization: { connect: { id: transaction.subscription.organizationId } }
-                  }
-                }
-              })
+              status: "SUCCESS",
+              paystackTransactionId: event.data.id.toString(),
+            },
+            include: {
+              subscription: true
             }
           });
+
+          if (transaction.subscription) {
+            // Update subscription status
+            await prisma.subscription.update({
+              where: { id: transaction.subscription.id },
+              data: {
+                status: "ACTIVE",
+                paystackCustomerId: customer.customer_code,
+                // If it's a card payment, save the authorization
+                ...(authorization && {
+                  paymentMethods: {
+                    create: {
+                      type: "CARD",
+                      last4: authorization.last4,
+                      expMonth: authorization.exp_month,
+                      expYear: authorization.exp_year,
+                      brand: authorization.card_type,
+                      isDefault: true,
+                      paystackAuthorizationCode: authorization.authorization_code,
+                      organization: { connect: { id: transaction.subscription.organizationId } }
+                    }
+                  }
+                })
+              }
+            });
+          }
         }
 
         break;
@@ -91,26 +127,49 @@ export async function POST(request: Request) {
       case "charge.failed": {
         const { reference } = event.data;
 
-        // Update transaction status
-        const transaction = await prisma.transaction.update({
-          where: { paystackReference: reference },
-          data: {
-            status: "FAILED",
-            paystackTransactionId: event.data.id.toString(),
-          },
-          include: {
-            subscription: true
-          }
-        });
+        // Check if this is a credit purchase transaction
+        if (reference.startsWith('credit_')) {
+          // Handle failed credit purchase
+          const creditTransaction = await prisma.creditTransaction.findFirst({
+            where: { paymentId: reference },
+          });
 
-        if (transaction.subscription) {
-          // Update subscription status
-          await prisma.subscription.update({
-            where: { id: transaction.subscription.id },
+          if (creditTransaction && creditTransaction.status === 'pending') {
+            await prisma.creditTransaction.update({
+              where: { id: creditTransaction.id },
+              data: {
+                status: 'failed',
+                metadata: {
+                  ...creditTransaction.metadata,
+                  paystackTransactionId: event.data.id.toString(),
+                  paystackStatus: 'failed',
+                  webhookDate: new Date().toISOString(),
+                },
+              },
+            });
+          }
+        } else {
+          // Handle subscription transaction
+          const transaction = await prisma.transaction.update({
+            where: { paystackReference: reference },
             data: {
-              status: "PAST_DUE"
+              status: "FAILED",
+              paystackTransactionId: event.data.id.toString(),
+            },
+            include: {
+              subscription: true
             }
           });
+
+          if (transaction.subscription) {
+            // Update subscription status
+            await prisma.subscription.update({
+              where: { id: transaction.subscription.id },
+              data: {
+                status: "PAST_DUE"
+              }
+            });
+          }
         }
 
         break;

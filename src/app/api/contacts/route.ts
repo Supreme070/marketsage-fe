@@ -10,11 +10,17 @@ import {
   unauthorized, 
   validationError 
 } from "@/lib/errors";
+import { smsService } from "@/lib/sms-providers/sms-service";
 
 // Schema for contact validation
 const contactSchema = z.object({
   email: z.string().email().optional(),
-  phone: z.string().optional(),
+  phone: z.string().optional().refine(
+    (phone) => !phone || smsService.validatePhoneNumber(phone),
+    {
+      message: "Invalid phone number format. Must be a valid African phone number (e.g., +234XXXXXXXXX, 0XXXXXXXXXX)"
+    }
+  ),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().optional(),
   company: z.string().optional(),
@@ -49,7 +55,7 @@ export async function GET(request: NextRequest) {
 
     // Different filters based on user role
     // Super admins and admins can see all contacts, other users only see their own
-    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN";
+    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN" || session.user.role === "IT_ADMIN";
     
     const contacts = await prisma.contact.findMany({
       where: isAdmin 

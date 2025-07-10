@@ -521,8 +521,24 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Update engagement score
-    const newScore = await calculateEngagementScore(visitor.id);
+    // Update engagement score using aggregation (no separate query needed)
+    const engagementData = await prisma.leadPulseTouchpoint.aggregate({
+      where: {
+        visitorId: visitor.id,
+        timestamp: {
+          gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24h
+        }
+      },
+      _sum: { value: true },
+      _count: true
+    });
+
+    // Calculate score based on touchpoint values and count
+    const totalValue = engagementData._sum.value || 0;
+    const touchpointCount = engagementData._count;
+    const baseScore = totalValue + (touchpointCount * 2); // Base calculation
+    const newScore = Math.min(100, Math.round(baseScore));
+
     await prisma.leadPulseVisitor.update({
       where: { id: visitor.id },
       data: { engagementScore: newScore }
@@ -558,24 +574,5 @@ function calculateTouchpointValue(type: string): number {
   }
 }
 
-// Helper function to calculate engagement score
-async function calculateEngagementScore(visitorId: string): Promise<number> {
-  const recentTouchpoints = await prisma.leadPulseTouchpoint.findMany({
-    where: {
-      visitorId,
-      timestamp: {
-        gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24h
-      }
-    }
-  });
-
-  // Calculate score based on touchpoint values and recency
-  const score = recentTouchpoints.reduce((total: number, tp: any) => {
-    const age = Date.now() - tp.timestamp.getTime();
-    const recencyFactor = Math.max(0.1, 1 - (age / (24 * 60 * 60 * 1000)));
-    return total + ((tp.score || 1) * recencyFactor);
-  }, 0);
-
-  // Normalize score to 0-100 range
-  return Math.min(100, Math.round(score));
-} 
+// Note: calculateEngagementScore function removed to prevent N+1 queries
+// Engagement calculation is now done inline using aggregation 

@@ -1,4 +1,4 @@
-import { redis } from '@/lib/queue';
+import { redisClientClient } from '@/lib/cache/redisClient-client';
 
 export interface RateLimitConfig {
   windowMs: number; // Time window in milliseconds
@@ -27,7 +27,7 @@ export class RateLimiter {
 
     try {
       // Use Redis sorted set to track requests in time window
-      const pipeline = redis.pipeline();
+      const pipeline = redisClient.pipeline();
       
       // Remove old entries outside the window
       pipeline.zremrangebyscore(key, 0, windowStart);
@@ -53,7 +53,7 @@ export class RateLimiter {
 
       if (currentCount >= this.config.maxRequests) {
         // Remove the request we just added since it's not allowed
-        await redis.zrem(key, `${now}-${Math.random()}`);
+        await redisClient.zrem(key, `${now}-${Math.random()}`);
         
         return {
           allowed: false,
@@ -87,8 +87,8 @@ export class RateLimiter {
     const windowStart = now - this.config.windowMs;
 
     try {
-      await redis.zremrangebyscore(key, 0, windowStart);
-      const currentCount = await redis.zcard(key);
+      await redisClient.zremrangebyscore(key, 0, windowStart);
+      const currentCount = await redisClient.zcard(key);
       return Math.max(0, this.config.maxRequests - currentCount);
     } catch (error) {
       console.error('Error getting remaining requests:', error);

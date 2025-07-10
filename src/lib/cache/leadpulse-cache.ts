@@ -4,11 +4,16 @@
  * High-performance caching for LeadPulse analytics and visitor data
  */
 
-import { redis } from './redis';
+import { getIORedisClient } from './redis-pool';
 import { logger } from '@/lib/logger';
 import prisma from '@/lib/db/prisma';
 
 export class LeadPulseCacheService {
+  // Get Redis client from connection pool
+  private get redis() {
+    return getIORedisClient();
+  }
+
   private readonly TTL = {
     ANALYTICS_OVERVIEW: 60, // 1 minute
     VISITOR_DATA: 300, // 5 minutes
@@ -34,14 +39,19 @@ export class LeadPulseCacheService {
   // Analytics Overview Caching
   async getAnalyticsOverview() {
     try {
-      const cached = await redis.get(this.KEYS.ANALYTICS_OVERVIEW);
+      const redisClient = this.redis;
+      if (!redisClient) {
+        return this.fetchAnalyticsOverview(); // Fallback to direct DB
+      }
+
+      const cached = await redisClient.get(this.KEYS.ANALYTICS_OVERVIEW);
       if (cached) {
-        return cached;
+        return JSON.parse(cached);
       }
 
       // Fetch from database
       const overview = await this.fetchAnalyticsOverview();
-      await redis.set(this.KEYS.ANALYTICS_OVERVIEW, overview, this.TTL.ANALYTICS_OVERVIEW);
+      await redisClient.set(this.KEYS.ANALYTICS_OVERVIEW, JSON.stringify(overview), 'EX', this.TTL.ANALYTICS_OVERVIEW);
       
       return overview;
     } catch (error) {
@@ -51,7 +61,7 @@ export class LeadPulseCacheService {
   }
 
   async invalidateAnalyticsOverview() {
-    await redis.del(this.KEYS.ANALYTICS_OVERVIEW);
+    await this.redis.del(this.KEYS.ANALYTICS_OVERVIEW);
   }
 
   private async fetchAnalyticsOverview() {
@@ -75,13 +85,13 @@ export class LeadPulseCacheService {
   // Visitor Count Caching
   async getCachedVisitorCount(): Promise<number> {
     try {
-      const cached = await redis.get(this.KEYS.VISITOR_COUNT);
+      const cached = await this.redis.get(this.KEYS.VISITOR_COUNT);
       if (cached) {
-        return cached;
+        return parseInt(cached);
       }
 
       const count = await prisma.leadPulseVisitor.count();
-      await redis.set(this.KEYS.VISITOR_COUNT, count, this.TTL.REAL_TIME_METRICS);
+      await this.redis.set(this.KEYS.VISITOR_COUNT, count, 'EX', this.TTL.REAL_TIME_METRICS);
       
       return count;
     } catch (error) {
@@ -92,7 +102,7 @@ export class LeadPulseCacheService {
 
   async updateVisitorCount(increment = 1) {
     try {
-      await redis.incr(this.KEYS.VISITOR_COUNT, this.TTL.REAL_TIME_METRICS);
+      await this.redis.incr(this.KEYS.VISITOR_COUNT);
     } catch (error) {
       logger.error('Error updating visitor count in cache:', error);
     }
@@ -101,9 +111,9 @@ export class LeadPulseCacheService {
   // Active Visitors Caching
   async getCachedActiveVisitors() {
     try {
-      const cached = await redis.get(this.KEYS.ACTIVE_VISITORS);
+      const cached = await this.redis.get(this.KEYS.ACTIVE_VISITORS);
       if (cached) {
-        return cached;
+        return JSON.parse(cached);
       }
 
       const activeVisitors = await prisma.leadPulseVisitor.findMany({
@@ -117,7 +127,7 @@ export class LeadPulseCacheService {
         orderBy: { lastVisit: 'desc' }
       });
 
-      await redis.set(this.KEYS.ACTIVE_VISITORS, activeVisitors, this.TTL.REAL_TIME_METRICS);
+      await this.redis.set(this.KEYS.ACTIVE_VISITORS, JSON.stringify(activeVisitors), 'EX', this.TTL.REAL_TIME_METRICS);
       return activeVisitors;
     } catch (error) {
       logger.error('Error getting active visitors from cache:', error);
@@ -128,10 +138,17 @@ export class LeadPulseCacheService {
   async updateActiveVisitors(visitor: any) {
     try {
       // Add to active visitors list
-      await redis.lpush(this.KEYS.ACTIVE_VISITORS, visitor, 50); // Keep last 50
+      await this.redis.lpush(this.KEYS.ACTIVE_VISITORS, JSON.stringify(visitor));
+      await this.redis.ltrim(this.KEYS.ACTIVE_VISITORS, 0, 49); // Keep last 50
+      
+      // Set TTL for active visitors list if it's new
+      await this.redis.expire(this.KEYS.ACTIVE_VISITORS, this.TTL.REAL_TIME_METRICS);
       
       // Add to active visitors set for quick lookup
-      await redis.sadd('leadpulse:active:set', visitor.id);
+      await this.redis.sadd('leadpulse:active:set', visitor.id);
+      
+      // Set TTL for active visitors set
+      await this.redis.expire('leadpulse:active:set', this.TTL.REAL_TIME_METRICS);
     } catch (error) {
       logger.error('Error updating active visitors in cache:', error);
     }
@@ -140,10 +157,10 @@ export class LeadPulseCacheService {
   async removeActiveVisitor(visitorId: string) {
     try {
       // Remove from active visitors set
-      await redis.del(`leadpulse:active:set:${visitorId}`);
+      await this.redis.srem('leadpulse:active:set', visitorId);
       
       // Invalidate active visitors list
-      await redis.del(this.KEYS.ACTIVE_VISITORS);
+      await this.redis.del(this.KEYS.ACTIVE_VISITORS);
     } catch (error) {
       logger.error('Error removing active visitor from cache:', error);
     }
@@ -152,9 +169,9 @@ export class LeadPulseCacheService {
   // Recent Visitors Caching
   async getCachedRecentVisitors() {
     try {
-      const cached = await redis.get(this.KEYS.RECENT_VISITORS);
+      const cached = await this.redis.get(this.KEYS.RECENT_VISITORS);
       if (cached) {
-        return cached;
+        return JSON.parse(cached);
       }
 
       const recentVisitors = await prisma.leadPulseVisitor.findMany({
@@ -168,7 +185,7 @@ export class LeadPulseCacheService {
         }
       });
 
-      await redis.set(this.KEYS.RECENT_VISITORS, recentVisitors, this.TTL.VISITOR_DATA);
+      await this.redis.set(this.KEYS.RECENT_VISITORS, JSON.stringify(recentVisitors), 'EX', this.TTL.VISITOR_DATA);
       return recentVisitors;
     } catch (error) {
       logger.error('Error getting recent visitors from cache:', error);
@@ -178,7 +195,11 @@ export class LeadPulseCacheService {
 
   async addRecentVisitor(visitor: any) {
     try {
-      await redis.lpush(this.KEYS.RECENT_VISITORS, visitor, 20); // Keep last 20
+      await this.redis.lpush(this.KEYS.RECENT_VISITORS, JSON.stringify(visitor));
+      await this.redis.ltrim(this.KEYS.RECENT_VISITORS, 0, 19); // Keep last 20
+      
+      // Set TTL for recent visitors list
+      await this.redis.expire(this.KEYS.RECENT_VISITORS, this.TTL.VISITOR_DATA);
     } catch (error) {
       logger.error('Error adding recent visitor to cache:', error);
     }
@@ -187,9 +208,9 @@ export class LeadPulseCacheService {
   // Conversion Rate Caching
   async getCachedConversionRate(): Promise<number> {
     try {
-      const cached = await redis.get(this.KEYS.CONVERSION_RATE);
+      const cached = await this.redis.get(this.KEYS.CONVERSION_RATE);
       if (cached) {
-        return cached;
+        return parseFloat(cached);
       }
 
       const [totalVisitors, conversions] = await Promise.all([
@@ -207,7 +228,7 @@ export class LeadPulseCacheService {
       const rate = totalVisitors > 0 ? (conversions / totalVisitors) * 100 : 0;
       const rounded = Math.round(rate * 100) / 100;
 
-      await redis.set(this.KEYS.CONVERSION_RATE, rounded, this.TTL.ANALYTICS_OVERVIEW);
+      await this.redis.set(this.KEYS.CONVERSION_RATE, rounded, 'EX', this.TTL.ANALYTICS_OVERVIEW);
       return rounded;
     } catch (error) {
       logger.error('Error getting conversion rate from cache:', error);
@@ -218,9 +239,9 @@ export class LeadPulseCacheService {
   // Geographic Data Caching
   async getCachedGeographicData() {
     try {
-      const cached = await redis.get(this.KEYS.GEOGRAPHIC_DATA);
+      const cached = await this.redis.get(this.KEYS.GEOGRAPHIC_DATA);
       if (cached) {
-        return cached;
+        return JSON.parse(cached);
       }
 
       const countryData = await prisma.leadPulseVisitor.groupBy({
@@ -235,7 +256,7 @@ export class LeadPulseCacheService {
         count: item._count.country
       }));
 
-      await redis.set(this.KEYS.GEOGRAPHIC_DATA, topCountries, this.TTL.GEOGRAPHIC_DATA);
+      await this.redis.set(this.KEYS.GEOGRAPHIC_DATA, JSON.stringify(topCountries), 'EX', this.TTL.GEOGRAPHIC_DATA);
       return topCountries;
     } catch (error) {
       logger.error('Error getting geographic data from cache:', error);
@@ -246,9 +267,9 @@ export class LeadPulseCacheService {
   // Recent Activity Caching
   async getCachedRecentActivity() {
     try {
-      const cached = await redis.lrange(this.KEYS.RECENT_ACTIVITY, 0, 9); // Last 10
+      const cached = await this.redis.lrange(this.KEYS.RECENT_ACTIVITY, 0, 9); // Last 10
       if (cached.length > 0) {
-        return cached;
+        return cached.map(item => JSON.parse(item));
       }
 
       const recentTouchpoints = await prisma.leadPulseTouchpoint.findMany({
@@ -264,8 +285,12 @@ export class LeadPulseCacheService {
 
       // Store in Redis list
       for (const touchpoint of recentTouchpoints.reverse()) {
-        await redis.lpush(this.KEYS.RECENT_ACTIVITY, touchpoint, 50);
+        await this.redis.lpush(this.KEYS.RECENT_ACTIVITY, JSON.stringify(touchpoint));
+        await this.redis.ltrim(this.KEYS.RECENT_ACTIVITY, 0, 49);
       }
+      
+      // Set TTL for recent activity list
+      await this.redis.expire(this.KEYS.RECENT_ACTIVITY, this.TTL.REAL_TIME_METRICS);
 
       return recentTouchpoints;
     } catch (error) {
@@ -276,7 +301,11 @@ export class LeadPulseCacheService {
 
   async addRecentActivity(touchpoint: any) {
     try {
-      await redis.lpush(this.KEYS.RECENT_ACTIVITY, touchpoint, 50); // Keep last 50
+      await this.redis.lpush(this.KEYS.RECENT_ACTIVITY, JSON.stringify(touchpoint));
+      await this.redis.ltrim(this.KEYS.RECENT_ACTIVITY, 0, 49); // Keep last 50
+      
+      // Set TTL for recent activity list
+      await this.redis.expire(this.KEYS.RECENT_ACTIVITY, this.TTL.REAL_TIME_METRICS);
     } catch (error) {
       logger.error('Error adding recent activity to cache:', error);
     }
@@ -285,9 +314,9 @@ export class LeadPulseCacheService {
   // Visitor Journey Caching
   async getCachedVisitorJourney(visitorId: string) {
     try {
-      const cached = await redis.get(this.KEYS.VISITOR_JOURNEY(visitorId));
+      const cached = await this.redis.get(this.KEYS.VISITOR_JOURNEY(visitorId));
       if (cached) {
-        return cached;
+        return JSON.parse(cached);
       }
 
       const journey = await prisma.leadPulseTouchpoint.findMany({
@@ -296,7 +325,7 @@ export class LeadPulseCacheService {
         include: { visitor: true }
       });
 
-      await redis.set(this.KEYS.VISITOR_JOURNEY(visitorId), journey, this.TTL.VISITOR_JOURNEY);
+      await this.redis.set(this.KEYS.VISITOR_JOURNEY(visitorId), JSON.stringify(journey), 'EX', this.TTL.VISITOR_JOURNEY);
       return journey;
     } catch (error) {
       logger.error(`Error getting visitor journey from cache for ${visitorId}:`, error);
@@ -307,7 +336,7 @@ export class LeadPulseCacheService {
   async updateVisitorJourney(visitorId: string, touchpoint: any) {
     try {
       // Invalidate cached journey to force refresh
-      await redis.del(this.KEYS.VISITOR_JOURNEY(visitorId));
+      await this.redis.del(this.KEYS.VISITOR_JOURNEY(visitorId));
       
       // Add to recent activity
       await this.addRecentActivity(touchpoint);
@@ -319,9 +348,9 @@ export class LeadPulseCacheService {
   // Visitor Profile Caching
   async getCachedVisitorProfile(visitorId: string) {
     try {
-      const cached = await redis.get(this.KEYS.VISITOR_PROFILE(visitorId));
+      const cached = await this.redis.get(this.KEYS.VISITOR_PROFILE(visitorId));
       if (cached) {
-        return cached;
+        return JSON.parse(cached);
       }
 
       const visitor = await prisma.leadPulseVisitor.findUnique({
@@ -334,7 +363,7 @@ export class LeadPulseCacheService {
       });
 
       if (visitor) {
-        await redis.set(this.KEYS.VISITOR_PROFILE(visitorId), visitor, this.TTL.VISITOR_DATA);
+        await this.redis.set(this.KEYS.VISITOR_PROFILE(visitorId), JSON.stringify(visitor), 'EX', this.TTL.VISITOR_DATA);
       }
 
       return visitor;
@@ -347,9 +376,9 @@ export class LeadPulseCacheService {
   // Daily Stats Caching
   async getCachedDailyStats(date: string) {
     try {
-      const cached = await redis.get(this.KEYS.DAILY_STATS(date));
+      const cached = await this.redis.get(this.KEYS.DAILY_STATS(date));
       if (cached) {
-        return cached;
+        return JSON.parse(cached);
       }
 
       const startOfDay = new Date(date);
@@ -393,7 +422,7 @@ export class LeadPulseCacheService {
         conversionRate: visitors > 0 ? (conversions / visitors) * 100 : 0
       };
 
-      await redis.set(this.KEYS.DAILY_STATS(date), stats, this.TTL.DAILY_AGGREGATES);
+      await this.redis.set(this.KEYS.DAILY_STATS(date), JSON.stringify(stats), 'EX', this.TTL.DAILY_AGGREGATES);
       return stats;
     } catch (error) {
       logger.error(`Error getting daily stats from cache for ${date}:`, error);
@@ -404,7 +433,11 @@ export class LeadPulseCacheService {
   // Cache invalidation
   async invalidateAll() {
     try {
-      await redis.flushPattern('leadpulse:*');
+      // Use key pattern deletion for LeadPulse keys
+      const keys = await this.redis.keys('leadpulse:*');
+      if (keys.length > 0) {
+        await this.redis.del(...keys);
+      }
       logger.info('Invalidated all LeadPulse cache');
     } catch (error) {
       logger.error('Error invalidating LeadPulse cache:', error);
@@ -414,10 +447,10 @@ export class LeadPulseCacheService {
   async invalidateVisitorData() {
     try {
       await Promise.all([
-        redis.del(this.KEYS.ACTIVE_VISITORS),
-        redis.del(this.KEYS.RECENT_VISITORS),
-        redis.del(this.KEYS.VISITOR_COUNT),
-        redis.flushPattern('leadpulse:visitor:*')
+        this.redis.del(this.KEYS.ACTIVE_VISITORS),
+        this.redis.del(this.KEYS.RECENT_VISITORS),
+        this.redis.del(this.KEYS.VISITOR_COUNT),
+        this.redis.keys('leadpulse:visitor:*').then(keys => keys.length > 0 ? this.redis.del(...keys) : Promise.resolve())
       ]);
     } catch (error) {
       logger.error('Error invalidating visitor data cache:', error);
@@ -426,7 +459,12 @@ export class LeadPulseCacheService {
 
   // Health check
   async isHealthy(): Promise<boolean> {
-    return await redis.isHealthy();
+    try {
+      await this.redis.ping();
+      return true;
+    } catch (error) {
+      return false;
+    }
   }
 }
 

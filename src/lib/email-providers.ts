@@ -121,6 +121,112 @@ class ResendProvider implements EmailProvider {
   }
 }
 
+// SendGrid Provider
+class SendGridProvider implements EmailProvider {
+  constructor(private apiKey: string) {}
+
+  async sendEmail(options: EmailOptions): Promise<EmailResult> {
+    try {
+      const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          personalizations: [
+            {
+              to: Array.isArray(options.to) 
+                ? options.to.map(email => ({ email }))
+                : [{ email: options.to }],
+            },
+          ],
+          from: { email: options.from },
+          subject: options.subject,
+          content: [
+            ...(options.html ? [{ type: 'text/html', value: options.html }] : []),
+            ...(options.text ? [{ type: 'text/plain', value: options.text }] : []),
+          ],
+          reply_to: options.replyTo ? { email: options.replyTo } : undefined,
+        }),
+      });
+
+      if (response.ok) {
+        const xMessageId = response.headers.get('X-Message-Id');
+        return {
+          success: true,
+          messageId: xMessageId || 'sendgrid-message-sent',
+        };
+      }
+
+      const result = await response.json();
+      return {
+        success: false,
+        error: {
+          message: result.errors?.[0]?.message || 'Email sending failed',
+          code: result.errors?.[0]?.field,
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      };
+    }
+  }
+
+  async sendBulkEmail(emails: EmailOptions[]): Promise<EmailResult[]> {
+    try {
+      const personalizations = emails.map(email => ({
+        to: Array.isArray(email.to) 
+          ? email.to.map(addr => ({ email: addr }))
+          : [{ email: email.to }],
+        subject: email.subject,
+      }));
+
+      const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          personalizations,
+          from: { email: emails[0].from },
+          content: [
+            ...(emails[0].html ? [{ type: 'text/html', value: emails[0].html }] : []),
+            ...(emails[0].text ? [{ type: 'text/plain', value: emails[0].text }] : []),
+          ],
+        }),
+      });
+
+      if (response.ok) {
+        return emails.map(() => ({
+          success: true,
+          messageId: 'sendgrid-bulk-message-sent',
+        }));
+      }
+
+      const result = await response.json();
+      return emails.map(() => ({
+        success: false,
+        error: {
+          message: result.errors?.[0]?.message || 'Bulk email sending failed',
+        },
+      }));
+    } catch (error) {
+      return emails.map(() => ({
+        success: false,
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      }));
+    }
+  }
+}
+
 // Mailgun Provider
 class MailgunProvider implements EmailProvider {
   constructor(private apiKey: string, private domain: string) {}
@@ -180,11 +286,40 @@ export function createEmailProvider(): EmailProvider {
     case 'resend':
       return new ResendProvider(process.env.RESEND_API_KEY!);
     
+    case 'sendgrid':
+      return new SendGridProvider(process.env.SENDGRID_API_KEY!);
+    
     case 'mailgun':
       return new MailgunProvider(
         process.env.MAILGUN_API_KEY!,
         process.env.MAILGUN_DOMAIN!
       );
+    
+    default:
+      throw new Error(`Unsupported email provider: ${provider}`);
+  }
+}
+
+// Factory for master account email providers
+export function createMasterEmailProvider(
+  provider: string,
+  config: { apiKey: string; domain?: string; fromEmail?: string }
+): EmailProvider {
+  switch (provider.toLowerCase()) {
+    case 'sendgrid':
+      return new SendGridProvider(config.apiKey);
+    
+    case 'mailgun':
+      if (!config.domain) {
+        throw new Error('Mailgun domain is required');
+      }
+      return new MailgunProvider(config.apiKey, config.domain);
+    
+    case 'postmark':
+      return new PostmarkProvider(config.apiKey);
+    
+    case 'resend':
+      return new ResendProvider(config.apiKey);
     
     default:
       throw new Error(`Unsupported email provider: ${provider}`);

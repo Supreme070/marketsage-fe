@@ -18,9 +18,13 @@ const baseSchemas = {
     .refine(email => !email.includes('<script'), 'Invalid email format')
     .refine(email => !email.includes('javascript:'), 'Invalid email format'),
   
-  // Safe string validation
+  // Safe string validation (without default max to allow chaining)
   safeString: z.string()
-    .max(1000, 'String too long')
+    .refine(str => !/<script|javascript:|data:|vbscript:|onload=/i.test(str), 'Invalid content detected'),
+    
+  // Safe string with max length helper
+  safeStringWithMax: (maxLength: number, message?: string) => z.string()
+    .max(maxLength, message || `String too long (max ${maxLength})`)
     .refine(str => !/<script|javascript:|data:|vbscript:|onload=/i.test(str), 'Invalid content detected'),
   
   // ID validation (UUID or CUID)
@@ -84,7 +88,7 @@ export const validationSchemas = {
       password: baseSchemas.password,
       role: baseSchemas.role.default('USER'),
       organizationId: baseSchemas.id.optional(),
-      company: baseSchemas.safeString.max(100, 'Company name too long').optional()
+      company: baseSchemas.safeStringWithMax(100, 'Company name too long').optional()
     }),
     update: z.object({
       id: baseSchemas.id,
@@ -92,7 +96,7 @@ export const validationSchemas = {
       email: baseSchemas.email.optional(),
       role: baseSchemas.role.optional(),
       isActive: z.boolean().optional(),
-      company: baseSchemas.safeString.max(100, 'Company name too long').optional()
+      company: baseSchemas.safeStringWithMax(100, 'Company name too long').optional()
     }),
     delete: z.object({
       id: baseSchemas.id
@@ -105,22 +109,22 @@ export const validationSchemas = {
       name: baseSchemas.name,
       plan: z.enum(['FREE', 'BASIC', 'PROFESSIONAL', 'ENTERPRISE']).default('FREE'),
       websiteUrl: baseSchemas.url,
-      address: baseSchemas.safeString.max(500, 'Address too long').optional(),
+      address: baseSchemas.safeStringWithMax(500, 'Address too long').optional(),
       billingEmail: baseSchemas.email.optional(),
       billingName: baseSchemas.name.optional(),
-      billingAddress: baseSchemas.safeString.max(500, 'Billing address too long').optional(),
-      vatNumber: baseSchemas.safeString.max(50, 'VAT number too long').optional()
+      billingAddress: baseSchemas.safeStringWithMax(500, 'Billing address too long').optional(),
+      vatNumber: baseSchemas.safeStringWithMax(50, 'VAT number too long').optional()
     }),
     update: z.object({
       id: baseSchemas.id,
       name: baseSchemas.name.optional(),
       plan: z.enum(['FREE', 'BASIC', 'PROFESSIONAL', 'ENTERPRISE']).optional(),
       websiteUrl: baseSchemas.url,
-      address: baseSchemas.safeString.max(500, 'Address too long').optional(),
+      address: baseSchemas.safeStringWithMax(500, 'Address too long').optional(),
       billingEmail: baseSchemas.email.optional(),
       billingName: baseSchemas.name.optional(),
-      billingAddress: baseSchemas.safeString.max(500, 'Billing address too long').optional(),
-      vatNumber: baseSchemas.safeString.max(50, 'VAT number too long').optional()
+      billingAddress: baseSchemas.safeStringWithMax(500, 'Billing address too long').optional(),
+      vatNumber: baseSchemas.safeStringWithMax(50, 'VAT number too long').optional()
     })
   },
   
@@ -131,9 +135,9 @@ export const validationSchemas = {
       lastName: baseSchemas.name,
       email: baseSchemas.email,
       phone: baseSchemas.phone,
-      company: baseSchemas.safeString.max(100, 'Company name too long').optional(),
-      jobTitle: baseSchemas.safeString.max(100, 'Job title too long').optional(),
-      tags: z.array(baseSchemas.safeString.max(50, 'Tag too long')).max(10, 'Too many tags').optional(),
+      company: baseSchemas.safeStringWithMax(100, 'Company name too long').optional(),
+      jobTitle: baseSchemas.safeStringWithMax(100, 'Job title too long').optional(),
+      tags: z.array(baseSchemas.safeStringWithMax(50, 'Tag too long')).max(10, 'Too many tags').optional(),
       customFields: z.record(z.string().max(50, 'Field name too long'), z.any()).optional()
     }),
     update: z.object({
@@ -142,16 +146,16 @@ export const validationSchemas = {
       lastName: baseSchemas.name.optional(),
       email: baseSchemas.email.optional(),
       phone: baseSchemas.phone,
-      company: baseSchemas.safeString.max(100, 'Company name too long').optional(),
-      jobTitle: baseSchemas.safeString.max(100, 'Job title too long').optional(),
-      tags: z.array(baseSchemas.safeString.max(50, 'Tag too long')).max(10, 'Too many tags').optional(),
+      company: baseSchemas.safeStringWithMax(100, 'Company name too long').optional(),
+      jobTitle: baseSchemas.safeStringWithMax(100, 'Job title too long').optional(),
+      tags: z.array(baseSchemas.safeStringWithMax(50, 'Tag too long')).max(10, 'Too many tags').optional(),
       customFields: z.record(z.string().max(50, 'Field name too long'), z.any()).optional(),
       isActive: z.boolean().optional()
     }),
     bulkUpdate: z.object({
       contactIds: z.array(baseSchemas.id).min(1, 'At least one contact required').max(1000, 'Too many contacts'),
       updates: z.object({
-        tags: z.array(baseSchemas.safeString.max(50, 'Tag too long')).max(10, 'Too many tags').optional(),
+        tags: z.array(baseSchemas.safeStringWithMax(50, 'Tag too long')).max(10, 'Too many tags').optional(),
         customFields: z.record(z.string().max(50, 'Field name too long'), z.any()).optional(),
         isActive: z.boolean().optional()
       })
@@ -162,8 +166,8 @@ export const validationSchemas = {
   campaign: {
     create: z.object({
       name: baseSchemas.name,
-      subject: baseSchemas.safeString.max(200, 'Subject too long'),
-      content: baseSchemas.safeString.max(50000, 'Content too long'),
+      subject: baseSchemas.safeStringWithMax(200, 'Subject too long'),
+      content: baseSchemas.safeStringWithMax(50000, 'Content too long'),
       type: z.enum(['EMAIL', 'SMS', 'WHATSAPP']),
       audienceType: z.enum(['ALL', 'SEGMENT', 'LIST', 'CUSTOM']),
       audienceIds: z.array(baseSchemas.id).optional(),
@@ -174,8 +178,8 @@ export const validationSchemas = {
     update: z.object({
       id: baseSchemas.id,
       name: baseSchemas.name.optional(),
-      subject: baseSchemas.safeString.max(200, 'Subject too long').optional(),
-      content: baseSchemas.safeString.max(50000, 'Content too long').optional(),
+      subject: baseSchemas.safeStringWithMax(200, 'Subject too long').optional(),
+      content: baseSchemas.safeStringWithMax(50000, 'Content too long').optional(),
       status: z.enum(['DRAFT', 'SCHEDULED', 'SENDING', 'SENT', 'PAUSED', 'CANCELLED']).optional(),
       scheduledAt: z.coerce.date().optional(),
       fromName: baseSchemas.name.optional(),
@@ -186,37 +190,37 @@ export const validationSchemas = {
   // Task validation
   task: {
     create: z.object({
-      title: baseSchemas.safeString.max(200, 'Title too long'),
-      description: baseSchemas.safeString.max(5000, 'Description too long').optional(),
+      title: baseSchemas.safeStringWithMax(200, 'Title too long'),
+      description: baseSchemas.safeStringWithMax(5000, 'Description too long').optional(),
       priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).default('MEDIUM'),
       dueDate: z.coerce.date().optional(),
       assigneeId: baseSchemas.id.optional(),
       categoryId: baseSchemas.id.optional(),
-      tags: z.array(baseSchemas.safeString.max(50, 'Tag too long')).max(10, 'Too many tags').optional()
+      tags: z.array(baseSchemas.safeStringWithMax(50, 'Tag too long')).max(10, 'Too many tags').optional()
     }),
     update: z.object({
       id: baseSchemas.id,
-      title: baseSchemas.safeString.max(200, 'Title too long').optional(),
-      description: baseSchemas.safeString.max(5000, 'Description too long').optional(),
+      title: baseSchemas.safeStringWithMax(200, 'Title too long').optional(),
+      description: baseSchemas.safeStringWithMax(5000, 'Description too long').optional(),
       priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional(),
       status: z.enum(['OPEN', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']).optional(),
       dueDate: z.coerce.date().optional(),
       assigneeId: baseSchemas.id.optional(),
       categoryId: baseSchemas.id.optional(),
-      tags: z.array(baseSchemas.safeString.max(50, 'Tag too long')).max(10, 'Too many tags').optional()
+      tags: z.array(baseSchemas.safeStringWithMax(50, 'Tag too long')).max(10, 'Too many tags').optional()
     })
   },
   
   // AI Command validation
   aiCommand: {
     execute: z.object({
-      command: baseSchemas.safeString.max(2000, 'Command too long'),
+      command: baseSchemas.safeStringWithMax(2000, 'Command too long'),
       context: z.object({
         businessContext: z.object({
-          industry: baseSchemas.safeString.max(100, 'Industry too long').optional(),
-          market: baseSchemas.safeString.max(100, 'Market too long').optional(),
-          organizationSize: baseSchemas.safeString.max(50, 'Organization size too long').optional(),
-          currentGoals: z.array(baseSchemas.safeString.max(200, 'Goal too long')).max(10, 'Too many goals').optional()
+          industry: baseSchemas.safeStringWithMax(100, 'Industry too long').optional(),
+          market: baseSchemas.safeStringWithMax(100, 'Market too long').optional(),
+          organizationSize: baseSchemas.safeStringWithMax(50, 'Organization size too long').optional(),
+          currentGoals: z.array(baseSchemas.safeStringWithMax(200, 'Goal too long')).max(10, 'Too many goals').optional()
         }).optional(),
         userPreferences: z.object({
           communicationStyle: z.enum(['FORMAL', 'CASUAL', 'PROFESSIONAL']).optional(),

@@ -106,19 +106,11 @@ export async function GET(request: NextRequest) {
           cutoffTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       }
 
-      // Fetch visitors from database
+      // First fetch visitors without touchpoints to avoid N+1
       const visitors = await prisma.leadPulseVisitor.findMany({
         where: {
           lastVisit: {
             gte: cutoffTime
-          }
-        },
-        include: {
-          touchpoints: {
-            orderBy: {
-              timestamp: 'desc'
-            },
-            take: 10 // Only get last 10 touchpoints per visitor
           }
         },
         orderBy: {
@@ -127,6 +119,31 @@ export async function GET(request: NextRequest) {
         skip: offset,
         take: limit
       });
+
+      // If we have visitors, fetch their touchpoints in one query
+      let touchpointsMap = new Map();
+      if (visitors.length > 0) {
+        const visitorIds = visitors.map(v => v.id);
+        const touchpoints = await prisma.leadPulseTouchpoint.findMany({
+          where: {
+            visitorId: { in: visitorIds }
+          },
+          orderBy: {
+            timestamp: 'desc'
+          }
+        });
+
+        // Group touchpoints by visitor ID and limit to 10 per visitor
+        touchpoints.forEach(tp => {
+          if (!touchpointsMap.has(tp.visitorId)) {
+            touchpointsMap.set(tp.visitorId, []);
+          }
+          const visitorTouchpoints = touchpointsMap.get(tp.visitorId);
+          if (visitorTouchpoints.length < 10) {
+            visitorTouchpoints.push(tp);
+          }
+        });
+      }
 
       // Get total count for pagination
       totalCount = await prisma.leadPulseVisitor.count({
@@ -137,8 +154,25 @@ export async function GET(request: NextRequest) {
         }
       });
 
-      // Format response
-      realVisitors = visitors.map(formatVisitorResponse);
+      // Format response with touchpoints from map
+      realVisitors = visitors.map(visitor => ({
+        id: visitor.id,
+        fingerprint: visitor.fingerprint,
+        location: visitor.city ? `${visitor.city}, ${visitor.country}` : undefined,
+        device: visitor.device,
+        browser: visitor.browser,
+        engagementScore: visitor.engagementScore,
+        lastActive: visitor.lastVisit,
+        isActive: visitor.isActive,
+        totalVisits: visitor.totalVisits,
+        pulseData: (touchpointsMap.get(visitor.id) || []).map((tp: any) => ({
+          timestamp: tp.timestamp,
+          value: tp.value || 1,
+          type: tp.type,
+          url: tp.url,
+          title: tp.title
+        }))
+      }));
 
     } catch (prismaError) {
       console.log('Database query failed, using simulator data:', prismaError);
@@ -240,8 +274,24 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Update engagement score
-    const newScore = await calculateEngagementScore(visitor.id);
+    // Update engagement score using aggregation (no separate query needed)
+    const engagementData = await prisma.leadPulseTouchpoint.aggregate({
+      where: {
+        visitorId: visitor.id,
+        timestamp: {
+          gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24h
+        }
+      },
+      _sum: { value: true },
+      _count: true
+    });
+
+    // Calculate score based on touchpoint values and count
+    const totalValue = engagementData._sum.value || 0;
+    const touchpointCount = engagementData._count;
+    const baseScore = totalValue + (touchpointCount * 2); // Base calculation
+    const newScore = Math.min(100, Math.round(baseScore));
+
     await prisma.leadPulseVisitor.update({
       where: { id: visitor.id },
       data: { engagementScore: newScore }
@@ -257,27 +307,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Helper function to format visitor response
-function formatVisitorResponse(visitor: any) {
-  return {
-    id: visitor.id,
-    fingerprint: visitor.fingerprint,
-    location: visitor.city ? `${visitor.city}, ${visitor.country}` : undefined,
-    device: visitor.device,
-    browser: visitor.browser,
-    engagementScore: visitor.engagementScore,
-    lastActive: visitor.lastVisit,
-    isActive: visitor.isActive,
-    totalVisits: visitor.totalVisits,
-    pulseData: visitor.touchpoints.map((tp: any) => ({
-      timestamp: tp.timestamp,
-      value: tp.value || 1,
-      type: tp.type,
-      url: tp.url,
-      title: tp.title
-    }))
-  };
-}
+// Note: formatVisitorResponse function removed to optimize queries
+// Visitor formatting is now done inline with optimized touchpoint mapping
 
 // Helper function to generate ID
 function generateId(): string {
@@ -299,24 +330,5 @@ function calculateTouchpointValue(type: string): number {
   }
 }
 
-// Helper function to calculate engagement score
-async function calculateEngagementScore(visitorId: string): Promise<number> {
-  const recentTouchpoints = await prisma.leadPulseTouchpoint.findMany({
-    where: {
-      visitorId,
-      timestamp: {
-        gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24h
-      }
-    }
-  });
-
-  // Calculate score based on touchpoint values and recency
-  const score = recentTouchpoints.reduce((total: number, tp: any) => {
-    const age = Date.now() - tp.timestamp.getTime();
-    const recencyFactor = Math.max(0.1, 1 - (age / (24 * 60 * 60 * 1000)));
-    return total + ((tp.value || 1) * recencyFactor);
-  }, 0);
-
-  // Normalize score to 0-100 range
-  return Math.min(100, Math.round(score));
-} 
+// Note: calculateEngagementScore function removed to prevent N+1 queries
+// Engagement calculation is now done inline using aggregation 

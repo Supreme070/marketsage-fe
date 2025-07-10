@@ -49,7 +49,7 @@ export async function POST(
     }
 
     // Check if user has access to schedule this campaign
-    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN";
+    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN" || session.user.role === "IT_ADMIN";
     if (!isAdmin && campaign.createdById !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -127,7 +127,7 @@ export async function DELETE(
     }
 
     // Check if user has access to this campaign
-    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN";
+    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN" || session.user.role === "IT_ADMIN";
     if (!isAdmin && campaign.createdById !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

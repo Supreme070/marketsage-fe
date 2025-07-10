@@ -226,6 +226,16 @@ const sidebarNavItems: NavItem[] = [
         icon: LineChart,
       },
       {
+        title: "Messaging Analytics",
+        href: "/analytics/messaging",
+        icon: BarChart4,
+      },
+      {
+        title: "Provider Optimization",
+        href: "/analytics/provider-optimization",
+        icon: Target,
+      },
+      {
         title: "Predictive Analytics",
         href: "/dashboard/predictive-analytics",
         icon: BrainCircuit,
@@ -268,6 +278,28 @@ const sidebarNavItems: NavItem[] = [
     title: "Settings",
     href: "/settings",
     icon: Settings,
+    submenu: [
+      {
+        title: "General",
+        href: "/settings",
+        icon: Settings,
+      },
+      {
+        title: "SMS Settings",
+        href: "/settings/sms",
+        icon: MessageSquare,
+      },
+      {
+        title: "WhatsApp Settings",
+        href: "/settings/whatsapp",
+        icon: MessageCircle,
+      },
+      {
+        title: "Messaging Settings",
+        href: "/settings/messaging",
+        icon: Zap,
+      },
+    ],
   },
 ];
 

@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Only allow admin users to access performance data
-    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN";
+    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN" || session.user.role === "IT_ADMIN";
     if (!isAdmin) {
       return NextResponse.json(
         { error: "Insufficient permissions", message: "Admin access required for performance monitoring" },

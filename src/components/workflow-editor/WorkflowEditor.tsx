@@ -23,7 +23,7 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, Save, Plus, Undo, Redo, Check, Eye, EyeOff, Map, Loader2, Sparkles } from "lucide-react";
+import { Trash2, Save, Plus, Undo, Redo, Check, Eye, EyeOff, Map, Loader2, Sparkles, Zap } from "lucide-react";
 import { toast } from "sonner";
 import NodeSelector from "./NodeSelector";
 import { TriggerNode } from "./nodes/TriggerNode";
@@ -32,6 +32,7 @@ import { ConditionNode } from "./nodes/ConditionNode";
 import { CustomEdge } from "./edges/CustomEdge";
 import PropertiesPanel from "./PropertiesPanel";
 import WorkflowAssistantPanel from "./WorkflowAssistantPanel";
+import AdvancedTriggerPanel from "./AdvancedTriggerPanel";
 
 // Node types configuration
 const nodeTypes: NodeTypes = {
@@ -143,6 +144,9 @@ export default function WorkflowEditor({
 
   // Add AI assistant state
   const [showAssistant, setShowAssistant] = useState(false);
+  
+  // Add advanced trigger state
+  const [showAdvancedTriggers, setShowAdvancedTriggers] = useState(false);
 
   // Load workflow from API if ID is provided
   useEffect(() => {
@@ -478,6 +482,7 @@ export default function WorkflowEditor({
         <div
           className="h-[600px] w-full border border-border rounded-md bg-background"
           ref={reactFlowWrapper}
+          data-workflow-id={workflowId}
         >
           <ReactFlow
             nodes={nodes}
@@ -560,6 +565,16 @@ export default function WorkflowEditor({
                   <Sparkles className="mr-1 h-4 w-4" />
                   AI Assistant
                 </Button>
+                <Button
+                  variant={showAdvancedTriggers ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowAdvancedTriggers(!showAdvancedTriggers)}
+                  title="Advanced ML Triggers"
+                  className={showAdvancedTriggers ? "bg-primary text-primary-foreground" : ""}
+                >
+                  <Zap className="mr-1 h-4 w-4" />
+                  ML Triggers
+                </Button>
               </div>
             </Panel>
 
@@ -633,6 +648,14 @@ export default function WorkflowEditor({
       <WorkflowAssistantPanel 
         isOpen={showAssistant}
         onOpenChange={setShowAssistant}
+      />
+      
+      {/* Advanced ML Triggers Panel */}
+      <AdvancedTriggerPanel 
+        isOpen={showAdvancedTriggers}
+        onOpenChange={setShowAdvancedTriggers}
+        workflowId={workflowId}
+        contactId="demo-contact" // TODO: Get from workflow context
       />
     </div>
   );

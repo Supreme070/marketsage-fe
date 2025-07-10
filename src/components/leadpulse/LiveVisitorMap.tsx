@@ -8,6 +8,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Globe, MapPin, Activity, Thermometer, Layers, Box, Map, ZoomIn, ZoomOut } from 'lucide-react';
 import type { VisitorLocation } from '@/lib/leadpulse/dataProvider';
 import { getVisitorLocations } from '@/lib/leadpulse/unifiedDataProvider';
+import { useLeadPulseLocationSync } from '@/hooks/useLeadPulseSync';
+import { raceConditionDetector } from '@/lib/leadpulse/race-condition-detector';
 import TimelineSlider from './TimelineSlider';
 import HeatMapOverlay from './HeatMapOverlay';
 import GeoFilterBreadcrumb from './GeoFilterBreadcrumb';
@@ -50,16 +52,30 @@ export default function LiveVisitorMap({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [mapDimensions, setMapDimensions] = useState({ width: 0, height: 0 });
 
-  // State for active locations and activity pulses
-  const [activeLocations, setActiveLocations] = useState<VisitorLocation[]>([]);
+  // Use synchronized data to prevent race conditions
+  const { 
+    locations: activeLocations, 
+    isLoading: syncLoading, 
+    error: syncError,
+    isStale,
+    lastUpdated 
+  } = useLeadPulseLocationSync({
+    timeRange,
+    refreshInterval: 15000, // 15 seconds
+    fallbackToDemo: true,
+    enableRealtime: true,
+    syncStrategy: 'priority_based'
+  });
+
   const [filteredLocations, setFilteredLocations] = useState<VisitorLocation[]>([]);
   const [activityPulses, setActivityPulses] = useState<{id: string, x: number, y: number, timestamp: number}[]>([]);
   const [mapMode, setMapMode] = useState<'all' | 'active' | 'heat'>('all');
   const [mapView, setMapView] = useState<'2d' | '3d'>('2d');
   const [hoveredLocation, setHoveredLocation] = useState<string | null>(null);
   const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
-  const [loading, setLoading] = useState(initialLoading);
+  const [loading, setLoading] = useState(initialLoading || syncLoading);
   const [selectedTimeRange, setSelectedTimeRange] = useState(timeRange);
+  const operationIdRef = useRef<string | null>(null);
   
   // Enhanced state for geographical filtering and zoom
   const [geoPath, setGeoPath] = useState<string[]>([]); // Start at world view

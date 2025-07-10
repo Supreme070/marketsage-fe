@@ -237,7 +237,7 @@ async function seedContacts() {
       source: 'manual'
     },
     {
-      email: 'kolajosph87@gmail.com',
+      email: 'kolajoseph87@gmail.com',
       firstName: 'Kola',
       lastName: 'Olatunde',
       jobTitle: 'Lead Developer',

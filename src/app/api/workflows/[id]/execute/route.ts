@@ -79,7 +79,7 @@ export async function POST(
     }
 
     // Check if user has access to this workflow
-    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN";
+    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN" || session.user.role === "IT_ADMIN";
     if (!isAdmin && workflow.createdById !== session.user.id) {
       return forbidden("Access denied");
     }
@@ -156,7 +156,7 @@ export async function GET(
     }
 
     // Check if user has access to this workflow
-    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN";
+    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN" || session.user.role === "IT_ADMIN";
     if (!isAdmin && workflow.createdById !== session.user.id) {
       return forbidden("Access denied");
     }

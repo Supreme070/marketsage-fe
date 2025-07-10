@@ -1,6 +1,6 @@
 import prisma from '@/lib/db/prisma';
 import { logger } from '@/lib/logger';
-import { triggerQueue, workflowQueue } from '@/lib/queue';
+import { workflowQueue } from '@/lib/queue';
 import { workflowEngine } from './execution-engine';
 
 export interface TriggerEvent {
@@ -278,7 +278,7 @@ export const triggerManager = new WorkflowTriggerManager();
  */
 
 // Process trigger events from the queue
-triggerQueue.process('trigger-event', async (job: any) => {
+workflowQueue.process('trigger-event', async (job: any) => {
   const { eventType, eventData, contactId } = job.data;
   
   await triggerManager.processTriggerEvent({
@@ -289,7 +289,7 @@ triggerQueue.process('trigger-event', async (job: any) => {
 });
 
 // Mark processed events
-triggerQueue.on('completed', async (job: any) => {
+workflowQueue.on('completed', async (job: any) => {
   const { eventType, contactId } = job.data;
   
   // Mark the event as processed in the database
@@ -308,7 +308,7 @@ triggerQueue.on('completed', async (job: any) => {
  */
 
 export const queueTriggerEvent = async (event: TriggerEvent): Promise<void> => {
-  await triggerQueue.add('trigger-event', {
+  await workflowQueue.add('trigger-event', {
     eventType: event.type,
     contactId: event.contactId,
     eventData: event.data,

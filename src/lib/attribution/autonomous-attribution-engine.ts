@@ -185,7 +185,7 @@ class AutonomousAttributionEngine extends EventEmitter {
 
       const conversions = await prisma.conversionTracking.findMany({
         where: {
-          createdAt: { gte: thirtyDaysAgo }
+          occurredAt: { gte: thirtyDaysAgo }
         },
         include: {
           event: true
@@ -351,7 +351,7 @@ class AutonomousAttributionEngine extends EventEmitter {
 
       const conversions = await prisma.conversionTracking.findMany({
         where: {
-          createdAt: { gte: sevenDaysAgo }
+          occurredAt: { gte: sevenDaysAgo }
         },
         include: {
           event: true
@@ -484,7 +484,7 @@ class AutonomousAttributionEngine extends EventEmitter {
           event: true
         },
         take: 1000,
-        orderBy: { createdAt: 'desc' }
+        orderBy: { occurredAt: 'desc' }
       });
 
       // Extract journey patterns
@@ -905,7 +905,7 @@ class AutonomousAttributionEngine extends EventEmitter {
     // Calculate metrics from recent data
     const recentConversions = await prisma.conversionTracking.findMany({
       where: {
-        createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+        occurredAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
       }
     });
 

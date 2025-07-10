@@ -31,6 +31,14 @@ import {
   Link,
   Search,
   X,
+  Globe,
+  Database,
+  CreditCard,
+  Settings,
+  Building,
+  DollarSign,
+  ShoppingCart,
+  Webhook,
 } from "lucide-react";
 
 interface NodeSelectorProps {
@@ -195,6 +203,88 @@ export default function NodeSelector({ onSelect }: NodeSelectorProps) {
       color: "bg-blue-500/10 text-blue-500",
       category: "integrations",
     },
+    // API Integration Nodes
+    {
+      type: "apiCallNode",
+      label: "API Call",
+      description: "Make a generic HTTP API call",
+      icon: <Globe className="h-4 w-4" />,
+      iconName: "Globe",
+      color: "bg-purple-500/10 text-purple-500",
+      category: "integrations",
+    },
+    {
+      type: "crmActionNode",
+      label: "CRM Action",
+      description: "Perform CRM operations (HubSpot, Salesforce, etc.)",
+      icon: <Building className="h-4 w-4" />,
+      iconName: "Building",
+      color: "bg-purple-500/10 text-purple-500",
+      category: "integrations",
+    },
+    {
+      type: "paymentWebhookNode",
+      label: "Payment Webhook",
+      description: "Send payment webhooks (Stripe, PayPal, Paystack)",
+      icon: <CreditCard className="h-4 w-4" />,
+      iconName: "CreditCard",
+      color: "bg-purple-500/10 text-purple-500",
+      category: "integrations",
+    },
+    {
+      type: "crmActionNode",
+      label: "Create Contact",
+      description: "Create a new contact in your CRM",
+      icon: <Users className="h-4 w-4" />,
+      iconName: "Users",
+      color: "bg-green-500/10 text-green-500",
+      category: "crm",
+    },
+    {
+      type: "crmActionNode",
+      label: "Update Contact",
+      description: "Update existing contact in your CRM",
+      icon: <Settings className="h-4 w-4" />,
+      iconName: "Settings",
+      color: "bg-green-500/10 text-green-500",
+      category: "crm",
+    },
+    {
+      type: "crmActionNode",
+      label: "Add to List",
+      description: "Add contact to a CRM list or segment",
+      icon: <List className="h-4 w-4" />,
+      iconName: "List",
+      color: "bg-green-500/10 text-green-500",
+      category: "crm",
+    },
+    {
+      type: "paymentWebhookNode",
+      label: "Payment Success",
+      description: "Send payment success webhook",
+      icon: <DollarSign className="h-4 w-4" />,
+      iconName: "DollarSign",
+      color: "bg-emerald-500/10 text-emerald-500",
+      category: "payments",
+    },
+    {
+      type: "paymentWebhookNode",
+      label: "Subscription Created",
+      description: "Send subscription created webhook",
+      icon: <ShoppingCart className="h-4 w-4" />,
+      iconName: "ShoppingCart",
+      color: "bg-emerald-500/10 text-emerald-500",
+      category: "payments",
+    },
+    {
+      type: "apiCallNode",
+      label: "Custom Webhook",
+      description: "Send custom webhook to any endpoint",
+      icon: <Webhook className="h-4 w-4" />,
+      iconName: "Webhook",
+      color: "bg-indigo-500/10 text-indigo-500",
+      category: "integrations",
+    },
   ];
 
   const conditionNodes: NodeOption[] = [
@@ -239,6 +329,8 @@ export default function NodeSelector({ onSelect }: NodeSelectorProps) {
     { id: "forms", name: "Forms", count: allNodes.filter(n => n.category === "forms").length },
     { id: "events", name: "Events", count: allNodes.filter(n => n.category === "events").length },
     { id: "integrations", name: "Integrations", count: allNodes.filter(n => n.category === "integrations").length },
+    { id: "crm", name: "CRM", count: allNodes.filter(n => n.category === "crm").length },
+    { id: "payments", name: "Payments", count: allNodes.filter(n => n.category === "payments").length },
   ];
 
   // Filter nodes based on search and active tab

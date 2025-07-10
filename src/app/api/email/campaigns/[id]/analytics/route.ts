@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db/prisma';
@@ -62,7 +62,7 @@ export async function GET(
       where: { campaignId },
       select: {
         type: true,
-        createdAt: true,
+        timestamp: true,
         metadata: true,
       },
     });
@@ -125,7 +125,7 @@ export async function GET(
     activities
       .filter(activity => activity.type === ActivityType.OPENED)
       .forEach(activity => {
-        const hour = new Date(activity.createdAt).toISOString().slice(0, 13) + ':00:00Z';
+        const hour = new Date(activity.timestamp).toISOString().slice(0, 13) + ':00:00Z';
         opensOverTime[hour] = (opensOverTime[hour] || 0) + 1;
       });
 

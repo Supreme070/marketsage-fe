@@ -23,6 +23,7 @@ services:
       - NEXTAUTH_URL=http://localhost:3030
       - NEXTAUTH_SECRET=your-nextauth-secret-here
       - JWT_SECRET=your-jwt-secret-here
+      - MASTER_ENCRYPTION_KEY=your-master-encryption-key-change-this-in-production
       - APP_URL=http://localhost:3030
       - COMPANY_NAME=MarketSage
       - SUPPORT_EMAIL=support@marketsage.com
@@ -47,6 +48,7 @@ services:
       - NEXT_PUBLIC_EMAIL_FROM=info@marketsage.africa
       - NEXT_PUBLIC_EMAIL_FROM_NAME=MarketSage
       - NEXT_PUBLIC_APP_URL=http://localhost:3030
+      - NEXT_PUBLIC_BASE_URL=http://localhost:3030
       
       # Paystack Payment Configuration (Test Mode)
       - PAYSTACK_SECRET_KEY=your-paystack-secret-key
@@ -268,7 +270,7 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    command: valkey-server --appendonly yes
+    command: valkey-server --maxmemory 512mb --maxmemory-policy allkeys-lru --appendonly yes
     healthcheck:
       test: ["CMD", "valkey-cli", "ping"]
       interval: 10s

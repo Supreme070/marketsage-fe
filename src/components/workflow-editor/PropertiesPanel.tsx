@@ -362,6 +362,370 @@ export default function PropertiesPanel({
           </div>
         );
       }
+    } else if (nodeType === "apiCallNode") {
+      return (
+        <div className="space-y-4">
+          <Tabs defaultValue="endpoint" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="endpoint">Endpoint</TabsTrigger>
+              <TabsTrigger value="auth">Auth</TabsTrigger>
+              <TabsTrigger value="body">Body</TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="endpoint" className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="apiUrl">API URL</Label>
+                <Input
+                  id="apiUrl"
+                  value={properties.url || ""}
+                  onChange={(e) => handleChange("url", e.target.value)}
+                  placeholder="https://api.example.com/endpoint"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="httpMethod">HTTP Method</Label>
+                <Select
+                  value={properties.method || "POST"}
+                  onValueChange={(value) => handleChange("method", value)}
+                >
+                  <SelectTrigger id="httpMethod">
+                    <SelectValue placeholder="Select method..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="GET">GET</SelectItem>
+                    <SelectItem value="POST">POST</SelectItem>
+                    <SelectItem value="PUT">PUT</SelectItem>
+                    <SelectItem value="PATCH">PATCH</SelectItem>
+                    <SelectItem value="DELETE">DELETE</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="auth" className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="authType">Authentication Type</Label>
+                <Select
+                  value={properties.authType || "none"}
+                  onValueChange={(value) => handleChange("authType", value)}
+                >
+                  <SelectTrigger id="authType">
+                    <SelectValue placeholder="Select auth type..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="bearer">Bearer Token</SelectItem>
+                    <SelectItem value="api_key">API Key</SelectItem>
+                    <SelectItem value="basic">Basic Auth</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {properties.authType === "bearer" && (
+                <div className="space-y-2">
+                  <Label htmlFor="bearerToken">Bearer Token</Label>
+                  <Input
+                    id="bearerToken"
+                    type="password"
+                    value={properties.bearerToken || ""}
+                    onChange={(e) => handleChange("bearerToken", e.target.value)}
+                    placeholder="Enter bearer token..."
+                  />
+                </div>
+              )}
+              {properties.authType === "api_key" && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="apiKeyHeader">Header Name</Label>
+                    <Input
+                      id="apiKeyHeader"
+                      value={properties.apiKeyHeader || "X-API-Key"}
+                      onChange={(e) => handleChange("apiKeyHeader", e.target.value)}
+                      placeholder="X-API-Key"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="apiKey">API Key</Label>
+                    <Input
+                      id="apiKey"
+                      type="password"
+                      value={properties.apiKey || ""}
+                      onChange={(e) => handleChange("apiKey", e.target.value)}
+                      placeholder="Enter API key..."
+                    />
+                  </div>
+                </>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="body" className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="bodyTemplate">Request Body Template</Label>
+                <Textarea
+                  id="bodyTemplate"
+                  value={properties.bodyTemplate || ""}
+                  onChange={(e) => handleChange("bodyTemplate", e.target.value)}
+                  placeholder='{"contact": {"email": "{{contact.email}}", "name": "{{contact.firstName}} {{contact.lastName}}"}}'
+                  rows={8}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Use variables like &#123;&#123;contact.email&#125;&#125;, &#123;&#123;contact.firstName&#125;&#125;, &#123;&#123;workflow.name&#125;&#125;
+                </p>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="settings" className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="timeout">Timeout (ms)</Label>
+                <Input
+                  id="timeout"
+                  type="number"
+                  value={properties.timeout || 30000}
+                  onChange={(e) => handleChange("timeout", Number(e.target.value))}
+                  min={1000}
+                  max={60000}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="retryCount">Retry Count</Label>
+                <Input
+                  id="retryCount"
+                  type="number"
+                  value={properties.retryCount || 3}
+                  onChange={(e) => handleChange("retryCount", Number(e.target.value))}
+                  min={0}
+                  max={10}
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      );
+    } else if (nodeType === "crmActionNode") {
+      return (
+        <div className="space-y-4">
+          <Tabs defaultValue="action" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="action">Action</TabsTrigger>
+              <TabsTrigger value="mapping">Mapping</TabsTrigger>
+              <TabsTrigger value="connection">Connection</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="action" className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="crmProvider">CRM Provider</Label>
+                <Select
+                  value={properties.provider || ""}
+                  onValueChange={(value) => handleChange("provider", value)}
+                >
+                  <SelectTrigger id="crmProvider">
+                    <SelectValue placeholder="Select CRM provider..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hubspot">HubSpot</SelectItem>
+                    <SelectItem value="salesforce">Salesforce</SelectItem>
+                    <SelectItem value="pipedrive">Pipedrive</SelectItem>
+                    <SelectItem value="zoho">Zoho CRM</SelectItem>
+                    <SelectItem value="custom">Custom API</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="crmAction">Action Type</Label>
+                <Select
+                  value={properties.actionType || ""}
+                  onValueChange={(value) => handleChange("actionType", value)}
+                >
+                  <SelectTrigger id="crmAction">
+                    <SelectValue placeholder="Select action..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="create_contact">Create Contact</SelectItem>
+                    <SelectItem value="update_contact">Update Contact</SelectItem>
+                    <SelectItem value="add_to_list">Add to List</SelectItem>
+                    <SelectItem value="remove_from_list">Remove from List</SelectItem>
+                    <SelectItem value="add_tag">Add Tag</SelectItem>
+                    <SelectItem value="remove_tag">Remove Tag</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {properties.provider === "custom" && (
+                <div className="space-y-2">
+                  <Label htmlFor="customApiUrl">Custom API URL</Label>
+                  <Input
+                    id="customApiUrl"
+                    value={properties.url || ""}
+                    onChange={(e) => handleChange("url", e.target.value)}
+                    placeholder="https://your-crm-api.com/contacts"
+                  />
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="mapping" className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Field Mapping</Label>
+                <p className="text-xs text-muted-foreground">Map contact fields to CRM fields</p>
+              </div>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <Label className="text-xs">CRM Field</Label>
+                  <Label className="text-xs">Contact Field</Label>
+                </div>
+                {(properties.fieldMapping || []).map((mapping: any, index: number) => (
+                  <div key={index} className="grid grid-cols-2 gap-2">
+                    <Input
+                      value={mapping.crmField || ""}
+                      onChange={(e) => {
+                        const newMapping = [...(properties.fieldMapping || [])];
+                        newMapping[index] = { ...mapping, crmField: e.target.value };
+                        handleChange("fieldMapping", newMapping);
+                      }}
+                      placeholder="email"
+                    />
+                    <Input
+                      value={mapping.contactField || ""}
+                      onChange={(e) => {
+                        const newMapping = [...(properties.fieldMapping || [])];
+                        newMapping[index] = { ...mapping, contactField: e.target.value };
+                        handleChange("fieldMapping", newMapping);
+                      }}
+                      placeholder="contact.email"
+                    />
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const newMapping = [...(properties.fieldMapping || []), { crmField: "", contactField: "" }];
+                    handleChange("fieldMapping", newMapping);
+                  }}
+                >
+                  Add Mapping
+                </Button>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="connection" className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="crmApiKey">API Key/Token</Label>
+                <Input
+                  id="crmApiKey"
+                  type="password"
+                  value={properties.apiKey || ""}
+                  onChange={(e) => handleChange("apiKey", e.target.value)}
+                  placeholder="Enter API key..."
+                />
+              </div>
+              {properties.provider === "salesforce" && (
+                <div className="space-y-2">
+                  <Label htmlFor="salesforceInstance">Salesforce Instance</Label>
+                  <Input
+                    id="salesforceInstance"
+                    value={properties.salesforceInstance || ""}
+                    onChange={(e) => handleChange("salesforceInstance", e.target.value)}
+                    placeholder="your-company.salesforce.com"
+                  />
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
+      );
+    } else if (nodeType === "paymentWebhookNode") {
+      return (
+        <div className="space-y-4">
+          <Tabs defaultValue="webhook" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="webhook">Webhook</TabsTrigger>
+              <TabsTrigger value="payload">Payload</TabsTrigger>
+              <TabsTrigger value="security">Security</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="webhook" className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="paymentProvider">Payment Provider</Label>
+                <Select
+                  value={properties.provider || ""}
+                  onValueChange={(value) => handleChange("provider", value)}
+                >
+                  <SelectTrigger id="paymentProvider">
+                    <SelectValue placeholder="Select payment provider..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="stripe">Stripe</SelectItem>
+                    <SelectItem value="paypal">PayPal</SelectItem>
+                    <SelectItem value="paystack">Paystack</SelectItem>
+                    <SelectItem value="flutterwave">Flutterwave</SelectItem>
+                    <SelectItem value="custom">Custom Webhook</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="webhookType">Webhook Type</Label>
+                <Select
+                  value={properties.webhookType || ""}
+                  onValueChange={(value) => handleChange("webhookType", value)}
+                >
+                  <SelectTrigger id="webhookType">
+                    <SelectValue placeholder="Select webhook type..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="payment_success">Payment Success</SelectItem>
+                    <SelectItem value="payment_failed">Payment Failed</SelectItem>
+                    <SelectItem value="subscription_created">Subscription Created</SelectItem>
+                    <SelectItem value="subscription_cancelled">Subscription Cancelled</SelectItem>
+                    <SelectItem value="refund_processed">Refund Processed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="webhookUrl">Webhook URL</Label>
+                <Input
+                  id="webhookUrl"
+                  value={properties.url || ""}
+                  onChange={(e) => handleChange("url", e.target.value)}
+                  placeholder="https://your-app.com/webhooks/payment"
+                />
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="payload" className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="eventData">Event Data (JSON)</Label>
+                <Textarea
+                  id="eventData"
+                  value={properties.eventDataJson || ""}
+                  onChange={(e) => handleChange("eventDataJson", e.target.value)}
+                  placeholder='{"amount": 1000, "currency": "USD", "customer_id": "{{contact.id}}"}'
+                  rows={6}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Additional event data to include in the webhook payload
+                </p>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="security" className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="webhookSecret">Webhook Secret</Label>
+                <Input
+                  id="webhookSecret"
+                  type="password"
+                  value={properties.secretKey || ""}
+                  onChange={(e) => handleChange("secretKey", e.target.value)}
+                  placeholder="Webhook signing secret..."
+                />
+                <p className="text-xs text-muted-foreground">
+                  Secret key for webhook signature verification
+                </p>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      );
     }
 
     // Generic properties for any node type
@@ -397,7 +761,15 @@ export default function PropertiesPanel({
             ? "Trigger"
             : node.type === "actionNode"
             ? "Action"
-            : "Condition"}
+            : node.type === "conditionNode"
+            ? "Condition"
+            : node.type === "apiCallNode"
+            ? "API Call"
+            : node.type === "crmActionNode"
+            ? "CRM Action"
+            : node.type === "paymentWebhookNode"
+            ? "Payment Webhook"
+            : "Unknown"}
         </span>
       </div>
       {renderProperties()}

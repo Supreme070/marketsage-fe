@@ -4,7 +4,7 @@
  * Global test configuration and mocks
  */
 
-import '@testing-library/jest-dom';
+// Note: @testing-library/jest-dom not available, removed for compatibility
 
 // Mock Next.js modules
 jest.mock('next/navigation', () => ({
@@ -140,6 +140,40 @@ jest.mock('@/lib/db/prisma', () => ({
       create: jest.fn(),
       findMany: jest.fn(),
     },
+    emailCampaign: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    emailActivity: {
+      findMany: jest.fn(),
+      create: jest.fn(),
+      deleteMany: jest.fn(),
+    },
+    workflow: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    workflowExecution: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      deleteMany: jest.fn(),
+    },
+    workflowExecutionStep: {
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+      deleteMany: jest.fn(),
+    },
   },
 }));
 
@@ -233,14 +267,26 @@ Object.defineProperty(global, 'crypto', {
 });
 
 // Mock canvas for fingerprinting tests
-HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
-  fillText: jest.fn(),
-  measureText: jest.fn(() => ({ width: 100 })),
-  font: '',
-  textBaseline: 'top',
+global.HTMLCanvasElement = jest.fn().mockImplementation(() => ({
+  getContext: jest.fn(() => ({
+    fillText: jest.fn(),
+    measureText: jest.fn(() => ({ width: 100 })),
+    font: '',
+    textBaseline: 'top',
+  })),
+  toDataURL: jest.fn(() => 'data:image/png;base64,test'),
 }));
 
-HTMLCanvasElement.prototype.toDataURL = jest.fn(() => 'data:image/png;base64,test');
+if (typeof HTMLCanvasElement !== 'undefined') {
+  HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
+    fillText: jest.fn(),
+    measureText: jest.fn(() => ({ width: 100 })),
+    font: '',
+    textBaseline: 'top',
+  }));
+  
+  HTMLCanvasElement.prototype.toDataURL = jest.fn(() => 'data:image/png;base64,test');
+}
 
 // Mock localStorage
 const localStorageMock = {

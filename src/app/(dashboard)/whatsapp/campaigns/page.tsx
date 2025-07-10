@@ -37,34 +37,14 @@ import {
   CheckCircle,
   FileText,
   Loader2,
-  Cpu,
-  Zap,
   TrendingUp,
-  Target,
   Phone
 } from "lucide-react";
 import Link from "next/link";
 import { getWhatsAppCampaigns, getWhatsAppTemplates } from "@/lib/api";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-// Quantum WhatsApp optimizer replaced with mock implementation
-const quantumWhatsAppOptimizer = {
-  optimizeWhatsAppCampaign: async (campaign: any) => {
-    // Mock implementation
-    return {
-      templateOptimization: {
-        quantumAdvantage: 0.18,
-        businessMessagingCompliance: {
-          complianceScore: 0.9
-        }
-      },
-      performancePrediction: {
-        estimatedOpenRate: 0.78,
-        estimatedResponseRate: 0.35
-      }
-    };
-  }
-};
+// Removed quantum functionality - using real analytics instead
 
 export default function WhatsAppCampaignsPage() {
   const router = useRouter();
@@ -76,8 +56,8 @@ export default function WhatsAppCampaignsPage() {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [templateFilter, setTemplateFilter] = useState<string | null>(null);
   const [isCreatingSampleData, setIsCreatingSampleData] = useState(false);
-  const [quantumOptimizations, setQuantumOptimizations] = useState<Record<string, any>>({});
-  const [isOptimizing, setIsOptimizing] = useState<Record<string, boolean>>({});
+  const [campaignAnalytics, setCampaignAnalytics] = useState<Record<string, any>>({});
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState<Record<string, boolean>>({});
   
   // New function to create sample data
   const createSampleData = async () => {
@@ -119,8 +99,8 @@ export default function WhatsAppCampaignsPage() {
         setCampaigns(campaignsData || []);
         setTemplates(templatesData || []);
         
-        // Apply quantum optimizations to WhatsApp campaigns
-        await applyWhatsAppQuantumOptimizations(campaignsData || []);
+        // Load real analytics for WhatsApp campaigns
+        await loadWhatsAppCampaignAnalytics(campaignsData || []);
       } catch (error) {
         console.error("Error fetching data:", error);
         toast.error("Failed to load campaigns");
@@ -132,66 +112,50 @@ export default function WhatsAppCampaignsPage() {
     fetchData();
   }, []);
 
-  // Apply quantum optimizations to WhatsApp campaigns
-  const applyWhatsAppQuantumOptimizations = async (campaignList: any[]) => {
-    const optimizations: Record<string, any> = {};
+  // Load real analytics for WhatsApp campaigns
+  const loadWhatsAppCampaignAnalytics = async (campaignList: any[]) => {
+    const analytics: Record<string, any> = {};
     
-    for (const campaign of campaignList.slice(0, 3)) { // Optimize first 3 WhatsApp campaigns
-      if (campaign.status === 'DRAFT' || campaign.status === 'SCHEDULED') {
-        setIsOptimizing(prev => ({ ...prev, [campaign.id]: true }));
+    const campaigns = Array.isArray(campaignList) ? campaignList : [];
+    for (const campaign of campaigns) {
+      if (campaign.status === 'SENT' || campaign.status === 'SENDING') {
+        setIsLoadingAnalytics(prev => ({ ...prev, [campaign.id]: true }));
         
         try {
-          const quantum = await quantumWhatsAppOptimizer.optimizeWhatsAppCampaign({
-            id: campaign.id,
-            name: campaign.name,
-            templateId: campaign.templateId,
-            template: campaign.template,
-            businessPhoneNumberId: campaign.businessPhoneNumberId || 'default',
-            status: campaign.status as any,
-            scheduledDate: campaign.scheduledFor ? new Date(campaign.scheduledFor) : undefined,
-            recipients: [], // Would normally get from API
-            segments: [],
-            market: 'NGN' // Default to Nigerian market
-          });
-          
-          optimizations[campaign.id] = quantum;
+          const response = await fetch(`/api/whatsapp/campaigns/${campaign.id}/analytics`);
+          if (response.ok) {
+            const data = await response.json();
+            analytics[campaign.id] = data;
+          }
         } catch (error) {
-          console.warn(`Quantum WhatsApp optimization failed for campaign ${campaign.id}:`, error);
+          console.warn(`Failed to load analytics for WhatsApp campaign ${campaign.id}:`, error);
         } finally {
-          setIsOptimizing(prev => ({ ...prev, [campaign.id]: false }));
+          setIsLoadingAnalytics(prev => ({ ...prev, [campaign.id]: false }));
         }
       }
     }
     
-    setQuantumOptimizations(optimizations);
+    setCampaignAnalytics(analytics);
   };
 
-  // Handle quantum optimization for individual WhatsApp campaign
-  const handleOptimizeWhatsAppCampaign = async (campaign: any) => {
-    setIsOptimizing(prev => ({ ...prev, [campaign.id]: true }));
+  // Refresh analytics for individual WhatsApp campaign
+  const handleRefreshAnalytics = async (campaign: any) => {
+    setIsLoadingAnalytics(prev => ({ ...prev, [campaign.id]: true }));
     
     try {
-      const quantum = await quantumWhatsAppOptimizer.optimizeWhatsAppCampaign({
-        id: campaign.id,
-        name: campaign.name,
-        templateId: campaign.templateId,
-        template: campaign.template,
-        businessPhoneNumberId: campaign.businessPhoneNumberId || 'default',
-        status: campaign.status as any,
-        scheduledDate: campaign.scheduledFor ? new Date(campaign.scheduledFor) : undefined,
-        recipients: [],
-        segments: [],
-        market: 'NGN'
-      });
-      
-      setQuantumOptimizations(prev => ({ ...prev, [campaign.id]: quantum }));
-      
-      toast.success(`⚡ WhatsApp Quantum Optimization Complete - +${(quantum.templateOptimization.quantumAdvantage * 100).toFixed(1)}% quantum advantage`);
+      const response = await fetch(`/api/whatsapp/campaigns/${campaign.id}/analytics`);
+      if (response.ok) {
+        const data = await response.json();
+        setCampaignAnalytics(prev => ({ ...prev, [campaign.id]: data }));
+        toast.success('Analytics refreshed successfully');
+      } else {
+        throw new Error('Failed to fetch analytics');
+      }
     } catch (error) {
-      console.error('Quantum WhatsApp optimization failed:', error);
-      toast.error('WhatsApp Quantum optimization failed. Using classical methods.');
+      console.error('Failed to refresh analytics:', error);
+      toast.error('Failed to refresh analytics');
     } finally {
-      setIsOptimizing(prev => ({ ...prev, [campaign.id]: false }));
+      setIsLoadingAnalytics(prev => ({ ...prev, [campaign.id]: false }));
     }
   };
 
@@ -207,7 +171,7 @@ export default function WhatsAppCampaignsPage() {
         if (response.ok) {
           toast.success("Campaign deleted successfully");
           // Remove the deleted campaign from state
-          setCampaigns(campaigns.filter(campaign => campaign.id !== id));
+          setCampaigns((campaigns || []).filter(campaign => campaign.id !== id));
         } else {
           const errorData = await response.json();
           toast.error(errorData.error || "Failed to delete campaign");
@@ -233,7 +197,7 @@ export default function WhatsAppCampaignsPage() {
         const duplicatedCampaign = await response.json();
         toast.success("Campaign duplicated successfully");
         // Add the new campaign to state
-        setCampaigns([duplicatedCampaign, ...campaigns]);
+        setCampaigns([duplicatedCampaign, ...(campaigns || [])]);
       } else {
         const errorData = await response.json();
         toast.error(errorData.error || "Failed to duplicate campaign");
@@ -247,7 +211,7 @@ export default function WhatsAppCampaignsPage() {
   };
   
   const itemsPerPage = 5;
-  const filteredCampaigns = campaigns.filter(campaign => {
+  const filteredCampaigns = (campaigns || []).filter(campaign => {
     // Search filter
     if (searchQuery) {
       const searchLower = searchQuery.toLowerCase();
@@ -292,16 +256,16 @@ export default function WhatsAppCampaignsPage() {
 
   // Stats by status
   const statusCounts = {
-    DRAFT: campaigns.filter(c => c.status === "DRAFT").length,
-    SCHEDULED: campaigns.filter(c => c.status === "SCHEDULED").length,
-    SENDING: campaigns.filter(c => c.status === "SENDING").length,
-    SENT: campaigns.filter(c => c.status === "SENT").length,
+    DRAFT: (campaigns || []).filter(c => c.status === "DRAFT").length,
+    SCHEDULED: (campaigns || []).filter(c => c.status === "SCHEDULED").length,
+    SENDING: (campaigns || []).filter(c => c.status === "SENDING").length,
+    SENT: (campaigns || []).filter(c => c.status === "SENT").length,
   };
 
   // Get unique templates
   const uniqueTemplates = templates.length ? templates : [];
   const templateCounts: Record<string, number> = {};
-  campaigns.forEach(campaign => {
+  (campaigns || []).forEach(campaign => {
     if (campaign.templateId) {
       templateCounts[campaign.templateId] = (templateCounts[campaign.templateId] || 0) + 1;
     }
@@ -331,24 +295,24 @@ export default function WhatsAppCampaignsPage() {
 
   // Calculate average open rate
   const calculateAverageOpenRate = () => {
-    const sentCampaigns = campaigns.filter(c => c.status === "SENT" && c.statistics?.openRate);
+    const sentCampaigns = (campaigns || []).filter(c => c.status === "SENT" && c.statistics?.openRate);
     if (sentCampaigns.length === 0) return 0;
     
     const totalOpenRate = sentCampaigns.reduce((acc, curr) => acc + (curr.statistics?.openRate || 0), 0);
     return Math.round(totalOpenRate / sentCampaigns.length);
   };
 
-  // Get quantum optimization summary
-  const getWhatsAppQuantumSummary = () => {
-    const optimizedCampaigns = Object.keys(quantumOptimizations).length;
-    const avgQuantumAdvantage = optimizedCampaigns > 0 
-      ? Object.values(quantumOptimizations).reduce((sum, opt: any) => 
-          sum + opt.templateOptimization.quantumAdvantage, 0) / optimizedCampaigns
+  // Get analytics summary
+  const getWhatsAppAnalyticsSummary = () => {
+    const campaignsWithAnalytics = Object.keys(campaignAnalytics).length;
+    const avgDeliveryRate = campaignsWithAnalytics > 0 
+      ? Object.values(campaignAnalytics).reduce((sum, analytics: any) => 
+          sum + (analytics.deliveryRate || 0), 0) / campaignsWithAnalytics
       : 0;
-    return { optimizedCampaigns, avgQuantumAdvantage };
+    return { campaignsWithAnalytics, avgDeliveryRate };
   };
   
-  const { optimizedCampaigns, avgQuantumAdvantage } = getWhatsAppQuantumSummary();
+  const { campaignsWithAnalytics, avgDeliveryRate } = getWhatsAppAnalyticsSummary();
 
   return (
     <div className="flex flex-col space-y-6">
@@ -356,17 +320,17 @@ export default function WhatsAppCampaignsPage() {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">WhatsApp Campaigns</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage all your WhatsApp Business message campaigns and templates with quantum optimization.
+            Manage all your WhatsApp Business message campaigns and templates with real-time analytics.
           </p>
-          {optimizedCampaigns > 0 && (
+          {campaignsWithAnalytics > 0 && (
             <div className="flex items-center gap-2 mt-2">
-              <Badge variant="outline" className="text-cyan-400 border-cyan-400 bg-cyan-900/20">
-                <Phone className="h-3 w-3 mr-1" />
-                ⚡ {optimizedCampaigns} Quantum Optimized
+              <Badge variant="outline" className="text-blue-400 border-blue-400 bg-blue-900/20">
+                <BarChart className="h-3 w-3 mr-1" />
+                {campaignsWithAnalytics} Campaigns with Analytics
               </Badge>
               <Badge variant="outline" className="text-green-400 border-green-400 bg-green-900/20">
                 <TrendingUp className="h-3 w-3 mr-1" />
-                +{(avgQuantumAdvantage * 100).toFixed(1)}% Avg Improvement
+                {avgDeliveryRate.toFixed(1)}% Avg Delivery Rate
               </Badge>
             </div>
           )}
@@ -391,69 +355,62 @@ export default function WhatsAppCampaignsPage() {
         </div>
       </div>
 
-      {/* Quantum WhatsApp Optimization Overview */}
-      {optimizedCampaigns > 0 && (
-        <Card className="bg-gradient-to-r from-green-950/50 to-emerald-950/50 border-green-500/30">
+      {/* WhatsApp Analytics Overview */}
+      {campaignsWithAnalytics > 0 && (
+        <Card className="bg-gradient-to-r from-blue-950/50 to-green-950/50 border-blue-500/30">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Phone className="h-5 w-5 text-green-400" />
-              ⚡ Quantum WhatsApp Intelligence
+              <BarChart className="h-5 w-5 text-blue-400" />
+              WhatsApp Campaign Analytics
             </CardTitle>
             <CardDescription>
-              Advanced quantum optimizations for WhatsApp Business messaging and template approval
+              Real-time performance data from your WhatsApp Business campaigns
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <BarChart className="h-4 w-4 text-blue-400" />
+                  <span className="font-medium text-blue-300">Active Campaigns</span>
+                </div>
+                <div className="text-2xl font-bold text-blue-100">{campaignsWithAnalytics}</div>
+                <p className="text-xs text-blue-200">Campaigns with analytics data</p>
+              </div>
+              
               <div className="p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
-                  <Zap className="h-4 w-4 text-green-400" />
-                  <span className="font-medium text-green-300">WhatsApp Optimized</span>
+                  <CheckCircle className="h-4 w-4 text-green-400" />
+                  <span className="font-medium text-green-300">Delivery Rate</span>
                 </div>
-                <div className="text-2xl font-bold text-green-100">{optimizedCampaigns}</div>
-                <p className="text-xs text-green-200">Quantum-enhanced campaigns</p>
+                <div className="text-2xl font-bold text-green-100">{avgDeliveryRate.toFixed(1)}%</div>
+                <p className="text-xs text-green-200">Average delivery success rate</p>
               </div>
               
-              <div className="p-3 bg-emerald-900/20 border border-emerald-500/30 rounded-lg">
+              <div className="p-3 bg-purple-900/20 border border-purple-500/30 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="h-4 w-4 text-emerald-400" />
-                  <span className="font-medium text-emerald-300">Open Rate</span>
+                  <MessageCircle className="h-4 w-4 text-purple-400" />
+                  <span className="font-medium text-purple-300">Messages Sent</span>
                 </div>
-                <div className="text-2xl font-bold text-emerald-100">
-                  {optimizedCampaigns > 0 ? 
-                    (Object.values(quantumOptimizations).reduce((sum, opt: any) => 
-                      sum + opt.performancePrediction.estimatedOpenRate, 0) / optimizedCampaigns * 100).toFixed(1)
-                    : '78.0'}%
+                <div className="text-2xl font-bold text-purple-100">
+                  {Object.values(campaignAnalytics).reduce((sum, analytics: any) => 
+                    sum + (analytics.sent || 0), 0).toLocaleString()}
                 </div>
-                <p className="text-xs text-emerald-200">Predicted open rate</p>
+                <p className="text-xs text-purple-200">Total messages dispatched</p>
               </div>
               
-              <div className="p-3 bg-teal-900/20 border border-teal-500/30 rounded-lg">
+              <div className="p-3 bg-orange-900/20 border border-orange-500/30 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
-                  <Target className="h-4 w-4 text-teal-400" />
-                  <span className="font-medium text-teal-300">Response Rate</span>
+                  <Users className="h-4 w-4 text-orange-400" />
+                  <span className="font-medium text-orange-300">Response Rate</span>
                 </div>
-                <div className="text-2xl font-bold text-teal-100">
-                  {optimizedCampaigns > 0 ? 
-                    (Object.values(quantumOptimizations).reduce((sum, opt: any) => 
-                      sum + opt.performancePrediction.estimatedResponseRate, 0) / optimizedCampaigns * 100).toFixed(1)
-                    : '35.0'}%
+                <div className="text-2xl font-bold text-orange-100">
+                  {campaignsWithAnalytics > 0 ? 
+                    (Object.values(campaignAnalytics).reduce((sum, analytics: any) => 
+                      sum + (analytics.responseRate || 0), 0) / campaignsWithAnalytics).toFixed(1)
+                    : '0.0'}%
                 </div>
-                <p className="text-xs text-teal-200">Expected response rate</p>
-              </div>
-              
-              <div className="p-3 bg-cyan-900/20 border border-cyan-500/30 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle className="h-4 w-4 text-cyan-400" />
-                  <span className="font-medium text-cyan-300">Compliance</span>
-                </div>
-                <div className="text-2xl font-bold text-cyan-100">
-                  {optimizedCampaigns > 0 ? 
-                    (Object.values(quantumOptimizations).reduce((sum, opt: any) => 
-                      sum + opt.templateOptimization.businessMessagingCompliance.complianceScore, 0) / optimizedCampaigns * 100).toFixed(0)
-                    : '90'}%
-                </div>
-                <p className="text-xs text-cyan-200">Business messaging compliance</p>
+                <p className="text-xs text-orange-200">Average response rate</p>
               </div>
             </div>
           </CardContent>
@@ -461,23 +418,24 @@ export default function WhatsAppCampaignsPage() {
       )}
       
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-        <Card className={optimizedCampaigns > 0 ? 'border-green-500/30' : ''}>
+        <Card className={campaignsWithAnalytics > 0 ? 'border-blue-500/30' : ''}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               Total Campaigns
-              {optimizedCampaigns > 0 && (
-                <Badge variant="outline" className="text-green-400 border-green-400 bg-green-900/20 text-xs">
-                  ⚡ Enhanced
+              {campaignsWithAnalytics > 0 && (
+                <Badge variant="outline" className="text-blue-400 border-blue-400 bg-blue-900/20 text-xs">
+                  <BarChart className="h-3 w-3 mr-1" />
+                  Analytics
                 </Badge>
               )}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{campaigns.length}</div>
+            <div className="text-2xl font-bold">{(campaigns || []).length}</div>
             <p className="text-xs text-muted-foreground mt-1">
               {statusCounts.SENDING} sending, {statusCounts.SCHEDULED} scheduled
-              {optimizedCampaigns > 0 && (
-                <span className="block text-green-400">⚡ {optimizedCampaigns} quantum optimized</span>
+              {campaignsWithAnalytics > 0 && (
+                <span className="block text-blue-400">{campaignsWithAnalytics} with analytics</span>
               )}
             </p>
           </CardContent>
@@ -679,27 +637,27 @@ export default function WhatsAppCampaignsPage() {
                         <div className="flex flex-col">
                           <div className="flex items-center gap-2">
                             <span>{campaign.name}</span>
-                            {quantumOptimizations[campaign.id] && (
+                            {campaignAnalytics[campaign.id] && (
                               <Badge variant="outline" className="text-green-400 border-green-400 bg-green-900/20 text-xs">
-                                <Phone className="h-3 w-3 mr-1" />
-                                ⚡ Optimized
+                                <BarChart className="h-3 w-3 mr-1" />
+                                Analytics
                               </Badge>
                             )}
-                            {isOptimizing[campaign.id] && (
-                              <Badge variant="outline" className="text-orange-400 border-orange-400 bg-orange-900/20 text-xs">
+                            {isLoadingAnalytics[campaign.id] && (
+                              <Badge variant="outline" className="text-blue-400 border-blue-400 bg-blue-900/20 text-xs">
                                 <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                Optimizing...
+                                Loading...
                               </Badge>
                             )}
                           </div>
                           <span className="text-xs text-muted-foreground">by {campaign.createdBy?.name || 'Unknown'}</span>
-                          {quantumOptimizations[campaign.id] && (
+                          {campaignAnalytics[campaign.id] && (
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-xs text-green-400">
-                                +{(quantumOptimizations[campaign.id].templateOptimization.quantumAdvantage * 100).toFixed(1)}% quantum boost
+                                {campaignAnalytics[campaign.id].deliveryRate}% delivery rate
                               </span>
-                              <Badge variant="outline" className="text-xs text-emerald-400 border-emerald-400">
-                                {(quantumOptimizations[campaign.id].templateOptimization.businessMessagingCompliance.complianceScore * 100).toFixed(0)}% compliant
+                              <Badge variant="outline" className="text-xs text-blue-400 border-blue-400">
+                                {campaignAnalytics[campaign.id].sent || 0} sent
                               </Badge>
                             </div>
                           )}
@@ -717,26 +675,35 @@ export default function WhatsAppCampaignsPage() {
                       </TableCell>
                       <TableCell>{getStatusBadge(campaign.status)}</TableCell>
                       <TableCell>
-                        {quantumOptimizations[campaign.id] ? (
+                        {campaignAnalytics[campaign.id] ? (
                           <div className="space-y-1">
                             <div className="flex items-center gap-2 text-xs">
-                              <span className="text-muted-foreground">Open Rate:</span>
-                              <Badge variant="outline" className="text-green-400 border-green-400">
-                                {(quantumOptimizations[campaign.id].performancePrediction.estimatedOpenRate * 100).toFixed(1)}%
-                              </Badge>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="text-muted-foreground">Response:</span>
+                              <span className="text-muted-foreground">Sent:</span>
                               <Badge variant="outline" className="text-blue-400 border-blue-400">
-                                {(quantumOptimizations[campaign.id].performancePrediction.estimatedResponseRate * 100).toFixed(1)}%
+                                {campaignAnalytics[campaign.id].sent || 0}
                               </Badge>
                             </div>
                             <div className="flex items-center gap-2 text-xs">
-                              <span className="text-muted-foreground">Recipients:</span>
-                              <span className="text-muted-foreground">
-                                {(campaign.statistics?.totalRecipients || 0).toLocaleString()}
-                              </span>
+                              <span className="text-muted-foreground">Delivered:</span>
+                              <Badge variant="outline" className="text-green-400 border-green-400">
+                                {campaignAnalytics[campaign.id].deliveryRate || 0}%
+                              </Badge>
                             </div>
+                            {campaignAnalytics[campaign.id].failed > 0 && (
+                              <div className="flex items-center gap-2 text-xs">
+                                <span className="text-muted-foreground">Failed:</span>
+                                <Badge variant="outline" className="text-red-400 border-red-400">
+                                  {campaignAnalytics[campaign.id].failed}
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+                        ) : campaign.status === 'DRAFT' || campaign.status === 'SCHEDULED' ? (
+                          <span className="text-xs text-muted-foreground">Not sent yet</span>
+                        ) : isLoadingAnalytics[campaign.id] ? (
+                          <div className="flex items-center gap-2 text-xs">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            <span className="text-muted-foreground">Loading...</span>
                           </div>
                         ) : (
                           <div className="flex items-center">
@@ -767,21 +734,21 @@ export default function WhatsAppCampaignsPage() {
                             <DropdownMenuItem onClick={() => router.push(`/whatsapp/campaigns/${campaign.id}/edit`)}>
                               <Edit className="mr-2 h-4 w-4" /> Edit
                             </DropdownMenuItem>
-                            {(campaign.status === "DRAFT" || campaign.status === "SCHEDULED") && !quantumOptimizations[campaign.id] && (
+                            {(campaign.status === 'SENT' || campaign.status === 'SENDING') && (
                               <DropdownMenuItem 
-                                onClick={() => handleOptimizeWhatsAppCampaign(campaign)}
-                                disabled={isOptimizing[campaign.id]}
+                                onClick={() => handleRefreshAnalytics(campaign)}
+                                disabled={isLoadingAnalytics[campaign.id]}
                               >
-                                <Cpu className="mr-2 h-4 w-4" /> 
-                                {isOptimizing[campaign.id] ? 'Optimizing...' : '⚡ Quantum Optimize'}
+                                <BarChart className="mr-2 h-4 w-4" /> 
+                                {isLoadingAnalytics[campaign.id] ? 'Loading...' : 'Refresh Analytics'}
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuItem onClick={() => handleDuplicate(campaign.id)}>
                               <Copy className="mr-2 h-4 w-4" /> Duplicate
                             </DropdownMenuItem>
-                            {quantumOptimizations[campaign.id] && (
-                              <DropdownMenuItem>
-                                <Target className="mr-2 h-4 w-4" /> View WhatsApp Optimization
+                            {campaignAnalytics[campaign.id] && (
+                              <DropdownMenuItem onClick={() => router.push(`/whatsapp/campaigns/${campaign.id}/analytics`)}>
+                                <BarChart className="mr-2 h-4 w-4" /> View Analytics
                               </DropdownMenuItem>
                             )}
                             {campaign.status === "SENT" && (

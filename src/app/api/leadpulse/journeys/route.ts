@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
           
           // Generate realistic journey data for demo visitors
           // Extract visitor number for consistent data
-          const visitorNum = parseInt(visitorId.split('_').pop() || '0');
+          const visitorNum = Number.parseInt(visitorId.split('_').pop() || '0');
           const baseTime = Date.now() - (visitorNum * 1000); // Offset by visitor number for variety
           
           const syntheticJourney: VisitorPath = {
@@ -117,25 +117,26 @@ export async function GET(request: NextRequest) {
           });
         }
 
+        // Optimized: Fetch visitor and touchpoints separately to avoid include
         const visitor = await prisma.leadPulseVisitor.findUnique({
           where: {
             id: visitorId
-          },
-          include: {
-            touchpoints: {
-              orderBy: {
-                timestamp: 'asc'
-              }
-            }
           }
         });
+        
+        let touchpoints: any[] = [];
+        if (visitor) {
+          touchpoints = await prisma.leadPulseTouchpoint.findMany({
+            where: { visitorId: visitor.id },
+            orderBy: { timestamp: 'asc' }
+          });
+        }
         
         console.log('Journeys API - Found LeadPulseVisitor:', !!visitor, visitor?.id);
         
         if (visitor) {
-          // Convert to journey format
-          const typedVisitor = visitor as unknown as PrismaVisitor;
-          const touchpoints = typedVisitor.touchpoints.map((tp: PrismaTouchpoint) => {
+          // Convert to journey format using separate touchpoints
+          const touchpointData = touchpoints.map((tp: any) => {
             // Determine type based on data
             let type: 'pageview' | 'click' | 'form_view' | 'form_start' | 'form_submit' | 'conversion' = 'pageview';
             
@@ -163,21 +164,21 @@ export async function GET(request: NextRequest) {
           });
           
           // Calculate prediction metrics
-          const engagementScore = typedVisitor.score || 0;
+          const engagementScore = visitor.engagementScore || 0;
           const probability = Math.min(engagementScore / 100, 0.95);
           const predictedValue = probability * 199.99;
           let status: 'active' | 'converted' | 'lost' = 'active';
           
           // Determine status based on data
-          if (typedVisitor.contactId) {
+          if (visitor.contactId) {
             status = 'converted';
-          } else if (typedVisitor.lastVisit.getTime() < (Date.now() - 7 * 24 * 60 * 60 * 1000)) {
+          } else if (visitor.lastVisit.getTime() < (Date.now() - 7 * 24 * 60 * 60 * 1000)) {
             status = 'lost';
           }
           
           const journeyPath: VisitorPath = {
-            visitorId: typedVisitor.id,
-            touchpoints,
+            visitorId: visitor.id,
+            touchpoints: touchpointData,
             probability,
             predictedValue,
             status
@@ -191,24 +192,25 @@ export async function GET(request: NextRequest) {
           // Visitor not found in LeadPulseVisitor - try AnonymousVisitor as fallback
           console.log(`Journeys API - Visitor ${visitorId} not found in LeadPulseVisitor, checking AnonymousVisitor...`);
           
+          // Optimized: Fetch anonymous visitor and touchpoints separately
           const anonVisitor = await prisma.anonymousVisitor.findUnique({
             where: {
               id: visitorId
-            },
-            include: {
-              LeadPulseTouchpoint: {
-                orderBy: {
-                  timestamp: 'asc'
-                }
-              },
-              LeadPulseJourney: true
             }
           });
           
+          let anonTouchpoints: any[] = [];
+          if (anonVisitor) {
+            anonTouchpoints = await prisma.leadPulseTouchpoint.findMany({
+              where: { visitorId: anonVisitor.id },
+              orderBy: { timestamp: 'asc' }
+            });
+          }
+          
           if (anonVisitor) {
             console.log('Journeys API - Found in AnonymousVisitor, using that data');
-            // Process anonymous visitor (existing logic)
-            const touchpoints = anonVisitor.LeadPulseTouchpoint.map((tp: any) => {
+            // Process anonymous visitor with separate touchpoints
+            const touchpoints = anonTouchpoints.map((tp: any) => {
               let type: 'pageview' | 'click' | 'form_view' | 'form_start' | 'form_submit' | 'conversion' = 'pageview';
               
               if (tp.type === 'CLICK') {
@@ -262,22 +264,24 @@ export async function GET(request: NextRequest) {
           // Neither table has the visitor - return first available visitor from LeadPulseVisitor
           console.log(`Journeys API - Visitor ${visitorId} not found in either table, looking for first available...`);
           
-          const firstVisitor = await prisma.leadPulseVisitor.findFirst({
-            include: {
-              touchpoints: {
-                orderBy: { timestamp: 'asc' }
-              }
-            }
-          });
+          // Optimized: Fetch first visitor and touchpoints separately
+          const firstVisitor = await prisma.leadPulseVisitor.findFirst();
+          
+          let firstVisitorTouchpoints: any[] = [];
+          if (firstVisitor) {
+            firstVisitorTouchpoints = await prisma.leadPulseTouchpoint.findMany({
+              where: { visitorId: firstVisitor.id },
+              orderBy: { timestamp: 'asc' }
+            });
+          }
           
           console.log('Journeys API - First LeadPulseVisitor query result:', !!firstVisitor, firstVisitor?.id);
           
           if (firstVisitor) {
             console.log('Journeys API - Using first available LeadPulseVisitor:', firstVisitor.id);
             
-            // Process firstVisitor the same way
-            const typedVisitor = firstVisitor as unknown as PrismaVisitor;
-            const touchpoints = typedVisitor.touchpoints.map((tp: PrismaTouchpoint) => {
+            // Process first visitor with separate touchpoints
+            const touchpoints = firstVisitorTouchpoints.map((tp: any) => {
               let type: 'pageview' | 'click' | 'form_view' | 'form_start' | 'form_submit' | 'conversion' = 'pageview';
               
               if (tp.type === 'CLICK') {
@@ -309,7 +313,7 @@ export async function GET(request: NextRequest) {
             const status: 'active' | 'converted' | 'lost' = 'active';
             
             const journeyPath: VisitorPath = {
-              visitorId: typedVisitor.id,
+              visitorId: firstVisitor.id,
               touchpoints,
               probability,
               predictedValue,
@@ -325,28 +329,41 @@ export async function GET(request: NextRequest) {
           }
         }
       } else {
-        // Fetch multiple journeys from LeadPulseVisitor
+        // Optimized: Fetch multiple visitors and their touchpoints separately
         const visitors = await prisma.leadPulseVisitor.findMany({
           take: 10,
           orderBy: {
             lastVisit: 'desc'
-          },
-          include: {
-            touchpoints: {
-              orderBy: {
-                timestamp: 'asc'
-              }
-            }
           }
+        });
+        
+        // Fetch all touchpoints for these visitors in one query
+        let allTouchpoints: any[] = [];
+        if (visitors.length > 0) {
+          const visitorIds = visitors.map(v => v.id);
+          allTouchpoints = await prisma.leadPulseTouchpoint.findMany({
+            where: { visitorId: { in: visitorIds } },
+            orderBy: { timestamp: 'asc' }
+          });
+        }
+        
+        // Group touchpoints by visitor ID
+        const touchpointsMap = new Map();
+        allTouchpoints.forEach(tp => {
+          if (!touchpointsMap.has(tp.visitorId)) {
+            touchpointsMap.set(tp.visitorId, []);
+          }
+          touchpointsMap.get(tp.visitorId).push(tp);
         });
         
         console.log('Journeys API - Found', visitors.length, 'LeadPulseVisitors for multiple journeys');
         
         if (visitors && visitors.length > 0) {
-          const journeys = visitors.map((visitor: unknown) => {
-            const typedVisitor = visitor as PrismaVisitor;
+          const journeys = visitors.map((visitor: any) => {
+            // Get touchpoints for this visitor from the map
+            const visitorTouchpoints = touchpointsMap.get(visitor.id) || [];
             // Convert to journey format (similar to above)
-            const touchpoints = typedVisitor.touchpoints.map((tp: PrismaTouchpoint) => {
+            const touchpoints = visitorTouchpoints.map((tp: any) => {
               // Determine type based on data
               let type: 'pageview' | 'click' | 'form_view' | 'form_start' | 'form_submit' | 'conversion' = 'pageview';
               
@@ -374,17 +391,17 @@ export async function GET(request: NextRequest) {
             });
             
             // Calculate prediction metrics
-            const engagementScore = typedVisitor.score || 0;
+            const engagementScore = visitor.engagementScore || 0;
             const probability = Math.min(engagementScore / 100, 0.95);
             const predictedValue = probability * 199.99;
             let status: 'active' | 'converted' | 'lost' = 'active';
             
-            if (typedVisitor.lastVisit.getTime() < (Date.now() - 7 * 24 * 60 * 60 * 1000)) {
+            if (visitor.lastVisit.getTime() < (Date.now() - 7 * 24 * 60 * 60 * 1000)) {
               status = 'lost';
             }
             
             return {
-              visitorId: typedVisitor.id,
+              visitorId: visitor.id,
               touchpoints,
               probability,
               predictedValue,

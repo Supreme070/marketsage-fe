@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Different filters based on user role
-    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN";
+    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN" || session.user.role === "IT_ADMIN";
     
     // Filter by category if provided in query
     const url = new URL(request.url);

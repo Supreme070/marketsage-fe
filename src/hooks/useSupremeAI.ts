@@ -9,14 +9,14 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { useSession } from 'next-auth/react';
-// Quantum AI removed - using Supreme-AI v3 directly
+// Using Supreme-AI v3 directly
 
 interface ChatMessage {
   id: string;
   content: string;
   role: 'user' | 'assistant';
   timestamp: Date;
-  // Quantum optimization removed - using Supreme-AI v3 direct processing
+  // Using Supreme-AI v3 direct processing
 }
 
 interface SupremeAIResponse {
@@ -44,7 +44,7 @@ export const useSupremeAI = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  // Quantum optimizations removed - direct Supreme-AI processing
+  // Direct Supreme-AI processing
   const [chatSession, setChatSession] = useState<any>(null);
   const { data: session } = useSession();
 
@@ -185,7 +185,7 @@ export const useSupremeAI = () => {
     return { type: 'question' };
   }, []);
 
-  const sendMessage = useCallback(async (content: string) => {
+  const sendMessage = useCallback(async (content: string, useStreaming: boolean = true) => {
     if (!content.trim() || !chatSession) return;
 
     const userMessage: ChatMessage = {
@@ -233,76 +233,11 @@ export const useSupremeAI = () => {
         toast.error('Task execution requires ADMIN, IT_ADMIN, or SUPER_ADMIN privileges');
       }
 
-      const response = await fetch('/api/ai/supreme-v3', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data: SupremeAIResponse = await response.json();
-
-      if (!data.success) {
-        throw new Error('Supreme-AI request failed');
-      }
-
-      // Update chat session with new message
-      const updatedChatSession = {
-        ...chatSession,
-        messages: [...chatSession.messages, userMessage],
-        lastActivity: new Date()
-      };
-      
-      console.log('✅ Supreme-AI v3 response received:', data.data.answer);
-      
-      const assistantMessage: ChatMessage = {
-        id: `assistant-${Date.now()}`,
-        content: data.data.answer,
-        role: 'assistant',
-        timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
-      // Supreme-AI v3 handles all optimizations internally
-      
-      // Update chat session
-      setChatSession({
-        ...updatedChatSession,
-        messages: [...updatedChatSession.messages, assistantMessage]
-      });
-
-      // Save user and assistant messages to database
-      await saveMessageToDatabase(userMessage);
-      await saveMessageToDatabase(assistantMessage, true, {
-        confidence: data.confidence,
-        processingTime: data.processingTime,
-        source: data.data.source,
-        taskExecution: data.data.taskExecution
-      });
-      
-      // Show Supreme-AI feedback
-      if (data.confidence && data.confidence > 0.8) {
-        toast.success(`🧠 Supreme-AI v3 high confidence response (${(data.confidence * 100).toFixed(1)}%)`);
-      }
-      
-      // Show task execution feedback if available
-      if (data.data.taskExecution) {
-        console.log('✅ Task execution result:', data.data.taskExecution);
-        if (data.data.taskExecution.success) {
-          toast.success('Task executed successfully!');
-        }
-      }
-      
-      // Show recommendations if available from Supreme-AI
-      if (data.data.recommendations && data.data.recommendations.length > 0) {
-        setTimeout(() => {
-          toast.success(`🎯 ${data.data.recommendations.length} AI recommendations available`);
-        }, 2000);
+      // Use streaming for better UX
+      if (useStreaming) {
+        await handleStreamingResponse(requestBody, userMessage);
+      } else {
+        await handleRegularResponse(requestBody, userMessage);
       }
 
     } catch (error) {
@@ -314,6 +249,180 @@ export const useSupremeAI = () => {
       setIsLoading(false);
     }
   }, [detectTaskType, chatSession, session?.user]);
+
+  const handleStreamingResponse = useCallback(async (requestBody: any, userMessage: ChatMessage) => {
+    const assistantMessageId = `assistant-${Date.now()}`;
+    let streamingContent = '';
+
+    // Add initial empty assistant message
+    const initialAssistantMessage: ChatMessage = {
+      id: assistantMessageId,
+      content: '',
+      role: 'assistant',
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, initialAssistantMessage]);
+
+    try {
+      const response = await fetch('/api/ai/chat-stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        throw new Error('No response stream available');
+      }
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              switch (data.type) {
+                case 'chunk':
+                  streamingContent += data.content;
+                  // Update the assistant message with streaming content
+                  setMessages(prev => prev.map(msg => 
+                    msg.id === assistantMessageId 
+                      ? { ...msg, content: streamingContent }
+                      : msg
+                  ));
+                  break;
+                
+                case 'complete':
+                  // Final processing
+                  const finalAssistantMessage: ChatMessage = {
+                    id: assistantMessageId,
+                    content: streamingContent,
+                    role: 'assistant',
+                    timestamp: new Date()
+                  };
+
+                  // Save messages to database
+                  await saveMessageToDatabase(userMessage);
+                  await saveMessageToDatabase(finalAssistantMessage, true, {
+                    confidence: data.metadata?.confidence,
+                    processingTime: data.metadata?.processingTime,
+                    source: data.metadata?.source,
+                    taskExecution: data.metadata?.taskExecution
+                  });
+
+                  // Show feedback
+                  if (data.metadata?.confidence && data.metadata.confidence > 0.8) {
+                    toast.success(`🧠 Supreme-AI v3 high confidence response (${(data.metadata.confidence * 100).toFixed(1)}%)`);
+                  }
+
+                  if (data.metadata?.taskExecution?.success) {
+                    toast.success('Task executed successfully!');
+                  }
+                  break;
+
+                case 'error':
+                  throw new Error(data.content);
+              }
+            } catch (parseError) {
+              console.warn('Failed to parse streaming data:', parseError);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Streaming error:', error);
+      // Fall back to regular response
+      await handleRegularResponse(requestBody, userMessage);
+    }
+  }, [saveMessageToDatabase]);
+
+  const handleRegularResponse = useCallback(async (requestBody: any, userMessage: ChatMessage) => {
+    const response = await fetch('/api/ai/supreme-v3', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data: SupremeAIResponse = await response.json();
+
+    if (!data.success) {
+      throw new Error('Supreme-AI request failed');
+    }
+
+    // Update chat session with new message
+    const updatedChatSession = {
+      ...chatSession,
+      messages: [...chatSession.messages, userMessage],
+      lastActivity: new Date()
+    };
+    
+    console.log('✅ Supreme-AI v3 response received:', data.data.answer);
+    
+    const assistantMessage: ChatMessage = {
+      id: `assistant-${Date.now()}`,
+      content: data.data.answer,
+      role: 'assistant',
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, assistantMessage]);
+    
+    // Update chat session
+    setChatSession({
+      ...updatedChatSession,
+      messages: [...updatedChatSession.messages, assistantMessage]
+    });
+
+    // Save user and assistant messages to database
+    await saveMessageToDatabase(userMessage);
+    await saveMessageToDatabase(assistantMessage, true, {
+      confidence: data.confidence,
+      processingTime: data.processingTime,
+      source: data.data.source,
+      taskExecution: data.data.taskExecution
+    });
+    
+    // Show Supreme-AI feedback
+    if (data.confidence && data.confidence > 0.8) {
+      toast.success(`🧠 Supreme-AI v3 high confidence response (${(data.confidence * 100).toFixed(1)}%)`);
+    }
+    
+    // Show task execution feedback if available
+    if (data.data.taskExecution) {
+      console.log('✅ Task execution result:', data.data.taskExecution);
+      if (data.data.taskExecution.success) {
+        toast.success('Task executed successfully!');
+      }
+    }
+    
+    // Show recommendations if available from Supreme-AI
+    if (data.data.recommendations && data.data.recommendations.length > 0) {
+      setTimeout(() => {
+        toast.success(`🎯 ${data.data.recommendations.length} AI recommendations available`);
+      }, 2000);
+    }
+  }, [chatSession, saveMessageToDatabase]);
 
   const clearMessages = useCallback(async () => {
     if (!currentSessionId) return;

@@ -7,6 +7,7 @@
 
 import { randomUUID } from 'crypto';
 import prisma from '@/lib/db/prisma';
+import { engagementScoringEngine } from './engagement-scoring-engine';
 
 // Import enums directly since the Prisma client may not have generated them yet
 enum ConversionStatus {
@@ -170,6 +171,7 @@ export async function recordTouchpoint(
 
 /**
  * Update a visitor's engagement score based on behavior
+ * Uses the new enhanced engagement scoring engine for accurate scoring
  * 
  * @param visitorId - Anonymous visitor ID
  * @param action - The action taken by the visitor
@@ -181,34 +183,42 @@ export async function updateVisitorEngagement(
   action: 'PAGE_VIEW' | 'FORM_VIEW' | 'FORM_START' | 'FORM_SUBMIT' | 'CTA_CLICK' | 'RETURN_VISIT' | 'TIME_ON_PAGE' | 'SCROLL_DEPTH',
   weight = 1
 ) {
-  // Define base scores for different actions
-  const actionScores: Record<string, number> = {
-    PAGE_VIEW: 1,
-    FORM_VIEW: 2,
-    FORM_START: 5,
-    FORM_SUBMIT: 10,
-    CTA_CLICK: 3,
-    RETURN_VISIT: 2,
-    TIME_ON_PAGE: 0.1, // Per minute
-    SCROLL_DEPTH: 0.05 // Per percentage point
-  };
-  
-  // Calculate score increment
-  const scoreIncrement = actionScores[action] * weight;
-  
-  // Update visitor engagement score with correct field names
-  return prisma.anonymousVisitor.update({
-    where: { id: visitorId },
-    data: {
-      engagementScore: {
-        increment: scoreIncrement
-      },
-      score: {
-        increment: scoreIncrement
-      },
-      lastVisit: new Date(), // Update last visit time
-    }
-  });
+  try {
+    // Use the new engagement scoring engine for accurate scoring
+    await engagementScoringEngine.updateVisitorScore(visitorId);
+    
+    // Get the updated visitor record
+    return prisma.anonymousVisitor.findUnique({
+      where: { id: visitorId }
+    });
+  } catch (error) {
+    // Fallback to simple scoring if new engine fails
+    const actionScores: Record<string, number> = {
+      PAGE_VIEW: 1,
+      FORM_VIEW: 2,
+      FORM_START: 5,
+      FORM_SUBMIT: 10,
+      CTA_CLICK: 3,
+      RETURN_VISIT: 2,
+      TIME_ON_PAGE: 0.1,
+      SCROLL_DEPTH: 0.05
+    };
+    
+    const scoreIncrement = actionScores[action] * weight;
+    
+    return prisma.anonymousVisitor.update({
+      where: { id: visitorId },
+      data: {
+        engagementScore: {
+          increment: scoreIncrement
+        },
+        score: {
+          increment: scoreIncrement
+        },
+        lastVisit: new Date(),
+      }
+    });
+  }
 }
 
 /**

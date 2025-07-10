@@ -83,16 +83,58 @@ export default function WorkflowAssistantPanel({
         const nodes = getNodes();
         const edges = getEdges();
         
-        const newRecommendations = await getWorkflowRecommendations(nodes, edges, {
+        // Get local recommendations first
+        const localRecommendations = await getWorkflowRecommendations(nodes, edges, {
           goal: selectedGoal,
           industry: selectedIndustry === "any" ? undefined : selectedIndustry
         });
         
-        setRecommendations(newRecommendations);
+        // Try to get AI-enhanced recommendations if we have a workflow context
+        let aiRecommendations: WorkflowRecommendation[] = [];
+        try {
+          // Check if we're in a workflow editing context
+          const workflowElement = document.querySelector('[data-workflow-id]');
+          const workflowId = workflowElement?.getAttribute('data-workflow-id');
+          
+          if (workflowId) {
+            const response = await fetch('/api/ai/workflows/enhance', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                workflowId,
+                action: 'analyze'
+              })
+            });
+            
+            if (response.ok) {
+              const aiData = await response.json();
+              
+              // Convert AI recommendations to our format
+              aiRecommendations = aiData.analytics?.recommendations?.map((rec: string, index: number) => ({
+                id: `ai-rec-${index}`,
+                type: 'GENERAL' as const,
+                priority: 'HIGH' as const,
+                title: 'AI-Powered Insight',
+                description: rec,
+                impact: 'HIGH' as const,
+                category: 'ai_enhancement',
+                actionData: null,
+              })) || [];
+            }
+          }
+        } catch (aiError) {
+          console.log('AI recommendations unavailable, using local recommendations only');
+        }
         
-        // Set featured recommendation (highest impact)
-        if (newRecommendations.length > 0) {
-          setFeaturedRecommendation(newRecommendations[0]);
+        // Combine local and AI recommendations
+        const combinedRecommendations = [...aiRecommendations, ...localRecommendations];
+        setRecommendations(combinedRecommendations);
+        
+        // Set featured recommendation (prioritize AI recommendations)
+        if (combinedRecommendations.length > 0) {
+          setFeaturedRecommendation(combinedRecommendations[0]);
         } else {
           setFeaturedRecommendation(null);
         }

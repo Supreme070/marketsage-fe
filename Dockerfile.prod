@@ -8,21 +8,27 @@ WORKDIR /app
 # Copy package files
 COPY package.json package-lock.json* ./
 
-# Install dependencies with proper glibc support for ARM64
+# Install dependencies with proper glibc support for ARM64 and robust networking
 RUN apk update && \
     apk add --no-cache --virtual .build-deps libc6-compat python3 make g++ && \
-    apk add --no-cache postgresql-client && \
-    # Add glibc for ARM64 compatibility
-    wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub && \
-    wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.35-r1/glibc-2.35-r1.apk && \
-    wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.35-r1/glibc-bin-2.35-r1.apk && \
-    apk add --no-cache glibc-2.35-r1.apk glibc-bin-2.35-r1.apk || true && \
-    rm -f glibc-*.apk && \
+    apk add --no-cache postgresql-client curl wget && \
+    # Test network connectivity
+    echo "Testing network connectivity..." && \
+    curl -f https://registry.npmjs.org/ || echo "Registry check failed, continuing anyway..." && \
+    # Configure npm for better network handling
     npm config set fetch-timeout 600000 && \
     npm config set fetch-retry-mintimeout 20000 && \
     npm config set fetch-retry-maxtimeout 120000 && \
     npm config set fetch-retries 5 && \
-    npm ci --only=production && \
+    npm config set registry https://registry.npmjs.org/ && \
+    npm config set maxsockets 1 && \
+    # Install all dependencies (including dev deps for Prisma) with retries
+    echo "Installing dependencies..." && \
+    (npm ci --cache /tmp/.npm --progress=false || \
+     (echo "Retry 1 after 10s..." && sleep 10 && npm ci --cache /tmp/.npm --progress=false) || \
+     (echo "Retry 2 after 20s..." && sleep 20 && npm ci --cache /tmp/.npm --progress=false) || \
+     (echo "Final attempt with clean cache..." && npm cache clean --force && npm ci --progress=false)) && \
+    echo "Dependencies installed successfully" && \
     apk del .build-deps
 
 # Rebuild the source code only when needed
@@ -46,8 +52,8 @@ ENV DATABASE_URL=${DATABASE_URL}
 ENV BUILDING=true
 ENV SKIP_DATABASE_CONNECTION=true
 
-# Reinstall and generate Prisma client before bcrypt rebuild
-RUN npm install @prisma/client prisma --save && \
+# Generate Prisma client (dependencies already installed from deps stage)
+RUN echo "Generating Prisma client..." && \
     npx prisma generate
 
 # Rebuild native binaries for Alpine Linux and handle ONNX gracefully

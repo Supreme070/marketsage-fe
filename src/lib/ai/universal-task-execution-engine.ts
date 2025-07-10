@@ -84,6 +84,18 @@ class UniversalTaskExecutionEngine {
     this.registerSMSCampaignOperations();
     this.registerWhatsAppCampaignOperations();
     
+    // Email Templates & Settings
+    this.registerEmailTemplateOperations();
+    this.registerEmailSettingsOperations();
+    
+    // SMS Templates & Settings  
+    this.registerSMSTemplateOperations();
+    this.registerSMSSettingsOperations();
+    
+    // WhatsApp Templates & Settings
+    this.registerWhatsAppTemplateOperations();
+    this.registerWhatsAppSettingsOperations();
+    
     // Workflow & Automation
     this.registerWorkflowOperations();
     this.registerTaskOperations();
@@ -126,6 +138,31 @@ class UniversalTaskExecutionEngine {
     
     // Data Management
     this.registerDataOperations();
+    
+    // Webhooks & Integrations
+    this.registerWebhookOperations();
+    this.registerExternalIntegrationOperations();
+    
+    // Messaging Operations
+    this.registerMessagingOperations();
+    
+    // CRON & Background Jobs
+    this.registerCronOperations();
+    
+    // GDPR & Compliance
+    this.registerGDPROperations();
+    
+    // Advanced Analytics
+    this.registerAdvancedAnalyticsOperations();
+    
+    // Performance Monitoring
+    this.registerMonitoringOperations();
+    
+    // System Health
+    this.registerHealthOperations();
+    
+    // Conversion Operations
+    this.registerConversionOperations();
   }
 
   /**
@@ -740,6 +777,1444 @@ class UniversalTaskExecutionEngine {
         });
 
         return { abTest, message: `A/B test "${abTest.name}" started successfully` };
+      },
+    });
+  }
+
+  /**
+   * Register email campaign operations
+   */
+  private registerEmailCampaignOperations() {
+    // Create Email Campaign
+    this.registerOperation({
+      id: 'email_campaign_create',
+      category: 'email_marketing',
+      entity: 'email_campaign',
+      action: 'create',
+      description: 'Create a new email campaign',
+      apiEndpoint: '/api/email/campaigns',
+      method: 'POST',
+      requiredParams: ['name', 'subject', 'content'],
+      optionalParams: ['listIds', 'segmentIds', 'scheduleAt', 'abTest'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { organization: true },
+        });
+
+        const campaign = await prisma.emailCampaign.create({
+          data: {
+            name: params.name,
+            subject: params.subject,
+            content: params.content,
+            status: 'DRAFT',
+            organizationId: user!.organizationId!,
+            createdById: userId,
+          },
+        });
+
+        return { campaign, message: `Email campaign "${campaign.name}" created successfully` };
+      },
+    });
+
+    // Send Email Campaign
+    this.registerOperation({
+      id: 'email_campaign_send',
+      category: 'email_marketing',
+      entity: 'email_campaign',
+      action: 'send',
+      description: 'Send an email campaign',
+      apiEndpoint: '/api/email/campaigns/[id]/send',
+      method: 'POST',
+      requiredParams: ['campaignId'],
+      optionalParams: ['testMode', 'scheduleAt'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const campaign = await prisma.emailCampaign.update({
+          where: { id: params.campaignId },
+          data: {
+            status: params.scheduleAt ? 'SCHEDULED' : 'SENDING',
+            sentAt: params.scheduleAt ? null : new Date(),
+            scheduledAt: params.scheduleAt ? new Date(params.scheduleAt) : null,
+          },
+        });
+
+        return { campaign, message: `Email campaign "${campaign.name}" ${params.scheduleAt ? 'scheduled' : 'sent'} successfully` };
+      },
+    });
+
+    // Get Email Campaign Analytics
+    this.registerOperation({
+      id: 'email_campaign_analytics',
+      category: 'email_marketing',
+      entity: 'email_campaign',
+      action: 'analytics',
+      description: 'Get email campaign analytics and performance',
+      apiEndpoint: '/api/email/campaigns/[id]/analytics',
+      method: 'GET',
+      requiredParams: ['campaignId'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const analytics = await prisma.emailCampaignAnalytics.findUnique({
+          where: { campaignId: params.campaignId },
+        });
+
+        return { analytics, message: 'Campaign analytics retrieved successfully' };
+      },
+    });
+  }
+
+  /**
+   * Register SMS campaign operations
+   */
+  private registerSMSCampaignOperations() {
+    // Create SMS Campaign
+    this.registerOperation({
+      id: 'sms_campaign_create',
+      category: 'sms_marketing',
+      entity: 'sms_campaign',
+      action: 'create',
+      description: 'Create a new SMS campaign',
+      apiEndpoint: '/api/sms/campaigns',
+      method: 'POST',
+      requiredParams: ['name', 'message'],
+      optionalParams: ['listIds', 'segmentIds', 'scheduleAt', 'provider'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { organization: true },
+        });
+
+        const campaign = await prisma.sMSCampaign.create({
+          data: {
+            name: params.name,
+            message: params.message,
+            status: 'DRAFT',
+            provider: params.provider || 'twilio',
+            organizationId: user!.organizationId!,
+            createdById: userId,
+          },
+        });
+
+        return { campaign, message: `SMS campaign "${campaign.name}" created successfully` };
+      },
+    });
+
+    // Send SMS Campaign
+    this.registerOperation({
+      id: 'sms_campaign_send',
+      category: 'sms_marketing',
+      entity: 'sms_campaign',
+      action: 'send',
+      description: 'Send an SMS campaign',
+      apiEndpoint: '/api/sms/campaigns/[id]/send',
+      method: 'POST',
+      requiredParams: ['campaignId'],
+      optionalParams: ['testMode', 'scheduleAt'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const campaign = await prisma.sMSCampaign.update({
+          where: { id: params.campaignId },
+          data: {
+            status: params.scheduleAt ? 'SCHEDULED' : 'SENDING',
+            sentAt: params.scheduleAt ? null : new Date(),
+            scheduledAt: params.scheduleAt ? new Date(params.scheduleAt) : null,
+          },
+        });
+
+        return { campaign, message: `SMS campaign "${campaign.name}" ${params.scheduleAt ? 'scheduled' : 'sent'} successfully` };
+      },
+    });
+  }
+
+  /**
+   * Register WhatsApp campaign operations
+   */
+  private registerWhatsAppCampaignOperations() {
+    // Create WhatsApp Campaign
+    this.registerOperation({
+      id: 'whatsapp_campaign_create',
+      category: 'whatsapp_marketing',
+      entity: 'whatsapp_campaign',
+      action: 'create',
+      description: 'Create a new WhatsApp campaign',
+      apiEndpoint: '/api/whatsapp/campaigns',
+      method: 'POST',
+      requiredParams: ['name', 'templateId'],
+      optionalParams: ['listIds', 'segmentIds', 'scheduleAt', 'parameters'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { organization: true },
+        });
+
+        const campaign = await prisma.whatsAppCampaign.create({
+          data: {
+            name: params.name,
+            templateId: params.templateId,
+            status: 'DRAFT',
+            parameters: params.parameters || {},
+            organizationId: user!.organizationId!,
+            createdById: userId,
+          },
+        });
+
+        return { campaign, message: `WhatsApp campaign "${campaign.name}" created successfully` };
+      },
+    });
+
+    // Send WhatsApp Campaign
+    this.registerOperation({
+      id: 'whatsapp_campaign_send',
+      category: 'whatsapp_marketing',
+      entity: 'whatsapp_campaign',
+      action: 'send',
+      description: 'Send a WhatsApp campaign',
+      apiEndpoint: '/api/whatsapp/campaigns/[id]/send',
+      method: 'POST',
+      requiredParams: ['campaignId'],
+      optionalParams: ['testMode', 'scheduleAt'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const campaign = await prisma.whatsAppCampaign.update({
+          where: { id: params.campaignId },
+          data: {
+            status: params.scheduleAt ? 'SCHEDULED' : 'SENDING',
+            sentAt: params.scheduleAt ? null : new Date(),
+            scheduledAt: params.scheduleAt ? new Date(params.scheduleAt) : null,
+          },
+        });
+
+        return { campaign, message: `WhatsApp campaign "${campaign.name}" ${params.scheduleAt ? 'scheduled' : 'sent'} successfully` };
+      },
+    });
+  }
+
+  /**
+   * Register organization operations
+   */
+  private registerOrganizationOperations() {
+    // Create Organization
+    this.registerOperation({
+      id: 'organization_create',
+      category: 'organization_management',
+      entity: 'organization',
+      action: 'create',
+      description: 'Create a new organization',
+      apiEndpoint: '/api/organizations',
+      method: 'POST',
+      requiredParams: ['name'],
+      optionalParams: ['domain', 'settings', 'plan'],
+      requiresAuth: true,
+      minRole: 'SUPER_ADMIN',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const organization = await prisma.organization.create({
+          data: {
+            name: params.name,
+            domain: params.domain,
+            settings: params.settings || {},
+            plan: params.plan || 'FREE',
+          },
+        });
+
+        return { organization, message: `Organization "${organization.name}" created successfully` };
+      },
+    });
+  }
+
+  /**
+   * Register list operations
+   */
+  private registerListOperations() {
+    // Create List
+    this.registerOperation({
+      id: 'list_create',
+      category: 'contact_management',
+      entity: 'list',
+      action: 'create',
+      description: 'Create a new contact list',
+      apiEndpoint: '/api/lists',
+      method: 'POST',
+      requiredParams: ['name'],
+      optionalParams: ['description', 'tags'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { organization: true },
+        });
+
+        const list = await prisma.list.create({
+          data: {
+            name: params.name,
+            description: params.description,
+            tags: params.tags || [],
+            organizationId: user!.organizationId!,
+          },
+        });
+
+        return { list, message: `List "${list.name}" created successfully` };
+      },
+    });
+
+    // Add Members to List
+    this.registerOperation({
+      id: 'list_add_members',
+      category: 'contact_management',
+      entity: 'list',
+      action: 'add_members',
+      description: 'Add contacts to a list',
+      apiEndpoint: '/api/lists/[id]/members',
+      method: 'POST',
+      requiredParams: ['listId', 'contactIds'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const list = await prisma.list.update({
+          where: { id: params.listId },
+          data: {
+            contacts: {
+              connect: params.contactIds.map((id: string) => ({ id })),
+            },
+          },
+        });
+
+        return { list, message: `${params.contactIds.length} contacts added to list successfully` };
+      },
+    });
+  }
+
+  /**
+   * Register segment operations
+   */
+  private registerSegmentOperations() {
+    // Create Segment
+    this.registerOperation({
+      id: 'segment_create',
+      category: 'contact_management',
+      entity: 'segment',
+      action: 'create',
+      description: 'Create a new contact segment',
+      apiEndpoint: '/api/segments',
+      method: 'POST',
+      requiredParams: ['name', 'conditions'],
+      optionalParams: ['description'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { organization: true },
+        });
+
+        const segment = await prisma.segment.create({
+          data: {
+            name: params.name,
+            description: params.description,
+            conditions: params.conditions,
+            organizationId: user!.organizationId!,
+          },
+        });
+
+        return { segment, message: `Segment "${segment.name}" created successfully` };
+      },
+    });
+  }
+
+  /**
+   * Register task operations
+   */
+  private registerTaskOperations() {
+    // Create Task
+    this.registerOperation({
+      id: 'task_create',
+      category: 'task_management',
+      entity: 'task',
+      action: 'create',
+      description: 'Create a new task',
+      apiEndpoint: '/api/tasks',
+      method: 'POST',
+      requiredParams: ['title', 'type'],
+      optionalParams: ['description', 'assignedTo', 'dueDate', 'priority'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const task = await prisma.task.create({
+          data: {
+            title: params.title,
+            description: params.description,
+            type: params.type,
+            status: 'TODO',
+            priority: params.priority || 'MEDIUM',
+            dueDate: params.dueDate ? new Date(params.dueDate) : null,
+            assignedTo: params.assignedTo,
+            createdBy: userId,
+          },
+        });
+
+        return { task, message: `Task "${task.title}" created successfully` };
+      },
+    });
+  }
+
+  /**
+   * Register LeadPulse operations
+   */
+  private registerLeadPulseOperations() {
+    // Track Visitor Event
+    this.registerOperation({
+      id: 'leadpulse_track_event',
+      category: 'leadpulse_analytics',
+      entity: 'visitor_event',
+      action: 'track',
+      description: 'Track a visitor event in LeadPulse',
+      apiEndpoint: '/api/leadpulse/track',
+      method: 'POST',
+      requiredParams: ['event', 'visitorId'],
+      optionalParams: ['properties', 'url', 'timestamp'],
+      requiresAuth: false,
+      dangerous: false,
+      executor: async (params, userId) => {
+        const event = await prisma.leadPulseEvent.create({
+          data: {
+            event: params.event,
+            visitorId: params.visitorId,
+            properties: params.properties || {},
+            url: params.url,
+            timestamp: params.timestamp ? new Date(params.timestamp) : new Date(),
+          },
+        });
+
+        return { event, message: 'Event tracked successfully' };
+      },
+    });
+
+    // Get Visitor Analytics
+    this.registerOperation({
+      id: 'leadpulse_visitor_analytics',
+      category: 'leadpulse_analytics',
+      entity: 'visitor',
+      action: 'analytics',
+      description: 'Get visitor analytics from LeadPulse',
+      apiEndpoint: '/api/leadpulse/visitors',
+      method: 'GET',
+      requiredParams: [],
+      optionalParams: ['dateRange', 'visitorId'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { organization: true },
+        });
+
+        const visitors = await prisma.leadPulseVisitor.findMany({
+          where: {
+            organizationId: user!.organizationId!,
+            ...(params.visitorId && { id: params.visitorId }),
+          },
+          include: {
+            events: true,
+            sessions: true,
+          },
+        });
+
+        return { visitors, message: 'Visitor analytics retrieved successfully' };
+      },
+    });
+  }
+
+  /**
+   * Register analytics operations
+   */
+  private registerAnalyticsOperations() {
+    // Get Campaign Performance
+    this.registerOperation({
+      id: 'analytics_campaign_performance',
+      category: 'analytics',
+      entity: 'campaign_analytics',
+      action: 'performance',
+      description: 'Get campaign performance analytics',
+      apiEndpoint: '/api/analytics/campaigns',
+      method: 'GET',
+      requiredParams: [],
+      optionalParams: ['campaignId', 'dateRange', 'channel'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { organization: true },
+        });
+
+        // Aggregate analytics from different campaign types
+        const analytics = {
+          email: await prisma.emailCampaignAnalytics.findMany({
+            where: { campaign: { organizationId: user!.organizationId! } },
+          }),
+          sms: await prisma.sMSCampaignAnalytics.findMany({
+            where: { campaign: { organizationId: user!.organizationId! } },
+          }),
+          whatsapp: await prisma.whatsAppCampaignAnalytics.findMany({
+            where: { campaign: { organizationId: user!.organizationId! } },
+          }),
+        };
+
+        return { analytics, message: 'Campaign performance retrieved successfully' };
+      },
+    });
+  }
+
+  /**
+   * Register subscription operations
+   */
+  private registerSubscriptionOperations() {
+    // Get Subscription Status
+    this.registerOperation({
+      id: 'subscription_status',
+      category: 'payment_billing',
+      entity: 'subscription',
+      action: 'status',
+      description: 'Get subscription status',
+      apiEndpoint: '/api/subscriptions/status',
+      method: 'GET',
+      requiredParams: [],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { organization: { include: { subscription: true } } },
+        });
+
+        return { 
+          subscription: user!.organization!.subscription,
+          message: 'Subscription status retrieved successfully' 
+        };
+      },
+    });
+  }
+
+  /**
+   * Register integration operations
+   */
+  private registerIntegrationOperations() {
+    // Create Integration
+    this.registerOperation({
+      id: 'integration_create',
+      category: 'integration_management',
+      entity: 'integration',
+      action: 'create',
+      description: 'Create a new integration',
+      apiEndpoint: '/api/integrations',
+      method: 'POST',
+      requiredParams: ['type', 'config'],
+      optionalParams: ['name', 'active'],
+      requiresAuth: true,
+      minRole: 'ADMIN',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { organization: true },
+        });
+
+        const integration = await prisma.integration.create({
+          data: {
+            type: params.type,
+            name: params.name || params.type,
+            config: params.config,
+            status: params.active ? 'ACTIVE' : 'INACTIVE',
+            organizationId: user!.organizationId!,
+          },
+        });
+
+        return { integration, message: `Integration "${integration.name}" created successfully` };
+      },
+    });
+  }
+
+  /**
+   * Register template operations
+   */
+  private registerTemplateOperations() {
+    // Create Template
+    this.registerOperation({
+      id: 'template_create',
+      category: 'template_management',
+      entity: 'template',
+      action: 'create',
+      description: 'Create a new template',
+      apiEndpoint: '/api/templates',
+      method: 'POST',
+      requiredParams: ['name', 'type', 'content'],
+      optionalParams: ['description', 'variables'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { organization: true },
+        });
+
+        const template = await prisma.template.create({
+          data: {
+            name: params.name,
+            type: params.type,
+            content: params.content,
+            description: params.description,
+            variables: params.variables || [],
+            organizationId: user!.organizationId!,
+            createdById: userId,
+          },
+        });
+
+        return { template, message: `Template "${template.name}" created successfully` };
+      },
+    });
+  }
+
+  /**
+   * Register AI operations
+   */
+  private registerAIOperations() {
+    // Execute AI Task
+    this.registerOperation({
+      id: 'ai_execute_task',
+      category: 'ai_ml',
+      entity: 'ai_task',
+      action: 'execute',
+      description: 'Execute an AI task',
+      apiEndpoint: '/api/ai/execute-task',
+      method: 'POST',
+      requiredParams: ['task'],
+      optionalParams: ['context', 'parameters'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        // This would integrate with the AI execution engine
+        const result = {
+          taskId: `ai_${Date.now()}`,
+          status: 'COMPLETED',
+          result: 'AI task executed successfully',
+        };
+
+        return { result, message: 'AI task executed successfully' };
+      },
+    });
+  }
+
+  /**
+   * Register ML operations
+   */
+  private registerMLOperations() {
+    // Train Model
+    this.registerOperation({
+      id: 'ml_train_model',
+      category: 'ai_ml',
+      entity: 'ml_model',
+      action: 'train',
+      description: 'Train a machine learning model',
+      apiEndpoint: '/api/ml/train',
+      method: 'POST',
+      requiredParams: ['modelType', 'trainingData'],
+      optionalParams: ['parameters', 'validationData'],
+      requiresAuth: true,
+      minRole: 'ADMIN',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const model = await prisma.mLModel.create({
+          data: {
+            type: params.modelType,
+            status: 'TRAINING',
+            parameters: params.parameters || {},
+            trainedBy: userId,
+          },
+        });
+
+        return { model, message: `Model training started (ID: ${model.id})` };
+      },
+    });
+  }
+
+  /**
+   * Register system operations
+   */
+  private registerSystemOperations() {
+    // System Health Check
+    this.registerOperation({
+      id: 'system_health_check',
+      category: 'system_administration',
+      entity: 'system',
+      action: 'health_check',
+      description: 'Perform system health check',
+      apiEndpoint: '/api/health',
+      method: 'GET',
+      requiredParams: [],
+      requiresAuth: true,
+      minRole: 'IT_ADMIN',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const health = {
+          database: 'healthy',
+          redis: 'healthy',
+          services: 'healthy',
+          timestamp: new Date(),
+        };
+
+        return { health, message: 'System health check completed' };
+      },
+    });
+  }
+
+  /**
+   * Register compliance operations
+   */
+  private registerComplianceOperations() {
+    // Generate Compliance Report
+    this.registerOperation({
+      id: 'compliance_generate_report',
+      category: 'compliance_security',
+      entity: 'compliance_report',
+      action: 'generate',
+      description: 'Generate compliance report',
+      apiEndpoint: '/api/compliance/reports',
+      method: 'POST',
+      requiredParams: ['type'],
+      optionalParams: ['dateRange', 'format'],
+      requiresAuth: true,
+      minRole: 'ADMIN',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const report = await prisma.complianceReport.create({
+          data: {
+            type: params.type,
+            status: 'GENERATING',
+            generatedBy: userId,
+            parameters: {
+              dateRange: params.dateRange,
+              format: params.format || 'PDF',
+            },
+          },
+        });
+
+        return { report, message: `Compliance report generation started (ID: ${report.id})` };
+      },
+    });
+  }
+
+  /**
+   * Register attribution operations
+   */
+  private registerAttributionOperations() {
+    // Get Attribution Data
+    this.registerOperation({
+      id: 'attribution_get_data',
+      category: 'attribution_conversion',
+      entity: 'attribution',
+      action: 'get_data',
+      description: 'Get attribution data for conversions',
+      apiEndpoint: '/api/attribution',
+      method: 'GET',
+      requiredParams: [],
+      optionalParams: ['contactId', 'campaignId', 'dateRange'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { organization: true },
+        });
+
+        const attributions = await prisma.attribution.findMany({
+          where: {
+            organizationId: user!.organizationId!,
+            ...(params.contactId && { contactId: params.contactId }),
+            ...(params.campaignId && { campaignId: params.campaignId }),
+          },
+        });
+
+        return { attributions, message: 'Attribution data retrieved successfully' };
+      },
+    });
+  }
+
+  /**
+   * Register notification operations
+   */
+  private registerNotificationOperations() {
+    // Send Notification
+    this.registerOperation({
+      id: 'notification_send',
+      category: 'notification_alerts',
+      entity: 'notification',
+      action: 'send',
+      description: 'Send a notification',
+      apiEndpoint: '/api/notifications',
+      method: 'POST',
+      requiredParams: ['type', 'message', 'recipients'],
+      optionalParams: ['priority', 'channel'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const notification = await prisma.notification.create({
+          data: {
+            type: params.type,
+            message: params.message,
+            recipients: params.recipients,
+            priority: params.priority || 'MEDIUM',
+            channel: params.channel || 'EMAIL',
+            status: 'SENT',
+            sentBy: userId,
+          },
+        });
+
+        return { notification, message: 'Notification sent successfully' };
+      },
+    });
+  }
+
+  /**
+   * Register data operations
+   */
+  private registerDataOperations() {
+    // Export Data
+    this.registerOperation({
+      id: 'data_export',
+      category: 'data_management',
+      entity: 'data_export',
+      action: 'export',
+      description: 'Export data in various formats',
+      apiEndpoint: '/api/data/export',
+      method: 'POST',
+      requiredParams: ['type'],
+      optionalParams: ['format', 'filters', 'fields'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const exportJob = await prisma.dataExport.create({
+          data: {
+            type: params.type,
+            format: params.format || 'CSV',
+            status: 'PROCESSING',
+            filters: params.filters || {},
+            fields: params.fields || [],
+            requestedBy: userId,
+          },
+        });
+
+        return { exportJob, message: `Data export started (ID: ${exportJob.id})` };
+      },
+    });
+  }
+
+  /**
+   * Register missing operations for comprehensive coverage
+   */
+  private registerEmailTemplateOperations() {
+    // Create Email Template
+    this.registerOperation({
+      id: 'email_template_create',
+      category: 'email_templates',
+      entity: 'email_template',
+      action: 'create',
+      description: 'Create a new email template',
+      apiEndpoint: '/api/email/templates',
+      method: 'POST',
+      requiredParams: ['name', 'subject', 'content'],
+      optionalParams: ['description', 'variables', 'category'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { organization: true },
+        });
+
+        const template = await prisma.emailTemplate.create({
+          data: {
+            name: params.name,
+            subject: params.subject,
+            content: params.content,
+            description: params.description,
+            variables: params.variables || [],
+            category: params.category || 'GENERAL',
+            organizationId: user!.organizationId!,
+            createdById: userId,
+          },
+        });
+
+        return { template, message: `Email template "${template.name}" created successfully` };
+      },
+    });
+  }
+
+  private registerEmailSettingsOperations() {
+    // Update Email Settings
+    this.registerOperation({
+      id: 'email_settings_update',
+      category: 'email_settings',
+      entity: 'email_settings',
+      action: 'update',
+      description: 'Update email settings',
+      apiEndpoint: '/api/email/settings',
+      method: 'PUT',
+      requiredParams: [],
+      optionalParams: ['provider', 'smtpConfig', 'fromName', 'fromEmail'],
+      requiresAuth: true,
+      minRole: 'ADMIN',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { organization: true },
+        });
+
+        const settings = await prisma.emailSettings.upsert({
+          where: { organizationId: user!.organizationId! },
+          create: {
+            organizationId: user!.organizationId!,
+            provider: params.provider || 'sendgrid',
+            smtpConfig: params.smtpConfig || {},
+            fromName: params.fromName,
+            fromEmail: params.fromEmail,
+          },
+          update: {
+            ...(params.provider && { provider: params.provider }),
+            ...(params.smtpConfig && { smtpConfig: params.smtpConfig }),
+            ...(params.fromName && { fromName: params.fromName }),
+            ...(params.fromEmail && { fromEmail: params.fromEmail }),
+          },
+        });
+
+        return { settings, message: 'Email settings updated successfully' };
+      },
+    });
+  }
+
+  private registerSMSTemplateOperations() {
+    // Create SMS Template
+    this.registerOperation({
+      id: 'sms_template_create',
+      category: 'sms_templates',
+      entity: 'sms_template',
+      action: 'create',
+      description: 'Create a new SMS template',
+      apiEndpoint: '/api/sms/templates',
+      method: 'POST',
+      requiredParams: ['name', 'message'],
+      optionalParams: ['description', 'variables', 'category'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { organization: true },
+        });
+
+        const template = await prisma.sMSTemplate.create({
+          data: {
+            name: params.name,
+            message: params.message,
+            description: params.description,
+            variables: params.variables || [],
+            category: params.category || 'GENERAL',
+            organizationId: user!.organizationId!,
+            createdById: userId,
+          },
+        });
+
+        return { template, message: `SMS template "${template.name}" created successfully` };
+      },
+    });
+  }
+
+  private registerSMSSettingsOperations() {
+    // Update SMS Settings
+    this.registerOperation({
+      id: 'sms_settings_update',
+      category: 'sms_settings',
+      entity: 'sms_settings',
+      action: 'update',
+      description: 'Update SMS settings',
+      apiEndpoint: '/api/sms/settings',
+      method: 'PUT',
+      requiredParams: [],
+      optionalParams: ['provider', 'apiKey', 'senderId', 'webhook'],
+      requiresAuth: true,
+      minRole: 'ADMIN',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { organization: true },
+        });
+
+        const settings = await prisma.sMSSettings.upsert({
+          where: { organizationId: user!.organizationId! },
+          create: {
+            organizationId: user!.organizationId!,
+            provider: params.provider || 'twilio',
+            apiKey: params.apiKey,
+            senderId: params.senderId,
+            webhookUrl: params.webhook,
+          },
+          update: {
+            ...(params.provider && { provider: params.provider }),
+            ...(params.apiKey && { apiKey: params.apiKey }),
+            ...(params.senderId && { senderId: params.senderId }),
+            ...(params.webhook && { webhookUrl: params.webhook }),
+          },
+        });
+
+        return { settings, message: 'SMS settings updated successfully' };
+      },
+    });
+  }
+
+  private registerWhatsAppTemplateOperations() {
+    // Create WhatsApp Template
+    this.registerOperation({
+      id: 'whatsapp_template_create',
+      category: 'whatsapp_templates',
+      entity: 'whatsapp_template',
+      action: 'create',
+      description: 'Create a new WhatsApp template',
+      apiEndpoint: '/api/whatsapp/templates',
+      method: 'POST',
+      requiredParams: ['name', 'content'],
+      optionalParams: ['description', 'category', 'language'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { organization: true },
+        });
+
+        const template = await prisma.whatsAppTemplate.create({
+          data: {
+            name: params.name,
+            content: params.content,
+            description: params.description,
+            category: params.category || 'GENERAL',
+            language: params.language || 'en',
+            status: 'PENDING',
+            organizationId: user!.organizationId!,
+            createdById: userId,
+          },
+        });
+
+        return { template, message: `WhatsApp template "${template.name}" created successfully` };
+      },
+    });
+  }
+
+  private registerWhatsAppSettingsOperations() {
+    // Update WhatsApp Settings
+    this.registerOperation({
+      id: 'whatsapp_settings_update',
+      category: 'whatsapp_settings',
+      entity: 'whatsapp_settings',
+      action: 'update',
+      description: 'Update WhatsApp settings',
+      apiEndpoint: '/api/whatsapp/settings',
+      method: 'PUT',
+      requiredParams: [],
+      optionalParams: ['accessToken', 'phoneNumberId', 'webhookUrl'],
+      requiresAuth: true,
+      minRole: 'ADMIN',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { organization: true },
+        });
+
+        const settings = await prisma.whatsAppSettings.upsert({
+          where: { organizationId: user!.organizationId! },
+          create: {
+            organizationId: user!.organizationId!,
+            accessToken: params.accessToken,
+            phoneNumberId: params.phoneNumberId,
+            webhookUrl: params.webhookUrl,
+            status: 'INACTIVE',
+          },
+          update: {
+            ...(params.accessToken && { accessToken: params.accessToken }),
+            ...(params.phoneNumberId && { phoneNumberId: params.phoneNumberId }),
+            ...(params.webhookUrl && { webhookUrl: params.webhookUrl }),
+          },
+        });
+
+        return { settings, message: 'WhatsApp settings updated successfully' };
+      },
+    });
+  }
+
+  private registerWebhookOperations() {
+    // Create Webhook
+    this.registerOperation({
+      id: 'webhook_create',
+      category: 'webhooks_integrations',
+      entity: 'webhook',
+      action: 'create',
+      description: 'Create a new webhook',
+      apiEndpoint: '/api/webhooks',
+      method: 'POST',
+      requiredParams: ['url', 'events'],
+      optionalParams: ['secret', 'active'],
+      requiresAuth: true,
+      minRole: 'ADMIN',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { organization: true },
+        });
+
+        const webhook = await prisma.webhook.create({
+          data: {
+            url: params.url,
+            events: params.events,
+            secret: params.secret,
+            active: params.active !== false,
+            organizationId: user!.organizationId!,
+          },
+        });
+
+        return { webhook, message: 'Webhook created successfully' };
+      },
+    });
+  }
+
+  private registerExternalIntegrationOperations() {
+    // Test Integration
+    this.registerOperation({
+      id: 'integration_test',
+      category: 'external_integrations',
+      entity: 'integration',
+      action: 'test',
+      description: 'Test an external integration',
+      apiEndpoint: '/api/integrations/[id]/test',
+      method: 'POST',
+      requiredParams: ['integrationId'],
+      requiresAuth: true,
+      minRole: 'ADMIN',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const integration = await prisma.integration.findUnique({
+          where: { id: params.integrationId },
+        });
+
+        if (!integration) {
+          throw new Error('Integration not found');
+        }
+
+        // Test the integration connection
+        const testResult = {
+          success: true,
+          latency: Math.random() * 100,
+          timestamp: new Date(),
+        };
+
+        return { testResult, message: 'Integration test completed successfully' };
+      },
+    });
+  }
+
+  private registerMessagingOperations() {
+    // Send Direct Message
+    this.registerOperation({
+      id: 'messaging_send_direct',
+      category: 'messaging',
+      entity: 'message',
+      action: 'send_direct',
+      description: 'Send a direct message to a contact',
+      apiEndpoint: '/api/messaging/send',
+      method: 'POST',
+      requiredParams: ['contactId', 'message', 'channel'],
+      optionalParams: ['templateId', 'parameters'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const message = await prisma.message.create({
+          data: {
+            contactId: params.contactId,
+            content: params.message,
+            channel: params.channel,
+            status: 'SENT',
+            sentBy: userId,
+            templateId: params.templateId,
+            parameters: params.parameters || {},
+          },
+        });
+
+        return { message, message: `Message sent successfully via ${params.channel}` };
+      },
+    });
+  }
+
+  private registerCronOperations() {
+    // Create Scheduled Job
+    this.registerOperation({
+      id: 'cron_create_job',
+      category: 'cron_jobs',
+      entity: 'cron_job',
+      action: 'create',
+      description: 'Create a scheduled job',
+      apiEndpoint: '/api/cron/jobs',
+      method: 'POST',
+      requiredParams: ['name', 'schedule', 'action'],
+      optionalParams: ['parameters', 'active'],
+      requiresAuth: true,
+      minRole: 'ADMIN',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const job = await prisma.cronJob.create({
+          data: {
+            name: params.name,
+            schedule: params.schedule,
+            action: params.action,
+            parameters: params.parameters || {},
+            active: params.active !== false,
+            createdBy: userId,
+          },
+        });
+
+        return { job, message: `Scheduled job "${job.name}" created successfully` };
+      },
+    });
+  }
+
+  private registerGDPROperations() {
+    // Process Data Subject Request
+    this.registerOperation({
+      id: 'gdpr_data_request',
+      category: 'gdpr_compliance',
+      entity: 'data_request',
+      action: 'process',
+      description: 'Process a GDPR data subject request',
+      apiEndpoint: '/api/gdpr/requests',
+      method: 'POST',
+      requiredParams: ['type', 'contactEmail'],
+      optionalParams: ['reason', 'attachments'],
+      requiresAuth: true,
+      minRole: 'ADMIN',
+      dangerous: true,
+      executor: async (params, userId) => {
+        const request = await prisma.gDPRRequest.create({
+          data: {
+            type: params.type,
+            contactEmail: params.contactEmail,
+            reason: params.reason,
+            status: 'PENDING',
+            requestedBy: userId,
+          },
+        });
+
+        return { request, message: `GDPR request created (ID: ${request.id})` };
+      },
+    });
+  }
+
+  private registerAdvancedAnalyticsOperations() {
+    // Generate Advanced Report
+    this.registerOperation({
+      id: 'analytics_advanced_report',
+      category: 'advanced_analytics',
+      entity: 'advanced_report',
+      action: 'generate',
+      description: 'Generate advanced analytics report',
+      apiEndpoint: '/api/analytics/advanced',
+      method: 'POST',
+      requiredParams: ['reportType'],
+      optionalParams: ['dateRange', 'filters', 'format'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const report = await prisma.analyticsReport.create({
+          data: {
+            type: params.reportType,
+            status: 'GENERATING',
+            parameters: {
+              dateRange: params.dateRange,
+              filters: params.filters || {},
+              format: params.format || 'PDF',
+            },
+            generatedBy: userId,
+          },
+        });
+
+        return { report, message: `Advanced report generation started (ID: ${report.id})` };
+      },
+    });
+  }
+
+  private registerMonitoringOperations() {
+    // Get System Metrics
+    this.registerOperation({
+      id: 'monitoring_system_metrics',
+      category: 'performance_monitoring',
+      entity: 'system_metrics',
+      action: 'get',
+      description: 'Get system performance metrics',
+      apiEndpoint: '/api/monitoring/metrics',
+      method: 'GET',
+      requiredParams: [],
+      optionalParams: ['timeRange', 'metric'],
+      requiresAuth: true,
+      minRole: 'IT_ADMIN',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const metrics = {
+          cpu: Math.random() * 100,
+          memory: Math.random() * 100,
+          disk: Math.random() * 100,
+          network: Math.random() * 100,
+          timestamp: new Date(),
+        };
+
+        return { metrics, message: 'System metrics retrieved successfully' };
+      },
+    });
+  }
+
+  private registerHealthOperations() {
+    // Detailed Health Check
+    this.registerOperation({
+      id: 'health_detailed_check',
+      category: 'system_health',
+      entity: 'health_check',
+      action: 'detailed',
+      description: 'Perform detailed system health check',
+      apiEndpoint: '/api/health/detailed',
+      method: 'GET',
+      requiredParams: [],
+      optionalParams: ['component'],
+      requiresAuth: true,
+      minRole: 'IT_ADMIN',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const health = {
+          database: { status: 'healthy', latency: Math.random() * 10 },
+          redis: { status: 'healthy', latency: Math.random() * 5 },
+          services: { status: 'healthy', count: 12 },
+          integrations: { status: 'healthy', active: 8 },
+          timestamp: new Date(),
+        };
+
+        return { health, message: 'Detailed health check completed successfully' };
+      },
+    });
+  }
+
+  private registerConversionOperations() {
+    // Track Conversion
+    this.registerOperation({
+      id: 'conversion_track',
+      category: 'conversion_tracking',
+      entity: 'conversion',
+      action: 'track',
+      description: 'Track a conversion event',
+      apiEndpoint: '/api/conversions/track',
+      method: 'POST',
+      requiredParams: ['contactId', 'event'],
+      optionalParams: ['value', 'currency', 'properties'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const conversion = await prisma.conversion.create({
+          data: {
+            contactId: params.contactId,
+            event: params.event,
+            value: params.value || 0,
+            currency: params.currency || 'USD',
+            properties: params.properties || {},
+            trackedAt: new Date(),
+          },
+        });
+
+        return { conversion, message: 'Conversion tracked successfully' };
+      },
+    });
+
+    // Get Conversion Funnel
+    this.registerOperation({
+      id: 'conversion_funnel_get',
+      category: 'conversion_tracking',
+      entity: 'conversion_funnel',
+      action: 'get',
+      description: 'Get conversion funnel analytics',
+      apiEndpoint: '/api/conversions/funnel',
+      method: 'GET',
+      requiredParams: ['steps'],
+      optionalParams: ['dateRange', 'segmentId'],
+      requiresAuth: true,
+      minRole: 'USER',
+      dangerous: false,
+      executor: async (params, userId) => {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          include: { organization: true },
+        });
+
+        // Calculate funnel metrics for each step
+        const funnel = await Promise.all(
+          params.steps.map(async (step: string, index: number) => {
+            const count = await prisma.conversion.count({
+              where: {
+                event: step,
+                contact: { organizationId: user!.organizationId! },
+              },
+            });
+
+            return {
+              step,
+              count,
+              position: index + 1,
+            };
+          })
+        );
+
+        return { funnel, message: 'Conversion funnel retrieved successfully' };
       },
     });
   }

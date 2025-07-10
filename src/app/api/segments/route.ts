@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Different filters based on user role
-    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN";
+    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN" || session.user.role === "IT_ADMIN";
     
     const segments = await prisma.segment.findMany({
       where: isAdmin 

@@ -1,4 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { validateAnalyticsQuery, createValidationErrorResponse } from '@/lib/leadpulse/validation';
+import { logger } from '@/lib/logger';
 
 interface TrafficData {
   date: string;
@@ -226,9 +228,44 @@ function generateABTestData(): ABTestData[] {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type') || 'all';
-    const timeRange = searchParams.get('timeRange') || '30d';
-    const page = searchParams.get('page');
+    
+    // Extract and validate query parameters
+    const queryParams = {
+      type: searchParams.get('type') || 'all',
+      timeRange: searchParams.get('timeRange') || '30d',
+      page: searchParams.get('page'),
+      pixelId: searchParams.get('pixelId'),
+      startDate: searchParams.get('startDate'),
+      endDate: searchParams.get('endDate'),
+      eventType: searchParams.get('eventType'),
+      groupBy: searchParams.get('groupBy'),
+      includeDetails: searchParams.get('includeDetails') === 'true',
+      limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : undefined,
+    };
+    
+    // Skip validation for simple analytics queries (traffic, heatmap, abtests)
+    const simpleQueryTypes = ['traffic', 'heatmap', 'abtests', 'all'];
+    const isSimpleQuery = simpleQueryTypes.includes(queryParams.type);
+    
+    if (!isSimpleQuery) {
+      // Only validate complex queries that require detailed parameters
+      const validation = validateAnalyticsQuery(queryParams);
+      if (!validation.success) {
+        logger.warn('Invalid analytics query parameters', {
+          ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+          userAgent: request.headers.get('user-agent'),
+          error: validation.error,
+          queryParams,
+        });
+        
+        return NextResponse.json(
+          createValidationErrorResponse(validation),
+          { status: 400 }
+        );
+      }
+    }
+    
+    const { type, timeRange, page } = queryParams;
     
     let response: any = { success: true };
     
@@ -322,7 +359,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response);
     
   } catch (error) {
-    console.error('Error fetching analytics:', error);
+    logger.error('Error fetching analytics', {
+      error,
+      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+      userAgent: request.headers.get('user-agent'),
+    });
+    
     return NextResponse.json(
       { success: false, error: 'Failed to fetch analytics data' },
       { status: 500 }
@@ -333,13 +375,97 @@ export async function GET(request: NextRequest) {
 // POST: Track new analytics event
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Parse and validate request body
+    let body: any;
+    try {
+      body = await request.json();
+    } catch (error) {
+      logger.warn('Invalid JSON in analytics tracking request', {
+        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+        userAgent: request.headers.get('user-agent'),
+      });
+      
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
+    
     const { type, data } = body;
+    
+    // Basic validation
+    if (!type || !data) {
+      logger.warn('Missing required fields in analytics event', {
+        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+        body,
+      });
+      
+      return NextResponse.json(
+        { error: 'Missing required fields: type and data' },
+        { status: 400 }
+      );
+    }
+    
+    // Validate event type
+    const validEventTypes = ['heatmap_interaction', 'conversion_event', 'abtest_conversion'];
+    if (!validEventTypes.includes(type)) {
+      logger.warn('Invalid analytics event type', {
+        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+        type,
+        validTypes: validEventTypes,
+      });
+      
+      return NextResponse.json(
+        { error: `Invalid event type. Valid types: ${validEventTypes.join(', ')}` },
+        { status: 400 }
+      );
+    }
     
     switch (type) {
       case 'heatmap_interaction':
-        // Add new heatmap interaction
+        // Validate heatmap interaction data
         const { pageUrl, x, y, interactionType } = data;
+        
+        if (!pageUrl || typeof x !== 'number' || typeof y !== 'number' || !interactionType) {
+          logger.warn('Invalid heatmap interaction data', {
+            ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+            data,
+          });
+          
+          return NextResponse.json(
+            { error: 'Invalid heatmap interaction data. Required: pageUrl, x, y, interactionType' },
+            { status: 400 }
+          );
+        }
+        
+        // Validate coordinate bounds
+        if (x < 0 || x > 100 || y < 0 || y > 100) {
+          logger.warn('Invalid coordinates in heatmap interaction', {
+            ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+            x, y,
+          });
+          
+          return NextResponse.json(
+            { error: 'Coordinates must be between 0 and 100' },
+            { status: 400 }
+          );
+        }
+        
+        // Validate interaction type
+        const validInteractionTypes = ['click', 'hover', 'scroll'];
+        if (!validInteractionTypes.includes(interactionType)) {
+          logger.warn('Invalid interaction type', {
+            ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+            interactionType,
+          });
+          
+          return NextResponse.json(
+            { error: `Invalid interaction type. Valid types: ${validInteractionTypes.join(', ')}` },
+            { status: 400 }
+          );
+        }
+        
+        // Add new heatmap interaction
         const pageData = analyticsDB.heatmap.find(h => h.pageUrl === pageUrl);
         
         if (pageData) {
@@ -366,6 +492,45 @@ export async function POST(request: NextRequest) {
         break;
         
       case 'conversion_event':
+        // Validate conversion event data
+        if (!data.eventType) {
+          logger.warn('Missing eventType in conversion event', {
+            ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+            data,
+          });
+          
+          return NextResponse.json(
+            { error: 'Missing eventType in conversion event data' },
+            { status: 400 }
+          );
+        }
+        
+        const validConversionTypes = ['application', 'sale'];
+        if (!validConversionTypes.includes(data.eventType)) {
+          logger.warn('Invalid conversion event type', {
+            ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+            eventType: data.eventType,
+          });
+          
+          return NextResponse.json(
+            { error: `Invalid conversion event type. Valid types: ${validConversionTypes.join(', ')}` },
+            { status: 400 }
+          );
+        }
+        
+        // Validate amount for sale events
+        if (data.eventType === 'sale' && (typeof data.amount !== 'number' || data.amount < 0)) {
+          logger.warn('Invalid sale amount', {
+            ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+            amount: data.amount,
+          });
+          
+          return NextResponse.json(
+            { error: 'Sale events must include a valid positive amount' },
+            { status: 400 }
+          );
+        }
+        
         // Add conversion to today's traffic data
         const today = new Date().toISOString().split('T')[0];
         const todayData = analyticsDB.traffic.find(t => t.date === today);
@@ -381,8 +546,22 @@ export async function POST(request: NextRequest) {
         break;
         
       case 'abtest_conversion':
-        // Track A/B test conversion
+        // Validate A/B test conversion data
         const { testId, variantId } = data;
+        
+        if (!testId || !variantId) {
+          logger.warn('Missing testId or variantId in A/B test conversion', {
+            ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+            data,
+          });
+          
+          return NextResponse.json(
+            { error: 'Missing testId or variantId in A/B test conversion data' },
+            { status: 400 }
+          );
+        }
+        
+        // Track A/B test conversion
         const test = analyticsDB.abtests.find(t => t.id === testId);
         
         if (test) {
@@ -410,7 +589,12 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Error tracking analytics event:', error);
+    logger.error('Error tracking analytics event', {
+      error,
+      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+      userAgent: request.headers.get('user-agent'),
+    });
+    
     return NextResponse.json(
       { success: false, error: 'Failed to track analytics event' },
       { status: 500 }
@@ -421,8 +605,51 @@ export async function POST(request: NextRequest) {
 // PUT: Update A/B test status
 export async function PUT(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Parse and validate request body
+    let body: any;
+    try {
+      body = await request.json();
+    } catch (error) {
+      logger.warn('Invalid JSON in A/B test update request', {
+        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+        userAgent: request.headers.get('user-agent'),
+      });
+      
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
+    
     const { testId, action, data: updateData } = body;
+    
+    // Validate required fields
+    if (!testId || !action) {
+      logger.warn('Missing required fields in A/B test update', {
+        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+        body,
+      });
+      
+      return NextResponse.json(
+        { error: 'Missing required fields: testId and action' },
+        { status: 400 }
+      );
+    }
+    
+    // Validate action type
+    const validActions = ['pause', 'resume', 'complete', 'add_traffic'];
+    if (!validActions.includes(action)) {
+      logger.warn('Invalid A/B test action', {
+        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+        action,
+        validActions,
+      });
+      
+      return NextResponse.json(
+        { error: `Invalid action. Valid actions: ${validActions.join(', ')}` },
+        { status: 400 }
+      );
+    }
     
     const test = analyticsDB.abtests.find(t => t.id === testId);
     
@@ -464,7 +691,12 @@ export async function PUT(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Error updating A/B test:', error);
+    logger.error('Error updating A/B test', {
+      error,
+      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+      userAgent: request.headers.get('user-agent'),
+    });
+    
     return NextResponse.json(
       { success: false, error: 'Failed to update A/B test' },
       { status: 500 }

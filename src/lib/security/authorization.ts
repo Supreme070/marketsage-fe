@@ -78,70 +78,97 @@ export enum Permission {
   MANAGE_API_KEYS = 'MANAGE_API_KEYS'
 }
 
+// Base permissions for each role
+const userPermissions = [
+  Permission.VIEW_USER,
+  Permission.UPDATE_USER, // Own profile only
+  Permission.CREATE_CONTACT,
+  Permission.UPDATE_CONTACT,
+  Permission.VIEW_CONTACT,
+  Permission.CREATE_CAMPAIGN,
+  Permission.UPDATE_CAMPAIGN,
+  Permission.VIEW_CAMPAIGN,
+  Permission.SEND_CAMPAIGN,
+  Permission.SCHEDULE_CAMPAIGN,
+  Permission.CREATE_TASK,
+  Permission.UPDATE_TASK,
+  Permission.VIEW_TASK,
+  Permission.CREATE_WORKFLOW,
+  Permission.UPDATE_WORKFLOW,
+  Permission.VIEW_WORKFLOW,
+  Permission.EXECUTE_WORKFLOW,
+  Permission.USE_AI_FEATURES,
+  Permission.VIEW_ANALYTICS,
+  Permission.EXPORT_DATA,
+  Permission.IMPORT_DATA
+];
+
+const adminPermissions = [
+  ...userPermissions,
+  Permission.DELETE_CONTACT,
+  Permission.BULK_CONTACT_OPERATIONS,
+  Permission.EXPORT_CONTACTS,
+  Permission.DELETE_CAMPAIGN,
+  Permission.DELETE_TASK,
+  Permission.ASSIGN_TASK,
+  Permission.DELETE_WORKFLOW,
+  Permission.EXECUTE_AI_TASKS,
+  Permission.DELETE_DATA,
+  Permission.MANAGE_INTEGRATIONS,
+  Permission.MANAGE_BILLING,
+  Permission.UPDATE_ORGANIZATION,
+  Permission.VIEW_ORGANIZATION,
+  Permission.MANAGE_ORGANIZATION_SETTINGS
+];
+
+const itAdminPermissions = [
+  ...adminPermissions,
+  Permission.CREATE_USER,
+  Permission.UPDATE_USER,
+  Permission.DELETE_USER,
+  Permission.VIEW_SYSTEM_LOGS,
+  Permission.MANAGE_SYSTEM_SETTINGS,
+  Permission.MANAGE_SECURITY_SETTINGS,
+  Permission.VIEW_SECURITY_LOGS,
+  Permission.MANAGE_API_KEYS,
+  Permission.CONFIGURE_AI_SETTINGS,
+  Permission.APPROVE_AI_OPERATIONS
+];
+
+const aiAgentPermissions = [
+  // AI Agent gets carefully selected permissions for autonomous operation
+  Permission.VIEW_USER,
+  Permission.CREATE_CONTACT,
+  Permission.UPDATE_CONTACT,
+  Permission.VIEW_CONTACT,
+  Permission.BULK_CONTACT_OPERATIONS,
+  Permission.CREATE_CAMPAIGN,
+  Permission.UPDATE_CAMPAIGN,
+  Permission.VIEW_CAMPAIGN,
+  Permission.SEND_CAMPAIGN,
+  Permission.SCHEDULE_CAMPAIGN,
+  Permission.CREATE_TASK,
+  Permission.UPDATE_TASK,
+  Permission.VIEW_TASK,
+  Permission.ASSIGN_TASK,
+  Permission.CREATE_WORKFLOW,
+  Permission.UPDATE_WORKFLOW,
+  Permission.VIEW_WORKFLOW,
+  Permission.EXECUTE_WORKFLOW,
+  Permission.USE_AI_FEATURES,
+  Permission.EXECUTE_AI_TASKS,
+  Permission.VIEW_ANALYTICS,
+  Permission.EXPORT_DATA,
+  Permission.IMPORT_DATA
+];
+
 // Role-based permission matrix
 const rolePermissions: Record<UserRole, Permission[]> = {
-  [UserRole.USER]: [
-    Permission.VIEW_USER,
-    Permission.UPDATE_USER, // Own profile only
-    Permission.CREATE_CONTACT,
-    Permission.UPDATE_CONTACT,
-    Permission.VIEW_CONTACT,
-    Permission.CREATE_CAMPAIGN,
-    Permission.UPDATE_CAMPAIGN,
-    Permission.VIEW_CAMPAIGN,
-    Permission.SEND_CAMPAIGN,
-    Permission.SCHEDULE_CAMPAIGN,
-    Permission.CREATE_TASK,
-    Permission.UPDATE_TASK,
-    Permission.VIEW_TASK,
-    Permission.CREATE_WORKFLOW,
-    Permission.UPDATE_WORKFLOW,
-    Permission.VIEW_WORKFLOW,
-    Permission.EXECUTE_WORKFLOW,
-    Permission.USE_AI_FEATURES,
-    Permission.VIEW_ANALYTICS,
-    Permission.EXPORT_DATA,
-    Permission.IMPORT_DATA
-  ],
-  
-  [UserRole.ADMIN]: [
-    // All USER permissions plus:
-    ...rolePermissions[UserRole.USER],
-    Permission.DELETE_CONTACT,
-    Permission.BULK_CONTACT_OPERATIONS,
-    Permission.EXPORT_CONTACTS,
-    Permission.DELETE_CAMPAIGN,
-    Permission.DELETE_TASK,
-    Permission.ASSIGN_TASK,
-    Permission.DELETE_WORKFLOW,
-    Permission.EXECUTE_AI_TASKS,
-    Permission.DELETE_DATA,
-    Permission.MANAGE_INTEGRATIONS,
-    Permission.MANAGE_BILLING,
-    Permission.UPDATE_ORGANIZATION,
-    Permission.VIEW_ORGANIZATION,
-    Permission.MANAGE_ORGANIZATION_SETTINGS
-  ],
-  
-  [UserRole.IT_ADMIN]: [
-    // All ADMIN permissions plus:
-    ...rolePermissions[UserRole.ADMIN],
-    Permission.CREATE_USER,
-    Permission.UPDATE_USER,
-    Permission.DELETE_USER,
-    Permission.VIEW_SYSTEM_LOGS,
-    Permission.MANAGE_SYSTEM_SETTINGS,
-    Permission.MANAGE_SECURITY_SETTINGS,
-    Permission.VIEW_SECURITY_LOGS,
-    Permission.MANAGE_API_KEYS,
-    Permission.CONFIGURE_AI_SETTINGS,
-    Permission.APPROVE_AI_OPERATIONS
-  ],
-  
-  [UserRole.SUPER_ADMIN]: [
-    // All permissions
-    ...Object.values(Permission)
-  ]
+  [UserRole.USER]: userPermissions,
+  [UserRole.ADMIN]: adminPermissions,
+  [UserRole.IT_ADMIN]: itAdminPermissions,
+  [UserRole.SUPER_ADMIN]: Object.values(Permission),
+  [UserRole.AI_AGENT]: aiAgentPermissions
 };
 
 // Resource ownership validation

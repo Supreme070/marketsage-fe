@@ -170,7 +170,7 @@ export async function PATCH(
     }
 
     // Only super admins or admins can change active status
-    if (isActive !== undefined && (session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN")) {
+    if (isActive !== undefined && (session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN" || session.user.role === "IT_ADMIN")) {
       updateData.isActive = isActive;
     }
 

@@ -62,53 +62,30 @@ export class LeadPulseQueryOptimizer {
     }
 
     try {
-      // Build optimized where clause
+      // Build optimized where clause using correct schema fields
       const where: any = {
-        userId,
-        ...(filters.dateFrom && { firstSeen: { gte: filters.dateFrom } }),
-        ...(filters.dateTo && { firstSeen: { lte: filters.dateTo } }),
-        ...(filters.status && { status: filters.status }),
-        ...(filters.source && { acquisitionSource: filters.source })
+        ...(filters.dateFrom && { firstVisit: { gte: filters.dateFrom } }),
+        ...(filters.dateTo && { firstVisit: { lte: filters.dateTo } }),
+        ...(filters.status && { isActive: filters.status === 'active' })
       };
 
-      // Add search functionality
+      // Add search functionality using available fields
       if (filters.search) {
         where.OR = [
-          { email: { contains: filters.search, mode: 'insensitive' } },
-          { company: { contains: filters.search, mode: 'insensitive' } },
-          { ipAddress: { contains: filters.search } }
+          { fingerprint: { contains: filters.search, mode: 'insensitive' } },
+          { city: { contains: filters.search, mode: 'insensitive' } },
+          { country: { contains: filters.search, mode: 'insensitive' } }
         ];
       }
 
       // Execute optimized queries in parallel
       const [visitors, totalCount] = await Promise.all([
+        // Optimized: First get visitors without includes to avoid N+1
         prisma.leadPulseVisitor.findMany({
           where,
-          include: {
-            touchpoints: {
-              select: {
-                id: true,
-                timestamp: true,
-                action: true,
-                url: true
-              },
-              orderBy: { timestamp: 'desc' },
-              take: 5 // Only recent touchpoints for list view
-            },
-            conversions: {
-              select: {
-                id: true,
-                type: true,
-                value: true,
-                timestamp: true
-              },
-              orderBy: { timestamp: 'desc' },
-              take: 3
-            }
-          },
           orderBy: [
-            { lastSeen: 'desc' },
-            { score: 'desc' }
+            { lastVisit: 'desc' },
+            { engagementScore: 'desc' }
           ],
           ...(enablePagination && {
             skip: (page - 1) * limit,
@@ -118,8 +95,45 @@ export class LeadPulseQueryOptimizer {
         prisma.leadPulseVisitor.count({ where })
       ]);
 
+      // Optimized: Fetch touchpoints separately to avoid N+1 queries
+      let touchpointsMap = new Map();
+      if (visitors.length > 0) {
+        const visitorIds = visitors.map(v => v.id);
+        const touchpoints = await prisma.leadPulseTouchpoint.findMany({
+          where: {
+            visitorId: { in: visitorIds }
+          },
+          select: {
+            id: true,
+            visitorId: true,
+            timestamp: true,
+            type: true,
+            url: true,
+            value: true
+          },
+          orderBy: { timestamp: 'desc' }
+        });
+
+        // Group touchpoints by visitor ID and limit to 5 per visitor
+        touchpoints.forEach(tp => {
+          if (!touchpointsMap.has(tp.visitorId)) {
+            touchpointsMap.set(tp.visitorId, []);
+          }
+          const visitorTouchpoints = touchpointsMap.get(tp.visitorId);
+          if (visitorTouchpoints.length < 5) {
+            visitorTouchpoints.push(tp);
+          }
+        });
+      }
+
+      // Add touchpoints to visitors
+      const visitorsWithTouchpoints = visitors.map(visitor => ({
+        ...visitor,
+        touchpoints: touchpointsMap.get(visitor.id) || []
+      }));
+
       const result = {
-        data: visitors,
+        data: visitorsWithTouchpoints,
         pagination: {
           page,
           limit,

@@ -8,15 +8,18 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Brain, Send, ArrowLeft, RotateCcw, Plus, Copy, ThumbsUp, ThumbsDown,
-  Sparkles, Zap, MessageSquare, Bot, User, Loader2, Settings
+  Sparkles, Zap, MessageSquare, Bot, User, Loader2, Settings, BarChart3
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSupremeAI } from '@/hooks/useSupremeAI';
+import { MarkdownRenderer } from '@/components/ai/MarkdownRenderer';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 export default function AIChatPage() {
   const [chatInput, setChatInput] = useState('');
+  const [showMetrics, setShowMetrics] = useState(false);
+  const [streamingEnabled, setStreamingEnabled] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -35,7 +38,7 @@ export default function AIChatPage() {
     if (!chatInput.trim() || aiChat.isLoading) return;
     
     try {
-      await aiChat.sendMessage(chatInput);
+      await aiChat.sendMessage(chatInput, streamingEnabled);
       setChatInput('');
       // Reset textarea height
       if (textareaRef.current) {
@@ -64,6 +67,32 @@ export default function AIChatPage() {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success('Copied to clipboard');
+  };
+
+  const exportConversation = () => {
+    const conversationData = {
+      sessionId: aiChat.currentSessionId,
+      messages: aiChat.messages,
+      exportedAt: new Date().toISOString(),
+      metadata: {
+        messageCount: aiChat.messages.length,
+        streamingEnabled,
+        version: 'supreme-ai-v3'
+      }
+    };
+
+    const blob = new Blob([JSON.stringify(conversationData, null, 2)], {
+      type: 'application/json'
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `supreme-ai-conversation-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success('Conversation exported successfully');
   };
 
   const quickPrompts = [
@@ -100,11 +129,47 @@ export default function AIChatPage() {
             <div className="w-2 h-2 bg-emerald-500 rounded-full mr-2"></div>
             Online
           </Badge>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => setShowMetrics(!showMetrics)}
+            className={cn(showMetrics && 'bg-slate-100 dark:bg-slate-800')}
+          >
+            <BarChart3 className="h-4 w-4" />
+          </Button>
           <Button variant="ghost" size="sm">
             <Settings className="h-4 w-4" />
           </Button>
         </div>
       </div>
+
+      {/* Performance Metrics Bar */}
+      {showMetrics && (
+        <div className="border-b bg-slate-50 dark:bg-slate-800 px-6 py-3">
+          <div className="flex items-center gap-6 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <span className="text-slate-600 dark:text-slate-300">Messages: {aiChat.messages.length}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-slate-600 dark:text-slate-300">Session: {aiChat.currentSessionId?.slice(-8) || 'New'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+              <span className="text-slate-600 dark:text-slate-300">Streaming: {streamingEnabled ? 'Enabled' : 'Disabled'}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setStreamingEnabled(!streamingEnabled)}
+              className="text-xs h-6"
+            >
+              Toggle Streaming
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Chat Container */}
       <div className="flex-1 flex">
@@ -161,8 +226,12 @@ export default function AIChatPage() {
                         ? 'bg-blue-600 text-white ml-12' 
                         : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700'
                     )}>
-                      <div className="text-sm leading-relaxed whitespace-pre-wrap">
-                        {message.content}
+                      <div className="text-sm leading-relaxed">
+                        {message.role === 'assistant' ? (
+                          <MarkdownRenderer content={message.content} />
+                        ) : (
+                          <div className="whitespace-pre-wrap">{message.content}</div>
+                        )}
                       </div>
                       
                       {message.role === 'assistant' && (
@@ -265,6 +334,16 @@ export default function AIChatPage() {
                     variant="ghost" 
                     size="sm" 
                     className="h-6 text-xs"
+                    onClick={exportConversation}
+                    disabled={aiChat.messages.length === 0}
+                  >
+                    <Copy className="h-3 w-3 mr-1" />
+                    Export
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-6 text-xs"
                     onClick={aiChat.clearMessages}
                   >
                     <RotateCcw className="h-3 w-3 mr-1" />
@@ -295,6 +374,10 @@ export default function AIChatPage() {
                   <MessageSquare className="h-4 w-4 text-green-500" />
                   Campaign creation & optimization
                 </div>
+                <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                  <BarChart3 className="h-4 w-4 text-orange-500" />
+                  Real-time streaming responses
+                </div>
               </div>
             </div>
 
@@ -314,8 +397,40 @@ export default function AIChatPage() {
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-600 dark:text-slate-300">Response Time</span>
-                  <span className="text-xs text-slate-500">~2.1s avg</span>
+                  <span className="text-sm text-slate-600 dark:text-slate-300">Streaming</span>
+                  <div className="flex items-center gap-1">
+                    <div className={cn("w-2 h-2 rounded-full", streamingEnabled ? "bg-blue-500" : "bg-gray-400")}></div>
+                    <span className="text-xs text-slate-500">{streamingEnabled ? 'Enabled' : 'Disabled'}</span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600 dark:text-slate-300">Markdown</span>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                    <span className="text-xs text-purple-600">Enabled</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Session Info */}
+            <div>
+              <h3 className="font-semibold text-slate-900 dark:text-white mb-3">Session</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600 dark:text-slate-300">Messages</span>
+                  <span className="text-xs text-slate-500">{aiChat.messages.length}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600 dark:text-slate-300">Session ID</span>
+                  <span className="text-xs text-slate-500 font-mono">{aiChat.currentSessionId?.slice(-8) || 'New'}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600 dark:text-slate-300">Loading</span>
+                  <div className="flex items-center gap-1">
+                    <div className={cn("w-2 h-2 rounded-full", aiChat.isLoading ? "bg-yellow-500" : "bg-gray-400")}></div>
+                    <span className="text-xs text-slate-500">{aiChat.isLoading ? 'Processing' : 'Ready'}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -350,6 +465,15 @@ export default function AIChatPage() {
                 >
                   <Zap className="h-4 w-4 mr-2" />
                   Assign Tasks
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start text-sm h-9"
+                  onClick={() => setChatInput("Generate a markdown report of our email campaign performance")}
+                >
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Generate Report
                 </Button>
               </div>
             </div>

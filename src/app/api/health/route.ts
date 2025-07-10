@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from "@/lib/db/prisma";
+import { redisCache } from "@/lib/cache/redis-client";
 import { trace } from '@opentelemetry/api';
 import { 
   handleApiError, 
@@ -123,7 +124,9 @@ async function performHealthChecks() {
     redis: false,
     ai: false,
     external_apis: false,
-    overall: false
+    overall: false,
+    redis_memory: null as any,
+    redis_details: null as any
   };
 
   try {
@@ -135,12 +138,35 @@ async function performHealthChecks() {
       console.error('Database health check failed:', error);
     }
 
-    // Redis health check (if available)
+    // Redis health check with memory monitoring
     try {
-      // Add Redis ping if you have Redis client available
-      checks.redis = true; // Placeholder
+      const isConnected = await redisCache.ping();
+      checks.redis = isConnected;
+      
+      if (isConnected) {
+        const memoryInfo = await redisCache.getMemoryInfo();
+        if (memoryInfo) {
+          checks.redis_memory = {
+            used_memory_human: memoryInfo.used_memory_human,
+            memory_usage_percentage: Math.round(memoryInfo.memory_usage_percentage * 10) / 10,
+            maxmemory_human: memoryInfo.maxmemory_human,
+            hit_rate: Math.round(memoryInfo.hit_rate * 10) / 10,
+            status: memoryInfo.memory_usage_percentage > 90 ? 'critical' : 
+                   memoryInfo.memory_usage_percentage > 75 ? 'warning' : 'healthy'
+          };
+          
+          // Detailed metrics for monitoring systems
+          checks.redis_details = {
+            connected_clients: memoryInfo.connected_clients,
+            keyspace_hits: memoryInfo.keyspace_hits,
+            keyspace_misses: memoryInfo.keyspace_misses,
+            uptime_hours: Math.round(memoryInfo.uptime_in_seconds / 3600 * 10) / 10
+          };
+        }
+      }
     } catch (error) {
       console.error('Redis health check failed:', error);
+      checks.redis = false;
     }
 
     // AI system health check
@@ -187,6 +213,35 @@ async function performHealthChecks() {
 function generatePrometheusMetrics(healthChecks: any, responseTime: number) {
   const timestamp = Date.now();
   
+  let redisMetrics = '';
+  if (healthChecks.redis_memory) {
+    const memory = healthChecks.redis_memory;
+    const details = healthChecks.redis_details;
+    
+    redisMetrics = `
+
+# HELP marketsage_redis_memory_usage_percentage Redis memory usage percentage
+# TYPE marketsage_redis_memory_usage_percentage gauge
+marketsage_redis_memory_usage_percentage ${memory.memory_usage_percentage} ${timestamp}
+
+# HELP marketsage_redis_hit_rate_percentage Redis cache hit rate percentage
+# TYPE marketsage_redis_hit_rate_percentage gauge
+marketsage_redis_hit_rate_percentage ${memory.hit_rate} ${timestamp}
+
+# HELP marketsage_redis_connected_clients Number of connected Redis clients
+# TYPE marketsage_redis_connected_clients gauge
+marketsage_redis_connected_clients ${details.connected_clients} ${timestamp}
+
+# HELP marketsage_redis_keyspace_operations_total Total Redis keyspace operations
+# TYPE marketsage_redis_keyspace_operations_total counter
+marketsage_redis_keyspace_operations_total{type="hits"} ${details.keyspace_hits} ${timestamp}
+marketsage_redis_keyspace_operations_total{type="misses"} ${details.keyspace_misses} ${timestamp}
+
+# HELP marketsage_redis_uptime_hours Redis uptime in hours
+# TYPE marketsage_redis_uptime_hours gauge
+marketsage_redis_uptime_hours ${details.uptime_hours} ${timestamp}`;
+  }
+  
   return `
 # HELP marketsage_health_check Application health check status
 # TYPE marketsage_health_check gauge
@@ -209,7 +264,7 @@ marketsage_uptime_seconds ${process.uptime()} ${timestamp}
 marketsage_memory_usage_bytes{type="rss"} ${process.memoryUsage().rss} ${timestamp}
 marketsage_memory_usage_bytes{type="heapTotal"} ${process.memoryUsage().heapTotal} ${timestamp}
 marketsage_memory_usage_bytes{type="heapUsed"} ${process.memoryUsage().heapUsed} ${timestamp}
-marketsage_memory_usage_bytes{type="external"} ${process.memoryUsage().external} ${timestamp}
+marketsage_memory_usage_bytes{type="external"} ${process.memoryUsage().external} ${timestamp}${redisMetrics}
 
 # HELP marketsage_info Application information
 # TYPE marketsage_info gauge

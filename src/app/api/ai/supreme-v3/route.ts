@@ -16,6 +16,7 @@ import { logger } from '@/lib/logger';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db/prisma';
+import { aiResponseCache } from '@/lib/cache/ai-response-cache';
 
 // Dynamic import type for SupremeAIv3Task
 type SupremeAIv3Task = {
@@ -208,6 +209,44 @@ export async function POST(request: NextRequest) {
     const isTaskExecution = body.type === 'task' || body.taskType === 'assign_task' || enableTaskExecution;
     const isAnalysisRequest = body.type === 'analyze';
     
+    // Extract question/query for caching
+    const question = body.question || body.data?.question || `${body.type || body.taskType} request`;
+    const context = body.context || body.data?.context || '';
+    
+    // Check AI response cache first (unless it's a task execution request)
+    if (!isTaskExecution && !forceLocal) {
+      const cachedResponse = await aiResponseCache.getCachedResponse(
+        question,
+        context,
+        user.id,
+        body.type || body.taskType
+      );
+      
+      if (cachedResponse) {
+        logger.info('AI Cache HIT - returning cached response', {
+          userId: user.id,
+          question: question.substring(0, 100),
+          processingTime: cachedResponse.processingTime,
+          cacheAge: Date.now() - cachedResponse.timestamp
+        });
+        
+        return NextResponse.json({
+          success: true,
+          confidence: cachedResponse.confidence,
+          data: {
+            answer: cachedResponse.response,
+            source: 'cache',
+            model: cachedResponse.model,
+            cached: true,
+            taskExecution: cachedResponse.metadata?.taskType === 'task' ? null : null
+          },
+          processingTime: Date.now() - startTime, // Current request processing time
+          originalProcessingTime: cachedResponse.processingTime,
+          cached: true
+        });
+      }
+    }
+    
     // Check if OpenAI-only mode is enabled, but respect localOnly flag, task execution, and analysis requests
     if ((process.env.USE_OPENAI_ONLY === 'true' || process.env.SUPREME_AI_MODE === 'disabled') && !forceLocal && !isTaskExecution && !isAnalysisRequest) {
       // Redirect to OpenAI API instead of using Supreme-AI (only for non-task requests)
@@ -239,12 +278,25 @@ export async function POST(request: NextRequest) {
        }
       
       const processingTime = Date.now() - startTime;
+      const finalResponse = `🤖 **MarketSage AI** (OpenAI-Powered)\n\n${openaiResponse.answer}`;
+      
+      // Cache the OpenAI response for future requests
+      await aiResponseCache.cacheResponse(
+        question,
+        finalResponse,
+        0.95, // High confidence from OpenAI
+        processingTime,
+        process.env.OPENAI_MODEL || 'gpt-4o-mini',
+        context,
+        user.id,
+        body.type || body.taskType
+      );
       
        return NextResponse.json({
          success: true,
          confidence: 0.95, // High confidence from OpenAI
          data: {
-           answer: `🤖 **MarketSage AI** (OpenAI-Powered)\n\n${openaiResponse.answer}`,
+           answer: finalResponse,
            source: 'openai-supreme-hybrid',
            model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
            taskExecution: enableTaskExecution ? { 
@@ -311,6 +363,20 @@ export async function POST(request: NextRequest) {
     
     const result = await SupremeAIv3.process(task);
     const processingTime = Date.now() - startTime;
+    
+    // Cache the Supreme-AI response for future requests (unless it's a task execution)
+    if (!isTaskExecution && result.success && result.data?.answer) {
+      await aiResponseCache.cacheResponse(
+        question,
+        result.data.answer,
+        result.confidence || 0.8, // Default confidence if not provided
+        processingTime,
+        'supreme-ai-v3',
+        context,
+        user.id,
+        body.type || body.taskType
+      );
+    }
     
     // Log successful request
     logger.info('Supreme-AI v3 request completed', {

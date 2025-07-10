@@ -3,7 +3,7 @@
  * Implements intelligent caching with Redis, LRU, and database-level optimization
  */
 
-import Redis from 'ioredis';
+import { getIORedisClient } from '@/lib/cache/redis-pool';
 import { SimpleCache } from '@/lib/utils/simple-cache';
 import prisma from '@/lib/db/prisma';
 import { logger } from '@/lib/logger';
@@ -132,25 +132,20 @@ export class AdvancedCacheManager {
   }
 
   /**
-   * Initialize Redis connection with advanced configuration
+   * Initialize Redis connection using connection pool
    */
   private initializeRedis(): void {
-    this.redis = new Redis(process.env.REDIS_URL || `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || '6379'}`, {
-      retryDelayOnFailover: 100,
-      maxRetriesPerRequest: 3,
-      lazyConnect: true,
-      keepAlive: 30000,
-      compression: this.config.compressionEnabled ? 'gzip' : undefined,
-      keyPrefix: 'workflow_cache:',
-    });
-
-    this.redis.on('connect', () => {
-      logger.info('Redis cache connection established');
-    });
-
-    this.redis.on('error', (error) => {
-      logger.error('Redis cache connection error', { error });
-    });
+    // Use the shared Redis connection pool instead of creating new instance
+    this.redis = getIORedisClient();
+    
+    if (this.redis) {
+      logger.info('Advanced cache manager using Redis connection pool');
+      this.redis.on('error', (error) => {
+        logger.error('Redis cache connection error', { error });
+      });
+    } else {
+      logger.warn('Redis connection pool not available for advanced cache manager');
+    }
   }
 
   /**
@@ -545,11 +540,18 @@ export class AdvancedCacheManager {
         });
       });
 
-      // Invalidate L2 cache (Redis)
-      for (const pattern of patterns) {
-        const keys = await this.redis.keys(`*${pattern}*`);
-        if (keys.length > 0) {
-          await this.redis.del(...keys);
+      // Invalidate L2 cache (Redis) - Using SCAN instead of KEYS to prevent blocking
+      if (this.redis) {
+        for (const pattern of patterns) {
+          const keys = await this.scanKeys(`*${pattern}*`);
+          if (keys.length > 0) {
+            // Delete in batches to prevent blocking
+            const batchSize = 100;
+            for (let i = 0; i < keys.length; i += batchSize) {
+              const batch = keys.slice(i, i + batchSize);
+              await this.redis.del(...batch);
+            }
+          }
         }
       }
 
@@ -557,6 +559,44 @@ export class AdvancedCacheManager {
     } catch (error) {
       logger.error('Cache invalidation failed', { error, patterns });
     }
+  }
+
+  /**
+   * Safe Redis key scanning to replace dangerous KEYS operation
+   */
+  private async scanKeys(pattern: string): Promise<string[]> {
+    const keys: string[] = [];
+    
+    if (!this.redis) {
+      logger.warn('Redis client not available for SCAN operation');
+      return keys;
+    }
+    
+    let cursor = '0';
+    const maxKeys = 10000; // Safety limit to prevent memory exhaustion
+    
+    do {
+      try {
+        const result = await this.redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+        cursor = result[0];
+        keys.push(...result[1]);
+        
+        // Safety check to prevent infinite loops or memory exhaustion
+        if (keys.length >= maxKeys) {
+          logger.warn('SCAN operation reached safety limit', { 
+            pattern, 
+            keysFound: keys.length,
+            maxKeys 
+          });
+          break;
+        }
+      } catch (error) {
+        logger.error('Redis SCAN operation failed', { error, pattern, cursor });
+        break;
+      }
+    } while (cursor !== '0');
+    
+    return keys;
   }
 
   /**

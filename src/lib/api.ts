@@ -115,7 +115,9 @@ export const getSMSCampaigns = async () => {
   if (!response.ok) {
     throw new Error('Failed to fetch SMS campaigns');
   }
-  return response.json();
+  const data = await response.json();
+  // Return the campaigns array if the response is an object with campaigns property
+  return Array.isArray(data) ? data : (data?.campaigns || []);
 };
 
 export const getSMSCampaignById = async (id: string) => {
@@ -198,7 +200,9 @@ export const getWhatsAppCampaigns = async () => {
   if (!response.ok) {
     throw new Error('Failed to fetch WhatsApp campaigns');
   }
-  return response.json();
+  const data = await response.json();
+  // Return the campaigns array if the response is an object with campaigns property
+  return Array.isArray(data) ? data : (data?.campaigns || []);
 };
 
 export const getWhatsAppCampaignById = async (id: string) => {

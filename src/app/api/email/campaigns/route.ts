@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Different filters based on user role
-    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN";
+    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN" || session.user.role === "IT_ADMIN";
     
     // Parse query parameters
     const url = new URL(request.url);
@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Check if user has access to this template
-      const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN";
+      const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN" || session.user.role === "IT_ADMIN";
       if (!isAdmin && template.createdById !== session.user.id) {
         return NextResponse.json({ error: "No access to the selected template" }, { status: 403 });
       }
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
     
     // Validate that all lists exist and user has access
     if (listIds && listIds.length > 0) {
-      const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN";
+      const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN" || session.user.role === "IT_ADMIN";
       const accessibleLists = await prisma.list.findMany({
         where: {
           id: { in: listIds },

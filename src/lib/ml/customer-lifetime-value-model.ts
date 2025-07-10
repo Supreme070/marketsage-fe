@@ -633,38 +633,20 @@ export class CustomerLifetimeValueModel {
    */
   private async storeCLVPrediction(prediction: CLVPrediction, organizationId: string): Promise<void> {
     try {
-      await prisma.lifetimeValuePrediction.upsert({
-        where: {
-          contactId_organizationId: {
-            contactId: prediction.contactId,
-            organizationId
-          }
-        },
-        update: {
-          predictedValue: prediction.predictedCLV,
-          confidenceLower: prediction.confidenceInterval.lower,
-          confidenceUpper: prediction.confidenceInterval.upper,
-          valueSegment: prediction.valueSegment,
-          confidence: prediction.confidence,
-          features: prediction.features as any,
-          contributingFactors: prediction.contributingFactors,
-          modelVersion: prediction.modelVersion,
-          timeHorizon: prediction.timeHorizon,
-          predictedAt: prediction.predictedAt
-        },
-        create: {
+      // Store in database using only the fields that exist in the schema
+      await prisma.lifetimeValuePrediction.create({
+        data: {
           contactId: prediction.contactId,
-          organizationId,
           predictedValue: prediction.predictedCLV,
-          confidenceLower: prediction.confidenceInterval.lower,
-          confidenceUpper: prediction.confidenceInterval.upper,
-          valueSegment: prediction.valueSegment,
-          confidence: prediction.confidence,
-          features: prediction.features as any,
-          contributingFactors: prediction.contributingFactors,
-          modelVersion: prediction.modelVersion,
-          timeHorizon: prediction.timeHorizon,
-          predictedAt: prediction.predictedAt
+          confidenceLevel: prediction.confidence,
+          timeframe: parseInt(prediction.timeHorizon.split('_')[0]), // Extract months from "12_months"
+          segments: JSON.stringify({
+            valueSegment: prediction.valueSegment,
+            confidenceInterval: prediction.confidenceInterval,
+            contributingFactors: prediction.contributingFactors,
+            features: prediction.features,
+            modelVersion: prediction.modelVersion
+          })
         }
       });
 

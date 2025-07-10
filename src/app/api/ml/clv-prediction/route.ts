@@ -182,7 +182,7 @@ async function handleSingleCLVPrediction(body: any, session: any): Promise<NextR
         valueSegment: prediction.valueSegment,
         confidence: prediction.confidence,
         contributingFactors: prediction.contributingFactors,
-        predictedAt: prediction.predictedAt,
+        predictedAt: new Date(), // Use current date since prediction object might not have this field
         modelVersion: prediction.modelVersion,
         timeHorizon: prediction.timeHorizon,
         metadata: {
@@ -255,7 +255,7 @@ async function handleBatchCLVPrediction(body: any, session: any): Promise<NextRe
           valueSegment: prediction.valueSegment,
           confidence: prediction.confidence,
           contributingFactors: prediction.contributingFactors,
-          predictedAt: prediction.predictedAt,
+          predictedAt: new Date(), // Use current date since prediction object might not have this field
           timeHorizon: prediction.timeHorizon
         };
       } else {
@@ -508,7 +508,7 @@ async function handleGetCLVPredictions(searchParams: URLSearchParams, session: a
 
     const predictions = await prisma.lifetimeValuePrediction.findMany({
       where: whereClause,
-      orderBy: { predictedAt: 'desc' },
+      orderBy: { createdAt: 'desc' },
       take: Math.min(limit, 100),
       skip: offset,
       include: {
@@ -540,21 +540,22 @@ async function handleGetCLVPredictions(searchParams: URLSearchParams, session: a
     return NextResponse.json({
       success: true,
       data: {
-        predictions: predictions.map(p => ({
-          contactId: p.contactId,
-          contact: p.contact,
-          predictedCLV: p.predictedValue,
-          confidenceInterval: {
-            lower: p.confidenceLower,
-            upper: p.confidenceUpper
-          },
-          valueSegment: p.valueSegment,
-          confidence: p.confidence,
-          contributingFactors: p.contributingFactors,
-          predictedAt: p.predictedAt,
-          modelVersion: p.modelVersion,
-          timeHorizon: p.timeHorizon
-        })),
+        predictions: predictions.map(p => {
+          // Parse segments JSON if exists
+          const segments = p.segments ? JSON.parse(p.segments) : {};
+          return {
+            contactId: p.contactId,
+            contact: p.contact,
+            predictedCLV: p.predictedValue,
+            confidenceInterval: segments.confidenceInterval || { lower: 0, upper: 0 },
+            valueSegment: segments.valueSegment || 'unknown',
+            confidence: p.confidenceLevel,
+            contributingFactors: segments.contributingFactors || [],
+            predictedAt: p.createdAt,
+            modelVersion: segments.modelVersion || '1.0.0',
+            timeHorizon: `${p.timeframe}_months` as '12_months' | '24_months' | '36_months'
+          };
+        }),
         summary: {
           totalPredictions: total,
           displayedPredictions: predictions.length,

@@ -9,6 +9,7 @@ import { Server as ServerIO } from 'socket.io';
 import type { NextApiResponseServerIO } from '@/types/socket';
 import { leadPulseRealtimeService } from '@/lib/websocket/leadpulse-realtime';
 import { collaborationRealtimeService } from '@/lib/websocket/collaboration-realtime';
+import { aiStreamingService } from '@/lib/websocket/ai-streaming-service';
 import { logger } from '@/lib/logger';
 
 export default function handler(req: NextApiRequest, res: NextApiResponseServerIO) {
@@ -41,6 +42,9 @@ export default function handler(req: NextApiRequest, res: NextApiResponseServerI
 
   // Initialize Collaboration realtime service
   collaborationRealtimeService.initialize(io);
+
+  // Initialize AI streaming service
+  aiStreamingService.initialize(io);
 
   // Store io instance
   res.socket.server.io = io;

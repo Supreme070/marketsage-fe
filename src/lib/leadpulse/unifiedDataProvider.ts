@@ -27,9 +27,9 @@ async function determineDataSource(options: DataProviderOptions = {}): Promise<D
     return options.forceSource;
   }
   
-  // Check demo mode first
+  // Check demo mode or AI training mode first
   const demoConfig = demoProvider.getDemoConfig();
-  if (demoConfig.mode === 'demo') {
+  if (demoConfig.mode === 'demo' || demoConfig.mode === 'ai_training') {
     return 'demo';
   }
   

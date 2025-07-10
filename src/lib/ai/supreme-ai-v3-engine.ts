@@ -24,6 +24,20 @@ import { intelligentExecutionEngine } from '@/lib/ai/intelligent-execution-engin
 import { universalTaskExecutionEngine } from '@/lib/ai/universal-task-execution-engine';
 import { enhancedNLPParser, type CommandContext } from '@/lib/ai/enhanced-nlp-parser';
 import { safetyApprovalSystem, type OperationRequest } from '@/lib/ai/safety-approval-system';
+import { 
+  AIPermissionService, 
+  AIPermission, 
+  RiskLevel,
+  checkAIPermission
+} from '@/lib/ai/ai-permission-system';
+import { 
+  aiSafeExecutionEngine,
+  type SafeExecutionRequest
+} from '@/lib/ai/ai-safe-execution-engine';
+import { 
+  aiContextAwarenessSystem,
+  type AIContext
+} from '@/lib/ai/ai-context-awareness-system';
 
 // -----------------------------
 // Request / Response Typings
@@ -81,6 +95,30 @@ class SupremeAIV3Core {
 
   async process(task: SupremeAIv3Task): Promise<SupremeAIv3Response> {
     await this.ensureMemoryReady();
+
+    // Get comprehensive context for intelligent decision making
+    const context = await this.getContextForTask(task);
+    
+    // Track user behavior for context building
+    await this.trackTaskBehavior(task, context);
+
+    // Permission checking for AI operations
+    const permissionResult = await this.checkTaskPermissions(task);
+    if (!permissionResult.allowed) {
+      return {
+        success: false,
+        timestamp: new Date(),
+        taskType: task.type,
+        data: null,
+        confidence: 0,
+        debug: {
+          permissionDenied: true,
+          reason: permissionResult.reason,
+          requiredPermissions: permissionResult.requiredPermissions,
+          contextId: context.id
+        }
+      };
+    }
 
     switch (task.type) {
       case 'question':
@@ -266,11 +304,11 @@ ${taskExecutionResult && taskExecutionResult.success ? `\n🚀 **TASK EXECUTION 
     const { userId, question, taskType } = task;
     const startTime = Date.now();
     
-    logger.info('Supreme-AI v3 handling task execution', { 
+    logger.info('Supreme-AI v3 handling task execution with safety boundaries', { 
       userId, 
       taskType,
       questionPreview: question.substring(0, 100) + '...',
-      mode: 'task-execution'
+      mode: 'safe-task-execution'
     });
 
     // Get user role for monitoring
@@ -286,7 +324,117 @@ ${taskExecutionResult && taskExecutionResult.success ? `\n🚀 **TASK EXECUTION 
     }
 
     try {
-      // First try the universal execution engine for comprehensive operations
+      // Use the safe execution engine for enhanced safety
+      const safeRequest: SafeExecutionRequest = {
+        userId,
+        operation: question,
+        parameters: { taskType },
+        context: {
+          source: 'ai_agent',
+          priority: 'medium',
+          timeoutMs: 30000,
+          maxRetries: 2,
+          dryRun: false
+        }
+      };
+
+      const safeResult = await aiSafeExecutionEngine.executeSafely(safeRequest);
+
+      // Handle safe execution results
+      if (!safeResult.success) {
+        if (safeResult.approvalRequired) {
+          return {
+            success: false,
+            timestamp: new Date(),
+            taskType: 'task',
+            data: {
+              answer: `⏳ **Approval Required**\n\n**Operation**: ${question}\n**Risk Level**: ${safeResult.riskLevel.toUpperCase()}\n**Approval ID**: ${safeResult.approvalId}\n\n**Safety Assessment**:\n${safeResult.warnings.join('\n')}\n\nOperation will proceed once approved by an administrator.`,
+              requiresApproval: true,
+              approvalId: safeResult.approvalId,
+              riskLevel: safeResult.riskLevel,
+              executionId: safeResult.executionId
+            },
+            confidence: safeResult.confidence,
+            debug: {
+              safeExecution: true,
+              approvalRequired: true,
+              executionId: safeResult.executionId
+            }
+          };
+        }
+
+        if (safeResult.safetyBlocked) {
+          return {
+            success: false,
+            timestamp: new Date(),
+            taskType: 'task',
+            data: {
+              answer: `🚫 **Operation Blocked by Safety System**\n\n**Operation**: ${question}\n**Risk Level**: ${safeResult.riskLevel.toUpperCase()}\n\n**Safety Concerns**:\n${safeResult.warnings.join('\n')}\n\n**Recommendations**:\n${safeResult.recommendations.join('\n')}`,
+              safetyBlocked: true,
+              riskLevel: safeResult.riskLevel,
+              executionId: safeResult.executionId
+            },
+            confidence: 0.9,
+            debug: {
+              safeExecution: true,
+              safetyBlocked: true,
+              executionId: safeResult.executionId
+            }
+          };
+        }
+
+        // Other execution errors
+        return {
+          success: false,
+          timestamp: new Date(),
+          taskType: 'task',
+          data: {
+            answer: `❌ **Task Execution Failed**\n\n**Error**: ${safeResult.error}\n\n**Recommendations**:\n${safeResult.recommendations.join('\n')}`,
+            executionFailed: true,
+            executionId: safeResult.executionId
+          },
+          confidence: 0.5,
+          debug: {
+            safeExecution: true,
+            executionFailed: true,
+            executionId: safeResult.executionId
+          }
+        };
+      }
+
+      // Safe execution successful
+      logger.info('Safe task execution successful', {
+        userId,
+        executionId: safeResult.executionId,
+        riskLevel: safeResult.riskLevel,
+        executionTime: safeResult.executionTime
+      });
+
+      return {
+        success: true,
+        timestamp: new Date(),
+        taskType: 'task',
+        data: {
+          answer: `✅ **Task Executed Successfully with Safety Verification**\n\n${safeResult.result ? JSON.stringify(safeResult.result, null, 2) : 'Operation completed successfully'}\n\n**Execution Details**:\n- Risk Level: ${safeResult.riskLevel}\n- Execution Time: ${safeResult.executionTime}ms\n- Execution ID: ${safeResult.executionId}${safeResult.rollbackId ? `\n- Rollback Available: ${safeResult.rollbackId}` : ''}${safeResult.warnings.length > 0 ? `\n\n**Warnings**:\n${safeResult.warnings.join('\n')}` : ''}`,
+          taskExecution: safeResult.result,
+          executionMode: 'safe-ai-execution',
+          confidence: safeResult.confidence,
+          executionId: safeResult.executionId,
+          riskLevel: safeResult.riskLevel,
+          rollbackId: safeResult.rollbackId
+        },
+        confidence: safeResult.confidence,
+        debug: {
+          safeExecution: true,
+          taskExecuted: true,
+          executionMode: 'safe-ai-execution',
+          executionId: safeResult.executionId,
+          riskLevel: safeResult.riskLevel,
+          executionTime: safeResult.executionTime
+        }
+      };
+
+      // Fallback to original execution logic if safe execution is not available
       let executionResult;
       
       try {
@@ -3514,6 +3662,258 @@ Deliver professional, efficient automation solutions that drive business growth 
       ],
       confidence: 0.81
     };
+  }
+
+  /**
+   * Get comprehensive context for task processing
+   */
+  private async getContextForTask(task: SupremeAIv3Task): Promise<AIContext> {
+    try {
+      const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const context = await aiContextAwarenessSystem.getContext(task.userId, sessionId);
+      return context;
+    } catch (error) {
+      logger.warn('Failed to get context for task', { 
+        taskType: task.type,
+        userId: task.userId,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      
+      // Return minimal context on failure
+      return {
+        id: 'fallback_context',
+        userId: task.userId,
+        sessionId: 'fallback',
+        timestamp: new Date(),
+        confidence: 0.1,
+        freshness: 1.0
+      } as AIContext;
+    }
+  }
+
+  /**
+   * Track user behavior for context building
+   */
+  private async trackTaskBehavior(task: SupremeAIv3Task, context: AIContext): Promise<void> {
+    try {
+      await aiContextAwarenessSystem.trackBehavior(
+        task.userId,
+        `supreme_ai_${task.type}`,
+        {
+          taskType: task.type,
+          timestamp: new Date(),
+          contextId: context.id,
+          confidence: context.confidence,
+          sessionId: context.sessionId
+        }
+      );
+    } catch (error) {
+      logger.warn('Failed to track behavior', { 
+        taskType: task.type,
+        userId: task.userId,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
+  /**
+   * Check AI permissions for tasks
+   */
+  private async checkTaskPermissions(task: SupremeAIv3Task): Promise<{
+    allowed: boolean;
+    reason?: string;
+    requiredPermissions?: AIPermission[];
+  }> {
+    try {
+      // Get user information
+      const user = await prisma.user.findUnique({
+        where: { id: task.userId },
+        select: { 
+          id: true,
+          role: true, 
+          organizationId: true,
+          isActive: true 
+        }
+      });
+
+      if (!user || !user.isActive) {
+        return {
+          allowed: false,
+          reason: 'User not found or inactive'
+        };
+      }
+
+      // Map task types to required permissions and operations
+      const taskPermissionMap: Record<string, { 
+        permissions: AIPermission[]; 
+        operation?: string; 
+      }> = {
+        'question': {
+          permissions: [AIPermission.USE_AI_CHAT]
+        },
+        'task': {
+          permissions: [
+            AIPermission.EXECUTE_CREATE_TASKS,
+            AIPermission.AUTONOMOUS_TASK_EXECUTION
+          ],
+          operation: 'task_execution'
+        },
+        'analyze': {
+          permissions: [
+            AIPermission.USE_AI_ANALYSIS,
+            AIPermission.ACCESS_ANALYTICS_DATA
+          ],
+          operation: 'analyze_data'
+        },
+        'predict': {
+          permissions: [
+            AIPermission.USE_AI_PREDICTION,
+            AIPermission.PREDICTIVE_ACTIONS
+          ],
+          operation: 'prediction'
+        },
+        'content': {
+          permissions: [AIPermission.USE_AI_CONTENT_GENERATION],
+          operation: 'content_generation'
+        },
+        'customer': {
+          permissions: [
+            AIPermission.USE_AI_ANALYSIS,
+            AIPermission.ACCESS_CONTACT_DATA
+          ],
+          operation: 'customer_analysis'
+        },
+        'market': {
+          permissions: [
+            AIPermission.USE_AI_ANALYSIS,
+            AIPermission.ACCESS_ANALYTICS_DATA
+          ],
+          operation: 'market_analysis'
+        },
+        'adaptive': {
+          permissions: [
+            AIPermission.LEARNING_FROM_DATA,
+            AIPermission.AUTONOMOUS_TASK_EXECUTION
+          ],
+          operation: 'adaptive_learning'
+        },
+        'leadpulse_insights': {
+          permissions: [
+            AIPermission.USE_AI_ANALYSIS,
+            AIPermission.ACCESS_ANALYTICS_DATA
+          ],
+          operation: 'leadpulse_analysis'
+        },
+        'leadpulse_predict': {
+          permissions: [
+            AIPermission.USE_AI_PREDICTION,
+            AIPermission.PREDICTIVE_ACTIONS
+          ],
+          operation: 'leadpulse_prediction'
+        },
+        'leadpulse_optimize': {
+          permissions: [
+            AIPermission.AUTONOMOUS_TASK_EXECUTION,
+            AIPermission.EXECUTE_UPDATE_TASKS
+          ],
+          operation: 'leadpulse_optimization'
+        },
+        'leadpulse_visitors': {
+          permissions: [
+            AIPermission.USE_AI_ANALYSIS,
+            AIPermission.ACCESS_ANALYTICS_DATA
+          ],
+          operation: 'visitor_analysis'
+        },
+        'leadpulse_segments': {
+          permissions: [
+            AIPermission.USE_AI_ANALYSIS,
+            AIPermission.ACCESS_CONTACT_DATA
+          ],
+          operation: 'segment_analysis'
+        }
+      };
+
+      const taskConfig = taskPermissionMap[task.type];
+      if (!taskConfig) {
+        return {
+          allowed: false,
+          reason: `Unknown task type: ${task.type}`,
+          requiredPermissions: [AIPermission.USE_AI_CHAT]
+        };
+      }
+
+      // Check if user has required permissions
+      for (const permission of taskConfig.permissions) {
+        if (!AIPermissionService.hasAIPermission(user.role, permission)) {
+          return {
+            allowed: false,
+            reason: `Missing required permission: ${permission}`,
+            requiredPermissions: taskConfig.permissions
+          };
+        }
+      }
+
+      // Check operation-specific permissions if applicable
+      if (taskConfig.operation) {
+        const operationResult = await checkAIPermission(
+          user.id,
+          user.role,
+          user.organizationId || '',
+          taskConfig.operation
+        );
+
+        if (!operationResult.allowed) {
+          return {
+            allowed: false,
+            reason: operationResult.reason || `Operation ${taskConfig.operation} not permitted`,
+            requiredPermissions: taskConfig.permissions
+          };
+        }
+      }
+
+      // Special role-based restrictions
+      if (user.role === 'USER') {
+        // Regular users have additional restrictions
+        if (['task', 'adaptive'].includes(task.type)) {
+          // Check if task involves dangerous operations
+          if ('question' in task && task.question) {
+            const dangerousKeywords = ['delete', 'remove', 'destroy', 'cancel', 'terminate'];
+            const questionLower = task.question.toLowerCase();
+            
+            if (dangerousKeywords.some(keyword => questionLower.includes(keyword))) {
+              return {
+                allowed: false,
+                reason: 'Users cannot perform potentially destructive operations',
+                requiredPermissions: [AIPermission.EXECUTE_DELETE_TASKS]
+              };
+            }
+          }
+        }
+      }
+
+      // Log permission grant
+      await AIPermissionService.logPermissionEvent(
+        user.id,
+        taskConfig.operation || task.type,
+        true,
+        `Task permission granted for ${task.type}`
+      );
+
+      return { allowed: true };
+
+    } catch (error) {
+      logger.error('Permission check failed', {
+        taskType: task.type,
+        userId: task.userId,
+        error: error instanceof Error ? error.message : String(error)
+      });
+
+      return {
+        allowed: false,
+        reason: 'Permission check failed - system error'
+      };
+    }
   }
 }
 

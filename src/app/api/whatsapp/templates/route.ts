@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Different filters based on user role
-    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN";
+    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN" || session.user.role === "IT_ADMIN";
     
     try {
       // Parse query parameters

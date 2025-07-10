@@ -64,7 +64,9 @@ export function addLinkTracking(
       return match;
     }
     
-    const trackingUrl = getTrackingUrl(url, contactId, campaignId);
+    // Use campaign-specific tracking endpoint for click tracking
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const trackingUrl = `${baseUrl}/api/email/campaigns/${campaignId}/track?cid=${contactId}&type=click&url=${encodeURIComponent(url)}`;
     return `<a href="${trackingUrl}"${rest}>`;
   });
 }
@@ -82,9 +84,9 @@ export function addTrackingPixel(
   contactId: string,
   campaignId: string
 ): string {
-  // Create the tracking pixel URL
+  // Create the tracking pixel URL using campaign-specific endpoint
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  const trackingUrl = `${baseUrl}/api/pixel.gif?cid=${contactId}&eid=${campaignId}&type=EMAIL_CAMPAIGN&t=${Date.now()}`;
+  const trackingUrl = `${baseUrl}/api/email/campaigns/${campaignId}/track?cid=${contactId}&type=open&t=${Date.now()}`;
   
   // Add the pixel before the closing body tag
   const pixelHtml = `<img src="${trackingUrl}" alt="" width="1" height="1" style="display:none !important;" />`;

@@ -11,12 +11,18 @@ import {
   notFound,
   validationError 
 } from "@/lib/errors";
+import { smsService } from "@/lib/sms-providers/sms-service";
 
 //  Schema for campaign update validation
 const campaignUpdateSchema = z.object({
   name: z.string().min(1, "Campaign name is required").optional(),
   description: z.string().optional(),
-  from: z.string().min(1, "From number is required").optional(),
+  from: z.string().min(1, "From number is required").refine(
+    (phone) => smsService.validatePhoneNumber(phone),
+    {
+      message: "Invalid sender phone number format. Must be a valid African phone number (e.g., +234XXXXXXXXX, 0XXXXXXXXXX)"
+    }
+  ).optional(),
   templateId: z.string().optional(),
   content: z.string().optional(),
   status: z.enum([
@@ -52,13 +58,13 @@ export async function GET(
     const campaign = await prisma.sMSCampaign.findUnique({
       where: { id: campaignId },
       include: {
-        SMSTemplate: true,
-        List: true,
-        Segment: true,
-        SMSActivity: {
+        template: true,
+        lists: true,
+        segments: true,
+        activities: {
           take: 5,
           include: {
-            Contact: {
+            contact: {
               select: {
                 id: true,
                 firstName: true,
@@ -74,7 +80,7 @@ export async function GET(
         },
         _count: {
           select: { 
-            SMSActivity: true 
+            activities: true 
           }
         }
       }
@@ -85,7 +91,7 @@ export async function GET(
     }
 
     // Check if user has access to this campaign
-    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN";
+    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN" || session.user.role === "IT_ADMIN";
     if (!isAdmin && campaign.createdById !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -93,12 +99,12 @@ export async function GET(
     // Transform the response
     const formattedCampaign = {
       ...campaign,
-      template: campaign.SMSTemplate,
-      lists: campaign.List,
-      segments: campaign.Segment,
-      activities: campaign.SMSActivity,
+      template: campaign.template,
+      lists: campaign.lists,
+      segments: campaign.segments,
+      activities: campaign.activities,
       statistics: {
-        totalRecipients: campaign._count.SMSActivity,
+        totalRecipients: campaign._count.activities,
         // Add more stats here if needed
       }
     };
@@ -129,8 +135,8 @@ export async function PATCH(
     const existingCampaign = await prisma.sMSCampaign.findUnique({
       where: { id: campaignId },
       include: {
-        List: true,
-        Segment: true,
+        lists: true,
+        segments: true,
       }
     });
 
@@ -139,7 +145,7 @@ export async function PATCH(
     }
 
     // Check if user has access to update this campaign
-    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN";
+    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN" || session.user.role === "IT_ADMIN";
     if (!isAdmin && existingCampaign.createdById !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -212,15 +218,15 @@ export async function PATCH(
 
     // Handle list and segment relationships separately
     if (listIds) {
-      updateObject.List = {
-        disconnect: existingCampaign.List.map(list => ({ id: list.id })),
+      updateObject.lists = {
+        disconnect: existingCampaign.lists.map(list => ({ id: list.id })),
         connect: listIds.map(id => ({ id })),
       };
     }
 
     if (segmentIds) {
-      updateObject.Segment = {
-        disconnect: existingCampaign.Segment.map(segment => ({ id: segment.id })),
+      updateObject.segments = {
+        disconnect: existingCampaign.segments.map(segment => ({ id: segment.id })),
         connect: segmentIds.map(id => ({ id })),
       };
     }
@@ -232,9 +238,9 @@ export async function PATCH(
         where: { id: campaignId },
         data: updateObject,
         include: {
-          SMSTemplate: true,
-          List: true,
-          Segment: true,
+          template: true,
+          lists: true,
+          segments: true,
         },
       });
       
@@ -244,9 +250,9 @@ export async function PATCH(
     // Transform the response to maintain backward compatibility
     const formattedCampaign = {
       ...updatedCampaign,
-      template: updatedCampaign.SMSTemplate,
-      lists: updatedCampaign.List,
-      segments: updatedCampaign.Segment,
+      template: updatedCampaign.template,
+      lists: updatedCampaign.lists,
+      segments: updatedCampaign.segments,
     };
 
     return NextResponse.json(formattedCampaign);
@@ -294,7 +300,7 @@ export async function DELETE(
     }
 
     // Check if user has access to delete this campaign
-    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN";
+    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN" || session.user.role === "IT_ADMIN";
     if (!isAdmin && existingCampaign.createdById !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

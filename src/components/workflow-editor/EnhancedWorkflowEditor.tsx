@@ -183,7 +183,10 @@ export default function EnhancedWorkflowEditor({
   }, [nodes, edges]);
 
   return (
-    <div className="h-full w-full relative overflow-hidden bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
+    <div 
+      className="h-full w-full relative overflow-hidden bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800"
+      data-workflow-id={workflowId}
+    >
       {/* Enhanced toolbar */}
       <motion.div
         initial={{ y: -20, opacity: 0 }}
@@ -469,14 +472,8 @@ export default function EnhancedWorkflowEditor({
             className="fixed left-0 top-0 bottom-0 w-96 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-r border-gray-200 dark:border-gray-700 shadow-2xl z-40"
           >
             <WorkflowAssistantPanel
-              nodes={nodes}
-              edges={edges}
-              onApplyRecommendation={(recommendation) => {
-                // Apply AI recommendations
-                toast.success("AI recommendation applied");
-                setIsAutoSaving(true);
-              }}
-              onClose={() => setIsAIAssistantOpen(false)}
+              isOpen={isAIAssistantOpen}
+              onOpenChange={setIsAIAssistantOpen}
             />
           </motion.div>
         )}
