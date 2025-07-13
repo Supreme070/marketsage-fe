@@ -51,6 +51,9 @@
     /* Base colors */
     --background: 0 0% 100%;
     --foreground: 215 25% 27%;
+    
+    /* Golden accent from Speakeasy */
+    --gold-accent: 38 96% 56%; /* #FBBF24 */
 
     /* Card and elements */
     --card: 0 0% 100%;
@@ -104,6 +107,9 @@
     /* Base colors */
     --background: 217 33% 17%; /* #1E293B */
     --foreground: 210 40% 98%;
+    
+    /* Golden accent from Speakeasy */
+    --gold-accent: 38 96% 56%; /* #FBBF24 */
 
     /* Card and elements */
     --card: 222 47% 11%; /* #0F172A */
@@ -237,6 +243,14 @@
     -webkit-backdrop-filter: blur(12px);
   }
   
+  /* Light mode glass navigation */
+  .light .glass-nav {
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.05);
+  }
+  
   .glass-button {
     @apply bg-white/20 backdrop-blur-md border border-white/30 rounded-xl shadow-subtle px-5 py-2.5 text-white font-medium transition-all duration-200 hover:bg-white/30 active:scale-[0.98];
   }
@@ -352,15 +366,38 @@
 }
 
 .brand-text-new .market {
-  font-weight: 600;
-  color: hsl(var(--primary));
-  text-shadow: 0 0 8px rgba(45, 212, 191, 0.4);
+  font-weight: 300;
+  color: #2DD4BF;
+  text-shadow: 0 0 8px rgba(45, 212, 191, 0.3);
 }
 
 .brand-text-new .sage {
-  font-weight: 500;
-  color: hsl(var(--accent));
-  text-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+  font-weight: 300;
+  color: #FBBF24;
+  text-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
+}
+
+/* Light mode brand text */
+.light .brand-text-new .market {
+  color: #0F766E;
+  text-shadow: 0 0 6px rgba(15, 118, 110, 0.2);
+}
+
+.light .brand-text-new .sage {
+  color: #D97706;
+  text-shadow: 0 0 6px rgba(217, 119, 6, 0.2);
+}
+
+/* Logo monogram styling */
+.logo-monogram {
+  font-family: 'Brush Script MT', 'Lucida Handwriting', cursive;
+  letter-spacing: -0.1em;
+  font-style: italic;
+  font-weight: 400;
+  color: white !important;
+  text-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 0 10px rgba(255, 255, 255, 0.3);
 }
 
 :root {

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Menu, X, ChevronDown } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useTheme } from "next-themes";
+import { LogoMorph } from "@/components/ui/logo-morph";
 
 export function LandingHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -79,12 +80,8 @@ export function LandingHeader() {
         : 'bg-transparent'
     }`}>
       <div className="container flex h-20 items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Link href="/" className="flex items-center">
-            <span className="text-3xl font-bold brand-text-new">
-              <span className="market">Market</span><span className="sage">Sage</span>
-            </span>
-          </Link>
+        <div className="flex items-center gap-2 w-[240px]">
+          <LogoMorph scrolled={scrolled} />
         </div>
 
         {/* Desktop navigation */}
@@ -93,11 +90,11 @@ export function LandingHeader() {
             <div key={index} className="relative group">
               <Link 
                 href={link.href} 
-                className={`text-sm font-medium flex items-center gap-1 transition-colors ${
+                className={`text-lg font-medium flex items-center gap-1 transition-colors ${
                   isLight 
                     ? scrolled 
                       ? 'text-gray-700 hover:text-gray-900'
-                      : 'text-gray-700 hover:text-gray-900' 
+                      : 'text-gray-800 hover:text-gray-900' 
                     : scrolled 
                       ? 'text-foreground/80 hover:text-foreground'
                       : 'text-white/90 hover:text-white'
@@ -121,7 +118,7 @@ export function LandingHeader() {
                             ? 'hover:bg-gray-100' 
                             : 'hover:bg-muted'
                         }`}>
-                          <div className="text-sm font-medium">{option.name}</div>
+                          <div className="text-base font-medium">{option.name}</div>
                           <div className={`text-xs mt-0.5 ${isLight ? 'text-gray-500' : 'text-gray-400'}`}>
                             {option.description}
                           </div>
@@ -136,7 +133,7 @@ export function LandingHeader() {
                             ? 'hover:bg-gray-100' 
                             : 'hover:bg-muted'
                         }`}>
-                          <div className="text-sm font-medium">{option.name}</div>
+                          <div className="text-base font-medium">{option.name}</div>
                           <div className={`text-xs mt-0.5 ${isLight ? 'text-gray-500' : 'text-gray-400'}`}>
                             {option.description}
                           </div>
@@ -158,7 +155,7 @@ export function LandingHeader() {
           <ThemeToggle />
           
           <Link href="/login">
-            <Button variant="ghost" size="sm" className="font-medium">
+            <Button variant="ghost" size="sm" className="font-medium text-lg">
               Log in
             </Button>
           </Link>
@@ -278,38 +275,6 @@ export function LandingHeader() {
         </div>
       )}
 
-      <style jsx global>{`
-        .brand-text-new .market {
-          color: #2DD4BF; /* Exact teal color requested */
-          text-shadow: 0 0 8px rgba(45, 212, 191, 0.3);
-          font-weight: 700;
-        }
-        .brand-text-new .sage {
-          color: #FBBF24; /* Exact amber color requested */
-          text-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
-          font-weight: 700;
-        }
-        
-        /* Enhanced light mode styles */
-        @media (prefers-color-scheme: light) {
-          .brand-text-new .market {
-            color: #23C5B2; /* Slightly more saturated teal */
-            text-shadow: 0 0 10px rgba(35, 197, 178, 0.4);
-          }
-          .brand-text-new .sage {
-            color: #F5BA16; /* Slightly more saturated amber */
-            text-shadow: 0 0 10px rgba(245, 186, 22, 0.4);
-          }
-        }
-        
-        /* Better glass effect for light mode */
-        .light .glass-nav {
-          background-color: rgba(255, 255, 255, 0.8);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.05);
-        }
-      `}</style>
     </header>
   );
 } 

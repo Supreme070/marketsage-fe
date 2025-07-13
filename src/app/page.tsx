@@ -1,11 +1,6 @@
 import { LandingHeader } from "@/components/landing/landing-header";
-import { IntelligenceHeroSection } from "@/components/landing/intelligence-hero-section";
-import { IntelligenceFeaturesSection } from "@/components/landing/intelligence-features-section";
-import { EnterpriseProofSection } from "@/components/landing/enterprise-proof-section";
-import { ROICalculatorSection } from "@/components/landing/roi-calculator-section";
-import { ComparisonSection } from "@/components/landing/comparison-section";
-import { IntelligenceCtaSection } from "@/components/landing/intelligence-cta-section";
 import { BrandLogo } from "@/components/landing/landing-footer-brand";
+import { HeroSection } from "@/components/landing/hero-section";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -21,17 +16,13 @@ export const metadata: Metadata = {
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-white dark:bg-[#0F172A]">
       <LandingHeader />
       <main className="flex-1">
-        <IntelligenceHeroSection />
-        <IntelligenceFeaturesSection />
-        <EnterpriseProofSection />
-        <ROICalculatorSection />
-        <ComparisonSection />
-        <IntelligenceCtaSection />
+        {/* Hero Section */}
+        <HeroSection />
       </main>
-      <footer className="border-t border-border bg-background py-6">
+      <footer className="border-t border-border bg-background dark:bg-[#0F172A] py-6 relative z-10">
         <div className="container px-4 mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center mb-4 md:mb-0">
