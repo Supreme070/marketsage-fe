@@ -107,11 +107,11 @@ export function HeroSection() {
       <div className={`absolute inset-1 sm:inset-2 lg:inset-x-10 lg:inset-y-0 border rounded-t-3xl ${
         isLight ? 'border-gray-200/60 shadow-inner' : 'border-white/10'
       }`} />
-      {/* Background pattern */}
+      {/* Background pattern - more subtle */}
       <div className={`absolute inset-0 ${
-        isLight ? 'opacity-[0.03]' : 'opacity-10'
+        isLight ? 'opacity-[0.02]' : 'opacity-[0.05]'
       }`}>
-        <div className={`h-full w-full bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]`} />
+        <div className={`h-full w-full bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:32px_32px]`} />
       </div>
       
       {/* Light mode glass effect overlay */}

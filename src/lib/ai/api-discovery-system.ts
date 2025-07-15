@@ -696,10 +696,8 @@ class APIDiscoverySystem {
    * Cache endpoint information
    */
   private async cacheEndpoint(endpoint: APIEndpoint): Promise<void> {
-    await redisCache.setEx(
-      `api_endpoint:${endpoint.id}`,
-      3600, // 1 hour TTL
-      JSON.stringify(endpoint)
+    await redisCache.set(`api_endpoint:${endpoint.id}`, // 1 hour TTL
+      JSON.stringify(endpoint, 3600)
     );
   }
 
@@ -707,10 +705,8 @@ class APIDiscoverySystem {
    * Cache capability information
    */
   private async cacheCapability(capability: APICapability): Promise<void> {
-    await redisCache.setEx(
-      `api_capability:${capability.id}`,
-      3600, // 1 hour TTL
-      JSON.stringify(capability)
+    await redisCache.set(`api_capability:${capability.id}`, // 1 hour TTL
+      JSON.stringify(capability, 3600)
     );
   }
 

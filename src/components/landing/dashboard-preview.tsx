@@ -96,7 +96,7 @@ export function DashboardPreview() {
       >
 
         {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative">
           {/* Connection Lines SVG */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none hidden lg:block" style={{ zIndex: 0 }}>
             <defs>
@@ -126,12 +126,12 @@ export function DashboardPreview() {
             transition={{ delay: 0.4 }}
             className="relative z-10"
           >
-            <Card className={`h-full border-2 transition-all duration-300 ${isLight ? "border-blue-200/50 bg-white/80 shadow-lg shadow-blue-100/20" : "border-blue-500/20 bg-slate-900/90"} backdrop-blur-md`}>
-              <CardHeader className="pb-4">
+            <Card className={`h-full border transition-all duration-500 hover:scale-[1.02] relative overflow-hidden noise-texture ${isLight ? "border-blue-200/30 bg-gradient-to-br from-white/95 via-white/90 to-blue-50/20 shadow-xl shadow-blue-100/30" : "border-blue-500/10 bg-gradient-to-br from-slate-900/95 via-slate-900/90 to-blue-950/20"} backdrop-blur-xl`}>
+              <CardHeader className="pb-6 pt-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Eye className="h-5 w-5 text-blue-500" />
-                    <CardTitle className="text-lg">LeadPulse Intelligence</CardTitle>
+                    <CardTitle className="text-lg font-semibold tracking-tight">LeadPulse Intelligence</CardTitle>
                   </div>
                   <Badge variant="secondary" className="bg-blue-500/10 text-blue-500">
                     SEEING
@@ -140,19 +140,23 @@ export function DashboardPreview() {
                 <div className="flex items-center gap-4 mt-2">
                   <div className="flex items-center gap-1">
                     <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
-                    <span className="text-sm text-muted-foreground">234 visitors online</span>
+                    <span className="text-sm text-muted-foreground font-medium">234 visitors online</span>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-5 px-6">
                 {/* Visitor List */}
                 <div className="space-y-2">
                   {visitors.slice(0, 3).map((visitor, index) => (
                     <motion.div
                       key={visitor.id}
-                      initial={{ opacity: 0, x: -10 }}
+                      initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.5 + index * 0.1 }}
+                      transition={{ 
+                        delay: 0.5 + index * 0.15,
+                        duration: 0.5,
+                        ease: [0.25, 0.46, 0.45, 0.94]
+                      }}
                       className={`p-3 rounded-lg border transition-all duration-200 ${
                         activeVisitor === index 
                           ? isLight ? "border-blue-400/50 bg-blue-50/50 shadow-sm" : "border-blue-500/50 bg-blue-950/30"
@@ -169,16 +173,16 @@ export function DashboardPreview() {
                             } ${visitor.status === "hot" ? "animate-pulse" : ""}`} />
                           </div>
                           <div>
-                            <p className="text-sm font-medium">{visitor.location}</p>
-                            <p className="text-xs text-muted-foreground">{visitor.device}</p>
+                            <p className="text-sm font-semibold">{visitor.location}</p>
+                            <p className="text-xs text-muted-foreground font-light">{visitor.device}</p>
                           </div>
                         </div>
                         <div className="text-right">
                           <div className="flex items-center gap-1 justify-end">
                             <TrendingUp className="h-3 w-3 text-green-500" />
-                            <span className="text-sm font-semibold text-green-600">{visitor.score}%</span>
+                            <span className={`text-base font-bold ${isLight ? "text-[hsl(var(--premium-green))]" : "text-green-500"}`}>{visitor.score}%</span>
                           </div>
-                          <p className="text-xs text-muted-foreground">{visitor.value}</p>
+                          <p className="text-xs text-muted-foreground font-medium">{visitor.value}</p>
                         </div>
                       </div>
                     </motion.div>
@@ -216,12 +220,12 @@ export function DashboardPreview() {
             transition={{ delay: 0.6 }}
             className="relative z-10"
           >
-            <Card className={`h-full border-2 transition-all duration-300 ${isLight ? "border-purple-200/50 bg-white/80 shadow-lg shadow-purple-100/20" : "border-purple-500/20 bg-slate-900/90"} backdrop-blur-md`}>
-              <CardHeader className="pb-4">
+            <Card className={`h-full border transition-all duration-500 hover:scale-[1.02] relative overflow-hidden noise-texture ${isLight ? "border-purple-200/30 bg-gradient-to-br from-white/95 via-white/90 to-purple-50/20 shadow-xl shadow-purple-100/30" : "border-purple-500/10 bg-gradient-to-br from-slate-900/95 via-slate-900/90 to-purple-950/20"} backdrop-blur-xl`}>
+              <CardHeader className="pb-6 pt-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Brain className="h-5 w-5 text-purple-500" />
-                    <CardTitle className="text-lg">Supreme-AI Decisions</CardTitle>
+                    <CardTitle className="text-lg font-semibold tracking-tight">Supreme-AI Decisions</CardTitle>
                   </div>
                   <Badge variant="secondary" className="bg-purple-500/10 text-purple-500">
                     THINKING
@@ -230,19 +234,23 @@ export function DashboardPreview() {
                 <div className="flex items-center gap-4 mt-2">
                   <div className="flex items-center gap-1">
                     <Zap className={`h-3 w-3 ${isLight ? "text-yellow-600" : "text-yellow-500"} animate-pulse`} />
-                    <span className="text-sm text-muted-foreground">847 decisions/min</span>
+                    <span className="text-sm text-muted-foreground font-medium">847 decisions/min</span>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-5 px-6">
                 {/* AI Decisions */}
                 <div className="space-y-3">
                   {aiDecisions.map((decision, index) => (
                     <motion.div
                       key={index}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.7 + index * 0.1 }}
+                      initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      transition={{ 
+                        delay: 0.7 + index * 0.15,
+                        duration: 0.5,
+                        ease: [0.25, 0.46, 0.45, 0.94]
+                      }}
                       className={`p-3 rounded-lg border transition-all duration-200 ${
                         aiDecision === index 
                           ? isLight ? "border-purple-400/50 bg-purple-50/50 shadow-sm" : "border-purple-500/50 bg-purple-950/30"
@@ -297,12 +305,12 @@ export function DashboardPreview() {
             transition={{ delay: 0.8 }}
             className="relative z-10"
           >
-            <Card className={`h-full border-2 transition-all duration-300 ${isLight ? "border-orange-200/50 bg-white/80 shadow-lg shadow-orange-100/20" : "border-orange-500/20 bg-slate-900/90"} backdrop-blur-md`}>
-              <CardHeader className="pb-4">
+            <Card className={`h-full border transition-all duration-500 hover:scale-[1.02] relative overflow-hidden noise-texture ${isLight ? "border-orange-200/30 bg-gradient-to-br from-white/95 via-white/90 to-orange-50/20 shadow-xl shadow-orange-100/30" : "border-orange-500/10 bg-gradient-to-br from-slate-900/95 via-slate-900/90 to-orange-950/20"} backdrop-blur-xl`}>
+              <CardHeader className="pb-6 pt-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Workflow className="h-5 w-5 text-orange-500" />
-                    <CardTitle className="text-lg">Workflow Automation</CardTitle>
+                    <CardTitle className="text-lg font-semibold tracking-tight">Workflow Automation</CardTitle>
                   </div>
                   <Badge variant="secondary" className="bg-orange-500/10 text-orange-500">
                     ACTING
@@ -311,19 +319,23 @@ export function DashboardPreview() {
                 <div className="flex items-center gap-4 mt-2">
                   <div className="flex items-center gap-1">
                     <Play className={`h-3 w-3 ${isLight ? "text-green-600" : "text-green-500"}`} />
-                    <span className="text-sm text-muted-foreground">12 workflows active</span>
+                    <span className="text-sm text-muted-foreground font-medium">12 workflows active</span>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-5 px-6">
                 {/* Workflow Steps */}
                 <div className="space-y-2">
                   {workflowSteps.map((step, index) => (
                     <motion.div
                       key={step.id}
-                      initial={{ opacity: 0, x: 10 }}
+                      initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.9 + index * 0.1 }}
+                      transition={{ 
+                        delay: 0.9 + index * 0.15,
+                        duration: 0.5,
+                        ease: [0.25, 0.46, 0.45, 0.94]
+                      }}
                       className="relative"
                     >
                       {index < workflowSteps.length - 1 && (

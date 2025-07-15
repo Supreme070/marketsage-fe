@@ -1407,6 +1407,15 @@ export const advancedTextAnalysis = {
   calculateSubjectivity
 };
 
+// Export main enhanced content intelligence object
+export const enhancedContentIntelligence = {
+  enhancedSentimentAnalysis,
+  enhancedContentScoring,
+  ...nlpHelpers,
+  ...advancedTextAnalysis,
+  ...contentIntelligenceHelpers
+};
+
 // Add missing functions
 
 async function extractRelevantTopics(content: string, category: string): Promise<Topic[]> {

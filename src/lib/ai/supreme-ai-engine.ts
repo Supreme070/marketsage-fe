@@ -1949,6 +1949,7 @@ class SupremeAICore {
 
 // Export Supreme-AI singleton
 export const SupremeAI = new SupremeAICore();
+export const supremeAI = SupremeAI;
 
 // Convenience exports
 export const analyzeContentWithSupremeAI = (content: string) => SupremeAI.analyzeContent(content);

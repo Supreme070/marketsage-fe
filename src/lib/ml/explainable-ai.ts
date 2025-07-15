@@ -1082,9 +1082,4 @@ export class MarketSageExplainableAI {
   }
 }
 
-export {
-  ShapleyExplainer,
-  LimeExplainer,
-  PermutationImportance,
-  IntegratedGradients
-};
+// Classes are already exported individually above

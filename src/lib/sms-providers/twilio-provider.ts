@@ -98,6 +98,33 @@ export class TwilioSMSProvider extends BaseSMSProvider {
     return !!(this.accountSid && this.authToken && this.fromNumber);
   }
 
+  // Override phone validation to support US numbers in addition to African numbers
+  validatePhoneNumber(phoneNumber: string): boolean {
+    if (!phoneNumber || typeof phoneNumber !== 'string') {
+      return false;
+    }
+    
+    const cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
+    
+    // Check if it's a valid length (typically 10-15 digits)
+    if (cleanPhoneNumber.length < 10 || cleanPhoneNumber.length > 15) {
+      return false;
+    }
+    
+    // Support US numbers (country code 1)
+    if (cleanPhoneNumber.startsWith('1') && cleanPhoneNumber.length === 11) {
+      return true;
+    }
+    
+    // Support US numbers without country code (10 digits)
+    if (cleanPhoneNumber.length === 10 && !cleanPhoneNumber.startsWith('0')) {
+      return true;
+    }
+    
+    // Fall back to base validation for African numbers
+    return super.validatePhoneNumber(phoneNumber);
+  }
+
   private formatPhoneNumber(phoneNumber: string): string {
     const cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
     
@@ -106,6 +133,15 @@ export class TwilioSMSProvider extends BaseSMSProvider {
         cleanPhoneNumber.startsWith('27') || cleanPhoneNumber.startsWith('233') ||
         cleanPhoneNumber.startsWith('1')) {
       return '+' + cleanPhoneNumber;
+    }
+    
+    // Handle US numbers (10 digits, likely US)
+    if (cleanPhoneNumber.length === 10 && !cleanPhoneNumber.startsWith('0')) {
+      // Check if it looks like a US number pattern
+      const firstDigit = cleanPhoneNumber.charAt(0);
+      if (firstDigit >= '2' && firstDigit <= '9') {
+        return '+1' + cleanPhoneNumber;
+      }
     }
     
     // Default to Nigerian country code for local numbers

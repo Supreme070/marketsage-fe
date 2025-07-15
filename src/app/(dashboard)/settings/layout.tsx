@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CreditCard, Database, type LucideIcon, Server, Settings, Shield, Users } from "lucide-react";
+import { CreditCard, Database, type LucideIcon, Mail, Server, Settings, Shield, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -57,6 +57,12 @@ const sidebarNavItems: SidebarNavItem[] = [
     href: "/settings/database",
     icon: Database,
     description: "Database connection and maintenance",
+  },
+  {
+    title: "Email Test",
+    href: "/settings/email-test",
+    icon: Mail,
+    description: "Test email configuration and send test emails",
   },
 ];
 

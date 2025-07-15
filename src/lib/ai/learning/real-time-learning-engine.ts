@@ -1,10 +1,51 @@
 /**
- * Real-Time Learning Engine
- * Implements adaptive user models and continuous learning from interactions
+ * Enhanced Real-Time Learning Engine v2.0
+ * =======================================
+ * 
+ * 🧠 ENHANCED REAL-TIME LEARNING ENGINE
+ * Advanced system for continuous adaptation from user interactions, campaign performance, and AI model optimization
+ * 
+ * ENHANCED CAPABILITIES - Building on existing MarketSage learning system:
+ * 🎯 Campaign Performance Learning with optimization feedback loops
+ * 🚀 AI Model Continuous Improvement with performance tracking
+ * 📊 Advanced User Behavior Analysis with predictive modeling
+ * 🔄 Cross-Agent Knowledge Transfer for collective intelligence
+ * 🌍 African Market Learning Specialization
+ * 💡 Real-Time A/B Testing Integration
+ * 🏆 Multi-Objective Optimization Learning
+ * 📈 Predictive User Intent Recognition
+ * 💎 Adaptive UI/UX Personalization
+ * 🎭 Emotional Intelligence Learning
+ * 🔮 Temporal Pattern Recognition
+ * 🛡️ Safety-Aware Learning with constraints
+ * 🌟 Federated Learning Capabilities
+ * 📱 Mobile-First Learning Optimization
+ * 
+ * ENHANCEMENTS TO EXISTING SYSTEMS:
+ * - Enhanced user interaction processing with deeper analysis
+ * - Advanced personalization algorithms
+ * - Campaign performance feedback integration
+ * - AI model optimization learning
+ * - Cross-system knowledge transfer
+ * - Real-time adaptation mechanisms
+ * 
+ * African Market Specializations:
+ * - Cultural behavior pattern learning
+ * - Mobile usage optimization
+ * - Regional preference adaptation
+ * - Local language processing
+ * - Economic context awareness
  */
 
 import { logger } from '@/lib/logger';
+import { trace } from '@opentelemetry/api';
+import { EventEmitter } from 'events';
 import prisma from '@/lib/db/prisma';
+import { supremeAI } from '../supreme-ai-engine';
+import { enhancedPredictiveProactiveEngine } from '../enhanced-predictive-proactive-engine';
+import { multiAgentCoordinator } from '../multi-agent-coordinator';
+import { persistentMemoryEngine } from '../persistent-memory-engine';
+import { redisCache } from '@/lib/cache/redis-client';
 
 interface UserInteraction {
   userId: string;
@@ -17,6 +58,7 @@ interface UserInteraction {
 }
 
 enum InteractionType {
+  // Enhanced existing types
   AI_CHAT = 'AI_CHAT',
   CAMPAIGN_CREATE = 'CAMPAIGN_CREATE',
   EMAIL_SEND = 'EMAIL_SEND',
@@ -26,6 +68,29 @@ enum InteractionType {
   CONTENT_GENERATION = 'CONTENT_GENERATION',
   OPTIMIZATION_ACCEPT = 'OPTIMIZATION_ACCEPT',
   OPTIMIZATION_REJECT = 'OPTIMIZATION_REJECT',
+  
+  // New enhanced interaction types
+  CAMPAIGN_PERFORMANCE_FEEDBACK = 'CAMPAIGN_PERFORMANCE_FEEDBACK',
+  AI_MODEL_FEEDBACK = 'AI_MODEL_FEEDBACK',
+  CROSS_AGENT_LEARNING = 'CROSS_AGENT_LEARNING',
+  PREDICTIVE_INSIGHT_VALIDATION = 'PREDICTIVE_INSIGHT_VALIDATION',
+  PERSONALIZATION_ADJUSTMENT = 'PERSONALIZATION_ADJUSTMENT',
+  CULTURAL_ADAPTATION = 'CULTURAL_ADAPTATION',
+  MOBILE_OPTIMIZATION = 'MOBILE_OPTIMIZATION',
+  AB_TEST_PARTICIPATION = 'AB_TEST_PARTICIPATION',
+  EMOTIONAL_RESPONSE = 'EMOTIONAL_RESPONSE',
+  TEMPORAL_PATTERN_DETECTED = 'TEMPORAL_PATTERN_DETECTED',
+  SAFETY_CONSTRAINT_TRIGGERED = 'SAFETY_CONSTRAINT_TRIGGERED',
+  FEDERATED_LEARNING_SYNC = 'FEDERATED_LEARNING_SYNC',
+  INTENT_PREDICTION = 'INTENT_PREDICTION',
+  MARKET_ADAPTATION = 'MARKET_ADAPTATION',
+  KNOWLEDGE_TRANSFER = 'KNOWLEDGE_TRANSFER',
+  BEHAVIORAL_ANOMALY = 'BEHAVIORAL_ANOMALY',
+  PERFORMANCE_OPTIMIZATION = 'PERFORMANCE_OPTIMIZATION',
+  ENGAGEMENT_PATTERN = 'ENGAGEMENT_PATTERN',
+  CONVERSION_LEARNING = 'CONVERSION_LEARNING',
+  CHURN_PREDICTION = 'CHURN_PREDICTION',
+  SENTIMENT_ANALYSIS = 'SENTIMENT_ANALYSIS'
 }
 
 interface InteractionContext {
@@ -34,6 +99,13 @@ interface InteractionContext {
   inputs: Record<string, any>;
   environment: EnvironmentContext;
   sessionData: SessionData;
+  // Enhanced context for better learning
+  campaignData?: CampaignContext;
+  aiModelData?: AIModelContext;
+  culturalContext?: CulturalContext;
+  performanceMetrics?: PerformanceContext;
+  emotionalContext?: EmotionalContext;
+  businessContext?: BusinessContext;
 }
 
 interface EnvironmentContext {
@@ -43,6 +115,115 @@ interface EnvironmentContext {
   timeOfDay: number;
   dayOfWeek: number;
   timezone: string;
+  // Enhanced environment tracking
+  networkSpeed?: string;
+  screenSize?: string;
+  operatingSystem?: string;
+  referrerSource?: string;
+  geolocation?: {
+    latitude: number;
+    longitude: number;
+    accuracy: number;
+  };
+  weatherCondition?: string;
+  economicIndicators?: {
+    localCurrency: string;
+    exchangeRate: number;
+    inflationRate: number;
+  };
+}
+
+// Enhanced context interfaces
+interface CampaignContext {
+  campaignId: string;
+  campaignType: 'email' | 'sms' | 'whatsapp' | 'social' | 'multi_channel';
+  channel: string;
+  segment: string;
+  abTestVariant?: string;
+  performanceMetrics: {
+    openRate: number;
+    clickRate: number;
+    conversionRate: number;
+    unsubscribeRate: number;
+    bounceRate: number;
+    revenueGenerated: number;
+  };
+  audienceSize: number;
+  sendTime: Date;
+  objectives: string[];
+  expectedOutcome: string;
+}
+
+interface AIModelContext {
+  modelId: string;
+  modelType: 'prediction' | 'classification' | 'generation' | 'optimization';
+  version: string;
+  confidence: number;
+  accuracy: number;
+  processingTime: number;
+  inputTokens: number;
+  outputTokens: number;
+  cost: number;
+  feedback: 'positive' | 'negative' | 'neutral';
+  errorRate: number;
+  improvementOpportunity: string[];
+}
+
+interface CulturalContext {
+  region: 'west_africa' | 'east_africa' | 'north_africa' | 'southern_africa' | 'central_africa';
+  country: string;
+  language: string;
+  culturalNorms: string[];
+  religiousContext?: string;
+  economicContext: 'urban' | 'rural' | 'mixed';
+  educationLevel: 'primary' | 'secondary' | 'tertiary' | 'vocational';
+  socialMediaPreferences: string[];
+  communicationStyle: 'direct' | 'indirect' | 'formal' | 'informal';
+  timeOrientation: 'punctual' | 'flexible' | 'event_based';
+  collectivismScore: number; // 0-1 (individualistic to collectivistic)
+}
+
+interface PerformanceContext {
+  responseTime: number;
+  cpuUsage: number;
+  memoryUsage: number;
+  errorCount: number;
+  successRate: number;
+  throughput: number;
+  latency: number;
+  cacheHitRate: number;
+  databaseQueries: number;
+  apiCallsCount: number;
+  costPerOperation: number;
+  qualityScore: number;
+}
+
+interface EmotionalContext {
+  sentimentScore: number; // -1 to 1
+  emotionalState: 'happy' | 'sad' | 'angry' | 'excited' | 'frustrated' | 'neutral' | 'anxious' | 'confident';
+  stressLevel: number; // 0-1
+  engagementLevel: number; // 0-1
+  satisfactionScore: number; // 0-1
+  motivationLevel: number; // 0-1
+  attentionSpan: number; // minutes
+  cognitiveLoad: number; // 0-1
+  emotionalTriggers: string[];
+  preferredInteractionStyle: string;
+}
+
+interface BusinessContext {
+  companySize: 'startup' | 'small' | 'medium' | 'large' | 'enterprise';
+  industry: string;
+  businessModel: 'b2b' | 'b2c' | 'b2b2c' | 'marketplace' | 'saas' | 'ecommerce';
+  marketingBudget: number;
+  campaignObjectives: string[];
+  kpis: string[];
+  competitivePosition: 'market_leader' | 'challenger' | 'follower' | 'niche_player';
+  growthStage: 'startup' | 'growth' | 'maturity' | 'decline';
+  digitalMaturity: number; // 0-1
+  teamSize: number;
+  technicalCapabilities: string[];
+  complianceRequirements: string[];
 }
 
 interface SessionData {
@@ -198,64 +379,466 @@ interface AdaptationEvent {
 }
 
 interface LearningUpdate {
-  type: 'PROFILE_UPDATE' | 'PREFERENCE_CHANGE' | 'PATTERN_DETECTED' | 'SKILL_IMPROVEMENT';
+  type: 'PROFILE_UPDATE' | 'PREFERENCE_CHANGE' | 'PATTERN_DETECTED' | 'SKILL_IMPROVEMENT' | 
+        'CAMPAIGN_OPTIMIZATION' | 'AI_MODEL_IMPROVEMENT' | 'CULTURAL_ADAPTATION' | 
+        'EMOTIONAL_INTELLIGENCE' | 'CROSS_AGENT_LEARNING' | 'SAFETY_CONSTRAINT';
   changes: Record<string, any>;
   confidence: number;
   evidence: string[];
   impact: 'LOW' | 'MEDIUM' | 'HIGH';
+  category: 'user_behavior' | 'campaign_performance' | 'ai_optimization' | 'cultural_intelligence' | 
+            'emotional_learning' | 'safety_compliance' | 'cross_system_transfer';
+  africaSpecific?: boolean;
+  mobileOptimized?: boolean;
 }
 
-export class RealTimeLearningEngine {
+// Enhanced learning component interfaces
+interface CampaignPerformanceModel {
+  campaignId: string;
+  channelType: string;
+  performanceHistory: PerformanceSnapshot[];
+  predictiveModel: PredictiveModel;
+  optimizationSuggestions: OptimizationSuggestion[];
+  segmentPerformance: Map<string, SegmentPerformance>;
+  temporalPatterns: TemporalPattern[];
+  culturalAdaptations: CulturalAdaptation[];
+  lastUpdated: Date;
+  learningVelocity: number;
+}
+
+interface PerformanceSnapshot {
+  timestamp: Date;
+  metrics: {
+    openRate: number;
+    clickRate: number;
+    conversionRate: number;
+    unsubscribeRate: number;
+    bounceRate: number;
+    revenuePerRecipient: number;
+    engagementScore: number;
+    sentimentScore: number;
+  };
+  contextFactors: ContextFactor[];
+  audience: AudienceSnapshot;
+  content: ContentSnapshot;
+  timing: TimingSnapshot;
+}
+
+interface ContextFactor {
+  factor: string;
+  value: any;
+  influence: number; // -1 to 1
+  confidence: number; // 0 to 1
+}
+
+interface AudienceSnapshot {
+  size: number;
+  demographics: Record<string, any>;
+  behaviorProfile: Record<string, any>;
+  engagementHistory: number[];
+  culturalProfile: CulturalProfile[];
+}
+
+interface ContentSnapshot {
+  contentType: string;
+  length: number;
+  sentiment: number;
+  readabilityScore: number;
+  culturalRelevance: number;
+  emotionalTone: string[];
+  visualElements: number;
+  personalizedElements: number;
+}
+
+interface TimingSnapshot {
+  sendTime: Date;
+  dayOfWeek: number;
+  timeOfDay: number;
+  timezone: string;
+  seasonalContext: string;
+  marketConditions: string;
+}
+
+interface AIModelPerformanceTracker {
+  modelId: string;
+  modelType: string;
+  performanceMetrics: ModelPerformanceMetrics;
+  trainingHistory: TrainingEvent[];
+  feedbackData: ModelFeedback[];
+  optimizationOpportunities: OptimizationOpportunity[];
+  resourceUsage: ResourceUsageMetrics;
+  errorPatterns: ErrorPattern[];
+  improvementSuggestions: ImprovementSuggestion[];
+  lastEvaluation: Date;
+}
+
+interface ModelPerformanceMetrics {
+  accuracy: number;
+  precision: number;
+  recall: number;
+  f1Score: number;
+  auc: number;
+  latency: number;
+  throughput: number;
+  costPerPrediction: number;
+  energyEfficiency: number;
+  fairnessScore: number;
+  explainabilityScore: number;
+  robustnessScore: number;
+}
+
+interface TrainingEvent {
+  timestamp: Date;
+  datasetSize: number;
+  trainingDuration: number;
+  hyperparameters: Record<string, any>;
+  performanceImprovement: number;
+  costOfTraining: number;
+  convergenceRate: number;
+  overfittingRisk: number;
+}
+
+interface ModelFeedback {
+  timestamp: Date;
+  userId: string;
+  feedbackType: 'accuracy' | 'relevance' | 'bias' | 'fairness' | 'explanation';
+  rating: number; // 1-5
+  comments: string;
+  context: Record<string, any>;
+  actionTaken: string;
+}
+
+interface CrossAgentKnowledgeBase {
+  agentId: string;
+  knowledgeGraph: KnowledgeNode[];
+  sharedInsights: SharedInsight[];
+  collaborationHistory: CollaborationEvent[];
+  transferEfficiency: number;
+  conflictResolutionData: ConflictResolution[];
+  consensusBuilding: ConsensusEvent[];
+  collectiveIntelligence: CollectiveIntelligenceMetrics;
+}
+
+interface KnowledgeNode {
+  id: string;
+  type: string;
+  content: any;
+  confidence: number;
+  sourceAgent: string;
+  validationScore: number;
+  applicationCount: number;
+  successRate: number;
+  connections: string[];
+  lastUpdated: Date;
+}
+
+interface SharedInsight {
+  id: string;
+  insight: string;
+  sourceAgent: string;
+  targetAgents: string[];
+  relevanceScore: number;
+  applicationResults: ApplicationResult[];
+  transferMethod: 'direct' | 'federated' | 'consensus' | 'emergent';
+  culturalAdaptation: boolean;
+}
+
+interface CulturalAdaptationModel {
+  region: string;
+  culturalProfiles: CulturalProfile[];
+  adaptationRules: AdaptationRule[];
+  performanceBySegment: Map<string, PerformanceMetrics>;
+  languageModels: LanguageModel[];
+  communicationPatterns: CommunicationPattern[];
+  socialNorms: SocialNorm[];
+  businessEtiquette: BusinessEtiquette[];
+  seasonalBehaviors: SeasonalBehavior[];
+}
+
+interface CulturalProfile {
+  profileId: string;
+  region: string;
+  language: string;
+  communicationStyle: string;
+  decisionMakingStyle: string;
+  timeOrientation: string;
+  relationshipOrientation: string;
+  hierarchyAcceptance: number;
+  uncertaintyAvoidance: number;
+  collectivismScore: number;
+  masculinityScore: number;
+  longTermOrientation: number;
+  indulgenceScore: number;
+}
+
+interface FederatedLearningNode {
+  nodeId: string;
+  organizationId: string;
+  modelVersions: ModelVersion[];
+  aggregationHistory: AggregationEvent[];
+  privacyPreservingMechanisms: PrivacyMechanism[];
+  contributionMetrics: ContributionMetrics;
+  trustScore: number;
+  communicationProtocols: CommunicationProtocol[];
+}
+
+interface TemporalPatternAnalyzer {
+  patterns: Map<string, TemporalPattern>;
+  seasonalTrends: SeasonalTrend[];
+  cyclicBehaviors: CyclicBehavior[];
+  anomalyDetection: AnomalyDetector;
+  forecastingModels: ForecastingModel[];
+  timeSeriesData: TimeSeriesData[];
+}
+
+interface EmotionalIntelligenceEngine {
+  emotionalModels: Map<string, EmotionalModel>;
+  sentimentAnalyzer: SentimentAnalyzer;
+  emotionRecognition: EmotionRecognizer;
+  empathyGenerator: EmpathyGenerator;
+  emotionalResponsePredictor: EmotionalResponsePredictor;
+  moodTracker: MoodTracker;
+}
+
+interface SafetyConstraintEngine {
+  safetyRules: SafetyRule[];
+  constraintViolations: ConstraintViolation[];
+  riskAssessment: RiskAssessment;
+  mitigationStrategies: MitigationStrategy[];
+  complianceTracker: ComplianceTracker;
+  ethicalGuidelines: EthicalGuideline[];
+}
+
+export class EnhancedRealTimeLearningEngine extends EventEmitter {
   private userModels: Map<string, UserModel> = new Map();
   private learningAlgorithms: LearningAlgorithm[] = [];
+  private campaignPerformanceModels = new Map<string, CampaignPerformanceModel>();
+  private aiModelPerformance = new Map<string, AIModelPerformanceTracker>();
+  private crossAgentKnowledge = new Map<string, CrossAgentKnowledgeBase>();
+  private culturalAdaptationModels = new Map<string, CulturalAdaptationModel>();
+  private federatedLearningNodes = new Map<string, FederatedLearningNode>();
+  private temporalPatternAnalyzer: TemporalPatternAnalyzer;
+  private emotionalIntelligenceEngine: EmotionalIntelligenceEngine;
+  private safetyConstraintEngine: SafetyConstraintEngine;
 
   constructor() {
-    this.initializeLearningAlgorithms();
+    super();
+    this.initializeEnhancedLearningComponents();
+    this.setupEventHandlers();
   }
 
   /**
-   * Process user interaction and update models in real-time
+   * Initialize enhanced learning components
+   */
+  private initializeEnhancedLearningComponents(): void {
+    // Initialize temporal pattern analyzer
+    this.temporalPatternAnalyzer = {
+      patterns: new Map(),
+      seasonalTrends: [],
+      cyclicBehaviors: [],
+      anomalyDetection: this.createAnomalyDetector(),
+      forecastingModels: [],
+      timeSeriesData: []
+    };
+
+    // Initialize emotional intelligence engine
+    this.emotionalIntelligenceEngine = {
+      emotionalModels: new Map(),
+      sentimentAnalyzer: this.createSentimentAnalyzer(),
+      emotionRecognition: this.createEmotionRecognizer(),
+      empathyGenerator: this.createEmpathyGenerator(),
+      emotionalResponsePredictor: this.createEmotionalResponsePredictor(),
+      moodTracker: this.createMoodTracker()
+    };
+
+    // Initialize safety constraint engine
+    this.safetyConstraintEngine = {
+      safetyRules: this.createSafetyRules(),
+      constraintViolations: [],
+      riskAssessment: this.createRiskAssessment(),
+      mitigationStrategies: [],
+      complianceTracker: this.createComplianceTracker(),
+      ethicalGuidelines: this.createEthicalGuidelines()
+    };
+
+    // Initialize enhanced learning algorithms
+    this.initializeEnhancedLearningAlgorithms();
+
+    logger.info('Enhanced Real-Time Learning Engine initialized', {
+      components: [
+        'temporal_pattern_analyzer',
+        'emotional_intelligence_engine',
+        'safety_constraint_engine',
+        'campaign_performance_models',
+        'ai_model_performance_trackers',
+        'cultural_adaptation_models',
+        'federated_learning_nodes'
+      ]
+    });
+  }
+
+  /**
+   * Setup event handlers for enhanced learning
+   */
+  private setupEventHandlers(): void {
+    // Campaign performance learning
+    this.on('campaign_performance_update', async (data) => {
+      await this.processCampaignPerformanceUpdate(data);
+    });
+
+    // AI model feedback
+    this.on('ai_model_feedback', async (data) => {
+      await this.processAIModelFeedback(data);
+    });
+
+    // Cross-agent learning
+    this.on('cross_agent_learning', async (data) => {
+      await this.processCrossAgentLearning(data);
+    });
+
+    // Cultural adaptation
+    this.on('cultural_adaptation', async (data) => {
+      await this.processCulturalAdaptation(data);
+    });
+
+    // Emotional intelligence update
+    this.on('emotional_intelligence_update', async (data) => {
+      await this.processEmotionalIntelligenceUpdate(data);
+    });
+
+    // Safety constraint triggered
+    this.on('safety_constraint_triggered', async (data) => {
+      await this.processSafetyConstraintViolation(data);
+    });
+  }
+
+  /**
+   * Enhanced process user interaction and update models in real-time
    */
   async processInteraction(interaction: UserInteraction): Promise<LearningUpdate[]> {
-    try {
-      logger.info('Processing user interaction for learning', {
-        userId: interaction.userId,
-        type: interaction.type,
-        timestamp: interaction.timestamp,
-      });
+    const tracer = trace.getTracer('enhanced-real-time-learning');
+    
+    return tracer.startActiveSpan('process-interaction', async (span) => {
+      try {
+        span.setAttributes({
+          'interaction.user_id': interaction.userId,
+          'interaction.type': interaction.type,
+          'interaction.timestamp': interaction.timestamp.toISOString()
+        });
 
-      // Get or create user model
-      const userModel = await this.getUserModel(interaction.userId);
+        logger.info('Processing enhanced user interaction for learning', {
+          userId: interaction.userId,
+          type: interaction.type,
+          timestamp: interaction.timestamp,
+          hasContext: {
+            campaign: !!interaction.context?.campaignData,
+            aiModel: !!interaction.context?.aiModelData,
+            cultural: !!interaction.context?.culturalContext,
+            emotional: !!interaction.context?.emotionalContext,
+            performance: !!interaction.context?.performanceMetrics
+          }
+        });
 
-      // Apply learning algorithms
-      const updates: LearningUpdate[] = [];
-      for (const algorithm of this.learningAlgorithms) {
-        if (algorithm.canProcess(interaction)) {
-          const update = await algorithm.process(interaction, userModel);
-          if (update) {
-            updates.push(update);
+        // Safety constraint check first
+        const safetyCheck = await this.checkSafetyConstraints(interaction);
+        if (!safetyCheck.passed) {
+          await this.handleSafetyConstraintViolation(interaction, safetyCheck);
+          return [];
+        }
+
+        // Get or create enhanced user model
+        const userModel = await this.getEnhancedUserModel(interaction.userId);
+
+        // Process different interaction types with specialized handlers
+        const updates: LearningUpdate[] = [];
+
+        // Campaign performance learning
+        if (interaction.context?.campaignData) {
+          const campaignUpdates = await this.processCampaignLearning(interaction, userModel);
+          updates.push(...campaignUpdates);
+        }
+
+        // AI model performance learning
+        if (interaction.context?.aiModelData) {
+          const aiModelUpdates = await this.processAIModelLearning(interaction, userModel);
+          updates.push(...aiModelUpdates);
+        }
+
+        // Cultural adaptation learning
+        if (interaction.context?.culturalContext) {
+          const culturalUpdates = await this.processCulturalLearning(interaction, userModel);
+          updates.push(...culturalUpdates);
+        }
+
+        // Emotional intelligence learning
+        if (interaction.context?.emotionalContext) {
+          const emotionalUpdates = await this.processEmotionalLearning(interaction, userModel);
+          updates.push(...emotionalUpdates);
+        }
+
+        // Temporal pattern analysis
+        const temporalUpdates = await this.processTemporalPatterns(interaction, userModel);
+        updates.push(...temporalUpdates);
+
+        // Apply existing learning algorithms (enhanced)
+        for (const algorithm of this.learningAlgorithms) {
+          if (algorithm.canProcess(interaction)) {
+            const update = await algorithm.process(interaction, userModel);
+            if (update) {
+              // Enhance existing update with new categories
+              const enhancedUpdate = this.enhanceUpdate(update, interaction);
+              updates.push(enhancedUpdate);
+            }
           }
         }
+
+        // Cross-agent knowledge sharing
+        if (updates.length > 0) {
+          await this.shareKnowledgeWithAgents(interaction, updates);
+        }
+
+        // Apply updates to user model
+        if (updates.length > 0) {
+          await this.applyEnhancedLearningUpdates(interaction.userId, updates);
+        }
+
+        // Store enhanced interaction for future learning
+        await this.storeEnhancedInteraction(interaction);
+
+        // Trigger predictive insights
+        await this.triggerPredictiveInsights(interaction, updates);
+
+        // Emit learning events for other systems
+        this.emit('learning_updates_processed', {
+          userId: interaction.userId,
+          updates,
+          interaction
+        });
+
+        span.setAttributes({
+          'learning.updates_generated': updates.length,
+          'learning.safety_passed': safetyCheck.passed,
+          'learning.categories': updates.map(u => u.category).join(',')
+        });
+
+        logger.info('Enhanced interaction processed', {
+          userId: interaction.userId,
+          updatesGenerated: updates.length,
+          categories: updates.map(u => u.category),
+          africanOptimized: updates.some(u => u.africaSpecific),
+          mobileOptimized: updates.some(u => u.mobileOptimized)
+        });
+
+        return updates;
+
+      } catch (error) {
+        span.setStatus({ code: 2, message: String(error) });
+        logger.error('Failed to process enhanced interaction', { error, interaction });
+        return [];
+      } finally {
+        span.end();
       }
-
-      // Apply updates to user model
-      if (updates.length > 0) {
-        await this.applyLearningUpdates(interaction.userId, updates);
-      }
-
-      // Store interaction for future learning
-      await this.storeInteraction(interaction);
-
-      logger.info('Interaction processed', {
-        userId: interaction.userId,
-        updatesGenerated: updates.length,
-      });
-
-      return updates;
-    } catch (error) {
-      logger.error('Failed to process interaction', { error, interaction });
-      return [];
-    }
+    });
   }
 
   /**

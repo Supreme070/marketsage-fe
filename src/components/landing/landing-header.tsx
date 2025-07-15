@@ -49,11 +49,11 @@ export function LandingHeader() {
   const isLight = currentTheme === "light";
 
   const navLinks = [
-    { name: "Features", href: "#features" },
-    { name: "Solutions", href: "#solutions", hasDropdown: true },
-    { name: "Pricing", href: "#pricing" },
-    { name: "Testimonials", href: "#testimonials" },
-    { name: "Resources", href: "#resources", hasDropdown: true },
+    { name: "Product", href: "/#product" },
+    { name: "Solutions", href: "/#solutions", hasDropdown: true },
+    { name: "Pricing", href: "/pricing" },
+    { name: "Testimonials", href: "/testimonials" },
+    { name: "Resources", href: "/#resources", hasDropdown: true },
   ];
 
   // Solution options with href links to specific feature sections

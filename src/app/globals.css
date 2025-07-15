@@ -48,6 +48,20 @@
 
 @layer base {
   :root {
+    /* Premium Color System - Refined B2B Palette */
+    --premium-blue: 221 83% 53%; /* #2563EB - Deeper, enterprise blue */
+    --premium-purple: 262 83% 58%; /* #7C3AED - Sophisticated purple */
+    --premium-orange: 21 90% 48%; /* #EA580C - Premium orange */
+    --premium-green: 160 84% 39%; /* #059669 - Money green */
+    
+    /* Gradient Color Stops for Premium Effects */
+    --gradient-blue-start: 221 83% 53%;
+    --gradient-blue-end: 221 91% 39%;
+    --gradient-purple-start: 262 83% 58%;
+    --gradient-purple-end: 280 68% 60%;
+    --gradient-orange-start: 21 90% 48%;
+    --gradient-orange-end: 15 95% 45%;
+    
     /* Base colors */
     --background: 0 0% 100%;
     --foreground: 215 25% 27%;
@@ -104,6 +118,12 @@
   }
 
   .dark {
+    /* Premium Dark Mode Colors - Brighter for contrast */
+    --premium-blue: 217 91% 60%; /* #3B82F6 - Brighter in dark */
+    --premium-purple: 263 70% 65%; /* #A78BFA - Brighter in dark */
+    --premium-orange: 20 90% 55%; /* #FB923C - Brighter in dark */
+    --premium-green: 158 64% 52%; /* #34D399 - Brighter in dark */
+    
     /* Base colors */
     --background: 217 33% 17%; /* #1E293B */
     --foreground: 210 40% 98%;
@@ -544,4 +564,51 @@
 .dark .code-text {
   color: #FBBF24 !important;
   text-shadow: 0 0 8px rgba(251, 191, 36, 0.3) !important;
+}
+
+@layer utilities {
+  /* Premium glass effect with noise texture */
+  .noise-texture::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
+    pointer-events: none;
+    opacity: 0.02;
+    mix-blend-mode: overlay;
+    border-radius: inherit;
+  }
+  
+  /* Premium gradient borders */
+  .gradient-border-blue {
+    background: linear-gradient(to bottom right, hsl(var(--gradient-blue-start)), hsl(var(--gradient-blue-end)));
+  }
+  
+  .gradient-border-purple {
+    background: linear-gradient(to bottom right, hsl(var(--gradient-purple-start)), hsl(var(--gradient-purple-end)));
+  }
+  
+  .gradient-border-orange {
+    background: linear-gradient(to bottom right, hsl(var(--gradient-orange-start)), hsl(var(--gradient-orange-end)));
+  }
+}
+
+/* Particle flow animation for world map */
+@keyframes particle-flow {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(20px, -10px) scale(1);
+  }
+  80% {
+    opacity: 1;
+    transform: translate(60px, -25px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(80px, -30px) scale(0);
+  }
 }

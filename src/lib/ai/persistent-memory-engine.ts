@@ -805,27 +805,228 @@ export class PersistentMemoryEngine {
     organizationId: string,
     businessContext: MemoryContext['businessContext']
   ): Promise<PersistentMemory[]> {
-    // Implementation for loading relevant memories
-    return [];
+    try {
+      const whereClause: any = {
+        userId,
+        organizationId,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date() } }
+        ]
+      };
+
+      // Add business context filters
+      if (businessContext.currentTask) {
+        whereClause.OR = [
+          ...whereClause.OR,
+          { 
+            content: { contains: businessContext.currentTask, mode: 'insensitive' } 
+          },
+          { 
+            tags: { hasSome: [businessContext.currentTask] } 
+          }
+        ];
+      }
+
+      if (businessContext.campaignId) {
+        whereClause.metadata = {
+          path: ['campaignId'],
+          equals: businessContext.campaignId
+        };
+      }
+
+      const memories = await prisma.aIMemory.findMany({
+        where: whereClause,
+        take: 20,
+        orderBy: [
+          { importance: 'desc' },
+          { lastAccessed: 'desc' }
+        ]
+      });
+
+      return memories.map(memory => ({
+        id: memory.id,
+        userId: memory.userId,
+        organizationId: memory.organizationId,
+        type: memory.type as MemoryType,
+        content: memory.content,
+        metadata: memory.metadata as Record<string, any>,
+        importance: memory.importance,
+        tags: memory.tags,
+        embedding: memory.embedding as number[],
+        sessionId: memory.sessionId,
+        relatedMemories: memory.relatedMemories,
+        accessCount: memory.accessCount,
+        lastAccessed: memory.lastAccessed,
+        expiresAt: memory.expiresAt,
+        createdAt: memory.createdAt,
+        updatedAt: memory.updatedAt
+      }));
+
+    } catch (error) {
+      logger.error('Failed to load relevant memories', { error, userId, businessContext });
+      return [];
+    }
   }
 
   private async loadConversationHistory(sessionId: string): Promise<ConversationMessage[]> {
-    // Implementation for loading conversation history
-    return [];
+    try {
+      const messages = await prisma.aIConversationMessage.findMany({
+        where: { sessionId },
+        orderBy: { timestamp: 'asc' },
+        take: 50 // Load last 50 messages
+      });
+
+      return messages.map(message => ({
+        id: message.id,
+        role: message.role as 'user' | 'assistant' | 'system',
+        content: message.content,
+        timestamp: message.timestamp,
+        metadata: message.metadata as Record<string, any>,
+        memoryId: message.memoryId
+      }));
+
+    } catch (error) {
+      logger.error('Failed to load conversation history', { error, sessionId });
+      return [];
+    }
   }
 
   private async generateContextSummary(context: MemoryContext): Promise<string> {
-    // Implementation for generating context summary
-    return '';
+    try {
+      const summaryParts: string[] = [];
+
+      // Business context summary
+      if (context.businessContext.currentTask) {
+        summaryParts.push(`Current task: ${context.businessContext.currentTask}`);
+      }
+      if (context.businessContext.campaignId) {
+        summaryParts.push(`Working on campaign: ${context.businessContext.campaignId}`);
+      }
+      if (context.businessContext.workflowId) {
+        summaryParts.push(`In workflow: ${context.businessContext.workflowId}`);
+      }
+
+      // Recent conversation summary
+      if (context.conversationHistory.length > 0) {
+        const recentMessages = context.conversationHistory.slice(-5);
+        const conversationSummary = recentMessages
+          .map(msg => `${msg.role}: ${msg.content.substring(0, 100)}...`)
+          .join(' ');
+        summaryParts.push(`Recent conversation: ${conversationSummary}`);
+      }
+
+      // Active memories summary
+      if (context.activeMemories.length > 0) {
+        const importantMemories = context.activeMemories
+          .filter(m => m.importance > 0.7)
+          .slice(0, 3);
+        
+        if (importantMemories.length > 0) {
+          const memorySummary = importantMemories
+            .map(m => `${m.type}: ${m.content.substring(0, 80)}...`)
+            .join(' ');
+          summaryParts.push(`Important memories: ${memorySummary}`);
+        }
+      }
+
+      // Memory type distribution
+      const memoryTypes = context.activeMemories.reduce((acc, memory) => {
+        acc[memory.type] = (acc[memory.type] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      if (Object.keys(memoryTypes).length > 0) {
+        const typesSummary = Object.entries(memoryTypes)
+          .map(([type, count]) => `${type}: ${count}`)
+          .join(', ');
+        summaryParts.push(`Memory types: ${typesSummary}`);
+      }
+
+      const summary = summaryParts.join(' | ');
+      return summary.substring(0, 1000); // Limit summary length
+
+    } catch (error) {
+      logger.error('Failed to generate context summary', { error, sessionId: context.sessionId });
+      return 'Context summary unavailable';
+    }
   }
 
   private calculateContextConfidence(context: MemoryContext): number {
-    // Implementation for calculating context confidence
-    return 0.5;
+    try {
+      let confidence = 0.3; // Base confidence
+
+      // Business context boosts confidence
+      if (context.businessContext.currentTask) confidence += 0.2;
+      if (context.businessContext.campaignId) confidence += 0.1;
+      if (context.businessContext.workflowId) confidence += 0.1;
+
+      // Conversation history boosts confidence
+      if (context.conversationHistory.length > 0) {
+        const recentMessages = context.conversationHistory.slice(-10);
+        const avgMessageLength = recentMessages.reduce((sum, msg) => sum + msg.content.length, 0) / recentMessages.length;
+        
+        if (avgMessageLength > 50) confidence += 0.1;
+        if (recentMessages.length > 5) confidence += 0.1;
+      }
+
+      // Active memories boost confidence
+      if (context.activeMemories.length > 0) {
+        const avgImportance = context.activeMemories.reduce((sum, mem) => sum + mem.importance, 0) / context.activeMemories.length;
+        confidence += avgImportance * 0.2;
+
+        // High-importance memories boost confidence more
+        const highImportanceMemories = context.activeMemories.filter(m => m.importance > 0.8);
+        if (highImportanceMemories.length > 0) {
+          confidence += 0.1;
+        }
+
+        // Recent memories boost confidence
+        const recentMemories = context.activeMemories.filter(m => 
+          (Date.now() - m.lastAccessed.getTime()) < 24 * 60 * 60 * 1000 // Last 24 hours
+        );
+        if (recentMemories.length > 0) {
+          confidence += 0.1;
+        }
+      }
+
+      // Memory type diversity boosts confidence
+      const memoryTypes = new Set(context.activeMemories.map(m => m.type));
+      if (memoryTypes.size > 3) confidence += 0.1;
+
+      return Math.min(confidence, 1.0);
+
+    } catch (error) {
+      logger.error('Failed to calculate context confidence', { error, sessionId: context.sessionId });
+      return 0.3;
+    }
   }
 
   private async updateAccessCount(memoryIds: string[]): Promise<void> {
-    // Implementation for updating access count
+    try {
+      if (memoryIds.length === 0) return;
+
+      await prisma.aIMemory.updateMany({
+        where: { id: { in: memoryIds } },
+        data: { 
+          accessCount: { increment: 1 },
+          lastAccessed: new Date()
+        }
+      });
+
+      // Update cache
+      for (const memoryId of memoryIds) {
+        const cachedMemory = this.memoryCache.get(memoryId);
+        if (cachedMemory) {
+          cachedMemory.accessCount += 1;
+          cachedMemory.lastAccessed = new Date();
+          this.memoryCache.set(memoryId, cachedMemory);
+        }
+      }
+
+    } catch (error) {
+      logger.error('Failed to update access count', { error, memoryIds });
+    }
   }
 
   private async getMemoriesForAnalysis(
@@ -906,8 +1107,514 @@ export class PersistentMemoryEngine {
   }
 
   private async getMemoryById(id: string): Promise<PersistentMemory | null> {
-    // Implementation for getting memory by ID
-    return null;
+    try {
+      // Check cache first
+      const cachedMemory = this.memoryCache.get(id);
+      if (cachedMemory) {
+        return cachedMemory;
+      }
+
+      // Check database
+      const memory = await prisma.aIMemory.findUnique({
+        where: { id }
+      });
+
+      if (!memory) return null;
+
+      const persistentMemory: PersistentMemory = {
+        id: memory.id,
+        userId: memory.userId,
+        organizationId: memory.organizationId,
+        type: memory.type as MemoryType,
+        content: memory.content,
+        metadata: memory.metadata as Record<string, any>,
+        importance: memory.importance,
+        tags: memory.tags,
+        embedding: memory.embedding as number[],
+        sessionId: memory.sessionId,
+        relatedMemories: memory.relatedMemories,
+        accessCount: memory.accessCount,
+        lastAccessed: memory.lastAccessed,
+        expiresAt: memory.expiresAt,
+        createdAt: memory.createdAt,
+        updatedAt: memory.updatedAt
+      };
+
+      // Cache it
+      this.memoryCache.set(id, persistentMemory);
+      
+      return persistentMemory;
+
+    } catch (error) {
+      logger.error('Failed to get memory by ID', { error, id });
+      return null;
+    }
+  }
+
+  /**
+   * Cross-Agent Memory Sharing System
+   */
+  
+  /**
+   * Share memory with agents in the same organization
+   */
+  async shareMemoryWithAgents(
+    memoryId: string,
+    targetAgentIds: string[],
+    shareType: 'READ' | 'WRITE' | 'REFERENCE' = 'READ',
+    expiresAt?: Date
+  ): Promise<{ success: boolean; sharedWith: string[]; failed: string[] }> {
+    try {
+      const memory = await this.getMemoryById(memoryId);
+      if (!memory) {
+        throw new Error(`Memory not found: ${memoryId}`);
+      }
+
+      const results = { success: true, sharedWith: [], failed: [] };
+
+      for (const agentId of targetAgentIds) {
+        try {
+          // Create shared memory reference
+          const sharedMemory: Omit<PersistentMemory, 'id' | 'createdAt' | 'updatedAt' | 'accessCount' | 'lastAccessed'> = {
+            ...memory,
+            userId: agentId,
+            metadata: {
+              ...memory.metadata,
+              shared: true,
+              sharedFrom: memory.userId,
+              shareType,
+              originalMemoryId: memoryId,
+              sharedAt: new Date()
+            },
+            tags: [...memory.tags, 'shared', `shared_${shareType.toLowerCase()}`],
+            expiresAt: expiresAt || memory.expiresAt
+          };
+
+          const stored = await this.storeMemory(sharedMemory);
+          results.sharedWith.push(agentId);
+
+          // Update original memory with reference
+          await this.updateMemoryRelations(memoryId, [stored.id]);
+
+        } catch (error) {
+          logger.error('Failed to share memory with agent', { error, memoryId, agentId });
+          results.failed.push(agentId);
+        }
+      }
+
+      if (results.failed.length > 0) {
+        results.success = false;
+      }
+
+      logger.info('Memory sharing completed', {
+        memoryId,
+        sharedWith: results.sharedWith.length,
+        failed: results.failed.length
+      });
+
+      return results;
+
+    } catch (error) {
+      logger.error('Failed to share memory with agents', { error, memoryId, targetAgentIds });
+      return { success: false, sharedWith: [], failed: targetAgentIds };
+    }
+  }
+
+  /**
+   * Get shared memories from other agents
+   */
+  async getSharedMemories(
+    userId: string,
+    organizationId: string,
+    shareType?: 'READ' | 'WRITE' | 'REFERENCE',
+    limit: number = 20
+  ): Promise<PersistentMemory[]> {
+    try {
+      const whereClause: any = {
+        userId,
+        organizationId,
+        metadata: {
+          path: ['shared'],
+          equals: true
+        }
+      };
+
+      if (shareType) {
+        whereClause.metadata.path = ['shareType'];
+        whereClause.metadata.equals = shareType;
+      }
+
+      const memories = await prisma.aIMemory.findMany({
+        where: whereClause,
+        take: limit,
+        orderBy: [
+          { importance: 'desc' },
+          { createdAt: 'desc' }
+        ]
+      });
+
+      return memories.map(memory => ({
+        id: memory.id,
+        userId: memory.userId,
+        organizationId: memory.organizationId,
+        type: memory.type as MemoryType,
+        content: memory.content,
+        metadata: memory.metadata as Record<string, any>,
+        importance: memory.importance,
+        tags: memory.tags,
+        embedding: memory.embedding as number[],
+        sessionId: memory.sessionId,
+        relatedMemories: memory.relatedMemories,
+        accessCount: memory.accessCount,
+        lastAccessed: memory.lastAccessed,
+        expiresAt: memory.expiresAt,
+        createdAt: memory.createdAt,
+        updatedAt: memory.updatedAt
+      }));
+
+    } catch (error) {
+      logger.error('Failed to get shared memories', { error, userId, shareType });
+      return [];
+    }
+  }
+
+  /**
+   * Create cross-agent memory cluster
+   */
+  async createCrossAgentMemoryCluster(
+    organizationId: string,
+    agentIds: string[],
+    clusterName: string,
+    clusterType: 'COLLABORATIVE' | 'DISTRIBUTED' | 'HIERARCHICAL' = 'COLLABORATIVE'
+  ): Promise<string> {
+    try {
+      const clusterId = `cluster_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Get memories from all agents
+      const allMemories: PersistentMemory[] = [];
+      for (const agentId of agentIds) {
+        const agentMemories = await this.retrieveMemories(agentId, organizationId, '', { limit: 50 });
+        allMemories.push(...agentMemories);
+      }
+
+      // Create cluster embedding by averaging all memory embeddings
+      const clusterEmbedding = this.calculateClusterEmbedding(allMemories);
+
+      // Create cluster metadata
+      const clusterMemory: Omit<PersistentMemory, 'id' | 'createdAt' | 'updatedAt' | 'accessCount' | 'lastAccessed'> = {
+        userId: 'system',
+        organizationId,
+        type: MemoryType.BUSINESS_CONTEXT,
+        content: `Cross-agent memory cluster: ${clusterName}`,
+        metadata: {
+          clusterType,
+          clusterId,
+          agentIds,
+          memoryCount: allMemories.length,
+          clusterEmbedding,
+          createdBy: 'system',
+          isCluster: true
+        },
+        importance: 0.9,
+        tags: ['cluster', 'cross_agent', clusterType.toLowerCase()],
+        embedding: clusterEmbedding
+      };
+
+      const stored = await this.storeMemory(clusterMemory);
+
+      // Update all memories to reference the cluster
+      for (const memory of allMemories) {
+        await this.updateMemoryRelations(memory.id, [stored.id]);
+      }
+
+      logger.info('Cross-agent memory cluster created', {
+        clusterId,
+        clusterName,
+        agentCount: agentIds.length,
+        memoryCount: allMemories.length
+      });
+
+      return clusterId;
+
+    } catch (error) {
+      logger.error('Failed to create cross-agent memory cluster', { error, organizationId, agentIds });
+      throw error;
+    }
+  }
+
+  /**
+   * Episodic Memory Consolidation System
+   */
+  async consolidateEpisodicMemories(
+    userId: string,
+    organizationId: string,
+    timeWindow: number = 24 * 60 * 60 * 1000 // 24 hours
+  ): Promise<{ consolidated: number; patterns: number; insights: number }> {
+    try {
+      const cutoffTime = new Date(Date.now() - timeWindow);
+      
+      // Get episodic memories from the time window
+      const episodicMemories = await prisma.aIMemory.findMany({
+        where: {
+          userId,
+          organizationId,
+          type: MemoryType.CONVERSATION,
+          createdAt: { gte: cutoffTime }
+        },
+        orderBy: { createdAt: 'asc' }
+      });
+
+      if (episodicMemories.length < 2) {
+        return { consolidated: 0, patterns: 0, insights: 0 };
+      }
+
+      // Group memories by similarity and time proximity
+      const consolidatedGroups = this.groupMemoriesByEpisodes(episodicMemories);
+      
+      let consolidated = 0;
+      let patterns = 0;
+      let insights = 0;
+
+      for (const group of consolidatedGroups) {
+        if (group.length < 2) continue;
+
+        // Create consolidated episodic memory
+        const consolidatedContent = this.consolidateEpisodicContent(group);
+        const consolidatedImportance = this.calculateConsolidatedImportance(group);
+        
+        const consolidatedMemory: Omit<PersistentMemory, 'id' | 'createdAt' | 'updatedAt' | 'accessCount' | 'lastAccessed'> = {
+          userId,
+          organizationId,
+          type: MemoryType.LEARNING_OUTCOME,
+          content: consolidatedContent,
+          metadata: {
+            episodeType: 'consolidated',
+            originalMemoryIds: group.map(m => m.id),
+            consolidatedFrom: group.length,
+            timeSpan: {
+              start: group[0].createdAt,
+              end: group[group.length - 1].createdAt
+            },
+            patterns: this.extractPatternsFromEpisode(group)
+          },
+          importance: consolidatedImportance,
+          tags: ['episodic', 'consolidated', 'learning'],
+          embedding: this.calculateEpisodeEmbedding(group)
+        };
+
+        await this.storeMemory(consolidatedMemory);
+        consolidated++;
+
+        // Extract patterns
+        const episodePatterns = this.extractPatternsFromEpisode(group);
+        patterns += episodePatterns.length;
+
+        // Generate insights
+        const episodeInsights = this.generateEpisodicInsights(group);
+        insights += episodeInsights.length;
+
+        // Store insights as separate memories
+        for (const insight of episodeInsights) {
+          await this.storeMemory({
+            userId,
+            organizationId,
+            type: MemoryType.LEARNING_OUTCOME,
+            content: insight.description,
+            metadata: {
+              insightType: insight.type,
+              confidence: insight.confidence,
+              episodeId: consolidatedMemory.metadata?.episodeId
+            },
+            importance: insight.confidence,
+            tags: ['insight', 'episodic', insight.type]
+          });
+        }
+      }
+
+      logger.info('Episodic memory consolidation completed', {
+        userId,
+        timeWindow,
+        consolidated,
+        patterns,
+        insights
+      });
+
+      return { consolidated, patterns, insights };
+
+    } catch (error) {
+      logger.error('Failed to consolidate episodic memories', { error, userId });
+      throw error;
+    }
+  }
+
+  // Helper methods for episodic consolidation
+  private groupMemoriesByEpisodes(memories: any[]): any[][] {
+    const groups: any[][] = [];
+    let currentGroup: any[] = [];
+    const timeThreshold = 30 * 60 * 1000; // 30 minutes
+
+    for (let i = 0; i < memories.length; i++) {
+      const memory = memories[i];
+      
+      if (currentGroup.length === 0) {
+        currentGroup.push(memory);
+      } else {
+        const lastMemory = currentGroup[currentGroup.length - 1];
+        const timeDiff = new Date(memory.createdAt).getTime() - new Date(lastMemory.createdAt).getTime();
+        
+        if (timeDiff <= timeThreshold) {
+          currentGroup.push(memory);
+        } else {
+          if (currentGroup.length > 1) {
+            groups.push(currentGroup);
+          }
+          currentGroup = [memory];
+        }
+      }
+    }
+
+    if (currentGroup.length > 1) {
+      groups.push(currentGroup);
+    }
+
+    return groups;
+  }
+
+  private consolidateEpisodicContent(memories: any[]): string {
+    const contents = memories.map(m => m.content);
+    const summary = `Episodic sequence: ${contents.join(' → ')}`;
+    return summary.substring(0, 500);
+  }
+
+  private calculateConsolidatedImportance(memories: any[]): number {
+    const avgImportance = memories.reduce((sum, m) => sum + m.importance, 0) / memories.length;
+    const sequenceBonus = Math.min(memories.length * 0.1, 0.3);
+    return Math.min(avgImportance + sequenceBonus, 1.0);
+  }
+
+  private extractPatternsFromEpisode(memories: any[]): any[] {
+    // Simple pattern extraction - in production, this would use ML
+    const patterns = [];
+    
+    if (memories.length >= 3) {
+      patterns.push({
+        type: 'sequence',
+        description: `${memories.length}-step interaction sequence`,
+        confidence: 0.8
+      });
+    }
+
+    return patterns;
+  }
+
+  private calculateEpisodeEmbedding(memories: any[]): number[] {
+    // Average embeddings of constituent memories
+    const embeddings = memories.filter(m => m.embedding).map(m => m.embedding);
+    if (embeddings.length === 0) {
+      return Array.from({length: 512}, () => Math.random());
+    }
+
+    const avgEmbedding = embeddings[0].map((_: any, i: number) => 
+      embeddings.reduce((sum, emb) => sum + emb[i], 0) / embeddings.length
+    );
+
+    return avgEmbedding;
+  }
+
+  private generateEpisodicInsights(memories: any[]): any[] {
+    const insights = [];
+    
+    if (memories.length >= 3) {
+      insights.push({
+        type: 'interaction_pattern',
+        description: `User tends to have ${memories.length}-step interactions`,
+        confidence: 0.7
+      });
+    }
+
+    return insights;
+  }
+
+  private calculateClusterEmbedding(memories: PersistentMemory[]): number[] {
+    const embeddings = memories.filter(m => m.embedding).map(m => m.embedding!);
+    if (embeddings.length === 0) {
+      return Array.from({length: 512}, () => Math.random());
+    }
+
+    const avgEmbedding = embeddings[0].map((_, i) => 
+      embeddings.reduce((sum, emb) => sum + emb[i], 0) / embeddings.length
+    );
+
+    return avgEmbedding;
+  }
+
+  private async updateMemoryRelations(memoryId: string, relatedIds: string[]): Promise<void> {
+    try {
+      const memory = await this.getMemoryById(memoryId);
+      if (!memory) return;
+
+      const updatedRelations = [...new Set([...(memory.relatedMemories || []), ...relatedIds])];
+
+      await prisma.aIMemory.update({
+        where: { id: memoryId },
+        data: { relatedMemories: updatedRelations }
+      });
+
+      // Update cache
+      const cachedMemory = this.memoryCache.get(memoryId);
+      if (cachedMemory) {
+        cachedMemory.relatedMemories = updatedRelations;
+        this.memoryCache.set(memoryId, cachedMemory);
+      }
+
+    } catch (error) {
+      logger.error('Failed to update memory relations', { error, memoryId, relatedIds });
+    }
+  }
+
+  /**
+   * New public methods for enhanced memory system
+   */
+  
+  /**
+   * Store goal in memory system
+   */
+  async storeGoal(goal: any): Promise<void> {
+    await this.storeMemory({
+      userId: 'system',
+      organizationId: goal.organizationId || 'default',
+      type: MemoryType.BUSINESS_CONTEXT,
+      content: `Goal: ${goal.name} - ${goal.description}`,
+      metadata: {
+        goalId: goal.id,
+        goalType: goal.type,
+        priority: goal.priority,
+        deadline: goal.deadline
+      },
+      importance: goal.priority / 100,
+      tags: ['goal', 'goap', goal.type?.toLowerCase()].filter(Boolean)
+    });
+  }
+
+  /**
+   * Store execution result in memory system
+   */
+  async storeExecutionResult(result: any): Promise<void> {
+    await this.storeMemory({
+      userId: 'system',
+      organizationId: result.organizationId || 'default',
+      type: MemoryType.TASK_EXECUTION,
+      content: `Execution result: Plan ${result.planId} for Goal ${result.goalId}`,
+      metadata: {
+        planId: result.planId,
+        goalId: result.goalId,
+        metrics: result.metrics,
+        executionHistory: result.executionHistory,
+        timestamp: result.timestamp
+      },
+      importance: result.metrics.success_rate,
+      tags: ['execution', 'goap', 'result']
+    });
   }
 }
 

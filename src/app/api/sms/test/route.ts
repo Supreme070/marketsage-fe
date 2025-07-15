@@ -4,7 +4,7 @@ import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
-    const { phoneNumber, message, organizationId } = await request.json();
+    const { phoneNumber, message, organizationId, provider } = await request.json();
 
     if (!phoneNumber || !message) {
       return NextResponse.json({
@@ -13,8 +13,8 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Test SMS sending
-    const result = await smsService.sendSMS(phoneNumber, message, organizationId);
+    // Test SMS sending with optional provider selection
+    const result = await smsService.sendSMS(phoneNumber, message, organizationId, provider);
 
     logger.info('SMS test result:', { 
       success: result.success, 
