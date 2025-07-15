@@ -306,10 +306,8 @@ class AIPerformanceMonitoringDashboard {
       this.metrics.set(organizationId, orgMetrics);
 
       // Cache in Redis
-      await redisCache.setEx(
-        `ai_metric:${organizationId}:${type}:${metricId}`,
-        3600, // 1 hour TTL
-        JSON.stringify(metric)
+      await redisCache.set(`ai_metric:${organizationId}:${type}:${metricId}`, // 1 hour TTL
+        JSON.stringify(metric, 3600)
       );
 
       // Store in persistent memory for long-term analysis
@@ -477,10 +475,8 @@ class AIPerformanceMonitoringDashboard {
     this.alerts.set(alertData.organizationId, orgAlerts);
 
     // Cache alert
-    await redisCache.setEx(
-      `ai_alert:${alertId}`,
-      86400, // 24 hours TTL
-      JSON.stringify(alert)
+    await redisCache.set(`ai_alert:${alertId}`, // 24 hours TTL
+      JSON.stringify(alert, 86400)
     );
 
     // Log alert
@@ -935,11 +931,7 @@ class AIPerformanceMonitoringDashboard {
     alert.resolvedAt = new Date();
 
     // Update cache
-    await redisCache.setEx(
-      `ai_alert:${alertId}`,
-      86400,
-      JSON.stringify(alert)
-    );
+    await redisCache.set(`ai_alert:${alertId}`, JSON.stringify(alert), 86400);
 
     // Stream resolution
     await aiStreamingService.streamAlertResolution(organizationId, {
@@ -1009,11 +1001,7 @@ class AIPerformanceMonitoringDashboard {
     this.alertThresholds.set(organizationId, thresholds);
     
     // Cache thresholds
-    await redisCache.setEx(
-      `ai_alert_thresholds:${organizationId}`,
-      86400,
-      JSON.stringify(Array.from(thresholds.entries()))
-    );
+    await redisCache.set(`ai_alert_thresholds:${organizationId}`, JSON.stringify(Array.from(thresholds.entries())), 86400);
   }
 }
 

@@ -313,10 +313,8 @@ class ParallelExecutionEngine extends EventEmitter {
       this.addToQueue(task);
 
       // Cache task
-      await redisCache.setEx(
-        `parallel_task:${taskId}`,
-        3600, // 1 hour TTL
-        JSON.stringify(task)
+      await redisCache.set(`parallel_task:${taskId}`,
+        JSON.stringify(task), 3600 // 1 hour TTL
       );
 
       // Log task submission
@@ -412,10 +410,7 @@ class ParallelExecutionEngine extends EventEmitter {
       this.batches.set(batchId, batch);
 
       // Cache batch
-      await redisCache.setEx(
-        `parallel_batch:${batchId}`,
-        3600,
-        JSON.stringify(batch)
+      await redisCache.set(`parallel_batch:${batchId}`, JSON.stringify(batch), 3600
       );
 
       // Log batch submission

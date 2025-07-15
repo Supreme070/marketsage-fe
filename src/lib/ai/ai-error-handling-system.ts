@@ -626,11 +626,15 @@ class AIErrorHandlingSystem {
       });
 
       // Store in Redis for quick access
-      await redisCache.setEx(
-        `ai_error:${error.id}`,
-        3600, // 1 hour TTL
-        JSON.stringify(error)
-      );
+      try {
+        await redisCache.set(
+          `ai_error:${error.id}`,
+          error,
+          3600 // 1 hour TTL
+        );
+      } catch (redisError) {
+        console.warn('Redis not available during build, skipping error caching');
+      }
 
       // Store in persistent memory for long-term analysis
       await persistentMemoryEngine.storeMemory(
@@ -697,11 +701,15 @@ class AIErrorHandlingSystem {
       this.systemHealth.metrics.errorRate = (this.systemHealth.metrics.errorRate || 0) + 1;
 
       // Cache updated health status
-      await redisCache.setEx(
-        'ai_system_health',
-        60, // 1 minute TTL
-        JSON.stringify(this.systemHealth)
-      );
+      try {
+        await redisCache.set(
+          'ai_system_health',
+          this.systemHealth,
+          60 // 1 minute TTL
+        );
+      } catch (redisError) {
+        console.warn('Redis not available during build, skipping health status caching');
+      }
 
     } catch (healthUpdateError) {
       console.error('Failed to update system health:', healthUpdateError);
@@ -749,11 +757,15 @@ class AIErrorHandlingSystem {
       pattern.averageImpact = (currentImpact + newImpact) / 2;
 
       // Store updated pattern
-      await redisCache.setEx(
-        `ai_error_pattern:${patternKey}`,
-        3600, // 1 hour TTL
-        JSON.stringify(pattern)
-      );
+      try {
+        await redisCache.set(
+          `ai_error_pattern:${patternKey}`,
+          pattern,
+          3600 // 1 hour TTL
+        );
+      } catch (redisError) {
+        console.warn('Redis not available during build, skipping pattern caching');
+      }
 
     } catch (patternUpdateError) {
       console.error('Failed to update error patterns:', patternUpdateError);

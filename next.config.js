@@ -10,7 +10,8 @@ const nextConfig = {
     'bcrypt',
     '@xenova/transformers',
     'onnxruntime-node',
-    'sharp'
+    'sharp',
+    'webworker-threads'
   ],
   
   // Removed deprecated options that were causing warnings
@@ -79,7 +80,8 @@ const nextConfig = {
       config.externals.push({
         '@xenova/transformers': 'commonjs @xenova/transformers',
         'onnxruntime-node': 'commonjs onnxruntime-node',
-        'sharp': 'commonjs sharp'
+        'sharp': 'commonjs sharp',
+        'webworker-threads': 'commonjs webworker-threads'
       });
     }
     
@@ -97,6 +99,19 @@ const nextConfig = {
         filename: 'static/[name].[hash][ext]'
       }
     });
+    
+    // Ignore webworker-threads in natural library
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'webworker-threads': false
+    };
+    
+    // Add webpack ignore plugin for optional dependencies
+    config.plugins.push(
+      new (require('webpack').IgnorePlugin)({
+        resourceRegExp: /^webworker-threads$/,
+      })
+    );
     
     return config;
   },

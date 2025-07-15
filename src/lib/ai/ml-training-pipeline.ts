@@ -451,16 +451,12 @@ class MLTrainingPipeline {
       this.trainingJobs.set(jobId, trainingJob);
       this.models.set(model.id, model);
 
-      await redisCache.setEx(
-        `training_job:${jobId}`,
-        3600, // 1 hour TTL
-        JSON.stringify(trainingJob)
+      await redisCache.set(`training_job:${jobId}`,
+        JSON.stringify(trainingJob), 3600 // 1 hour TTL
       );
 
-      await redisCache.setEx(
-        `ml_model:${model.id}`,
-        3600, // 1 hour TTL
-        JSON.stringify(model)
+      await redisCache.set(`ml_model:${model.id}`,
+        JSON.stringify(model), 3600 // 1 hour TTL
       );
 
       // Log audit trail
@@ -636,10 +632,7 @@ class MLTrainingPipeline {
     });
 
     // Update cache
-    await redisCache.setEx(
-      `training_job:${jobId}`,
-      3600,
-      JSON.stringify(job)
+    await redisCache.set(`training_job:${jobId}`, JSON.stringify(job), 3600
     );
 
     // Stream progress update
@@ -964,10 +957,7 @@ class MLTrainingPipeline {
     }
 
     // Cache the metrics
-    await redisCache.setEx(
-      `model_metrics:${modelId}`,
-      3600,
-      JSON.stringify(modelMetrics)
+    await redisCache.set(`model_metrics:${modelId}`, JSON.stringify(modelMetrics), 3600
     );
   }
 
