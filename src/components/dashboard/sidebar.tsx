@@ -34,6 +34,14 @@ import {
   Target,
   TrendingDown,
   Activity,
+  Share2,
+  Instagram,
+  Facebook,
+  Twitter,
+  Linkedin,
+  Youtube,
+  Hash,
+  Sparkles,
   type LucideIcon
 } from "lucide-react";
 
@@ -160,6 +168,58 @@ const sidebarNavItems: NavItem[] = [
         title: "Setup",
         href: "/leadpulse/setup",
         icon: Settings,
+      },
+    ],
+  },
+  {
+    title: "Social Media",
+    href: "/social-media",
+    icon: Share2,
+    submenu: [
+      {
+        title: "Content Studio",
+        href: "/social-media",
+        icon: Sparkles,
+      },
+      {
+        title: "Instagram",
+        href: "/social-media?tab=content&platform=instagram",
+        icon: Instagram,
+      },
+      {
+        title: "Facebook",
+        href: "/social-media?tab=content&platform=facebook",
+        icon: Facebook,
+      },
+      {
+        title: "Twitter",
+        href: "/social-media?tab=content&platform=twitter",
+        icon: Twitter,
+      },
+      {
+        title: "LinkedIn",
+        href: "/social-media?tab=content&platform=linkedin",
+        icon: Linkedin,
+      },
+      {
+        title: "YouTube",
+        href: "/social-media?tab=content&platform=youtube",
+        icon: Youtube,
+      },
+      {
+        title: "Hashtag Research",
+        href: "/social-media?tab=hashtags",
+        icon: Hash,
+      },
+      {
+        title: "Influencer Hub",
+        href: "/social-media?tab=influencers",
+        icon: Users,
+      },
+      {
+        title: "Analytics",
+        href: "/social-media?tab=analytics",
+        icon: BarChart4,
       },
     ],
   },

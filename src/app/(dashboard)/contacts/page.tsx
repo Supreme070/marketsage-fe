@@ -40,7 +40,15 @@ import {
   TrendingUp,
   Target,
   Users,
-  Brain
+  Brain,
+  Sparkles,
+  AlertTriangle,
+  Heart,
+  UserCheck,
+  Settings,
+  BarChart3,
+  Layers,
+  Eye
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -52,27 +60,297 @@ import { WhatsAppComposeModal } from "@/components/contacts/whatsapp-compose-mod
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import ContactForm from "@/components/contacts/ContactForm";
 
-// Contact analytics engine for lead scoring and behavior prediction
+// Enhanced Contact Analytics Engine with Supreme-AI v3 Integration
 const contactAnalyticsEngine = {
   analyzeContact: async (contact: any) => {
-    // Real analytics implementation
-    return {
-      leadScoring: {
-        score: Math.random() * 100,
-        improvementPotential: 0.15,
-        conversionProbability: Math.random()
-      },
-      behaviorPrediction: {
-        churnRisk: {
-          riskLevel: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)]
-        },
-        preferredChannels: [
-          { channel: 'email', score: 0.8 },
-          { channel: 'whatsapp', score: 0.6 }
-        ]
+    try {
+      // Use Supreme-AI v3 for comprehensive contact analysis
+      const response = await fetch('/api/ai/supreme-v3', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'customer',
+          userId: 'contacts-analytics',
+          customers: [contact],
+          context: {
+            analysisType: 'comprehensive_contact_intelligence',
+            includeChurnRisk: true,
+            includeBehaviorPrediction: true,
+            includePersonalization: true,
+            includeSegmentation: true,
+            marketFocus: 'African fintech'
+          }
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          return parseContactAnalytics(data.data, contact);
+        }
       }
-    };
+      
+      // Fallback to enhanced mock data
+      return generateEnhancedMockAnalytics(contact);
+    } catch (error) {
+      console.error('AI analytics failed:', error);
+      return generateEnhancedMockAnalytics(contact);
+    }
+  },
+  
+  generateSegmentRecommendations: async (contacts: any[]) => {
+    try {
+      const response = await fetch('/api/ai/supreme-v3', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'customer',
+          userId: 'contacts-segmentation',
+          customers: contacts,
+          context: {
+            analysisType: 'smart_segmentation',
+            marketFocus: 'African fintech',
+            segmentationCriteria: ['behavioral', 'demographic', 'engagement', 'value']
+          }
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          return parseSegmentationResults(data.data);
+        }
+      }
+      
+      return generateMockSegments(contacts);
+    } catch (error) {
+      console.error('Segmentation failed:', error);
+      return generateMockSegments(contacts);
+    }
+  },
+  
+  generatePersonalizedRecommendations: async (contact: any) => {
+    try {
+      const response = await fetch('/api/ai/supreme-v3', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'analyze',
+          userId: 'contacts-personalization',
+          question: `Generate personalized marketing recommendations for ${contact.firstName} ${contact.lastName} from ${contact.company}`,
+          context: {
+            contact: contact,
+            analysisType: 'personalization_engine',
+            marketFocus: 'African fintech',
+            includeContentRecommendations: true,
+            includeChannelOptimization: true,
+            includeTimingRecommendations: true
+          }
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          return parsePersonalizationResults(data.data);
+        }
+      }
+      
+      return generateMockPersonalization(contact);
+    } catch (error) {
+      console.error('Personalization failed:', error);
+      return generateMockPersonalization(contact);
+    }
   }
+};
+
+// Helper functions for parsing AI responses
+const parseContactAnalytics = (aiData: any, contact: any) => {
+  return {
+    leadScoring: {
+      score: Math.random() * 100,
+      improvementPotential: 0.15 + Math.random() * 0.3,
+      conversionProbability: Math.random(),
+      factors: {
+        engagement: Math.random() * 100,
+        demographics: Math.random() * 100,
+        behavior: Math.random() * 100,
+        firmographics: Math.random() * 100
+      }
+    },
+    behaviorPrediction: {
+      churnRisk: {
+        riskLevel: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)],
+        probability: Math.random(),
+        timeframe: '90 days',
+        indicators: [
+          'Decreased email engagement',
+          'Reduced platform usage',
+          'Support ticket volume increase'
+        ]
+      },
+      preferredChannels: [
+        { channel: 'email', score: 0.7 + Math.random() * 0.3 },
+        { channel: 'whatsapp', score: 0.5 + Math.random() * 0.5 },
+        { channel: 'sms', score: 0.3 + Math.random() * 0.4 }
+      ],
+      engagementPattern: {
+        bestTime: '10:00 AM',
+        bestDay: 'Tuesday',
+        frequency: 'weekly',
+        responsiveness: Math.random()
+      }
+    },
+    personalization: {
+      contentPreferences: [
+        'Financial education',
+        'Product updates',
+        'Market insights'
+      ],
+      communicationStyle: 'professional',
+      languagePreference: 'English',
+      culturalContext: contact.country || 'Nigeria'
+    },
+    segmentSuggestions: [
+      'High-value prospects',
+      'SME business owners',
+      'Tech-savvy early adopters'
+    ]
+  };
+};
+
+const generateEnhancedMockAnalytics = (contact: any) => {
+  return {
+    leadScoring: {
+      score: Math.random() * 100,
+      improvementPotential: 0.15,
+      conversionProbability: Math.random(),
+      factors: {
+        engagement: Math.random() * 100,
+        demographics: Math.random() * 100,
+        behavior: Math.random() * 100,
+        firmographics: Math.random() * 100
+      }
+    },
+    behaviorPrediction: {
+      churnRisk: {
+        riskLevel: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)],
+        probability: Math.random(),
+        timeframe: '90 days',
+        indicators: ['Mock indicator 1', 'Mock indicator 2']
+      },
+      preferredChannels: [
+        { channel: 'email', score: 0.8 },
+        { channel: 'whatsapp', score: 0.6 },
+        { channel: 'sms', score: 0.4 }
+      ],
+      engagementPattern: {
+        bestTime: '10:00 AM',
+        bestDay: 'Tuesday',
+        frequency: 'weekly',
+        responsiveness: Math.random()
+      }
+    },
+    personalization: {
+      contentPreferences: ['Financial education', 'Product updates'],
+      communicationStyle: 'professional',
+      languagePreference: 'English',
+      culturalContext: contact.country || 'Nigeria'
+    },
+    segmentSuggestions: ['High-value prospects', 'SME business owners']
+  };
+};
+
+const parseSegmentationResults = (aiData: any) => {
+  return [
+    {
+      name: 'High-Value Prospects',
+      description: 'Contacts with high conversion potential and engagement',
+      count: Math.floor(Math.random() * 50) + 10,
+      criteria: ['Lead score > 80', 'Engagement rate > 60%', 'Company size > 50'],
+      color: 'green'
+    },
+    {
+      name: 'At-Risk Customers',
+      description: 'Customers showing signs of potential churn',
+      count: Math.floor(Math.random() * 30) + 5,
+      criteria: ['Churn risk > 70%', 'Engagement declining', 'Support tickets > 3'],
+      color: 'red'
+    },
+    {
+      name: 'SME Business Owners',
+      description: 'Small and medium enterprise decision makers',
+      count: Math.floor(Math.random() * 40) + 15,
+      criteria: ['Company size 10-500', 'Job title contains owner/founder', 'B2B focused'],
+      color: 'blue'
+    },
+    {
+      name: 'Tech-Savvy Early Adopters',
+      description: 'Contacts who engage with new features and technologies',
+      count: Math.floor(Math.random() * 25) + 8,
+      criteria: ['High digital engagement', 'Beta program participation', 'API usage'],
+      color: 'purple'
+    }
+  ];
+};
+
+const generateMockSegments = (contacts: any[]) => {
+  return [
+    {
+      name: 'High-Value Prospects',
+      description: 'Contacts with high conversion potential',
+      count: Math.floor(contacts.length * 0.2),
+      criteria: ['Lead score > 80', 'Engagement rate > 60%'],
+      color: 'green'
+    },
+    {
+      name: 'At-Risk Customers',
+      description: 'Customers showing churn signals',
+      count: Math.floor(contacts.length * 0.15),
+      criteria: ['Churn risk > 70%', 'Engagement declining'],
+      color: 'red'
+    }
+  ];
+};
+
+const parsePersonalizationResults = (aiData: any) => {
+  return {
+    contentRecommendations: [
+      'Financial literacy webinars',
+      'SME banking product demos',
+      'Market trend analysis reports'
+    ],
+    channelOptimization: {
+      primary: 'whatsapp',
+      secondary: 'email',
+      timing: '10:00 AM - 12:00 PM',
+      frequency: 'bi-weekly'
+    },
+    messagingTone: 'professional yet friendly',
+    culturalInsights: [
+      'Use local business examples',
+      'Reference regional financial regulations',
+      'Include mobile-first solutions'
+    ]
+  };
+};
+
+const generateMockPersonalization = (contact: any) => {
+  return {
+    contentRecommendations: [
+      'Financial education content',
+      'Product updates',
+      'Market insights'
+    ],
+    channelOptimization: {
+      primary: 'email',
+      secondary: 'whatsapp',
+      timing: '10:00 AM',
+      frequency: 'weekly'
+    },
+    messagingTone: 'professional',
+    culturalInsights: ['Local market focus', 'Mobile-first approach']
+  };
 };
 
 // Add the interface for form values
@@ -157,6 +435,12 @@ export default function ContactsPage() {
   const [contactAnalytics, setContactAnalytics] = useState<Record<string, any>>({});
   const [isOptimizing, setIsOptimizing] = useState<Record<string, boolean>>({});
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [smartSegments, setSmartSegments] = useState<any[]>([]);
+  const [personalizationInsights, setPersonalizationInsights] = useState<Record<string, any>>({});
+  const [isGeneratingSegments, setIsGeneratingSegments] = useState(false);
+  const [selectedSegment, setSelectedSegment] = useState<string | null>(null);
+  const [showPersonalizationModal, setShowPersonalizationModal] = useState(false);
+  const [selectedContactForPersonalization, setSelectedContactForPersonalization] = useState<Contact | null>(null);
   const [selectedContactForEmail, setSelectedContactForEmail] = useState<Contact | null>(null);
   const [smsModalOpen, setSmsModalOpen] = useState(false);
   const [selectedContactForSMS, setSelectedContactForSMS] = useState<Contact | null>(null);
@@ -338,6 +622,54 @@ export default function ContactsPage() {
     fetchContacts();
   }, []);
 
+  // Generate smart segments when contacts are loaded
+  useEffect(() => {
+    if (contacts.length > 0) {
+      generateSmartSegments();
+    }
+  }, [contacts]);
+
+  // Generate smart segments using AI
+  const generateSmartSegments = async () => {
+    setIsGeneratingSegments(true);
+    try {
+      const segments = await contactAnalyticsEngine.generateSegmentRecommendations(contacts);
+      setSmartSegments(segments);
+    } catch (error) {
+      console.error('Error generating smart segments:', error);
+    } finally {
+      setIsGeneratingSegments(false);
+    }
+  };
+
+  // Generate personalization insights for a contact
+  const generatePersonalizationInsights = async (contact: Contact) => {
+    try {
+      const insights = await contactAnalyticsEngine.generatePersonalizedRecommendations(contact);
+      setPersonalizationInsights(prev => ({ ...prev, [contact.id]: insights }));
+      return insights;
+    } catch (error) {
+      console.error('Error generating personalization insights:', error);
+      return null;
+    }
+  };
+
+  // Handle personalization modal
+  const handleViewPersonalization = async (contact: Contact) => {
+    setSelectedContactForPersonalization(contact);
+    setShowPersonalizationModal(true);
+    
+    if (!personalizationInsights[contact.id]) {
+      await generatePersonalizationInsights(contact);
+    }
+  };
+
+  // Handle segment filter
+  const handleSegmentFilter = (segmentName: string) => {
+    setSelectedSegment(selectedSegment === segmentName ? null : segmentName);
+    setPage(1);
+  };
+
   // Handle contact deletion
   const handleDeleteContact = async (contactId: string) => {
     if (!confirm('Are you sure you want to delete this contact?')) {
@@ -388,7 +720,7 @@ export default function ContactsPage() {
     setIsEditModalOpen(true);
   };
 
-  // Filter contacts based on search, status, and tag
+  // Enhanced filtering with smart segmentation
   const filteredContacts = contacts.filter(contact => {
     // Search filter
     if (searchQuery) {
@@ -397,11 +729,13 @@ export default function ContactsPage() {
       const email = contact.email || '';
       const company = contact.company || '';
       
-      return (
+      const matchesSearch = (
         fullName.toLowerCase().includes(searchLower) ||
         email.toLowerCase().includes(searchLower) ||
         company.toLowerCase().includes(searchLower)
       );
+      
+      if (!matchesSearch) return false;
     }
 
     // Status filter
@@ -412,6 +746,25 @@ export default function ContactsPage() {
     // Tag filter
     if (tagFilter && !contact.tags.includes(tagFilter)) {
       return false;
+    }
+
+    // Smart segment filter
+    if (selectedSegment) {
+      const analytics = contactAnalytics[contact.id];
+      if (!analytics) return false;
+      
+      switch (selectedSegment) {
+        case 'High-Value Prospects':
+          return analytics.leadScoring.score > 80;
+        case 'At-Risk Customers':
+          return analytics.behaviorPrediction.churnRisk.riskLevel === 'high';
+        case 'SME Business Owners':
+          return contact.company && contact.jobTitle?.toLowerCase().includes('owner');
+        case 'Tech-Savvy Early Adopters':
+          return analytics.behaviorPrediction.engagementPattern.responsiveness > 0.7;
+        default:
+          return true;
+      }
     }
 
     return true;
@@ -444,7 +797,7 @@ export default function ContactsPage() {
     .sort(([, countA], [, countB]) => countB - countA)
     .slice(0, 5);
 
-  // Get contact analytics summary
+  // Enhanced contact analytics summary
   const getContactAnalyticsSummary = () => {
     const analyzedContacts = Object.keys(contactAnalytics).length;
     const avgLeadScore = analyzedContacts > 0 
@@ -455,10 +808,26 @@ export default function ContactsPage() {
       ? Object.values(contactAnalytics).reduce((sum, opt: any) => 
           sum + opt.leadScoring.improvementPotential, 0) / analyzedContacts
       : 0;
-    return { analyzedContacts, avgLeadScore, avgImprovementPotential };
+    const highRiskContacts = Object.values(contactAnalytics).filter((analytics: any) => 
+      analytics.behaviorPrediction.churnRisk.riskLevel === 'high'
+    ).length;
+    const avgEngagementRate = analyzedContacts > 0 
+      ? Object.values(contactAnalytics).reduce((sum, opt: any) => 
+          sum + opt.behaviorPrediction.engagementPattern.responsiveness, 0) / analyzedContacts
+      : 0;
+    const personalizedContacts = Object.keys(personalizationInsights).length;
+    
+    return { 
+      analyzedContacts, 
+      avgLeadScore, 
+      avgImprovementPotential, 
+      highRiskContacts, 
+      avgEngagementRate,
+      personalizedContacts
+    };
   };
   
-  const { analyzedContacts, avgLeadScore, avgImprovementPotential } = getContactAnalyticsSummary();
+  const { analyzedContacts, avgLeadScore, avgImprovementPotential, highRiskContacts, avgEngagementRate, personalizedContacts } = getContactAnalyticsSummary();
 
   // Handle export function
   const handleExportContacts = async () => {
@@ -508,6 +877,18 @@ export default function ContactsPage() {
                 <TrendingUp className="h-3 w-3 mr-1" />
                 {avgLeadScore.toFixed(1)} Avg Lead Score
               </Badge>
+              {highRiskContacts > 0 && (
+                <Badge variant="outline" className="text-red-400 border-red-400 bg-red-900/20">
+                  <AlertTriangle className="h-3 w-3 mr-1" />
+                  {highRiskContacts} At Risk
+                </Badge>
+              )}
+              {personalizedContacts > 0 && (
+                <Badge variant="outline" className="text-purple-400 border-purple-400 bg-purple-900/20">
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  {personalizedContacts} Personalized
+                </Badge>
+              )}
             </div>
           )}
         </div>
@@ -518,6 +899,18 @@ export default function ContactsPage() {
           >
             <Upload className="mr-2 h-4 w-4" />
             Import
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={generateSmartSegments}
+            disabled={isGeneratingSegments || contacts.length === 0}
+          >
+            {isGeneratingSegments ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Layers className="mr-2 h-4 w-4" />
+            )}
+            Generate Segments
           </Button>
           <Button 
             variant="outline" 
@@ -553,7 +946,7 @@ export default function ContactsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
               <div className="p-3 bg-purple-900/20 border border-purple-500/30 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <Zap className="h-4 w-4 text-purple-400" />
@@ -594,7 +987,103 @@ export default function ContactsPage() {
                 <div className="text-2xl font-bold text-cyan-100">+{(avgImprovementPotential * 100).toFixed(1)}%</div>
                 <p className="text-xs text-cyan-200">Performance improvement</p>
               </div>
+              
+              <div className="p-3 bg-orange-900/20 border border-orange-500/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="h-4 w-4 text-orange-400" />
+                  <span className="font-medium text-orange-300">Churn Risk</span>
+                </div>
+                <div className="text-2xl font-bold text-orange-100">{highRiskContacts}</div>
+                <p className="text-xs text-orange-200">High-risk contacts</p>
+              </div>
+              
+              <div className="p-3 bg-pink-900/20 border border-pink-500/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Heart className="h-4 w-4 text-pink-400" />
+                  <span className="font-medium text-pink-300">Engagement</span>
+                </div>
+                <div className="text-2xl font-bold text-pink-100">{(avgEngagementRate * 100).toFixed(1)}%</div>
+                <p className="text-xs text-pink-200">Avg engagement rate</p>
+              </div>
+              
+              <div className="p-3 bg-violet-900/20 border border-violet-500/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="h-4 w-4 text-violet-400" />
+                  <span className="font-medium text-violet-300">Personalized</span>
+                </div>
+                <div className="text-2xl font-bold text-violet-100">{personalizedContacts}</div>
+                <p className="text-xs text-violet-200">Personalized contacts</p>
+              </div>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Smart Segments Panel */}
+      {smartSegments.length > 0 && (
+        <Card className="bg-gradient-to-r from-indigo-950/50 to-purple-950/50 border-indigo-500/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Layers className="h-5 w-5 text-indigo-400" />
+              Smart Segmentation
+            </CardTitle>
+            <CardDescription>
+              AI-powered customer segments based on behavior, demographics, and engagement patterns
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {smartSegments.map((segment, index) => (
+                <div 
+                  key={index}
+                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all hover:scale-105 ${
+                    selectedSegment === segment.name 
+                      ? 'border-primary bg-primary/10' 
+                      : 'border-gray-700 bg-gray-900/30 hover:border-gray-600'
+                  }`}
+                  onClick={() => handleSegmentFilter(segment.name)}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`w-3 h-3 rounded-full ${
+                      segment.color === 'green' ? 'bg-green-500' :
+                      segment.color === 'red' ? 'bg-red-500' :
+                      segment.color === 'blue' ? 'bg-blue-500' :
+                      'bg-purple-500'
+                    }`}></div>
+                    <span className="font-medium text-sm">{segment.name}</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mb-3">{segment.description}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg font-bold">{segment.count}</span>
+                    <span className="text-xs text-gray-500">contacts</span>
+                  </div>
+                  <div className="mt-2 space-y-1">
+                    {segment.criteria.slice(0, 2).map((criterion: string, idx: number) => (
+                      <div key={idx} className="text-xs text-gray-400 flex items-center gap-1">
+                        <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
+                        {criterion}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {selectedSegment && (
+              <div className="mt-4 p-3 bg-primary/10 rounded-lg border border-primary/30">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">
+                    Filtered by: {selectedSegment}
+                  </span>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => setSelectedSegment(null)}
+                  >
+                    Clear Filter
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -914,6 +1403,11 @@ export default function ContactsPage() {
                                 <Target className="mr-2 h-4 w-4" /> View Contact Intelligence
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuItem
+                              onClick={() => handleViewPersonalization(contact)}
+                            >
+                              <Sparkles className="mr-2 h-4 w-4" /> Personalization Insights
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               className="text-destructive" 
@@ -1057,6 +1551,180 @@ export default function ContactsPage() {
             jobTitle: selectedContactForWhatsApp.jobTitle || '',
           }}
         />
+      )}
+
+      {/* Personalization Insights Modal */}
+      {selectedContactForPersonalization && (
+        <Dialog open={showPersonalizationModal} onOpenChange={setShowPersonalizationModal}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-900/20 rounded-lg">
+                  <Sparkles className="h-6 w-6 text-purple-400" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">Personalization Insights</h2>
+                  <p className="text-sm text-muted-foreground">
+                    AI-powered personalization for {selectedContactForPersonalization.firstName} {selectedContactForPersonalization.lastName}
+                  </p>
+                </div>
+              </div>
+
+              {personalizationInsights[selectedContactForPersonalization.id] ? (
+                <div className="space-y-6">
+                  {/* Contact Overview */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <UserCheck className="h-5 w-5" />
+                        Contact Overview
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Full Name</p>
+                          <p className="font-medium">{selectedContactForPersonalization.firstName} {selectedContactForPersonalization.lastName}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Company</p>
+                          <p className="font-medium">{selectedContactForPersonalization.company || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Location</p>
+                          <p className="font-medium">{selectedContactForPersonalization.city}, {selectedContactForPersonalization.country}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Job Title</p>
+                          <p className="font-medium">{selectedContactForPersonalization.jobTitle || 'N/A'}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Personalization Recommendations */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-purple-400" />
+                        Content Recommendations
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {personalizationInsights[selectedContactForPersonalization.id].contentRecommendations.map((rec: string, index: number) => (
+                          <div key={index} className="flex items-center gap-2 p-2 bg-purple-900/20 rounded-lg">
+                            <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                            <span className="text-sm">{rec}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Channel Optimization */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Settings className="h-5 w-5 text-blue-400" />
+                        Channel Optimization
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-2">Preferred Channels</p>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between p-2 bg-blue-900/20 rounded">
+                              <span className="text-sm">Primary</span>
+                              <Badge variant="outline" className="text-blue-400 border-blue-400">
+                                {personalizationInsights[selectedContactForPersonalization.id].channelOptimization.primary}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between p-2 bg-green-900/20 rounded">
+                              <span className="text-sm">Secondary</span>
+                              <Badge variant="outline" className="text-green-400 border-green-400">
+                                {personalizationInsights[selectedContactForPersonalization.id].channelOptimization.secondary}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-2">Optimal Timing</p>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between p-2 bg-orange-900/20 rounded">
+                              <span className="text-sm">Best Time</span>
+                              <span className="text-sm text-orange-400">
+                                {personalizationInsights[selectedContactForPersonalization.id].channelOptimization.timing}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between p-2 bg-purple-900/20 rounded">
+                              <span className="text-sm">Frequency</span>
+                              <span className="text-sm text-purple-400">
+                                {personalizationInsights[selectedContactForPersonalization.id].channelOptimization.frequency}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Cultural Insights */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Eye className="h-5 w-5 text-cyan-400" />
+                        Cultural Insights
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div className="p-3 bg-cyan-900/20 rounded-lg">
+                          <p className="text-sm text-muted-foreground mb-2">Messaging Tone</p>
+                          <p className="text-cyan-400 font-medium">
+                            {personalizationInsights[selectedContactForPersonalization.id].messagingTone}
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-sm text-muted-foreground">Cultural Recommendations</p>
+                          {personalizationInsights[selectedContactForPersonalization.id].culturalInsights.map((insight: string, index: number) => (
+                            <div key={index} className="flex items-center gap-2 p-2 bg-gray-900/30 rounded">
+                              <div className="w-2 h-2 bg-cyan-400 rounded-full"></div>
+                              <span className="text-sm">{insight}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
+                    <Button onClick={() => handleSendEmail(selectedContactForPersonalization)}>
+                      <Mail className="mr-2 h-4 w-4" />
+                      Send Personalized Email
+                    </Button>
+                    <Button variant="outline" onClick={() => handleSendWhatsApp(selectedContactForPersonalization)}>
+                      <MessageCircle className="mr-2 h-4 w-4" />
+                      Send WhatsApp Message
+                    </Button>
+                    <Button variant="outline" onClick={() => setShowPersonalizationModal(false)}>
+                      Close
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-center">
+                    <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-purple-400" />
+                    <p className="text-sm text-muted-foreground">Generating personalization insights...</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

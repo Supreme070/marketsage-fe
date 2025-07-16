@@ -324,7 +324,15 @@ export default function AIChatPage() {
               </div>
               
               <div className="flex items-center justify-between mt-3 text-xs text-slate-500">
-                <span>Supreme-AI can make mistakes. Verify important information.</span>
+                <div className="flex items-center gap-4">
+                  <span>Supreme-AI can make mistakes. Verify important information.</span>
+                  {taskExecutionMode && (
+                    <Badge variant="outline" className="text-xs">
+                      <Shield className="mr-1 h-3 w-3" />
+                      Task Execution Mode
+                    </Badge>
+                  )}
+                </div>
                 <div className="flex items-center gap-4">
                   <Button variant="ghost" size="sm" className="h-6 text-xs">
                     <Plus className="h-3 w-3 mr-1" />
@@ -480,6 +488,296 @@ export default function AIChatPage() {
           </div>
         </div>
       </div>
+      
+      {/* Task Permission Dialog */}
+      <Dialog open={showPermissionDialog} onOpenChange={setShowPermissionDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Shield className="mr-2 h-5 w-5" />
+              Task Execution Permission
+            </DialogTitle>
+            <DialogDescription>
+              Supreme-AI wants to execute a task that requires permission
+            </DialogDescription>
+          </DialogHeader>
+          
+          {pendingTask && (
+            <div className="space-y-4">
+              <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                <div className="font-medium mb-2">{pendingTask.name}</div>
+                <div className="text-sm text-slate-600 dark:text-slate-300 mb-2">{pendingTask.description}</div>
+                <div className="flex items-center space-x-2">
+                  <Badge variant="outline">{pendingTask.type}</Badge>
+                  {getPriorityBadge(pendingTask.priority)}
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-300">
+                <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                <span>This task will be executed automatically if approved</span>
+              </div>
+              
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => handlePermissionApproval(false)}>
+                  Deny
+                </Button>
+                <Button onClick={() => handlePermissionApproval(true)}>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Approve & Execute
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Task Management Panel */}
+      <Dialog open={showTaskPanel} onOpenChange={setShowTaskPanel}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Workflow className="mr-2 h-5 w-5" />
+              Task Management Center
+            </DialogTitle>
+            <DialogDescription>
+              Monitor and manage AI-executed tasks with intelligent prioritization
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Task Controls */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search tasks..."
+                    value={searchTasks}
+                    onChange={(e) => setSearchTasks(e.target.value)}
+                    className="pl-9 w-64"
+                  />
+                </div>
+                
+                <Select value={taskFilters.status} onValueChange={(value) => setTaskFilters({...taskFilters, status: value})}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="running">Running</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="failed">Failed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Badge variant="outline">
+                  {activeTasks.length} Active
+                </Badge>
+                <Badge variant="secondary">
+                  {taskHistory.length} Completed
+                </Badge>
+              </div>
+            </div>
+            
+            {/* Task List */}
+            <ScrollArea className="h-96">
+              <div className="space-y-2">
+                {filteredTasks.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500">
+                    <Workflow className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <div>No tasks found</div>
+                  </div>
+                ) : (
+                  filteredTasks.map((task, index) => (
+                    <Card key={index} className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <div className="font-medium">{task.name}</div>
+                            <div className="flex items-center space-x-1">
+                              {getTaskStatusBadge(task.status)}
+                              {getPriorityBadge(task.priority)}
+                            </div>
+                          </div>
+                          <div className="text-sm text-slate-600 dark:text-slate-300 mb-2">{task.description}</div>
+                          <div className="flex items-center space-x-4 text-xs text-slate-500">
+                            <span>Created: {new Date(task.createdAt).toLocaleDateString()}</span>
+                            {task.executedAt && (
+                              <span>Executed: {new Date(task.executedAt).toLocaleDateString()}</span>
+                            )}
+                            {task.executionTime && (
+                              <span>Duration: {task.executionTime}ms</span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          {task.status === 'pending' && (
+                            <Button 
+                              size="sm" 
+                              onClick={() => taskExecutionEngine.executeTask(task)}
+                              disabled={loadingTasks}
+                            >
+                              <Play className="h-4 w-4" />
+                            </Button>
+                          )}
+                          
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Details
+                              </DropdownMenuItem>
+                              {task.status === 'pending' && (
+                                <DropdownMenuItem onClick={() => taskExecutionEngine.executeTask(task)}>
+                                  <Play className="mr-2 h-4 w-4" />
+                                  Execute Now
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Advanced Settings Dialog */}
+      <Dialog open={showAdvancedSettings} onOpenChange={setShowAdvancedSettings}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Settings className="mr-2 h-5 w-5" />
+              Advanced AI Settings
+            </DialogTitle>
+            <DialogDescription>
+              Configure Supreme-AI behavior and task execution preferences
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Tabs defaultValue="general" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="general">General</TabsTrigger>
+              <TabsTrigger value="tasks">Tasks</TabsTrigger>
+              <TabsTrigger value="permissions">Permissions</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="general" className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">AI Personality</Label>
+                  <Select value={aiPersonality} onValueChange={setAiPersonality}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="professional">Professional</SelectItem>
+                      <SelectItem value="friendly">Friendly</SelectItem>
+                      <SelectItem value="concise">Concise</SelectItem>
+                      <SelectItem value="detailed">Detailed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-medium">Response Length</Label>
+                  <Select value={responseLength} onValueChange={setResponseLength}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="short">Short</SelectItem>
+                      <SelectItem value="balanced">Balanced</SelectItem>
+                      <SelectItem value="detailed">Detailed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">African Market Context</Label>
+                  <Switch checked={africanContext} onCheckedChange={setAfricanContext} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Proactive Insights</Label>
+                  <Switch checked={proactiveInsights} onCheckedChange={setProactiveInsights} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Streaming Responses</Label>
+                  <Switch checked={streamingEnabled} onCheckedChange={setStreamingEnabled} />
+                </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="tasks" className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Task Execution Mode</Label>
+                  <Switch checked={taskExecutionMode} onCheckedChange={setTaskExecutionMode} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Intelligent Prioritizer</Label>
+                  <Switch checked={intelligentPrioritizer} onCheckedChange={setIntelligentPrioritizer} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Auto-Execute Tasks</Label>
+                  <Switch checked={autoExecuteTasks} onCheckedChange={setAutoExecuteTasks} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Task Notifications</Label>
+                  <Switch checked={taskNotifications} onCheckedChange={setTaskNotifications} />
+                </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="permissions" className="space-y-4">
+              <div className="space-y-3">
+                <div className="text-sm text-slate-600 dark:text-slate-300 mb-3">
+                  Configure which task types can be executed automatically
+                </div>
+                {Object.entries(taskPermissions).map(([type, allowed]) => (
+                  <div key={type} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <div className="capitalize">{type.replace('_', ' ')}</div>
+                      {!allowed && (
+                        <Badge variant="outline" className="text-xs">
+                          Requires Permission
+                        </Badge>
+                      )}
+                    </div>
+                    <Switch 
+                      checked={allowed}
+                      onCheckedChange={(checked) => 
+                        setTaskPermissions(prev => ({ ...prev, [type]: checked }))
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

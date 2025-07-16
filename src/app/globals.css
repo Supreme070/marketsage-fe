@@ -612,3 +612,520 @@
     transform: translate(80px, -30px) scale(0);
   }
 }
+
+/* ===== AFRICAN-INSPIRED DESIGN ENHANCEMENTS ===== */
+
+/* African pattern animations */
+@keyframes kente-pattern {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes ubuntu-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+}
+
+@keyframes adinkra-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes baobab-sway {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  25% { transform: translateX(-2px) rotate(-0.5deg); }
+  75% { transform: translateX(2px) rotate(0.5deg); }
+}
+
+@keyframes african-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* African-inspired gradient patterns */
+.african-kente-bg {
+  background: linear-gradient(
+    45deg,
+    #2DD4BF 0%,
+    #FBBF24 25%,
+    #DC2626 50%,
+    #059669 75%,
+    #2DD4BF 100%
+  );
+  background-size: 400% 400%;
+  animation: kente-pattern 15s ease infinite;
+}
+
+.african-sunset-bg {
+  background: linear-gradient(
+    135deg,
+    #FF6B35 0%,
+    #F7931E 25%,
+    #FFD23F 50%,
+    #FF6B35 75%,
+    #C73E1D 100%
+  );
+  background-size: 400% 400%;
+  animation: kente-pattern 20s ease infinite;
+}
+
+.african-earth-bg {
+  background: linear-gradient(
+    180deg,
+    #8B4513 0%,
+    #A0522D 25%,
+    #CD853F 50%,
+    #DEB887 75%,
+    #F4A460 100%
+  );
+  background-size: 400% 400%;
+  animation: kente-pattern 25s ease infinite;
+}
+
+/* Ubuntu philosophy inspired elements */
+.ubuntu-card {
+  @apply bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6 transition-all duration-500 hover:scale-105 hover:shadow-2xl;
+  animation: ubuntu-pulse 4s ease-in-out infinite;
+}
+
+.ubuntu-button {
+  @apply bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold py-3 px-8 rounded-full transition-all duration-300 hover:from-orange-600 hover:to-red-600 hover:scale-105 active:scale-95;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+}
+
+/* African continent silhouette patterns */
+.africa-pattern {
+  background-image: 
+    radial-gradient(circle at 20% 20%, rgba(45, 212, 191, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(251, 191, 36, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 40% 60%, rgba(220, 38, 38, 0.1) 0%, transparent 50%);
+}
+
+/* Adinkra symbol inspired decorations */
+.adinkra-symbol {
+  @apply relative inline-block;
+}
+
+.adinkra-symbol::before {
+  content: '◊';
+  @apply absolute -top-2 -right-2 text-amber-400 text-xs;
+  animation: adinkra-rotate 10s linear infinite;
+}
+
+.adinkra-symbol::after {
+  content: '◊';
+  @apply absolute -bottom-2 -left-2 text-teal-400 text-xs;
+  animation: adinkra-rotate 15s linear infinite reverse;
+}
+
+/* African market colors */
+.market-vibrant {
+  background: linear-gradient(
+    45deg,
+    #E74C3C 0%,
+    #F39C12 25%,
+    #F1C40F 50%,
+    #27AE60 75%,
+    #3498DB 100%
+  );
+}
+
+.market-warm {
+  background: linear-gradient(
+    135deg,
+    #FF6B35 0%,
+    #F7931E 50%,
+    #FFD23F 100%
+  );
+}
+
+.market-cool {
+  background: linear-gradient(
+    225deg,
+    #2DD4BF 0%,
+    #14B8A6 50%,
+    #0D9488 100%
+  );
+}
+
+/* ===== ENHANCED MOBILE RESPONSIVENESS ===== */
+
+/* Touch-friendly interactive elements */
+.touch-target {
+  @apply min-h-[44px] min-w-[44px] flex items-center justify-center;
+}
+
+.mobile-card {
+  @apply bg-white dark:bg-gray-800 rounded-xl p-4 shadow-lg border border-gray-200 dark:border-gray-700;
+  /* Enhanced touch feedback */
+  -webkit-tap-highlight-color: transparent;
+  tap-highlight-color: transparent;
+}
+
+.mobile-card:active {
+  @apply scale-95 shadow-md;
+  transition: all 0.1s ease-out;
+}
+
+/* Mobile-optimized spacing */
+.mobile-spacing {
+  @apply space-y-4 md:space-y-6;
+}
+
+.mobile-padding {
+  @apply p-4 md:p-6 lg:p-8;
+}
+
+.mobile-margin {
+  @apply m-4 md:m-6 lg:m-8;
+}
+
+/* Improved mobile navigation */
+.mobile-nav {
+  @apply fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 z-50 sm:hidden;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.mobile-nav-item {
+  @apply flex-1 flex flex-col items-center justify-center py-2 text-xs font-medium transition-colors duration-200;
+}
+
+.mobile-nav-item.active {
+  @apply text-primary-600;
+}
+
+.mobile-nav-item:not(.active) {
+  @apply text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200;
+}
+
+/* Mobile-first responsive grid */
+.mobile-grid {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6;
+}
+
+.mobile-grid-2 {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6;
+}
+
+.mobile-grid-3 {
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6;
+}
+
+/* Enhanced mobile forms */
+.mobile-form-group {
+  @apply space-y-2 md:space-y-3;
+}
+
+.mobile-input {
+  @apply w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base;
+  /* Prevent zoom on iOS */
+  font-size: 16px;
+}
+
+.mobile-button {
+  @apply w-full py-3 px-6 rounded-lg font-semibold text-base transition-all duration-200 touch-target;
+}
+
+.mobile-button-primary {
+  @apply mobile-button bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800;
+}
+
+.mobile-button-secondary {
+  @apply mobile-button bg-gray-200 text-gray-900 hover:bg-gray-300 active:bg-gray-400 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600;
+}
+
+/* Mobile-optimized modals */
+.mobile-modal {
+  @apply fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center;
+}
+
+.mobile-modal-content {
+  @apply bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl w-full max-w-md mx-auto shadow-2xl max-h-[90vh] overflow-y-auto;
+}
+
+.mobile-modal-header {
+  @apply sticky top-0 bg-white dark:bg-gray-800 px-6 py-4 border-b border-gray-200 dark:border-gray-700;
+}
+
+.mobile-modal-body {
+  @apply p-6;
+}
+
+.mobile-modal-footer {
+  @apply sticky bottom-0 bg-white dark:bg-gray-800 px-6 py-4 border-t border-gray-200 dark:border-gray-700;
+}
+
+/* ===== ENHANCED ANIMATIONS ===== */
+
+/* Staggered animations for lists */
+.stagger-animation > * {
+  @apply opacity-0 translate-y-4;
+  animation: fade-in-up 0.6s ease-out forwards;
+}
+
+.stagger-animation > *:nth-child(1) { animation-delay: 0.1s; }
+.stagger-animation > *:nth-child(2) { animation-delay: 0.2s; }
+.stagger-animation > *:nth-child(3) { animation-delay: 0.3s; }
+.stagger-animation > *:nth-child(4) { animation-delay: 0.4s; }
+.stagger-animation > *:nth-child(5) { animation-delay: 0.5s; }
+.stagger-animation > *:nth-child(6) { animation-delay: 0.6s; }
+
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Smooth hover effects */
+.hover-lift {
+  @apply transition-all duration-300 hover:scale-105 hover:shadow-lg;
+}
+
+.hover-glow {
+  @apply transition-all duration-300;
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 20px rgba(45, 212, 191, 0.3);
+}
+
+/* Loading states */
+.loading-shimmer {
+  @apply bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700;
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.loading-pulse {
+  @apply animate-pulse bg-gray-200 dark:bg-gray-700 rounded;
+}
+
+.loading-spin {
+  @apply animate-spin;
+}
+
+/* Scroll-triggered animations */
+.scroll-animate {
+  @apply opacity-0 translate-y-8 transition-all duration-700 ease-out;
+}
+
+.scroll-animate.in-view {
+  @apply opacity-100 translate-y-0;
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Enhanced focus states for accessibility */
+.focus-visible:focus-visible {
+  @apply outline-none ring-2 ring-primary-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-900;
+}
+
+/* ===== PERFORMANCE OPTIMIZATIONS ===== */
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* GPU acceleration for animations */
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Optimized shadows */
+.shadow-smooth {
+  box-shadow: 
+    0 1px 3px 0 rgba(0, 0, 0, 0.1),
+    0 1px 2px -1px rgba(0, 0, 0, 0.1);
+}
+
+.shadow-smooth-lg {
+  box-shadow: 
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -4px rgba(0, 0, 0, 0.1);
+}
+
+/* ===== ACCESSIBILITY ENHANCEMENTS ===== */
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .bg-primary { background-color: #000; }
+  .text-primary { color: #000; }
+  .border-primary { border-color: #000; }
+}
+
+/* Dark mode improvements */
+@media (prefers-color-scheme: dark) {
+  .auto-dark {
+    color-scheme: dark;
+  }
+}
+
+/* ===== CULTURAL DESIGN ELEMENTS ===== */
+
+/* Wax print patterns */
+.wax-print-pattern {
+  background-image: 
+    radial-gradient(circle at 25% 25%, #FBBF24 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, #2DD4BF 0%, transparent 50%),
+    linear-gradient(45deg, transparent 40%, rgba(220, 38, 38, 0.1) 50%, transparent 60%);
+  background-size: 40px 40px, 40px 40px, 20px 20px;
+  background-position: 0 0, 20px 20px, 0 0;
+}
+
+/* Mudcloth inspired textures */
+.mudcloth-texture {
+  background-image: 
+    linear-gradient(90deg, rgba(139, 69, 19, 0.1) 1px, transparent 1px),
+    linear-gradient(rgba(139, 69, 19, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Tribal pattern borders */
+.tribal-border {
+  border-image: linear-gradient(
+    45deg,
+    #2DD4BF 0%,
+    #FBBF24 25%,
+    #DC2626 50%,
+    #059669 75%,
+    #2DD4BF 100%
+  ) 1;
+  border-width: 2px;
+  border-style: solid;
+}
+
+/* Ubuntu philosophy colors */
+.ubuntu-orange { color: #E95420; }
+.ubuntu-warmgrey { color: #AEA79F; }
+.ubuntu-coolGrey { color: #333333; }
+.ubuntu-lightGrey { color: #CDCDCD; }
+
+/* ===== FINTECH SPECIFIC ENHANCEMENTS ===== */
+
+/* Currency display enhancements */
+.currency-display {
+  @apply font-mono text-lg font-semibold text-green-600 dark:text-green-400;
+  letter-spacing: 0.5px;
+}
+
+.currency-large {
+  @apply font-mono text-2xl font-bold text-green-600 dark:text-green-400;
+  letter-spacing: 0.5px;
+}
+
+.currency-small {
+  @apply font-mono text-sm font-medium text-gray-600 dark:text-gray-400;
+  letter-spacing: 0.25px;
+}
+
+/* Status indicators */
+.status-success {
+  @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200;
+}
+
+.status-warning {
+  @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200;
+}
+
+.status-error {
+  @apply bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200;
+}
+
+.status-info {
+  @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200;
+}
+
+/* Chart and graph enhancements */
+.chart-grid {
+  stroke: rgba(156, 163, 175, 0.2);
+  stroke-width: 1;
+}
+
+.chart-line {
+  stroke: #2DD4BF;
+  stroke-width: 2;
+  fill: none;
+}
+
+.chart-area {
+  fill: url(#chartGradient);
+}
+
+.chart-point {
+  fill: #2DD4BF;
+  stroke: #ffffff;
+  stroke-width: 2;
+}
+
+.chart-tooltip {
+  @apply bg-gray-900 text-white p-2 rounded-lg shadow-lg text-sm;
+}
+
+/* ===== PRINT STYLES ===== */
+
+@media print {
+  * {
+    color: #000 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+  
+  .page-break {
+    page-break-after: always;
+  }
+  
+  h1, h2, h3 {
+    page-break-after: avoid;
+  }
+  
+  blockquote, pre {
+    page-break-inside: avoid;
+  }
+  
+  ul, ol, dl {
+    page-break-before: avoid;
+  }
+}

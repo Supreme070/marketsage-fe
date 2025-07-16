@@ -205,6 +205,39 @@ const config = {
             transform: 'translateY(0)',
             opacity: '1'
           }
+        },
+        // African-inspired keyframes
+        'kente-pattern': {
+          '0%': { 'background-position': '0% 50%' },
+          '50%': { 'background-position': '100% 50%' },
+          '100%': { 'background-position': '0% 50%' }
+        },
+        'ubuntu-pulse': {
+          '0%, 100%': { transform: 'scale(1)', opacity: '1' },
+          '50%': { transform: 'scale(1.05)', opacity: '0.8' }
+        },
+        'adinkra-rotate': {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' }
+        },
+        'baobab-sway': {
+          '0%, 100%': { transform: 'translateX(0) rotate(0deg)' },
+          '25%': { transform: 'translateX(-2px) rotate(-0.5deg)' },
+          '75%': { transform: 'translateX(2px) rotate(0.5deg)' }
+        },
+        'african-shimmer': {
+          '0%': { 'background-position': '-200% 0' },
+          '100%': { 'background-position': '200% 0' }
+        },
+        // Enhanced mobile keyframes
+        'bounce-gentle': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-5px)' }
+        },
+        'wiggle': {
+          '0%, 100%': { transform: 'rotate(0deg)' },
+          '25%': { transform: 'rotate(-3deg)' },
+          '75%': { transform: 'rotate(3deg)' }
         }
       },
       animation: {
@@ -219,12 +252,28 @@ const config = {
         'scale-up': 'scale-up 0.3s ease-out forwards',
         'slide-up': 'slide-up 0.5s ease-out forwards',
         'slide-up-delayed': 'slide-up 0.5s 0.2s ease-out forwards',
+        // African-inspired animations
+        'kente-pattern': 'kente-pattern 15s ease infinite',
+        'ubuntu-pulse': 'ubuntu-pulse 4s ease-in-out infinite',
+        'adinkra-rotate': 'adinkra-rotate 10s linear infinite',
+        'baobab-sway': 'baobab-sway 6s ease-in-out infinite',
+        'african-shimmer': 'african-shimmer 2s infinite',
+        // Enhanced mobile animations
+        'bounce-gentle': 'bounce-gentle 2s ease-in-out infinite',
+        'wiggle': 'wiggle 1s ease-in-out infinite',
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'gradient-primary': 'linear-gradient(to right, #2DD4BF, #14B8A6)',
         'gradient-primary-dark': 'linear-gradient(to right, #2DD4BF, #0D9488)',
         'hero-pattern': 'url("data:image/svg+xml,%3Csvg width=\'30\' height=\'30\' viewBox=\'0 0 30 30\' fill=\'none\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M1.22676 0C1.91374 0 2.45351 0.539773 2.45351 1.22676C2.45351 1.91374 1.91374 2.45351 1.22676 2.45351C0.539773 2.45351 0 1.91374 0 1.22676C0 0.539773 0.539773 0 1.22676 0Z\' fill=\'rgba(107,114,128,0.10)\'/%3E%3C/svg%3E")',
+        // African-inspired patterns
+        'kente-pattern': 'linear-gradient(45deg, #2DD4BF 0%, #FBBF24 25%, #DC2626 50%, #059669 75%, #2DD4BF 100%)',
+        'african-sunset': 'linear-gradient(135deg, #FF6B35 0%, #F7931E 25%, #FFD23F 50%, #FF6B35 75%, #C73E1D 100%)',
+        'african-earth': 'linear-gradient(180deg, #8B4513 0%, #A0522D 25%, #CD853F 50%, #DEB887 75%, #F4A460 100%)',
+        'wax-print': 'radial-gradient(circle at 25% 25%, #FBBF24 0%, transparent 50%), radial-gradient(circle at 75% 75%, #2DD4BF 0%, transparent 50%)',
+        'mudcloth-texture': 'linear-gradient(90deg, rgba(139, 69, 19, 0.1) 1px, transparent 1px), linear-gradient(rgba(139, 69, 19, 0.1) 1px, transparent 1px)',
+        'africa-pattern': 'radial-gradient(circle at 20% 20%, rgba(45, 212, 191, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(251, 191, 36, 0.1) 0%, transparent 50%)',
       },
       boxShadow: {
         'subtle': '0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.1)',
@@ -234,6 +283,37 @@ const config = {
       },
       backdropBlur: {
         'xs': '2px',
+      },
+      // Enhanced mobile spacing
+      spacing: {
+        '18': '4.5rem',
+        '22': '5.5rem',
+        '26': '6.5rem',
+        '30': '7.5rem',
+        '34': '8.5rem',
+        '38': '9.5rem',
+        '42': '10.5rem',
+        '46': '11.5rem',
+        // African-inspired spacing (based on traditional proportions)
+        'ubuntu': '1.618rem', // Golden ratio
+        'ubuntu-2': '3.236rem',
+        'ubuntu-3': '4.854rem',
+        'ubuntu-4': '6.472rem',
+        'ubuntu-5': '8.09rem',
+      },
+      // Enhanced mobile breakpoints
+      screens: {
+        'xs': '375px',
+        'sm': '640px',
+        'md': '768px',
+        'lg': '1024px',
+        'xl': '1280px',
+        '2xl': '1536px',
+        // African mobile-first breakpoints
+        'mobile': '320px',
+        'tablet': '768px',
+        'desktop': '1024px',
+        'wide': '1280px',
       },
     },
   },
