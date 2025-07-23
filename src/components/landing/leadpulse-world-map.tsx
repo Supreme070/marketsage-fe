@@ -265,7 +265,7 @@ export function LeadPulseWorldMap() {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">Engaged (Score > 70)</span>
+                        <span className="text-sm font-medium">Engaged (Score &gt; 70)</span>
                         <span className="text-sm text-muted-foreground">89</span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1">

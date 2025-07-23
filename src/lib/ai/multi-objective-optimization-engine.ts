@@ -853,7 +853,7 @@ class MultiObjectiveOptimizationEngine extends EventEmitter {
   private activeOptimizations: Map<string, OptimizationRequest>;
   private algorithms: Map<string, OptimizationAlgorithm>;
   private benchmarks: Map<string, any>;
-  private initialized: boolean = false;
+  private initialized = false;
   private tracer = trace.getTracer('multi-objective-optimization');
 
   private constructor() {

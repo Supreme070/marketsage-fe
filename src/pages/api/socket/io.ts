@@ -10,6 +10,7 @@ import type { NextApiResponseServerIO } from '@/types/socket';
 import { leadPulseRealtimeService } from '@/lib/websocket/leadpulse-realtime';
 import { collaborationRealtimeService } from '@/lib/websocket/collaboration-realtime';
 import { aiStreamingService } from '@/lib/websocket/ai-streaming-service';
+import { adminRealtimeService } from '@/lib/websocket/admin-realtime-service';
 import { logger } from '@/lib/logger';
 
 export default function handler(req: NextApiRequest, res: NextApiResponseServerIO) {
@@ -45,6 +46,9 @@ export default function handler(req: NextApiRequest, res: NextApiResponseServerI
 
   // Initialize AI streaming service
   aiStreamingService.initialize(io);
+
+  // Initialize Admin realtime service
+  adminRealtimeService.initialize(io);
 
   // Store io instance
   res.socket.server.io = io;

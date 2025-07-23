@@ -694,7 +694,7 @@ export class EnhancedCustomerSuccessEngine extends EventEmitter {
         });
 
         // Get existing satisfaction metrics
-        let satisfactionMetrics = await this.getExistingSatisfactionMetrics(customerId);
+        const satisfactionMetrics = await this.getExistingSatisfactionMetrics(customerId);
 
         // Analyze sentiment from communications
         if (options.analyzeSentiment) {

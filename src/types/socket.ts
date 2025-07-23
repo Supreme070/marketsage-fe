@@ -26,6 +26,19 @@ export interface ServerToClientEvents {
   touchpoint_added: (data: any) => void;
   analytics_data: (data: any) => void;
   
+  // Admin events
+  'admin:system_metrics_update': (data: any) => void;
+  'admin:service_status_change': (data: any) => void;
+  'admin:security_event_created': (data: any) => void;
+  'admin:threat_detected': (data: any) => void;
+  'admin:user_activity_update': (data: any) => void;
+  'admin:new_user_registered': (data: any) => void;
+  'admin:user_status_changed': (data: any) => void;
+  'admin:organization_created': (data: any) => void;
+  'admin:subscription_changed': (data: any) => void;
+  'admin:stats_update': (data: any) => void;
+  'admin:alert_created': (data: any) => void;
+  
   // Connection events
   pong: (data: { timestamp: string }) => void;
 }
@@ -34,6 +47,10 @@ export interface ClientToServerEvents {
   // Subscription events
   subscribe: (dataType: string) => void;
   unsubscribe: (dataType: string) => void;
+  
+  // Admin subscription events
+  'admin:subscribe': (channels: string[]) => void;
+  'admin:unsubscribe': (channels: string[]) => void;
   
   // Connection events
   ping: () => void;

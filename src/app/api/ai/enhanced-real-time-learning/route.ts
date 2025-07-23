@@ -10,7 +10,7 @@
  * - GET /api/ai/enhanced-real-time-learning - Get learning insights and analytics
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { logger } from '@/lib/logger';
@@ -603,7 +603,7 @@ export async function GET(request: NextRequest) {
         result = await getRecommendations({
           userId,
           context: searchParams.get('context') || 'general',
-          limit: parseInt(searchParams.get('limit') || '10')
+          limit: Number.parseInt(searchParams.get('limit') || '10')
         });
         break;
 

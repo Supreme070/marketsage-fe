@@ -1,11 +1,34 @@
-import { PrismaClient, type Prisma } from "@prisma/client";
-import * as fs from 'fs';
-import * as path from 'path';
+// Browser-safe imports
+let PrismaClient: any;
+let Prisma: any;
+let fs: any;
+let path: any;
+let extractTenantIdFromEnvironment: any;
+
+// Only import server-side modules when not in browser
+if (typeof window === 'undefined') {
+  const prismaModule = require("@prisma/client");
+  PrismaClient = prismaModule.PrismaClient;
+  Prisma = prismaModule.Prisma;
+  fs = require('fs');
+  path = require('path');
+  
+  // Import tenant context utilities (Edge Runtime compatible)
+  try {
+    const tenantModule = require('@/lib/tenant/edge-tenant-context');
+    extractTenantIdFromEnvironment = tenantModule.extractTenantIdFromEnvironment;
+  } catch (error) {
+    console.warn('Could not load tenant context utilities:', error);
+    extractTenantIdFromEnvironment = () => null;
+  }
+}
 
 // Add custom methods to PrismaClient
-interface CustomPrismaClient extends PrismaClient {
+interface CustomPrismaClient {
   $healthCheck: () => Promise<boolean>;
   $reconnect: () => Promise<boolean>;
+  $connect: () => Promise<void>;
+  $disconnect: () => Promise<void>;
   
   // Add type for models (using index signature)
   [key: string]: any;
@@ -22,28 +45,44 @@ const RETRY_DELAY_MS = 500;
 const CONNECTION_CHECK_INTERVAL = 60000; // 1 minute
 
 // Check if we're running in a Docker environment (server-side only)
-const isDocker = typeof window === 'undefined' && 
+const isDocker = typeof window === 'undefined' && fs && 
   (fs.existsSync('/.dockerenv') || (process.env.DOCKER_CONTAINER === 'true'));
 
 // Create a new PrismaClient instance
 const createPrismaClient = (): CustomPrismaClient => {
+  // Return null client if in browser
+  if (typeof window !== 'undefined') {
+    return {
+      $healthCheck: async () => false,
+      $reconnect: async () => false,
+      $connect: async () => {},
+      $disconnect: async () => {},
+    } as CustomPrismaClient;
+  }
+
   try {
     // Set up Prisma client with appropriate options
-    const clientOptions: Prisma.PrismaClientOptions = {
+    const clientOptions: any = {
       log: [
         { level: 'error', emit: 'stdout' },
         { level: 'warn', emit: 'stdout' }
-      ],
-      errorFormat: 'pretty',
+      ]
     };
 
-    // Initialize the client
+    // Add database URL if available
+    if (process.env.DATABASE_URL) {
+      clientOptions.datasources = {
+        db: {
+          url: process.env.DATABASE_URL
+        }
+      };
+    }
+
     const client = new PrismaClient(clientOptions) as CustomPrismaClient;
-    
-    // Add health check method
+
+    // Add custom health check method
     client.$healthCheck = async (): Promise<boolean> => {
       try {
-        // Simple query to check if connection is alive
         await client.$queryRaw`SELECT 1`;
         return true;
       } catch (error) {
@@ -51,39 +90,33 @@ const createPrismaClient = (): CustomPrismaClient => {
         return false;
       }
     };
-    
-    // Add reconnect method
+
+    // Add custom reconnect method
     client.$reconnect = async (): Promise<boolean> => {
       try {
         await client.$disconnect();
         await client.$connect();
-        return await client.$healthCheck();
+        return true;
       } catch (error) {
-        console.error('Database reconnection failed:', error);
+        console.error('Database reconnect failed:', error);
         return false;
       }
     };
 
     return client;
   } catch (error) {
-    console.error('Failed to initialize Prisma client:', error);
+    console.error('Error creating Prisma client:', error);
     throw error;
   }
 };
 
-// Check if we're in build mode
-const isBuildTime = process.env.NODE_ENV === 'production' && 
-  (process.env.NEXT_PHASE === 'phase-production-build' || 
-   process.env.BUILDING === 'true' ||
-   process.argv.includes('build'));
-
-// Initialize Prisma client with error handling
+// Initialize Prisma client
 let prisma: CustomPrismaClient;
 let isConnected = false;
 
-if (isBuildTime) {
-  // During build time, provide a mock client to prevent database connections
-  console.log('Build time detected - using mock Prisma client');
+// Create the client
+if (typeof window !== 'undefined') {
+  // Browser environment - use mock client
   prisma = {
     $connect: async () => Promise.resolve(),
     $disconnect: async () => Promise.resolve(),
@@ -105,28 +138,36 @@ if (isBuildTime) {
       prisma = createPrismaClient();
     }
     
-    // Connect to the database only if not in build mode
-    prisma.$connect()
-      .then(() => {
-        console.log('Successfully connected to database');
-        isConnected = true;
+    // Connect to the database only if not in build mode and not in browser
+    const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build' || 
+      process.env.BUILDING === 'true' ||
+      process.argv.includes('build') ||
+      (process.argv.includes('next') && process.argv.includes('build')) ||
+      process.env.NODE_ENV === 'test' ||
+      process.env.CI === 'true';
+    
+    if (typeof window === 'undefined' && !isBuildTime) {
+      prisma.$connect()
+        .then(() => {
+          console.log('Successfully connected to database');
+          isConnected = true;
         
-        // Set up periodic health checks in production
-        if (process.env.NODE_ENV === 'production') {
-          setInterval(async () => {
-            const isHealthy = await prisma.$healthCheck();
-            if (!isHealthy && isConnected) {
-              console.warn('Database connection lost, attempting to reconnect...');
-              isConnected = await prisma.$reconnect();
-              console.log(isConnected ? 'Reconnection successful' : 'Reconnection failed');
-            }
-          }, CONNECTION_CHECK_INTERVAL);
-        }
-      })
-      .catch(e => {
-        console.error('Failed to connect to database:', e);
-        isConnected = false;
-      });
+          // Set up periodic health checks in production
+          if (process.env.NODE_ENV === 'production') {
+            setInterval(async () => {
+              const healthy = await prisma.$healthCheck();
+              if (!healthy) {
+                console.error('Database health check failed');
+                isConnected = false;
+              }
+            }, CONNECTION_CHECK_INTERVAL);
+          }
+        })
+        .catch(e => {
+          console.error('Failed to connect to database:', e);
+          isConnected = false;
+        });
+    }
   } catch (error) {
     console.error('Critical error initializing Prisma client:', error);
     
@@ -144,247 +185,11 @@ if (isBuildTime) {
   }
 }
 
-// Add middleware for query timeout and retry
-prisma.$use(async (params: any, next: any) => {
-  let attempts = 0;
-
-  async function runWithRetry() {
-    try {
-      attempts++;
-      const startTime = Date.now();
-      const result = await next(params);
-      const duration = Date.now() - startTime;
-      
-      // Log slow queries (only in development)
-      if (process.env.NODE_ENV !== 'production' && duration > 500) {
-        console.warn(`Slow database operation: ${params.model}.${params.action} (${duration}ms)`);
-      }
-      
-      // Update connection status
-      if (!isConnected) {
-        isConnected = true;
-        console.log('Database connection restored');
-      }
-      
-      return result;
-    } catch (error) {
-      const isConnectionError =
-        error instanceof Error &&
-        (error.message.includes('Connection refused') ||
-         error.message.includes('connection timeout') ||
-         error.message.includes('Connection terminated unexpectedly') ||
-         error.message.includes('pool is draining') ||
-         error.message.includes('pool overflow') ||
-         error.message.includes('Can\'t reach database server'));
-
-      // Handle schema mismatch errors
-      if (error instanceof Error && 
-         (error.message.includes('does not exist in the current database') ||
-          error.message.includes('Unknown field') ||
-          error.message.includes('column') && error.message.includes('does not exist') ||
-          error.message.includes('Invalid `prisma') && error.message.includes('invocation'))) {
-        
-        console.warn(`Schema mismatch error detected: ${error.message}`);
-        
-        // Check for specific errors like organizationId column missing
-        if (error.message.includes('organizationId') && params.model === 'user') {
-          console.log('Handling missing organizationId column in User model');
-          
-          // Remove the problematic field from the query
-          if (params.args?.select?.organizationId) {
-            delete params.args.select.organizationId;
-          }
-          
-          if (params.args?.include?.organization) {
-            delete params.args.include.organization;
-          }
-          
-          if (params.args?.where?.organizationId) {
-            delete params.args.where.organizationId;
-          }
-          
-          if (params.args?.data?.organizationId) {
-            delete params.args.data.organizationId;
-          }
-          
-          // Try again with modified params
-          return next(params);
-        }
-        
-        // Automatic handling for unknown field errors
-        if (error.message.includes('Unknown field')) {
-          // Extract the field name from the error message
-          const matches = error.message.match(/Unknown field `([^`]+)`/);
-          if (matches && matches[1]) {
-            const fieldName = matches[1];
-            console.log(`Automatically removing unknown field: ${fieldName}`);
-            
-            // Remove the field from the appropriate location in params
-            if (params.args?.select && params.args.select[fieldName] !== undefined) {
-              delete params.args.select[fieldName];
-            }
-            
-            if (params.args?.include && params.args.include[fieldName] !== undefined) {
-              delete params.args.include[fieldName];
-            }
-            
-            if (params.args?.where && params.args.where[fieldName] !== undefined) {
-              delete params.args.where[fieldName];
-            }
-            
-            if (params.args?.data && params.args.data[fieldName] !== undefined) {
-              delete params.args.data[fieldName];
-            }
-            
-            // Try again with modified params
-            return next(params);
-          }
-        }
-      }
-
-      // Retry logic for connection issues
-      if (isConnectionError && attempts < MAX_RETRIES) {
-        console.warn(`Database connection error, retrying (${attempts}/${MAX_RETRIES})...`);
-        
-        // Mark connection as down
-        if (isConnected) {
-          isConnected = false;
-          console.error('Database connection lost');
-        }
-        
-        // Wait before retry with exponential backoff
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * Math.pow(2, attempts - 1)));
-        
-        // Attempt to reconnect before retry
-        if (attempts === MAX_RETRIES - 1) {
-          await prisma.$reconnect().catch(() => {});
-        }
-        
-        return runWithRetry();
-      }
-      throw error;
-    }
-  }
-
-  return runWithRetry();
-});
-
-// TENANT ISOLATION MIDDLEWARE - Critical Security Feature
-// This middleware automatically adds organizationId filters to all database queries
-// to ensure complete data isolation between tenants
-prisma.$use(async (params: any, next: any) => {
-  // Models that require tenant isolation
-  const TENANT_ISOLATED_MODELS = [
-    'Contact', 'EmailCampaign', 'SMSCampaign', 'WhatsAppCampaign', 
-    'List', 'Segment', 'Workflow', 'Task', 'Lead', 'Journey',
-    'ConversionEvent', 'ConversionTracking', 'ConversionFunnel',
-    'AI_ContentAnalysis', 'AI_CustomerSegment', 'AI_ChatHistory',
-    'LeadPulseVisitor', 'LeadPulseTouchpoint', 'PredictionModel',
-    'ChurnPrediction', 'LifetimeValuePrediction', 'ContactJourney'
-  ];
-
-  // Skip tenant isolation for non-tenant models or if no model specified
-  if (!params.model || !TENANT_ISOLATED_MODELS.includes(params.model)) {
-    return next(params);
-  }
-
-  // Skip for build time or when using mock client
-  if (typeof prisma.$healthCheck === 'function') {
-    const isHealthy = await prisma.$healthCheck();
-    if (!isHealthy) {
-      return next(params);
-    }
-  }
-
-  try {
-    // Get tenant ID from request context
-    const tenantId = getCurrentTenantId();
-    
-    // If no tenant context available, allow query to proceed (for system operations)
-    if (!tenantId) {
-      // Log warning for production to detect potential security issues
-      if (process.env.NODE_ENV === 'production') {
-        console.warn(`Database query without tenant context: ${params.model}.${params.action}`);
-      }
-      return next(params);
-    }
-
-    // Add tenant filter based on operation type
-    switch (params.action) {
-      case 'findMany':
-      case 'findFirst':
-      case 'findUnique':
-      case 'count':
-      case 'aggregate':
-      case 'groupBy':
-        // Add organizationId filter to WHERE clause
-        if (!params.args) params.args = {};
-        if (!params.args.where) params.args.where = {};
-        
-        // Only add filter if not already present
-        if (!params.args.where.organizationId) {
-          params.args.where.organizationId = tenantId;
-        }
-        break;
-
-      case 'create':
-        // Ensure organizationId is set for new records
-        if (!params.args) params.args = {};
-        if (!params.args.data) params.args.data = {};
-        
-        // Set organizationId for the new record
-        if (!params.args.data.organizationId) {
-          params.args.data.organizationId = tenantId;
-        }
-        break;
-
-      case 'createMany':
-        // Ensure organizationId is set for all new records
-        if (!params.args) params.args = {};
-        if (!params.args.data) params.args.data = [];
-        
-        // Set organizationId for each record in batch create
-        if (Array.isArray(params.args.data)) {
-          params.args.data = params.args.data.map((record: any) => ({
-            ...record,
-            organizationId: record.organizationId || tenantId
-          }));
-        }
-        break;
-
-      case 'update':
-      case 'updateMany':
-      case 'upsert':
-      case 'delete':
-      case 'deleteMany':
-        // Add organizationId filter to WHERE clause for safety
-        if (!params.args) params.args = {};
-        if (!params.args.where) params.args.where = {};
-        
-        // Ensure we only update/delete records from the current tenant
-        if (!params.args.where.organizationId) {
-          params.args.where.organizationId = tenantId;
-        }
-        break;
-    }
-
-    return next(params);
-
-  } catch (error) {
-    console.error('Tenant isolation middleware error:', error);
-    // Continue with original query if middleware fails
-    return next(params);
-  }
-});
-
-// Import tenant context utilities (Edge Runtime compatible)
-import { extractTenantIdFromEnvironment } from '@/lib/tenant/edge-tenant-context';
-
 // Helper function to get current tenant ID from request context
 function getCurrentTenantId(): string | null {
   try {
     // Use the tenant context utility
-    return extractTenantIdFromEnvironment();
+    return extractTenantIdFromEnvironment ? extractTenantIdFromEnvironment() : null;
   } catch (error) {
     console.warn('Could not determine tenant context:', error);
     return null;
@@ -392,7 +197,7 @@ function getCurrentTenantId(): string | null {
 }
 
 // Setup proper shutdown for production
-if (process.env.NODE_ENV === 'production') {
+if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
   const gracefulShutdown = async () => {
     console.log('Closing Prisma client connection...');
     await prisma.$disconnect();
@@ -404,7 +209,10 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // In development, we reuse the same client across requests
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+if (typeof window === 'undefined' && process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = prisma;
+}
 
 export default prisma;
 export { prisma };
+export { prisma as db };

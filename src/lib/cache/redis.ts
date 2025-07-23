@@ -32,9 +32,17 @@ class RedisCacheService {
 
   private async initialize() {
     try {
+      // Environment-aware Redis configuration
+      const isDocker = process.env.DOCKER_ENV === 'true' || process.env.NODE_ENV === 'production';
+      const redisHost = isDocker 
+        ? (process.env.REDIS_HOST || 'marketsage-valkey')
+        : 'localhost';
+      
+      logger.info(`Initializing IORedis client for ${isDocker ? 'Docker' : 'local'} environment: ${redisHost}:${process.env.REDIS_PORT || '6379'}`);
+      
       // Initialize Redis client
       this.client = new Redis({
-        host: process.env.REDIS_HOST || 'localhost',
+        host: redisHost,
         port: Number.parseInt(process.env.REDIS_PORT || '6379'),
         password: process.env.REDIS_PASSWORD,
         db: Number.parseInt(process.env.REDIS_DB || '0'),
@@ -323,3 +331,4 @@ class RedisCacheService {
 
 // Export singleton instance
 export const redis = new RedisCacheService();
+export const redisService = redis; // Alias for compatibility

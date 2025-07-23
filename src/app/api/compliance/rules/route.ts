@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { logger } from '@/lib/logger';
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     const regulation = searchParams.get('regulation');
     const category = searchParams.get('category');
     const isActive = searchParams.get('active');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const limit = Number.parseInt(searchParams.get('limit') || '50');
 
     // Build where condition
     const whereCondition: any = {};

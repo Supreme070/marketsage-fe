@@ -115,7 +115,7 @@ export function DashboardPreview() {
               strokeDasharray="5,5"
               initial={{ pathLength: 0 }}
               animate={{ pathLength: 1 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
             />
           </svg>
 

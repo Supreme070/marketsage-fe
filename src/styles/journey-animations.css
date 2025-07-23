@@ -1,0 +1,144 @@
+/* Customer Journey Visualization Animations */
+
+@keyframes journeyStepReveal {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes engagementPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+@keyframes journeyFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes stepHighlight {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+@keyframes countUp {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.journey-step-reveal {
+  animation: journeyStepReveal 0.6s ease-out forwards;
+}
+
+.engagement-pulse {
+  animation: engagementPulse 2s ease-in-out infinite;
+}
+
+.journey-flow {
+  background: linear-gradient(-45deg, 
+    transparent 25%, 
+    rgba(59, 130, 246, 0.1) 25%, 
+    rgba(59, 130, 246, 0.1) 50%, 
+    transparent 50%, 
+    transparent 75%, 
+    rgba(59, 130, 246, 0.1) 75%);
+  background-size: 20px 20px;
+  animation: journeyFlow 2s linear infinite;
+}
+
+.step-highlight {
+  animation: stepHighlight 2s ease-out;
+}
+
+.count-up {
+  animation: countUp 0.8s ease-out forwards;
+}
+
+/* Hover effects */
+.journey-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.journey-step:hover {
+  transform: scale(1.1);
+  transition: transform 0.2s ease;
+}
+
+/* Responsive design helpers */
+@media (max-width: 768px) {
+  .journey-timeline {
+    padding-left: 1rem;
+  }
+  
+  .journey-step-content {
+    margin-left: 0.5rem;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .journey-card {
+    background: #1f2937;
+    border-color: #374151;
+  }
+  
+  .journey-step-content {
+    background: #374151;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .journey-step {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .journey-step-reveal,
+  .engagement-pulse,
+  .journey-flow,
+  .step-highlight,
+  .count-up {
+    animation: none;
+  }
+  
+  .journey-card:hover,
+  .journey-step:hover {
+    transform: none;
+  }
+}

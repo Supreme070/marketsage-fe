@@ -108,6 +108,37 @@ export async function middleware(request: NextRequest) {
       return corsResponse;
     }
 
+    // URL Redirects for Navigation Restructuring
+    const redirects: Record<string, string> = {
+      // Admin redirects - move old admin routes to new structure
+      '/dashboard/admin': '/admin/dashboard',
+      '/dashboard/admin/subscriptions': '/admin/billing/subscriptions',
+      '/admin': '/admin-login', // Redirect old admin path to new login
+      
+      // LeadPulse redirects
+      '/analytics/funnels': '/leadpulse/analytics/funnels',
+      '/analytics/realtime': '/leadpulse/analytics/realtime', 
+      '/conversions': '/leadpulse/forms/conversions',
+      '/leadpulse/lead-management': '/leadpulse/visitors/leads',
+      
+      // AI Intelligence redirects
+      '/ai-chat': '/ai-intelligence/chat',
+      '/intelligence': '/ai-intelligence/customers/behavior',
+      '/approvals': '/ai-intelligence/operations/approvals',
+      '/tasks': '/ai-intelligence/operations/tasks',
+      '/ai-monitoring': '/ai-intelligence/operations/monitor',
+      '/dashboard/predictive-analytics': '/ai-intelligence/customers/predictive',
+      '/dashboard/decision-support': '/ai-intelligence/business/decisions',
+      '/ai-intelligence/feedback': '/ai-intelligence/operations/feedback',
+      '/ai-intelligence/model-training': '/ai-intelligence/operations/training',
+      '/ai-intelligence/performance-monitor': '/ai-intelligence/operations/monitor'
+    };
+
+    // Check if current path needs to be redirected
+    if (redirects[request.nextUrl.pathname]) {
+      return NextResponse.redirect(new URL(redirects[request.nextUrl.pathname], request.url));
+    }
+
     // For non-API routes, handle authentication and authorization
     const token = await getToken({
       req: request,
@@ -116,6 +147,39 @@ export async function middleware(request: NextRequest) {
 
     // Public routes that don't require authentication
     const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/reset-password'];
+    
+    // Admin routes require special handling
+    const isAdminRoute = request.nextUrl.pathname.startsWith('/admin');
+    
+    // Admin login page is accessible without auth
+    if (request.nextUrl.pathname === '/admin' || request.nextUrl.pathname === '/admin-login') {
+      return NextResponse.next();
+    }
+    
+    // Other admin routes require staff authentication
+    if (isAdminRoute) {
+      if (!token) {
+        return NextResponse.redirect(new URL('/admin-login', request.url));
+      }
+      
+      // Check if user is staff
+      const userEmail = token.email;
+      const userRole = token.role;
+      const staffEmails = ['admin@marketsage.africa', 'support@marketsage.africa'];
+      const staffDomains = ['marketsage.africa'];
+      
+      const isStaff = userEmail && (
+        staffEmails.includes(userEmail) ||
+        staffDomains.some(domain => userEmail.endsWith(`@${domain}`)) ||
+        ['ADMIN', 'SUPER_ADMIN', 'IT_ADMIN'].includes(userRole)
+      );
+      
+      if (!isStaff) {
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
+      
+      return NextResponse.next();
+    }
 
     // If the path is a public route, continue
     if (publicRoutes.some((route) => request.nextUrl.pathname.startsWith(route))) {

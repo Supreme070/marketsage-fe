@@ -4,14 +4,14 @@
  * High-performance caching for LeadPulse analytics and visitor data
  */
 
-import { getIORedisClient } from './redis-pool';
+import { redisService } from './redis';
 import { logger } from '@/lib/logger';
 import prisma from '@/lib/db/prisma';
 
 export class LeadPulseCacheService {
-  // Get Redis client from connection pool
+  // Get Redis client from service
   private get redis() {
-    return getIORedisClient();
+    return redisService.getClient();
   }
 
   private readonly TTL = {
@@ -87,7 +87,7 @@ export class LeadPulseCacheService {
     try {
       const cached = await this.redis.get(this.KEYS.VISITOR_COUNT);
       if (cached) {
-        return parseInt(cached);
+        return Number.parseInt(cached);
       }
 
       const count = await prisma.leadPulseVisitor.count();
@@ -210,7 +210,7 @@ export class LeadPulseCacheService {
     try {
       const cached = await this.redis.get(this.KEYS.CONVERSION_RATE);
       if (cached) {
-        return parseFloat(cached);
+        return Number.parseFloat(cached);
       }
 
       const [totalVisitors, conversions] = await Promise.all([

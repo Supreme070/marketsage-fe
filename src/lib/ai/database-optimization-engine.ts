@@ -21,7 +21,7 @@ import { trace } from '@opentelemetry/api';
 import { redisCache } from '@/lib/cache/redis-client';
 import { aiAuditTrailSystem } from '@/lib/ai/ai-audit-trail-system';
 import { aiStreamingService } from '@/lib/websocket/ai-streaming-service';
-import { UserRole } from '@prisma/client';
+import type { UserRole } from '@prisma/client';
 import prisma from '@/lib/db/prisma';
 
 // Query types and performance metrics
@@ -448,7 +448,7 @@ class DatabaseOptimizationEngine {
       params: any[];
       context: string;
     }>,
-    batchSize: number = 100
+    batchSize = 100
   ): Promise<{
     optimizedOperations: Array<{
       query: string;
@@ -603,7 +603,7 @@ class DatabaseOptimizationEngine {
   async applyAIOptimizations(
     organizationId: string,
     aiContexts: string[],
-    dryRun: boolean = true
+    dryRun = true
   ): Promise<{
     applied: OptimizationRecommendation[];
     pending: OptimizationRecommendation[];

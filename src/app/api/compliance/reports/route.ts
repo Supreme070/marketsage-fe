@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { workflowComplianceChecker } from '@/lib/workflow/compliance-checker';
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     const workflowId = searchParams.get('workflowId');
     const reportType = searchParams.get('reportType');
     const isPublished = searchParams.get('published');
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const limit = Number.parseInt(searchParams.get('limit') || '20');
 
     // Build where condition
     const whereCondition: any = {};

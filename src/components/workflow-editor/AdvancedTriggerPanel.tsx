@@ -46,7 +46,7 @@ import {
   Info
 } from "lucide-react";
 import { toast } from "sonner";
-import { type AdvancedTriggerCondition, type AdvancedTriggerType } from "@/lib/workflow/advanced-trigger-engine";
+import type { AdvancedTriggerCondition, AdvancedTriggerType } from "@/lib/workflow/advanced-trigger-engine";
 
 interface AdvancedTriggerPanelProps {
   isOpen?: boolean;
@@ -348,7 +348,7 @@ export default function AdvancedTriggerPanel({
               value={params.time_window_days}
               onChange={(e) => 
                 updateCondition(condition.id, {
-                  parameters: { ...params, time_window_days: parseInt(e.target.value) || 7 }
+                  parameters: { ...params, time_window_days: Number.parseInt(e.target.value) || 7 }
                 })
               }
               min={1}
@@ -365,7 +365,7 @@ export default function AdvancedTriggerPanel({
               value={params.compare_window_days}
               onChange={(e) => 
                 updateCondition(condition.id, {
-                  parameters: { ...params, compare_window_days: parseInt(e.target.value) || 14 }
+                  parameters: { ...params, compare_window_days: Number.parseInt(e.target.value) || 14 }
                 })
               }
               min={1}

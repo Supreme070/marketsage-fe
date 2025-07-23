@@ -36,7 +36,7 @@ class LeadPulseRealtimeService {
   private activeConnections = new Map<string, { lastSeen: Date; subscriptions: Set<string> }>();
   private broadcastThrottle = new Map<string, number>();
   private analyticsCache: AnalyticsUpdate | null = null;
-  private analyticsCacheExpiry: number = 0;
+  private analyticsCacheExpiry = 0;
   private selectiveBroadcastEnabled = true; // Feature flag for selective broadcasting
   
   initialize(io: SocketServer) {

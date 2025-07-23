@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { engagementScoreUpdater } from '@/lib/cron/engagement-score-updater';
 import { logger } from '@/lib/logger';
 

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { workflowTemplateMarketplace } from '@/lib/workflow/template-marketplace';
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '6');
+    const limit = Number.parseInt(searchParams.get('limit') || '6');
 
     // Get personalized recommendations
     const recommendations = await workflowTemplateMarketplace.getRecommendations(

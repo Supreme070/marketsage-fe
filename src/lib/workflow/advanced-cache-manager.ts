@@ -3,6 +3,7 @@
  * Implements intelligent caching with Redis, LRU, and database-level optimization
  */
 
+import { redisService } from '@/lib/cache/redis';
 import { getIORedisClient } from '@/lib/cache/redis-pool';
 import { SimpleCache } from '@/lib/utils/simple-cache';
 import prisma from '@/lib/db/prisma';

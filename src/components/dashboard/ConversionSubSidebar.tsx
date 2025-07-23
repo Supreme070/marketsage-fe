@@ -264,21 +264,21 @@ export default function ConversionSubSidebar({
                 <h4 className="text-sm font-medium">Quick Actions</h4>
                 
                 <div className="space-y-2">
-                  <Link href="/conversions" className="block">
+                  <Link href="/leadpulse/forms/conversions" className="block">
                     <Button variant="outline" size="sm" className="w-full justify-start">
                       <BarChart3 className="h-4 w-4 mr-2" />
                       View Dashboard
                     </Button>
                   </Link>
                   
-                  <Link href="/conversions/goals" className="block">
+                  <Link href="/leadpulse/forms/conversions/goals" className="block">
                     <Button variant="outline" size="sm" className="w-full justify-start">
                       <Target className="h-4 w-4 mr-2" />
                       Manage Goals
                     </Button>
                   </Link>
                   
-                  <Link href="/conversions/optimize" className="block">
+                  <Link href="/leadpulse/forms/conversions/optimize" className="block">
                     <Button variant="outline" size="sm" className="w-full justify-start">
                       <Zap className="h-4 w-4 mr-2" />
                       Optimize

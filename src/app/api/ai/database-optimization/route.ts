@@ -205,8 +205,8 @@ export async function GET(request: NextRequest) {
         });
 
       case 'query_history':
-        const limit = parseInt(searchParams.get('limit') || '50');
-        const offset = parseInt(searchParams.get('offset') || '0');
+        const limit = Number.parseInt(searchParams.get('limit') || '50');
+        const offset = Number.parseInt(searchParams.get('offset') || '0');
         
         const queryHistory = await databaseOptimizationEngine.getQueryHistory(
           organizationId,

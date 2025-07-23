@@ -431,7 +431,7 @@ export function TaskDependencyManager() {
                 </div>
                 <div>
                   <Label htmlFor="depth">Dependency Depth</Label>
-                  <Select value={dependencyDepth.toString()} onValueChange={(value) => setDependencyDepth(parseInt(value))}>
+                  <Select value={dependencyDepth.toString()} onValueChange={(value) => setDependencyDepth(Number.parseInt(value))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>

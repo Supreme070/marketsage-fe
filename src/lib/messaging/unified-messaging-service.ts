@@ -6,6 +6,8 @@
 
 import prisma from '@/lib/db/prisma';
 import { smsService } from '@/lib/sms-providers/sms-service';
+import { emailService } from '@/lib/email-providers/email-service';
+import { whatsappService } from '@/lib/whatsapp-service';
 import { MasterAccountManager, masterAccountsConfig } from '@/lib/config/master-accounts';
 import { providerOptimizationEngine } from '@/lib/messaging/provider-optimization-engine';
 import { logger } from '@/lib/logger';
@@ -92,14 +94,24 @@ export class UnifiedMessagingService {
         };
         
       case 'email':
-        // TODO: Implement email service
+        const emailResult = await emailService.sendEmail(organizationId, {
+          to: to,
+          from: 'noreply@marketsage.africa',
+          subject: 'Message from MarketSage',
+          html: content,
+          text: content.replace(/<[^>]*>/g, '') // Strip HTML for text version
+        });
         return {
-          success: false,
-          error: { message: 'Email service not implemented yet', code: 'NOT_IMPLEMENTED' }
+          success: emailResult.success,
+          messageId: emailResult.messageId,
+          provider: (emailResult as any).provider || 'email',
+          cost: 0, // Customer pays provider directly
+          credits: 0,
+          error: emailResult.error
         };
         
       case 'whatsapp':
-        const whatsappResult = await this.sendWhatsAppViaCustomerAPI(to, content, organizationId);
+        const whatsappResult = await whatsappService.sendTextMessage(to, content, organizationId);
         return {
           success: whatsappResult.success,
           messageId: whatsappResult.messageId,
@@ -209,75 +221,6 @@ export class UnifiedMessagingService {
     return result;
   }
   
-  /**
-   * Send WhatsApp via customer's own WhatsApp Business API
-   */
-  private async sendWhatsAppViaCustomerAPI(to: string, content: string, organizationId: string): Promise<UnifiedMessageResult> {
-    try {
-      // Get organization's WhatsApp configuration
-      const whatsappConfig = await prisma.whatsAppBusinessConfig.findUnique({
-        where: { organizationId, isActive: true },
-      });
-
-      if (!whatsappConfig) {
-        return {
-          success: false,
-          error: { message: 'WhatsApp not configured for this organization', code: 'NOT_CONFIGURED' }
-        };
-      }
-
-      // Decrypt the access token
-      const accessToken = this.decrypt(whatsappConfig.accessToken);
-
-      // Format phone number
-      const cleanPhoneNumber = to.replace(/\D/g, '');
-      const formattedPhoneNumber = cleanPhoneNumber.startsWith('234') 
-        ? cleanPhoneNumber 
-        : '234' + cleanPhoneNumber.replace(/^0/, '');
-
-      // Send via WhatsApp Business API
-      const response = await fetch(`https://graph.facebook.com/v21.0/${whatsappConfig.phoneNumberId}/messages`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          to: formattedPhoneNumber,
-          type: 'text',
-          text: {
-            body: content
-          }
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        return {
-          success: true,
-          messageId: data.messages[0]?.id,
-        };
-      } else {
-        const error = await response.json();
-        return {
-          success: false,
-          error: { 
-            message: error.error?.message || 'WhatsApp send failed', 
-            code: 'WHATSAPP_ERROR' 
-          }
-        };
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: {
-          message: error instanceof Error ? error.message : 'WhatsApp send failed',
-          code: 'WHATSAPP_SEND_ERROR'
-        }
-      };
-    }
-  }
 
   /**
    * Decrypt sensitive data

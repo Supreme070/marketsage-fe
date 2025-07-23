@@ -447,7 +447,7 @@ export class WorkflowComplianceChecker {
   ): Promise<Partial<ComplianceCheckResult>> {
     const findings: any[] = [];
     const recommendations: any[] = [];
-    let isCompliant = true;
+    const isCompliant = true;
     let riskScore = 0;
 
     // Count communication nodes in workflow
@@ -522,7 +522,7 @@ export class WorkflowComplianceChecker {
   ): Promise<Partial<ComplianceCheckResult>> {
     const findings: any[] = [];
     const recommendations: any[] = [];
-    let isCompliant = true;
+    const isCompliant = true;
     let riskScore = 0;
 
     // Check for external API calls that might transfer data
@@ -590,7 +590,7 @@ export class WorkflowComplianceChecker {
   ): Promise<Partial<ComplianceCheckResult>> {
     const findings: any[] = [];
     const recommendations: any[] = [];
-    let isCompliant = true;
+    const isCompliant = true;
     let riskScore = 0;
 
     // Check for financial content detection
@@ -847,7 +847,7 @@ export class WorkflowComplianceChecker {
       complianceRate: `${((compliantChecks / totalChecks) * 100).toFixed(1)}%`,
       violationsFound,
       highRiskViolations,
-      overallScore: parseFloat(overallScore.toFixed(1))
+      overallScore: Number.parseFloat(overallScore.toFixed(1))
     };
 
     const findings = {

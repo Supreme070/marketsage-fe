@@ -94,14 +94,50 @@ export interface RollbackStep {
   critical: boolean;
 }
 
+interface SmartApprovalMetrics {
+  userTrustScore: number;
+  operationSuccessRate: number;
+  averageRiskLevel: number;
+  autoApprovalEligible: boolean;
+  historicalPatterns: {
+    commonOperations: string[];
+    typicalRiskLevel: string;
+    averageApprovalTime: number;
+    rejectionRate: number;
+  };
+}
+
+interface LearningPattern {
+  operationType: string;
+  entity: string;
+  action: string;
+  userRole: string;
+  riskLevel: string;
+  approved: boolean;
+  approvalTime: number;
+  outcome: 'success' | 'failure' | 'rollback';
+  timestamp: Date;
+}
+
 class SafetyApprovalSystem {
   private safetyRules: Map<string, SafetyRule> = new Map();
   private pendingApprovals: Map<string, ApprovalRequest> = new Map();
   private operationHistory: Map<string, OperationRequest[]> = new Map();
+  private learningPatterns: Map<string, LearningPattern[]> = new Map();
+  private userTrustScores: Map<string, number> = new Map();
+  private smartApprovalThresholds = {
+    trustScoreMinimum: 0.8,
+    successRateMinimum: 0.95,
+    maxAutoApprovalRisk: 'medium' as const,
+    learningPeriodDays: 30,
+    patternConfidenceThreshold: 0.9
+  };
 
   constructor() {
     this.initializeSafetyRules();
     this.startApprovalCleanup();
+    this.startLearningEngine();
+    this.loadHistoricalPatterns();
   }
 
   /**
@@ -237,7 +273,123 @@ class SafetyApprovalSystem {
   }
 
   /**
-   * Assess safety of an operation
+   * Get smart approval metrics for a user
+   */
+  async getSmartApprovalMetrics(userId: string): Promise<SmartApprovalMetrics> {
+    const userPatterns = this.learningPatterns.get(userId) || [];
+    const recentPatterns = userPatterns.filter(p => 
+      p.timestamp > new Date(Date.now() - this.smartApprovalThresholds.learningPeriodDays * 24 * 60 * 60 * 1000)
+    );
+
+    const trustScore = this.userTrustScores.get(userId) || 0.5;
+    const successfulOps = recentPatterns.filter(p => p.outcome === 'success').length;
+    const totalOps = recentPatterns.length;
+    const successRate = totalOps > 0 ? successfulOps / totalOps : 0;
+
+    const riskLevels = recentPatterns.map(p => p.riskLevel);
+    const avgRiskValue = this.calculateAverageRiskLevel(riskLevels);
+
+    const operationTypes = recentPatterns.map(p => `${p.operationType}:${p.entity}:${p.action}`);
+    const commonOperations = this.getMostCommonItems(operationTypes, 5);
+
+    const approvedPatterns = recentPatterns.filter(p => p.approved);
+    const avgApprovalTime = approvedPatterns.length > 0 
+      ? approvedPatterns.reduce((sum, p) => sum + p.approvalTime, 0) / approvedPatterns.length 
+      : 0;
+
+    const rejectionRate = totalOps > 0 
+      ? recentPatterns.filter(p => !p.approved).length / totalOps 
+      : 0;
+
+    const autoApprovalEligible = 
+      trustScore >= this.smartApprovalThresholds.trustScoreMinimum &&
+      successRate >= this.smartApprovalThresholds.successRateMinimum &&
+      avgRiskValue <= this.getRiskLevelValue(this.smartApprovalThresholds.maxAutoApprovalRisk) &&
+      rejectionRate < 0.1;
+
+    return {
+      userTrustScore: trustScore,
+      operationSuccessRate: successRate,
+      averageRiskLevel: avgRiskValue,
+      autoApprovalEligible,
+      historicalPatterns: {
+        commonOperations,
+        typicalRiskLevel: this.getTypicalRiskLevel(riskLevels),
+        averageApprovalTime: avgApprovalTime,
+        rejectionRate
+      }
+    };
+  }
+
+  /**
+   * Smart approval decision based on patterns and trust
+   */
+  async makeSmartApprovalDecision(
+    operation: OperationRequest, 
+    assessment: SafetyAssessment
+  ): Promise<{ 
+    autoApprove: boolean; 
+    confidence: number; 
+    reasoning: string[]; 
+    suggestedApprovalLevel?: string;
+  }> {
+    const metrics = await this.getSmartApprovalMetrics(operation.userId);
+    const reasoning: string[] = [];
+    let confidence = 0;
+    let autoApprove = false;
+
+    // Check if operation matches common patterns
+    const operationSignature = `${operation.operationType}:${operation.entity}:${operation.action}`;
+    const isCommonOperation = metrics.historicalPatterns.commonOperations.includes(operationSignature);
+
+    if (isCommonOperation) {
+      confidence += 0.3;
+      reasoning.push('Operation matches user\'s common patterns');
+    }
+
+    // Check trust score
+    if (metrics.userTrustScore >= this.smartApprovalThresholds.trustScoreMinimum) {
+      confidence += 0.3;
+      reasoning.push(`High user trust score: ${(metrics.userTrustScore * 100).toFixed(1)}%`);
+    }
+
+    // Check success rate
+    if (metrics.operationSuccessRate >= this.smartApprovalThresholds.successRateMinimum) {
+      confidence += 0.2;
+      reasoning.push(`Excellent operation success rate: ${(metrics.operationSuccessRate * 100).toFixed(1)}%`);
+    }
+
+    // Check risk level
+    if (assessment.riskLevel === 'low' || 
+        (assessment.riskLevel === 'medium' && metrics.autoApprovalEligible)) {
+      confidence += 0.2;
+      reasoning.push(`Acceptable risk level: ${assessment.riskLevel}`);
+    }
+
+    // Final decision
+    autoApprove = 
+      confidence >= this.smartApprovalThresholds.patternConfidenceThreshold &&
+      metrics.autoApprovalEligible &&
+      assessment.riskLevel !== 'critical' &&
+      assessment.riskLevel !== 'high';
+
+    if (!autoApprove && confidence > 0.7) {
+      reasoning.push('Recommend expedited manual review due to high confidence');
+    }
+
+    // Learn from this assessment
+    this.recordLearningPattern(operation, assessment, autoApprove);
+
+    return {
+      autoApprove,
+      confidence,
+      reasoning,
+      suggestedApprovalLevel: this.suggestApprovalLevel(assessment.riskLevel, confidence)
+    };
+  }
+
+  /**
+   * Assess safety of an operation with smart approval
    */
   async assessOperation(operation: OperationRequest): Promise<SafetyAssessment> {
     try {
@@ -308,6 +460,33 @@ class SafetyApprovalSystem {
 
       // Record the assessment
       await this.recordAssessment(operation, assessment);
+
+      // Check for smart approval if assessment requires approval
+      if (requiredApprovals.length > 0 && restrictions.length === 0) {
+        const smartDecision = await this.makeSmartApprovalDecision(operation, assessment);
+        
+        if (smartDecision.autoApprove) {
+          // Auto-approve low-risk operations for trusted users
+          assessment.canProceed = true;
+          assessment.requiredApprovals = [];
+          assessment.warnings.push('Auto-approved based on user trust and patterns');
+          assessment.warnings.push(...smartDecision.reasoning);
+          
+          // Record auto-approval
+          await this.recordAutoApproval(operation, assessment, smartDecision);
+          
+          logger.info('Operation auto-approved by smart system', {
+            operationId: operation.id,
+            userId: operation.userId,
+            confidence: smartDecision.confidence,
+            reasoning: smartDecision.reasoning
+          });
+        } else if (smartDecision.confidence > 0.7) {
+          // Add recommendation for expedited review
+          assessment.warnings.push('High confidence for approval - expedited review recommended');
+          assessment.warnings.push(...smartDecision.reasoning);
+        }
+      }
 
       return assessment;
 
@@ -680,6 +859,245 @@ class SafetyApprovalSystem {
 
   private generateRollbackId(): string {
     return `rollback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  /**
+   * Smart approval helper methods
+   */
+  private calculateAverageRiskLevel(riskLevels: string[]): number {
+    if (riskLevels.length === 0) return 0;
+    
+    const sum = riskLevels.reduce((acc, level) => acc + this.getRiskLevelValue(level), 0);
+    return sum / riskLevels.length;
+  }
+
+  private getMostCommonItems(items: string[], limit: number): string[] {
+    const counts = items.reduce((acc, item) => {
+      acc[item] = (acc[item] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(counts)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, limit)
+      .map(([item]) => item);
+  }
+
+  private getTypicalRiskLevel(riskLevels: string[]): string {
+    const counts = riskLevels.reduce((acc, level) => {
+      acc[level] = (acc[level] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const sorted = Object.entries(counts).sort(([,a], [,b]) => b - a);
+    return sorted.length > 0 ? sorted[0][0] : 'medium';
+  }
+
+  private suggestApprovalLevel(riskLevel: string, confidence: number): string {
+    if (riskLevel === 'critical') return 'multi_admin';
+    if (riskLevel === 'high') return 'super_admin';
+    if (confidence < 0.5) return 'super_admin';
+    if (confidence < 0.7) return 'admin';
+    return 'auto';
+  }
+
+  private async recordLearningPattern(
+    operation: OperationRequest, 
+    assessment: SafetyAssessment, 
+    autoApproved: boolean
+  ): Promise<void> {
+    const pattern: LearningPattern = {
+      operationType: operation.operationType,
+      entity: operation.entity,
+      action: operation.action,
+      userRole: operation.userRole,
+      riskLevel: assessment.riskLevel,
+      approved: autoApproved || assessment.canProceed,
+      approvalTime: 0, // Will be updated when approval completes
+      outcome: 'success', // Will be updated based on execution
+      timestamp: new Date()
+    };
+
+    const userPatterns = this.learningPatterns.get(operation.userId) || [];
+    userPatterns.push(pattern);
+    
+    // Keep only recent patterns
+    const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000); // 90 days
+    const recentPatterns = userPatterns.filter(p => p.timestamp > cutoff);
+    
+    this.learningPatterns.set(operation.userId, recentPatterns);
+
+    // Update trust score
+    await this.updateUserTrustScore(operation.userId);
+  }
+
+  private async updateUserTrustScore(userId: string): Promise<void> {
+    const patterns = this.learningPatterns.get(userId) || [];
+    const recentPatterns = patterns.filter(p => 
+      p.timestamp > new Date(Date.now() - this.smartApprovalThresholds.learningPeriodDays * 24 * 60 * 60 * 1000)
+    );
+
+    if (recentPatterns.length < 5) {
+      // Not enough data for trust score
+      this.userTrustScores.set(userId, 0.5);
+      return;
+    }
+
+    const successCount = recentPatterns.filter(p => p.outcome === 'success').length;
+    const rollbackCount = recentPatterns.filter(p => p.outcome === 'rollback').length;
+    const failureCount = recentPatterns.filter(p => p.outcome === 'failure').length;
+    
+    const successRate = successCount / recentPatterns.length;
+    const rollbackPenalty = rollbackCount * 0.1;
+    const failurePenalty = failureCount * 0.2;
+    
+    const trustScore = Math.max(0, Math.min(1, successRate - rollbackPenalty - failurePenalty));
+    
+    this.userTrustScores.set(userId, trustScore);
+  }
+
+  private async recordAutoApproval(
+    operation: OperationRequest,
+    assessment: SafetyAssessment,
+    decision: any
+  ): Promise<void> {
+    try {
+      await prisma.approvalRequest.create({
+        data: {
+          id: `auto_${operation.id}`,
+          operationId: operation.id,
+          requesterId: operation.userId,
+          approvalLevel: 'auto',
+          operationData: operation,
+          justification: 'Auto-approved by smart approval system',
+          expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
+          status: 'approved',
+          approvedBy: 'SMART_APPROVAL_SYSTEM',
+          approvedAt: new Date()
+        }
+      });
+    } catch (error) {
+      logger.warn('Failed to record auto-approval', { error });
+    }
+  }
+
+  /**
+   * Learning engine methods
+   */
+  private startLearningEngine(): void {
+    // Update trust scores periodically
+    setInterval(() => {
+      this.updateAllUserTrustScores();
+    }, 60 * 60 * 1000); // Every hour
+
+    // Clean up old patterns
+    setInterval(() => {
+      this.cleanupOldPatterns();
+    }, 24 * 60 * 60 * 1000); // Daily
+  }
+
+  private async updateAllUserTrustScores(): Promise<void> {
+    for (const userId of this.learningPatterns.keys()) {
+      await this.updateUserTrustScore(userId);
+    }
+    
+    logger.info('Updated user trust scores', {
+      totalUsers: this.userTrustScores.size,
+      averageTrustScore: Array.from(this.userTrustScores.values())
+        .reduce((sum, score) => sum + score, 0) / Math.max(1, this.userTrustScores.size)
+    });
+  }
+
+  private cleanupOldPatterns(): void {
+    const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000); // 90 days
+    
+    for (const [userId, patterns] of this.learningPatterns.entries()) {
+      const recentPatterns = patterns.filter(p => p.timestamp > cutoff);
+      if (recentPatterns.length === 0) {
+        this.learningPatterns.delete(userId);
+        this.userTrustScores.delete(userId);
+      } else {
+        this.learningPatterns.set(userId, recentPatterns);
+      }
+    }
+  }
+
+  private async loadHistoricalPatterns(): Promise<void> {
+    try {
+      // Load recent approval patterns from database
+      const recentApprovals = await prisma.approvalRequest.findMany({
+        where: {
+          createdAt: {
+            gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
+          }
+        },
+        take: 1000,
+        orderBy: { createdAt: 'desc' }
+      });
+
+      // Convert to learning patterns
+      for (const approval of recentApprovals) {
+        const operation = approval.operationData as OperationRequest;
+        if (operation) {
+          const pattern: LearningPattern = {
+            operationType: operation.operationType,
+            entity: operation.entity,
+            action: operation.action,
+            userRole: operation.userRole,
+            riskLevel: 'medium', // Default if not stored
+            approved: approval.status === 'approved',
+            approvalTime: approval.approvedAt ? 
+              approval.approvedAt.getTime() - approval.createdAt.getTime() : 0,
+            outcome: 'success', // Default, will be updated from execution logs
+            timestamp: approval.createdAt
+          };
+
+          const userId = approval.requesterId;
+          const userPatterns = this.learningPatterns.get(userId) || [];
+          userPatterns.push(pattern);
+          this.learningPatterns.set(userId, userPatterns);
+        }
+      }
+
+      // Initial trust score calculation
+      await this.updateAllUserTrustScores();
+
+      logger.info('Loaded historical approval patterns', {
+        totalPatterns: Array.from(this.learningPatterns.values())
+          .reduce((sum, patterns) => sum + patterns.length, 0),
+        totalUsers: this.learningPatterns.size
+      });
+
+    } catch (error) {
+      logger.warn('Failed to load historical patterns', { error });
+    }
+  }
+
+  /**
+   * Update learning outcome after task execution
+   */
+  async updateLearningOutcome(
+    operationId: string,
+    userId: string,
+    outcome: 'success' | 'failure' | 'rollback'
+  ): Promise<void> {
+    const patterns = this.learningPatterns.get(userId) || [];
+    const pattern = patterns.find(p => 
+      // Find pattern by matching operation characteristics and timing
+      Math.abs(p.timestamp.getTime() - Date.now()) < 24 * 60 * 60 * 1000
+    );
+
+    if (pattern) {
+      pattern.outcome = outcome;
+      await this.updateUserTrustScore(userId);
+      
+      logger.info('Updated learning pattern outcome', {
+        userId,
+        operationId,
+        outcome,
+        newTrustScore: this.userTrustScores.get(userId)
+      });
+    }
   }
 
   /**

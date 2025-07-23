@@ -4,7 +4,7 @@
  * Automated task dependency management and analysis
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { automatedTaskDependencyManager } from '@/lib/task-automation/dependency-manager';
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
         const includeAfrican = searchParams.get('african_optimization') === 'true';
         const autoCreate = searchParams.get('auto_create') === 'true';
-        const depth = parseInt(searchParams.get('depth') || '3');
+        const depth = Number.parseInt(searchParams.get('depth') || '3');
 
         const analysis = await automatedTaskDependencyManager.analyzeTaskDependencies(
           taskId,
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
           }, { status: 400 });
         }
 
-        const maxDepth = parseInt(searchParams.get('max_depth') || '5');
+        const maxDepth = Number.parseInt(searchParams.get('max_depth') || '5');
         const includeParallel = searchParams.get('include_parallel') === 'true';
         const africanOptimization = searchParams.get('african_optimization') === 'true';
 

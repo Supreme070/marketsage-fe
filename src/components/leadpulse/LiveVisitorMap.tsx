@@ -54,7 +54,7 @@ export default function LiveVisitorMap({
 
   // Use synchronized data to prevent race conditions
   const { 
-    locations: activeLocations, 
+    locations: hookLocations, 
     isLoading: syncLoading, 
     error: syncError,
     isStale,
@@ -67,6 +67,8 @@ export default function LiveVisitorMap({
     syncStrategy: 'priority_based'
   });
 
+  // Local state for active locations that can be modified
+  const [activeLocations, setActiveLocations] = useState<VisitorLocation[]>([]);
   const [filteredLocations, setFilteredLocations] = useState<VisitorLocation[]>([]);
   const [activityPulses, setActivityPulses] = useState<{id: string, x: number, y: number, timestamp: number}[]>([]);
   const [mapMode, setMapMode] = useState<'all' | 'active' | 'heat'>('all');
@@ -76,6 +78,13 @@ export default function LiveVisitorMap({
   const [loading, setLoading] = useState(initialLoading || syncLoading);
   const [selectedTimeRange, setSelectedTimeRange] = useState(timeRange);
   const operationIdRef = useRef<string | null>(null);
+
+  // Sync hook locations with local state
+  useEffect(() => {
+    if (hookLocations && hookLocations.length > 0) {
+      setActiveLocations(hookLocations);
+    }
+  }, [hookLocations]);
   
   // Enhanced state for geographical filtering and zoom
   const [geoPath, setGeoPath] = useState<string[]>([]); // Start at world view

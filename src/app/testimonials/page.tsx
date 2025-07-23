@@ -1,4 +1,4 @@
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import { TestimonialsHeader } from "@/components/testimonials/testimonials-header";
 import { TestimonialsHero } from "@/components/testimonials/testimonials-hero";
 import { TestimonialsGrid } from "@/components/testimonials/testimonials-grid";

@@ -229,7 +229,9 @@ export async function POST(request: NextRequest) {
           controller.enqueue(
             encoder.encode(createStreamResponse({
               type: 'error',
-              content: 'An error occurred while processing your request',
+              content: process.env.NODE_ENV === 'development' 
+                ? `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+                : 'An error occurred while processing your request',
               timestamp: new Date().toISOString()
             }))
           );

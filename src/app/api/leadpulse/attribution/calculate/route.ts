@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { leadPulseAttributionService } from '@/lib/leadpulse/attribution-service';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
@@ -91,8 +91,8 @@ export async function GET(request: NextRequest) {
       startDate: searchParams.get('startDate'),
       endDate: searchParams.get('endDate'),
       configId: searchParams.get('configId'),
-      limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 100,
-      offset: searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0
+      limit: searchParams.get('limit') ? Number.parseInt(searchParams.get('limit')!) : 100,
+      offset: searchParams.get('offset') ? Number.parseInt(searchParams.get('offset')!) : 0
     };
 
     const validatedData = getAttributionSchema.parse(queryParams);

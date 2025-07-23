@@ -3225,8 +3225,8 @@ export async function updateCampaignApprovalStatus(
 
 export async function getCampaignsByOrganization(
   organizationId: string,
-  limit: number = 10,
-  offset: number = 0
+  limit = 10,
+  offset = 0
 ): Promise<AutonomousCampaignPlan[]> {
   try {
     const campaigns = await prisma.autonomousCampaign.findMany({

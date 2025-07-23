@@ -10,7 +10,7 @@
  * - GET /api/ai/enhanced-agent-communication - Get communication analytics and insights
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { logger } from '@/lib/logger';
@@ -22,13 +22,13 @@ import {
   CommunicationOptimization,
   TrustSystem,
   AfricanCommunicationContext,
-  NegotiationType,
-  ConflictType,
-  ConflictSeverity,
-  ResolutionStrategy,
-  ConsensusMethod,
-  OptimizationScope,
-  AfricanRegion,
+  type NegotiationType,
+  type ConflictType,
+  type ConflictSeverity,
+  type ResolutionStrategy,
+  type ConsensusMethod,
+  type OptimizationScope,
+  type AfricanRegion,
   ParticipantRole,
   NegotiationStatus,
   startAgentNegotiation,

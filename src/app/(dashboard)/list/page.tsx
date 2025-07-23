@@ -96,7 +96,13 @@ export default function ListsPage() {
     async function fetchLists() {
       try {
         setLoading(true);
-        const response = await fetch('/api/lists');
+        const response = await fetch('/api/lists', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include'
+        });
         if (!response.ok) {
           throw new Error('Failed to fetch lists');
         }
@@ -126,6 +132,7 @@ export default function ListsPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(newList),
       });
 
@@ -174,6 +181,7 @@ export default function ListsPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(editFormData),
       });
 
@@ -217,6 +225,7 @@ export default function ListsPage() {
       setDeleting(true);
       const response = await fetch(`/api/lists/${selectedList.id}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
 
       if (!response.ok) {

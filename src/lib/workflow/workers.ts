@@ -9,8 +9,9 @@ import prisma from '@/lib/db/prisma';
  * Workflow Queue Processors
  */
 
-// Process workflow execution steps
-workflowQueue.process('execute-step', async (job: any) => {
+// Process workflow execution steps (only if queue is available)
+if (workflowQueue) {
+  workflowQueue.process('execute-step', async (job: any) => {
   const { executionId, stepId } = job.data as WorkflowJobData;
   
   logger.info('Processing workflow step', { executionId, stepId, jobId: job.id });
@@ -22,10 +23,10 @@ workflowQueue.process('execute-step', async (job: any) => {
     logger.error('Workflow step failed', { executionId, stepId, jobId: job.id, error });
     throw error;
   }
-});
+  });
 
-// Process workflow start requests
-workflowQueue.process('start-workflow', async (job: any) => {
+  // Process workflow start requests
+  workflowQueue.process('start-workflow', async (job: any) => {
   const { workflowId, contactId, context } = job.data as WorkflowJobData;
   
   logger.info('Starting workflow execution', { workflowId, contactId, jobId: job.id });
@@ -42,14 +43,16 @@ workflowQueue.process('start-workflow', async (job: any) => {
     logger.error('Failed to start workflow execution', { workflowId, contactId, jobId: job.id, error });
     throw error;
   }
-});
+  });
+}
 
 /**
  * Delay Queue Processors
  */
 
-// Process delayed workflow steps
-delayQueue.process('delayed-step', async (job: any) => {
+// Process delayed workflow steps (only if queue is available)
+if (delayQueue) {
+  delayQueue.process('delayed-step', async (job: any) => {
   const { executionId, stepId } = job.data as DelayJobData;
   
   logger.info('Processing delayed workflow step', { executionId, stepId, jobId: job.id });
@@ -61,77 +64,90 @@ delayQueue.process('delayed-step', async (job: any) => {
     logger.error('Delayed workflow step failed', { executionId, stepId, jobId: job.id, error });
     throw error;
   }
-});
+  });
+}
 
 /**
- * Error Handling
+ * Error Handling (only if queues are available)
  */
 
-workflowQueue.on('completed', (job: any, result: any) => {
-  logger.debug('Workflow job completed', { 
-    jobId: job.id, 
-    jobType: job.name,
+if (workflowQueue) {
+  workflowQueue.on('completed', (job: any, result: any) => {
+    logger.debug('Workflow job completed', { 
+      jobId: job.id, 
+      jobType: job.name,
+      result 
+    });
+  });
+
+  workflowQueue.on('failed', (job: any, err: any) => {
+    logger.error('Workflow job failed', { 
+      jobId: job.id, 
+      jobType: job.name,
+      error: err.message,
+      stack: err.stack
+    });
+  });
+}
+
+if (delayQueue) {
+  delayQueue.on('completed', (job: any, result: any) => {
+    logger.debug('Delay job completed', { 
+      jobId: job.id, 
+      jobType: job.name,
     result 
   });
-});
-
-workflowQueue.on('failed', (job: any, err: any) => {
-  logger.error('Workflow job failed', { 
-    jobId: job.id, 
-    jobType: job.name,
-    error: err.message,
-    stack: err.stack
   });
-});
 
-delayQueue.on('completed', (job: any, result: any) => {
-  logger.debug('Delay job completed', { 
-    jobId: job.id, 
-    jobType: job.name,
-    result 
+  delayQueue.on('failed', (job: any, err: any) => {
+    logger.error('Delay job failed', { 
+      jobId: job.id, 
+      jobType: job.name,
+      error: err.message,
+      stack: err.stack
+    });
   });
-});
-
-delayQueue.on('failed', (job: any, err: any) => {
-  logger.error('Delay job failed', { 
-    jobId: job.id, 
-    jobType: job.name,
-    error: err.message,
-    stack: err.stack
-  });
-});
+}
 
 /**
- * Scheduled Tasks (Cron Jobs)
+ * Scheduled Tasks (Cron Jobs) - Only run if not in build mode
  */
 
-// Process scheduled triggers every minute
-cron.schedule('* * * * *', async () => {
+// Check if we're in build mode
+const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build' || 
+  process.env.BUILDING === 'true' ||
+  process.argv.includes('build') ||
+  (process.argv.includes('next') && process.argv.includes('build'));
+
+if (!isBuildTime) {
+  // Process scheduled triggers every minute
+  cron.schedule('* * * * *', async () => {
   try {
     await triggerManager.processScheduledTriggers();
   } catch (error) {
     logger.error('Failed to process scheduled triggers', { error });
   }
-});
+  });
 
-// Health check and cleanup every 5 minutes
-cron.schedule('*/5 * * * *', async () => {
-  try {
-    await performHealthCheck();
-    await cleanupCompletedJobs();
-  } catch (error) {
-    logger.error('Failed to perform health check', { error });
-  }
-});
+  // Health check and cleanup every 5 minutes
+  cron.schedule('*/5 * * * *', async () => {
+    try {
+      await performHealthCheck();
+      await cleanupCompletedJobs();
+    } catch (error) {
+      logger.error('Failed to perform health check', { error });
+    }
+  });
 
-// Cleanup stale executions every hour
-cron.schedule('0 * * * *', async () => {
-  try {
-    await cleanupStaleExecutions();
-  } catch (error) {
-    logger.error('Failed to cleanup stale executions', { error });
-  }
-});
+  // Cleanup stale executions every hour
+  cron.schedule('0 * * * *', async () => {
+    try {
+      await cleanupStaleExecutions();
+    } catch (error) {
+      logger.error('Failed to cleanup stale executions', { error });
+    }
+  });
+}
 
 /**
  * Health Check Functions
@@ -140,11 +156,21 @@ cron.schedule('0 * * * *', async () => {
 async function performHealthCheck(): Promise<void> {
   logger.info('Performing workflow system health check');
   
-  // Check queue health
-  const workflowWaiting = await workflowQueue.getWaiting();
-  const workflowActive = await workflowQueue.getActive();
-  const delayWaiting = await delayQueue.getWaiting();
-  const delayActive = await delayQueue.getActive();
+  // Check queue health (only if queues are available)
+  let workflowWaiting: any[] = [];
+  let workflowActive: any[] = [];
+  let delayWaiting: any[] = [];
+  let delayActive: any[] = [];
+  
+  if (workflowQueue) {
+    workflowWaiting = await workflowQueue.getWaiting();
+    workflowActive = await workflowQueue.getActive();
+  }
+  
+  if (delayQueue) {
+    delayWaiting = await delayQueue.getWaiting();
+    delayActive = await delayQueue.getActive();
+  }
   
   logger.info('Queue status', {
     workflow: { waiting: workflowWaiting.length, active: workflowActive.length },
@@ -164,11 +190,16 @@ async function performHealthCheck(): Promise<void> {
 async function cleanupCompletedJobs(): Promise<void> {
   logger.debug('Cleaning up completed jobs');
   
-  // Clean up completed jobs older than 1 hour
-  await workflowQueue.clean(60 * 60 * 1000, 'completed');
-  await workflowQueue.clean(60 * 60 * 1000, 'failed');
-  await delayQueue.clean(60 * 60 * 1000, 'completed');
-  await delayQueue.clean(60 * 60 * 1000, 'failed');
+  // Clean up completed jobs older than 1 hour (only if queues are available)
+  if (workflowQueue) {
+    await workflowQueue.clean(60 * 60 * 1000, 'completed');
+    await workflowQueue.clean(60 * 60 * 1000, 'failed');
+  }
+  
+  if (delayQueue) {
+    await delayQueue.clean(60 * 60 * 1000, 'completed');
+    await delayQueue.clean(60 * 60 * 1000, 'failed');
+  }
 }
 
 async function cleanupStaleExecutions(): Promise<void> {
@@ -314,12 +345,14 @@ export class WorkflowWorkerManager {
 // Export worker manager instance
 export const workerManager = new WorkflowWorkerManager();
 
-// Auto-start workers in production
-if (process.env.NODE_ENV === 'production') {
+// Auto-start workers in production (only if not in build mode)
+if (process.env.NODE_ENV === 'production' && !isBuildTime) {
   workerManager.start().catch(error => {
     logger.error('Failed to start workflow workers', { error });
     process.exit(1);
   });
 }
 
-logger.info('Workflow workers initialized'); 
+if (!isBuildTime) {
+  logger.info('Workflow workers initialized');
+} 

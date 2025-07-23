@@ -497,7 +497,7 @@ class AISystemFederationEngine extends EventEmitter {
   private responseCache: Map<string, FederationResponse>;
   private performanceMetrics: Map<string, PerformanceMetrics>;
   private costTracker: Map<string, number>;
-  private initialized: boolean = false;
+  private initialized = false;
   private tracer = trace.getTracer('ai-system-federation');
 
   private constructor() {

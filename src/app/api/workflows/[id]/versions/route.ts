@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { workflowVersionControl } from '@/lib/workflow/version-control';
@@ -18,7 +18,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const includeArchived = searchParams.get('includeArchived') === 'true';
     const status = searchParams.get('status') || undefined;
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const limit = Number.parseInt(searchParams.get('limit') || '50');
 
     // Get version history
     const versions = await workflowVersionControl.getVersionHistory(workflowId, {

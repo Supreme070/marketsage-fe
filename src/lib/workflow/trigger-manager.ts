@@ -277,37 +277,47 @@ export const triggerManager = new WorkflowTriggerManager();
  * Queue processors for trigger events
  */
 
-// Process trigger events from the queue
-workflowQueue.process('trigger-event', async (job: any) => {
-  const { eventType, eventData, contactId } = job.data;
-  
-  await triggerManager.processTriggerEvent({
-    type: eventType,
-    contactId,
-    data: eventData,
+// Process trigger events from the queue (only if queue is available)
+if (workflowQueue) {
+  workflowQueue.process('trigger-event', async (job: any) => {
+    const { eventType, eventData, contactId } = job.data;
+    
+    await triggerManager.processTriggerEvent({
+      type: eventType,
+      contactId,
+      data: eventData,
+    });
   });
-});
+}
 
-// Mark processed events
-workflowQueue.on('completed', async (job: any) => {
-  const { eventType, contactId } = job.data;
-  
-  // Mark the event as processed in the database
-  await prisma.workflowEvent.updateMany({
-    where: {
-      eventType,
-      contactId: contactId || null,
-      processed: false,
-    },
-    data: { processed: true },
+// Mark processed events (only if queue is available)
+if (workflowQueue) {
+  workflowQueue.on('completed', async (job: any) => {
+    const { eventType, contactId } = job.data;
+    
+    // Mark the event as processed in the database
+    await prisma.workflowEvent.updateMany({
+      where: {
+        eventType,
+        contactId: contactId || null,
+        processed: false,
+      },
+      data: { processed: true },
+    });
   });
-});
+}
 
 /**
  * Helper functions to add trigger events to the queue
  */
 
 export const queueTriggerEvent = async (event: TriggerEvent): Promise<void> => {
+  if (!workflowQueue) {
+    console.warn('Queue not available - processing trigger event directly');
+    await triggerManager.processTriggerEvent(event);
+    return;
+  }
+  
   await workflowQueue.add('trigger-event', {
     eventType: event.type,
     contactId: event.contactId,

@@ -19,7 +19,7 @@ import { trace } from '@opentelemetry/api';
 import { redisCache } from '@/lib/cache/redis-client';
 import { safetyApprovalSystem } from '@/lib/ai/safety-approval-system';
 import { aiTaskExecutionEngine } from '@/lib/ai/ai-task-execution-engine';
-import { UserRole } from '@prisma/client';
+import type { UserRole } from '@prisma/client';
 import prisma from '@/lib/db/prisma';
 
 // Rollback strategy types
@@ -582,7 +582,7 @@ class AIOperationRollbackSystem {
     const startTime = Date.now();
     const executionLog: any[] = [];
     let stepsExecuted = 0;
-    let stepsSkipped = 0;
+    const stepsSkipped = 0;
     let stepsFailed = 0;
     const warnings: string[] = [];
     const errors: string[] = [];

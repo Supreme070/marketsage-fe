@@ -8,7 +8,7 @@
 import { logger } from '@/lib/logger';
 import { EventEmitter } from 'events';
 import { trace } from '@opentelemetry/api';
-import { multimodalAIEngine, MediaInput, ProcessingResult, ModalityType } from './multimodal-ai-engine';
+import { multimodalAIEngine, type MediaInput, ProcessingResult, ModalityType } from './multimodal-ai-engine';
 import { MultiAgentCoordinator } from './multi-agent-coordinator';
 import { persistentMemoryEngine, MemoryType } from './persistent-memory-engine';
 import { supremeAIv3 } from './supreme-ai-v3-engine';

@@ -32,13 +32,6 @@ export const metadata: Metadata = {
   keywords: "marketing automation, email marketing, SMS marketing, WhatsApp marketing, Nigerian business, African business",
   authors: [{ name: "MarketSage Team" }],
   manifest: "/manifest.json",
-  themeColor: "#3b82f6",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    minimumScale: 1,
-    viewportFit: "cover"
-  },
   openGraph: {
     title: "MarketSage | Multi-Channel Marketing Automation for African Businesses",
     description: "Connect with your audience through Email, SMS, and WhatsApp marketing automation designed specifically for Nigerian and African businesses.",
@@ -47,6 +40,14 @@ export const metadata: Metadata = {
     locale: "en_NG",
     type: "website",
   },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  minimumScale: 1,
+  viewportFit: "cover",
+  themeColor: "#3b82f6",
 };
 
 export default function RootLayout({

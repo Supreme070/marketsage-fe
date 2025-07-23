@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { workflowTemplateMarketplace } from '@/lib/workflow/template-marketplace';
@@ -43,9 +43,9 @@ export async function GET(request: NextRequest) {
       search: searchParams.get('search') || undefined,
       isFeatured: searchParams.get('featured') === 'true' ? true : undefined,
       isPremium: searchParams.get('premium') === 'true' ? true : undefined,
-      minRating: searchParams.get('minRating') ? parseFloat(searchParams.get('minRating')!) : undefined,
-      limit: parseInt(searchParams.get('limit') || '20'),
-      offset: parseInt(searchParams.get('offset') || '0'),
+      minRating: searchParams.get('minRating') ? Number.parseFloat(searchParams.get('minRating')!) : undefined,
+      limit: Number.parseInt(searchParams.get('limit') || '20'),
+      offset: Number.parseInt(searchParams.get('offset') || '0'),
       sortBy: (searchParams.get('sortBy') as any) || 'popular'
     };
 

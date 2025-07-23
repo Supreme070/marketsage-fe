@@ -705,7 +705,7 @@ class AIDelegationManager extends EventEmitter {
     permissions: string[],
     defaultConditions: any,
     createdBy: string,
-    isPublic: boolean = false
+    isPublic = false
   ): DelegationTemplate {
     const template: DelegationTemplate = {
       id: `template_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,

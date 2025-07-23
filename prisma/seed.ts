@@ -1,8 +1,10 @@
-import prisma from '../src/lib/db/prisma';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 import { hash } from 'bcrypt';
 import { sampleContacts } from '../src/data/sampleContacts';
 import { randomUUID } from 'crypto';
-import { seedSampleJourneys } from '../src/data/sampleJourneys';
+// import { seedSampleJourneys } from '../src/data/sampleJourneys';
 
 // Define UserRole enum locally since we can't import it from @prisma/client
 enum UserRole {
@@ -10,6 +12,14 @@ enum UserRole {
   ADMIN = 'ADMIN', 
   IT_ADMIN = 'IT_ADMIN',
   USER = 'USER'
+}
+
+// Define WorkflowStatus enum locally
+enum WorkflowStatus {
+  DRAFT = 'DRAFT',
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  ARCHIVED = 'ARCHIVED'
 }
 
 async function main() {
@@ -51,7 +61,10 @@ async function main() {
   await createContacts(admin.id);
 
   // Create sample visitor journeys
-  await seedSampleJourneys(admin.id);
+  // await seedSampleJourneys(admin.id); // Temporarily commented out due to TypeScript error
+
+  // Create sample workflows
+  await createSampleWorkflows(admin.id);
 
   console.log(`Seeding finished.`);
 }
@@ -128,6 +141,74 @@ async function createContacts(createdById: string) {
   }
 
   console.log(`Created ${createdCount} sample contacts`);
+}
+
+async function createSampleWorkflows(createdById: string) {
+  console.log('Creating sample workflows...');
+
+  // Check if workflows already exist
+  const existingWorkflows = await prisma.workflow.count();
+  if (existingWorkflows > 0) {
+    console.log('Workflows already exist, skipping workflow seeding');
+    return;
+  }
+
+  // Simple workflow sample - safe and minimal
+  const sampleWorkflow = {
+    name: "Welcome Email Sequence",
+    description: "Simple welcome sequence for new subscribers",
+    status: 'DRAFT',
+    definition: JSON.stringify({
+      nodes: [
+        {
+          id: "trigger-1",
+          type: "triggerNode",
+          position: { x: 250, y: 100 },
+          data: {
+            label: "New subscriber",
+            description: "When a contact subscribes to newsletter",
+            icon: "UserPlus"
+          }
+        },
+        {
+          id: "action-1",
+          type: "actionNode",
+          position: { x: 250, y: 200 },
+          data: {
+            label: "Send welcome email",
+            description: "Send welcome email to new subscriber",
+            icon: "Mail"
+          }
+        }
+      ],
+      edges: [
+        {
+          id: "edge-1",
+          source: "trigger-1",
+          target: "action-1",
+          type: "custom"
+        }
+      ]
+    })
+  };
+
+  try {
+    await prisma.workflow.create({
+      data: {
+        id: randomUUID(),
+        name: sampleWorkflow.name,
+        description: sampleWorkflow.description,
+        status: sampleWorkflow.status as any,
+        definition: sampleWorkflow.definition,
+        createdById,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+    console.log(`Created sample workflow: ${sampleWorkflow.name}`);
+  } catch (error) {
+    console.log(`Error creating sample workflow: ${sampleWorkflow.name}`, error);
+  }
 }
 
 main()

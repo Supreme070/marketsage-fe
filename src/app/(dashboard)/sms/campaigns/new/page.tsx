@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -29,6 +30,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import { 
   getListsWithContactCount, 
   getSegmentsWithContactCount, 
@@ -45,6 +48,15 @@ const formSchema = z.object({
   templateId: z.string().optional(),
   listIds: z.array(z.string()).optional(),
   segmentIds: z.array(z.string()).optional(),
+  enableABTesting: z.boolean().default(false),
+  enableGeoTargeting: z.boolean().default(false),
+  targetCountries: z.array(z.string()).default([]),
+  targetStates: z.array(z.string()).default([]),
+  targetCities: z.array(z.string()).default([]),
+  enableBirthdayTargeting: z.boolean().default(false),
+  birthdayTiming: z.enum(['on_birthday', 'day_before', 'week_before']).default('on_birthday'),
+  birthdayOfferType: z.enum(['discount', 'freebie', 'exclusive_access', 'personalized_gift']).default('discount'),
+  birthdayOfferValue: z.number().min(0).max(100).default(15),
 });
 
 interface SMSTemplate {
@@ -85,6 +97,15 @@ export default function CreateSMSCampaign() {
       templateId: "",
       listIds: [],
       segmentIds: [],
+      enableABTesting: false,
+      enableGeoTargeting: false,
+      targetCountries: [],
+      targetStates: [],
+      targetCities: [],
+      enableBirthdayTargeting: false,
+      birthdayTiming: 'on_birthday',
+      birthdayOfferType: 'discount',
+      birthdayOfferValue: 15,
     },
   });
 
@@ -240,6 +261,222 @@ export default function CreateSMSCampaign() {
                   </FormItem>
                 )}
               />
+              
+              <Separator />
+              
+              <FormField
+                control={form.control}
+                name="enableABTesting"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">
+                        A/B Testing
+                      </FormLabel>
+                      <FormDescription>
+                        Enable A/B testing to compare different versions of your SMS campaign
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="enableGeoTargeting"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">
+                        Geographic Targeting
+                      </FormLabel>
+                      <FormDescription>
+                        Target specific countries, states, or cities for your SMS campaign
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              {form.watch("enableGeoTargeting") && (
+                <div className="space-y-4 rounded-lg border p-4 bg-muted/10">
+                  <h4 className="text-sm font-medium">Geographic Settings</h4>
+                  
+                  <FormField
+                    control={form.control}
+                    name="targetCountries"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Target Countries (Optional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="e.g., Nigeria, Kenya, Ghana (comma-separated)"
+                            value={field.value.join(", ")}
+                            onChange={(e) => field.onChange(
+                              e.target.value.split(",").map(s => s.trim()).filter(s => s.length > 0)
+                            )}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="targetStates"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Target States/Regions (Optional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="e.g., Lagos, Kano, Abuja (comma-separated)"
+                            value={field.value.join(", ")}
+                            onChange={(e) => field.onChange(
+                              e.target.value.split(",").map(s => s.trim()).filter(s => s.length > 0)
+                            )}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="targetCities"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Target Cities (Optional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="e.g., Ikeja, Victoria Island, Kano (comma-separated)"
+                            value={field.value.join(", ")}
+                            onChange={(e) => field.onChange(
+                              e.target.value.split(",").map(s => s.trim()).filter(s => s.length > 0)
+                            )}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
+
+              <FormField
+                control={form.control}
+                name="enableBirthdayTargeting"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">
+                        Birthday Campaign
+                      </FormLabel>
+                      <FormDescription>
+                        Automatically target customers on or around their birthday
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              {form.watch("enableBirthdayTargeting") && (
+                <div className="space-y-4 rounded-lg border p-4 bg-muted/10">
+                  <h4 className="text-sm font-medium">Birthday Campaign Settings</h4>
+                  
+                  <FormField
+                    control={form.control}
+                    name="birthdayTiming"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Send Timing</FormLabel>
+                        <FormControl>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Choose when to send" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="on_birthday">On their birthday</SelectItem>
+                              <SelectItem value="day_before">Day before birthday</SelectItem>
+                              <SelectItem value="week_before">Week before birthday</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="birthdayOfferType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Birthday Offer Type</FormLabel>
+                        <FormControl>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Choose offer type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="discount">Percentage Discount</SelectItem>
+                              <SelectItem value="freebie">Free Gift</SelectItem>
+                              <SelectItem value="exclusive_access">Exclusive Access</SelectItem>
+                              <SelectItem value="personalized_gift">Personalized Gift</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {form.watch("birthdayOfferType") === "discount" && (
+                    <FormField
+                      control={form.control}
+                      name="birthdayOfferValue"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Discount Percentage (%)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="0"
+                              max="100"
+                              placeholder="15"
+                              value={field.value || ''}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Enter discount percentage (0-100%)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 

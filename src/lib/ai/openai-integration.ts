@@ -29,7 +29,8 @@ export class OpenAIIntegration {
     this.baseURL = 'https://api.openai.com/v1';
     
     if (!this.apiKey) {
-      throw new Error('OpenAI API key is required for Supreme-AI intelligence');
+      console.error('⚠️ OpenAI API key not found in environment variables');
+      console.error('Please set OPENAI_API_KEY in your .env file');
     }
   }
 
@@ -39,6 +40,20 @@ export class OpenAIIntegration {
     conversationHistory: OpenAIMessage[] = [],
     options: OpenAIGenerationOptions = {}
   ): Promise<OpenAIResponse> {
+    if (!this.apiKey) {
+      console.error('OpenAI API key is missing. Falling back to helpful error message.');
+      return {
+        answer: `I apologize, but I'm unable to process your request at this moment. The AI service is not properly configured.
+
+**To fix this issue:**
+1. Add your OpenAI API key to your .env file: \`OPENAI_API_KEY=your-api-key-here\`
+2. Restart your development server
+3. Try your request again
+
+For more information, please check the MarketSage documentation or contact support.`
+      };
+    }
+    
     try {
       const messages: OpenAIMessage[] = [
         {

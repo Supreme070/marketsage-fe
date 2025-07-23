@@ -13,7 +13,7 @@ import { EventEmitter } from 'events';
 import { 
   multiAgentCoordinator,
   type AIAgent,
-  AgentType
+  type AgentType
 } from '@/lib/ai/multi-agent-coordinator';
 import { 
   supremeAIv3,

@@ -17,7 +17,21 @@ class RedisCacheClient {
   private maxRetries = 3;
 
   constructor() {
-    this.initialize();
+    // Only initialize if we're not in build mode
+    if (!this.isBuildTime()) {
+      this.initialize();
+    } else {
+      console.log('Redis client initialization skipped - build mode detected');
+    }
+  }
+
+  private isBuildTime(): boolean {
+    return process.env.NEXT_PHASE === 'phase-production-build' || 
+      process.env.BUILDING === 'true' ||
+      process.argv.includes('build') ||
+      (process.argv.includes('next') && process.argv.includes('build')) ||
+      process.env.NODE_ENV === 'test' ||
+      process.env.CI === 'true';
   }
 
   /**
@@ -25,19 +39,31 @@ class RedisCacheClient {
    */
   private async initialize(): Promise<void> {
     try {
-      const redisUrl = process.env.REDIS_URL || 'redis://marketsage-valkey:6379';
+      // Skip Redis completely during build time
+      if (this.isBuildTime()) {
+        console.log('Redis initialization skipped - build time detected');
+        return;
+      }
+
+      // Environment-aware Redis configuration
+      const isDocker = process.env.DOCKER_ENV === 'true' || process.env.NODE_ENV === 'production';
+      const redisUrl = process.env.REDIS_URL || (isDocker 
+        ? 'redis://marketsage-valkey:6379'
+        : 'redis://localhost:6379');
+      
+      console.log(`Initializing Redis client for ${isDocker ? 'Docker' : 'local'} environment: ${redisUrl}`);
       
       this.client = createClient({
         url: redisUrl,
         socket: {
-          connectTimeout: 5000,
+          connectTimeout: 3000, // Reduced timeout
           lazyConnect: true,
           reconnectStrategy: (retries) => {
             if (retries > this.maxRetries) {
-              console.error('Redis max retries exceeded');
+              console.warn('Redis max retries exceeded - running without cache');
               return false;
             }
-            return Math.min(retries * 100, 3000);
+            return Math.min(retries * 50, 1000); // Faster retry
           }
         }
       });
@@ -49,7 +75,7 @@ class RedisCacheClient {
       });
 
       this.client.on('error', (err) => {
-        console.error('Redis client error:', err);
+        console.warn('Redis client error (app will continue without cache):', err.message);
         this.connected = false;
       });
 
@@ -58,12 +84,18 @@ class RedisCacheClient {
         this.connected = false;
       });
 
-      // Connect to Redis
-      await this.client.connect();
+      // Connect to Redis with timeout
+      const connectPromise = this.client.connect();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Redis connection timeout')), 5000)
+      );
+
+      await Promise.race([connectPromise, timeoutPromise]);
       
     } catch (error) {
-      console.error('Failed to initialize Redis client:', error);
+      console.warn('Failed to initialize Redis client - continuing without cache:', error.message);
       this.connected = false;
+      this.client = null;
     }
   }
 

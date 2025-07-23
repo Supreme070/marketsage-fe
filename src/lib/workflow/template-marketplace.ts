@@ -538,7 +538,7 @@ export class WorkflowTemplateMarketplace {
   /**
    * Get recommended templates for a user
    */
-  async getRecommendations(userId: string, limit: number = 6) {
+  async getRecommendations(userId: string, limit = 6) {
     try {
       // Get user's installed templates to understand preferences
       const userInstallations = await prisma.workflowTemplateInstallation.findMany({

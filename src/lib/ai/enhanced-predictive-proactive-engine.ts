@@ -46,7 +46,7 @@ import { EventEmitter } from 'events';
 import { supremeAI } from './supreme-ai-engine';
 import { BehavioralPredictor } from './behavioral-predictor';
 import { persistentMemoryEngine } from './persistent-memory-engine';
-import { aiContextAwarenessSystem, AIContext } from './ai-context-awareness-system';
+import { aiContextAwarenessSystem, type AIContext } from './ai-context-awareness-system';
 import { realTimeLearningEngine } from './learning/real-time-learning-engine';
 import { enhancedCustomerSuccessEngine } from '../customer-success/enhanced-customer-success-engine';
 import { revenueOptimizationEngine } from './revenue-optimization-engine';

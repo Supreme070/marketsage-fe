@@ -151,7 +151,7 @@ export class WorkflowCostTracker {
     workflowId: string,
     executionId: string | null,
     emailCount: number,
-    provider: string = 'default'
+    provider = 'default'
   ): Promise<void> {
     const unitCost = await this.getCostRule(workflowId, 'EMAIL_SEND', provider);
     
@@ -172,8 +172,8 @@ export class WorkflowCostTracker {
     workflowId: string,
     executionId: string | null,
     smsCount: number,
-    provider: string = 'default',
-    region: string = 'default'
+    provider = 'default',
+    region = 'default'
   ): Promise<void> {
     const unitCost = await this.getCostRule(workflowId, 'SMS_SEND', provider, region);
     
@@ -195,7 +195,7 @@ export class WorkflowCostTracker {
     workflowId: string,
     executionId: string | null,
     messageCount: number,
-    provider: string = 'meta'
+    provider = 'meta'
   ): Promise<void> {
     const unitCost = await this.getCostRule(workflowId, 'WHATSAPP_SEND', provider);
     
@@ -361,7 +361,7 @@ export class WorkflowCostTracker {
    */
   async generateCostProjection(
     workflowId: string,
-    projectionPeriod: string = 'MONTHLY'
+    projectionPeriod = 'MONTHLY'
   ): Promise<CostProjection> {
     try {
       // Get historical data for the last period

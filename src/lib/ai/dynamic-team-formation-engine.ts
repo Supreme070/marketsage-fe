@@ -40,11 +40,11 @@
 import { logger } from '@/lib/logger';
 import { trace } from '@opentelemetry/api';
 import { EventEmitter } from 'events';
-import { multiAgentCoordinator, AIAgent, AgentType, CollaborationSession } from './multi-agent-coordinator';
+import { multiAgentCoordinator, type AIAgent, AgentType, CollaborationSession } from './multi-agent-coordinator';
 import { swarmIntelligenceEngine, SwarmAgent } from './swarm-intelligence-engine';
 import { supremeAI } from './supreme-ai-engine';
 import { persistentMemoryEngine } from './persistent-memory-engine';
-import { redisCache } from '@/lib/cache/redis-client';
+import { redis } from '@/lib/cache/redis';
 import prisma from '@/lib/db/prisma';
 
 // Enhanced dynamic team formation interfaces
@@ -909,7 +909,7 @@ export class DynamicTeamFormationEngine extends EventEmitter {
   // Private helper methods (implementation details)
   private async loadTeamFormationPatterns(): Promise<void> {
     // Load historical team formation patterns from database
-    const patterns = await redisCache.hgetall('team_formation_patterns') || {};
+    const patterns = await redis.hgetall('team_formation_patterns') || {};
     for (const [key, value] of Object.entries(patterns)) {
       try {
         this.teamFormationPatterns.set(key, JSON.parse(value));

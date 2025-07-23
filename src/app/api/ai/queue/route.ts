@@ -5,7 +5,7 @@
  * Requires admin privileges
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { aiJobQueue, cleanupAIJobs } from '@/lib/queue/ai-job-queue';
@@ -355,7 +355,7 @@ async function removeWorker() {
 }
 
 // Cleanup old jobs
-async function cleanupJobs(olderThanHours: number = 24) {
+async function cleanupJobs(olderThanHours = 24) {
   try {
     const cleanedCount = await cleanupAIJobs(olderThanHours);
     

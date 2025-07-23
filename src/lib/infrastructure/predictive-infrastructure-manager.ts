@@ -170,6 +170,17 @@ class PredictiveInfrastructureManager extends EventEmitter {
    * Initialize infrastructure discovery and register core resources
    */
   private async initializeInfrastructureDiscovery() {
+    // Skip infrastructure discovery during build time
+    const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build' || 
+      process.env.BUILDING === 'true' ||
+      process.argv.includes('build') ||
+      (process.argv.includes('next') && process.argv.includes('build'));
+
+    if (isBuildTime) {
+      logger.info('Skipping infrastructure discovery during build');
+      return;
+    }
+
     try {
       logger.info('Initializing infrastructure discovery...');
 
@@ -489,6 +500,70 @@ class PredictiveInfrastructureManager extends EventEmitter {
     }, 3600000);
 
     logger.info('Infrastructure monitoring started');
+  }
+
+  /**
+   * Start resource health checks
+   */
+  private startResourceHealthChecks() {
+    // Health check interval: every 30 seconds
+    setInterval(async () => {
+      try {
+        for (const [resourceId, resource] of this.resources) {
+          await this.checkResourceHealth(resourceId, resource);
+        }
+      } catch (error) {
+        logger.error('Health check cycle failed', { error });
+      }
+    }, 30000);
+
+    logger.info('Resource health checks started');
+  }
+
+  /**
+   * Check health of a specific resource
+   */
+  private async checkResourceHealth(resourceId: string, resource: InfrastructureResource) {
+    try {
+      const newMetrics = await this.collectResourceMetrics(resource);
+      
+      // Update resource with new metrics
+      resource.metrics = newMetrics;
+      resource.lastUpdated = new Date();
+      
+      // Determine health status
+      const healthStatus = this.calculateHealthStatus(newMetrics);
+      if (resource.status !== healthStatus) {
+        resource.status = healthStatus;
+        this.emit('resourceStatusChanged', { resourceId, oldStatus: resource.status, newStatus: healthStatus });
+      }
+      
+      this.resources.set(resourceId, resource);
+      
+    } catch (error) {
+      logger.error('Failed to check resource health', { resourceId, error });
+      resource.status = 'critical';
+      this.resources.set(resourceId, resource);
+    }
+  }
+
+  /**
+   * Calculate health status based on metrics
+   */
+  private calculateHealthStatus(metrics: ResourceMetrics): InfrastructureResource['status'] {
+    const { cpu, memory, disk } = metrics;
+    
+    // Critical thresholds
+    if (cpu.usage > 90 || memory.usage > 95 || disk.usage > 95) {
+      return 'critical';
+    }
+    
+    // Warning thresholds
+    if (cpu.usage > 75 || memory.usage > 85 || disk.usage > 85) {
+      return 'warning';
+    }
+    
+    return 'healthy';
   }
 
   /**

@@ -14,6 +14,7 @@ import { randomUUID } from 'crypto';
 import { getBestSendTime } from '@/lib/engagement-tracking';
 import { stringify } from 'querystring';
 import nodemailer from 'nodemailer';
+import { emailService } from '@/lib/email-providers/email-service';
 
 interface EmailProvider {
   sendEmail: (options: EmailOptions) => Promise<EmailSendResult>;
@@ -165,6 +166,32 @@ function getEmailProvider(): EmailProvider {
   }
 }
 
+// Get organization-specific email provider or fallback to default
+async function getOrganizationEmailProvider(organizationId?: string): Promise<EmailProvider> {
+  if (organizationId) {
+    try {
+      const orgProvider = await emailService.getOrganizationProvider(organizationId);
+      if (orgProvider) {
+        // Wrap the organization provider to match the expected interface
+        return {
+          name: orgProvider.name,
+          sendEmail: async (options: EmailOptions) => {
+            return orgProvider.sendEmail(options);
+          }
+        };
+      }
+    } catch (error) {
+      logger.warn('Failed to get organization email provider, falling back to default:', { 
+        error, 
+        organizationId 
+      });
+    }
+  }
+  
+  // Fallback to default provider
+  return getEmailProvider();
+}
+
 /**
  * Apply contact-specific personalization to content
  * 
@@ -197,12 +224,14 @@ function personalizeContent(content: string, contact: any): string {
  * @param contact The contact to send to
  * @param campaignId The ID of the email campaign
  * @param options The email options
+ * @param organizationId The organization ID for provider selection
  * @returns The result of the send operation
  */
 export async function sendTrackedEmail(
   contact: { id: string; email: string; [key: string]: any },
   campaignId: string,
-  options: Omit<EmailOptions, 'to'>
+  options: Omit<EmailOptions, 'to'>,
+  organizationId?: string
 ): Promise<EmailSendResult> {
   try {
     if (!contact.email) {
@@ -214,8 +243,8 @@ export async function sendTrackedEmail(
       };
     }
     
-    // Get the email provider
-    const provider = getEmailProvider();
+    // Get the email provider (organization-specific or default)
+    const provider = await getOrganizationEmailProvider(organizationId);
     
     // Personalize the content
     let personalizedHtml = personalizeContent(options.html, contact);
@@ -324,6 +353,7 @@ export async function sendCampaign(
       where: { id: campaignId },
       include: {
         template: true,
+        organization: true,
         lists: {
           include: {
             members: {
@@ -409,7 +439,7 @@ export async function sendCampaign(
         }
         
         // Send immediately if not using optimal time or no optimal time found
-        const result = await sendTrackedEmail(contact, campaignId, baseOptions);
+        const result = await sendTrackedEmail(contact, campaignId, baseOptions, campaign.organizationId);
         
         if (result.success) {
           results.sentCount++;
@@ -581,4 +611,34 @@ To unsubscribe: mailto:unsubscribe@marketsage.africa?subject=Unsubscribe
   `.trim();
 
   return plainText;
+}
+
+/**
+ * Send email using organization-specific provider
+ * 
+ * @param organizationId The organization ID
+ * @param options The email options
+ * @returns The result of the send operation
+ */
+export async function sendOrganizationEmail(
+  organizationId: string,
+  options: EmailOptions
+): Promise<EmailSendResult> {
+  try {
+    const result = await emailService.sendEmail(organizationId, options);
+    
+    return {
+      success: result.success,
+      messageId: result.messageId,
+      error: result.error,
+      provider: (result as any).provider || 'unknown'
+    };
+  } catch (error) {
+    logger.error('Error sending organization email:', { error, organizationId });
+    return {
+      success: false,
+      error: error instanceof Error ? error : new Error('Unknown error'),
+      provider: 'error'
+    };
+  }
 } 

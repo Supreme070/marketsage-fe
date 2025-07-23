@@ -68,6 +68,7 @@ const contactAnalyticsEngine = {
       const response = await fetch('/api/ai/supreme-v3', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           type: 'customer',
           userId: 'contacts-analytics',
@@ -103,6 +104,7 @@ const contactAnalyticsEngine = {
       const response = await fetch('/api/ai/supreme-v3', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           type: 'customer',
           userId: 'contacts-segmentation',
@@ -134,6 +136,7 @@ const contactAnalyticsEngine = {
       const response = await fetch('/api/ai/supreme-v3', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           type: 'analyze',
           userId: 'contacts-personalization',
@@ -451,7 +454,13 @@ export default function ContactsPage() {
   const fetchContacts = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/contacts');
+      const response = await fetch('/api/contacts', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include' // Include cookies for authentication
+      });
       
       if (!response.ok) {
         throw new Error('Failed to fetch contacts');

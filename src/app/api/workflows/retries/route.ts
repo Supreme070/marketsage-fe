@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { workflowRetryManager } from '@/lib/workflow/retry-mechanism';
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
-    const timeRange = parseInt(searchParams.get('timeRange') || '86400000'); // Default 24 hours
+    const timeRange = Number.parseInt(searchParams.get('timeRange') || '86400000'); // Default 24 hours
     const executionId = searchParams.get('executionId');
     const stepId = searchParams.get('stepId');
 

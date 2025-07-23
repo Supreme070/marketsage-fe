@@ -10,15 +10,15 @@
  * - GET /api/ai/dynamic-team-formation - Get team formation analytics and insights
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { 
   dynamicTeamFormationEngine,
-  TaskComplexity,
+  type TaskComplexity,
   DynamicTeam,
-  AfricanMarketContext,
+  type AfricanMarketContext,
   TeamStatus,
   TeamRole,
   LeadershipStyle,

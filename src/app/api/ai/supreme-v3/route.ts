@@ -412,11 +412,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: 'Internal server error. Please try again later.',
+        error: process.env.NODE_ENV === 'development' 
+          ? `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+          : 'Internal server error. Please try again later.',
         meta: {
           processingTime,
           version: '3.0',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          ...(process.env.NODE_ENV === 'development' && {
+            debug: {
+              message: error instanceof Error ? error.message : 'Unknown error',
+              stack: error instanceof Error ? error.stack?.split('\n').slice(0, 5) : undefined
+            }
+          })
         }
       },
       { status: 500 }

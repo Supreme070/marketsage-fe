@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { leadPulseAttributionService } from '@/lib/leadpulse/attribution-service';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';

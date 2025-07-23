@@ -521,7 +521,7 @@ export function GDPRComplianceDashboard({ className }: GDPRComplianceDashboardPr
                       id="retentionPeriod"
                       type="number"
                       value={newRetentionRule.retentionPeriod}
-                      onChange={(e) => setNewRetentionRule(prev => ({ ...prev, retentionPeriod: parseInt(e.target.value) }))}
+                      onChange={(e) => setNewRetentionRule(prev => ({ ...prev, retentionPeriod: Number.parseInt(e.target.value) }))}
                     />
                   </div>
                   <div>

@@ -5,7 +5,7 @@
  * Supports concurrent processing and automatic retries
  */
 
-import { aiJobQueue, AIJobData } from './ai-job-queue';
+import { aiJobQueue, type AIJobData } from './ai-job-queue';
 import { SupremeAIv3 } from '../ai/supreme-ai-v3-engine';
 import { logger } from '../logger';
 

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { smsService } from '@/lib/sms-providers/sms-service';
 import { logger } from '@/lib/logger';
 

@@ -5,7 +5,7 @@
  * API endpoint for safe AI task execution with comprehensive safety boundaries
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { 

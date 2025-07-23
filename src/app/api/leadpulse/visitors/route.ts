@@ -121,7 +121,7 @@ export async function GET(request: NextRequest) {
       });
 
       // If we have visitors, fetch their touchpoints in one query
-      let touchpointsMap = new Map();
+      const touchpointsMap = new Map();
       if (visitors.length > 0) {
         const visitorIds = visitors.map(v => v.id);
         const touchpoints = await prisma.leadPulseTouchpoint.findMany({

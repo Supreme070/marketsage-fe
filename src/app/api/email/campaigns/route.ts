@@ -12,6 +12,7 @@ import {
   notFound,
   validationError 
 } from "@/lib/errors";
+import { getBirthdayAutoDetectionSystem } from "@/lib/campaigns/birthday-auto-detection";
 
 //  Schema for email campaign validation
 const campaignSchema = z.object({
@@ -25,6 +26,18 @@ const campaignSchema = z.object({
   design: z.string().optional(), // JSON string
   listIds: z.array(z.string()).min(1, "At least one list is required"),
   segmentIds: z.array(z.string()).optional(),
+  // A/B Testing
+  enableABTesting: z.boolean().default(false),
+  // Geo-targeting
+  enableGeoTargeting: z.boolean().default(false),
+  targetCountries: z.array(z.string()).default([]),
+  targetStates: z.array(z.string()).default([]),
+  targetCities: z.array(z.string()).default([]),
+  // Birthday targeting
+  enableBirthdayTargeting: z.boolean().default(false),
+  birthdayTiming: z.enum(['on_birthday', 'day_before', 'week_before']).default('on_birthday'),
+  birthdayOfferType: z.enum(['discount', 'freebie', 'exclusive_access', 'personalized_gift']).default('discount'),
+  birthdayOfferValue: z.number().min(0).max(100).default(15),
 });
 
 // GET email campaigns endpoint
@@ -238,7 +251,32 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(newCampaign, { status: 201 });
+    // If birthday targeting is enabled, trigger birthday detection for the organization
+    if (campaignData.enableBirthdayTargeting) {
+      try {
+        const birthdaySystem = getBirthdayAutoDetectionSystem();
+        
+        // Run birthday detection to identify upcoming birthdays and automatically
+        // create birthday campaigns based on the template settings from this campaign
+        await birthdaySystem.runDailyBirthdayDetection(session.user.organizationId);
+        
+        console.log(`Birthday detection triggered for campaign: ${newCampaign.id}`);
+      } catch (birthdayError) {
+        // Log birthday detection error but don't fail the campaign creation
+        console.error("Birthday detection failed:", birthdayError);
+      }
+    }
+
+    return NextResponse.json({
+      ...newCampaign,
+      birthdayIntegration: campaignData.enableBirthdayTargeting ? {
+        enabled: true,
+        timing: campaignData.birthdayTiming,
+        offerType: campaignData.birthdayOfferType,
+        offerValue: campaignData.birthdayOfferValue,
+        message: "Birthday detection has been triggered for this campaign"
+      } : null
+    }, { status: 201 });
   } catch (error: any) {
     console.error("Error creating email campaign:", error);
     

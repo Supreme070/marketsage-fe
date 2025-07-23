@@ -14,23 +14,24 @@ import {
 // POST endpoint to change a user's password
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-
-  // Check if user is authenticated
-  if (!session || !session.user) {
-    return unauthorized();
-  }
-
-  const { id: userId } = await params;
-
-  // Users can only change their own password
-  if (session.user.id !== userId) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   try {
+    const session = await getServerSession(authOptions);
+
+    // Check if user is authenticated
+    if (!session || !session.user) {
+      return unauthorized();
+    }
+
+    const params = await context.params;
+    const { id: userId } = params;
+
+    // Users can only change their own password
+    if (session.user.id !== userId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const body = await request.json();
     const { currentPassword, newPassword } = body;
 
@@ -83,6 +84,7 @@ export async function POST(
 
     return NextResponse.json({ message: "Password updated successfully" });
   } catch (error) {
+    console.error('Error in POST /api/users/[id]/password:', error);
     return handleApiError(error, "/api/users/[id]/password/route.ts");
   }
 } 

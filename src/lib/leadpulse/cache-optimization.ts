@@ -5,6 +5,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { redisService } from '@/lib/cache/redis';
 import { getIORedisClient } from '@/lib/cache/redis-pool';
 import { logger } from '@/lib/logger';
 import prisma from '@/lib/db/prisma';
@@ -505,7 +506,7 @@ export class LeadPulseCacheOptimizer extends EventEmitter {
    */
   private parseInfoValue(info: string, key: string): number {
     const match = info.match(new RegExp(`${key}:(\\d+)`));
-    return match ? parseInt(match[1]) : 0;
+    return match ? Number.parseInt(match[1]) : 0;
   }
 
   /**

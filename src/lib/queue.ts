@@ -58,20 +58,26 @@ export interface DelayJobData {
 const redisConfig = {
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
+    port: Number.parseInt(process.env.REDIS_PORT || '6379'),
     password: process.env.REDIS_PASSWORD,
-    db: parseInt(process.env.REDIS_DB || '0'),
+    db: Number.parseInt(process.env.REDIS_DB || '0'),
     maxRetriesPerRequest: 3,
     retryDelayOnFailover: 100,
     lazyConnect: true,
   },
 };
 
-// Create queues
-export const workflowQueue = new Queue<WorkflowJobData>('workflow-execution', redisConfig);
-export const emailQueue = new Queue<EmailJobData>('email-sending', redisConfig);
-export const smsQueue = new Queue<SMSJobData>('sms-sending', redisConfig);
-export const delayQueue = new Queue<DelayJobData>('delayed-jobs', redisConfig);
+// Check if we're in build mode
+const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build' || 
+  process.env.BUILDING === 'true' ||
+  process.argv.includes('build') ||
+  (process.argv.includes('next') && process.argv.includes('build'));
+
+// Create queues only if not in build mode
+export const workflowQueue: Queue<WorkflowJobData> | null = isBuildTime ? null : new Queue<WorkflowJobData>('workflow-execution', redisConfig);
+export const emailQueue: Queue<EmailJobData> | null = isBuildTime ? null : new Queue<EmailJobData>('email-sending', redisConfig);
+export const smsQueue: Queue<SMSJobData> | null = isBuildTime ? null : new Queue<SMSJobData>('sms-sending', redisConfig);
+export const delayQueue: Queue<DelayJobData> | null = isBuildTime ? null : new Queue<DelayJobData>('delayed-jobs', redisConfig);
 
 // Queue configuration
 const commonQueueOptions = {
@@ -84,10 +90,14 @@ const commonQueueOptions = {
   },
 };
 
-// Apply settings to all queues
-[workflowQueue, emailQueue, smsQueue, delayQueue].forEach(queue => {
-  queue.setMaxListeners(50); // Increase listener limit
-});
+// Apply settings to all queues (only if they exist)
+if (!isBuildTime) {
+  [workflowQueue, emailQueue, smsQueue, delayQueue].forEach(queue => {
+    if (queue) {
+      queue.setMaxListeners(50); // Increase listener limit
+    }
+  });
+}
 
 // Error handling for all queues
 const setupQueueErrorHandling = (queue: Queue, name: string) => {
@@ -116,14 +126,17 @@ const setupQueueErrorHandling = (queue: Queue, name: string) => {
   });
 };
 
-// Setup error handling for all queues
-setupQueueErrorHandling(workflowQueue, 'workflow');
-setupQueueErrorHandling(emailQueue, 'email');
-setupQueueErrorHandling(smsQueue, 'sms');
-setupQueueErrorHandling(delayQueue, 'delay');
+// Setup error handling for all queues (only if they exist)
+if (!isBuildTime) {
+  if (workflowQueue) setupQueueErrorHandling(workflowQueue, 'workflow');
+  if (emailQueue) setupQueueErrorHandling(emailQueue, 'email');
+  if (smsQueue) setupQueueErrorHandling(smsQueue, 'sms');
+  if (delayQueue) setupQueueErrorHandling(delayQueue, 'delay');
+}
 
-// Workflow queue processors
-workflowQueue.process('execute-workflow', async (job) => {
+// Workflow queue processors (only if not in build mode)
+if (!isBuildTime && workflowQueue) {
+  workflowQueue.process('execute-workflow', async (job) => {
   const { WorkflowExecutionEngine } = await import('@/lib/workflow/execution-engine');
   const engine = new WorkflowExecutionEngine();
   
@@ -141,10 +154,12 @@ workflowQueue.process('execute-workflow', async (job) => {
     logger.error('Workflow execution failed:', error);
     throw error;
   }
-});
+  });
+}
 
 // Email queue processors
-emailQueue.process('send-email', async (job) => {
+if (!isBuildTime && emailQueue) {
+  emailQueue.process('send-email', async (job) => {
   const { sendTrackedEmail } = await import('@/lib/email-service');
   
   const { contactId, emailData, trackingData, campaignId } = job.data;
@@ -160,10 +175,12 @@ emailQueue.process('send-email', async (job) => {
     logger.error('Email sending failed:', error);
     throw error;
   }
-});
+  });
+}
 
 // SMS queue processors
-smsQueue.process('send-sms', async (job) => {
+if (!isBuildTime && smsQueue) {
+  smsQueue.process('send-sms', async (job) => {
   const { sendSMS } = await import('@/lib/sms-service');
   
   const { contactId, smsData, trackingData, campaignId } = job.data;
@@ -179,19 +196,24 @@ smsQueue.process('send-sms', async (job) => {
     logger.error('SMS sending failed:', error);
     throw error;
   }
-});
+  });
+}
 
 // Delay queue processors
-delayQueue.process('execute-delayed', async (job) => {
+if (!isBuildTime && delayQueue) {
+  delayQueue.process('execute-delayed', async (job) => {
   const { type, originalJobData } = job.data;
   
   try {
     switch (type) {
       case 'workflow':
+        if (!workflowQueue) throw new Error('Workflow queue not available');
         return await workflowQueue.add('execute-workflow', originalJobData as WorkflowJobData, commonQueueOptions);
       case 'email':
+        if (!emailQueue) throw new Error('Email queue not available');
         return await emailQueue.add('send-email', originalJobData as EmailJobData, commonQueueOptions);
       case 'sms':
+        if (!smsQueue) throw new Error('SMS queue not available');
         return await smsQueue.add('send-sms', originalJobData as SMSJobData, commonQueueOptions);
       default:
         throw new Error(`Unknown delayed job type: ${type}`);
@@ -200,7 +222,8 @@ delayQueue.process('execute-delayed', async (job) => {
     logger.error('Delayed job execution failed:', error);
     throw error;
   }
-});
+  });
+}
 
 // Queue utility functions
 export class QueueManager {
@@ -208,6 +231,9 @@ export class QueueManager {
    * Add a workflow execution job
    */
   static async addWorkflowJob(data: WorkflowJobData, options = {}): Promise<void> {
+    if (!workflowQueue) {
+      throw new Error('Workflow queue not available (build mode)');
+    }
     try {
       await workflowQueue.add('execute-workflow', data, {
         ...commonQueueOptions,
@@ -224,6 +250,9 @@ export class QueueManager {
    * Add an email sending job
    */
   static async addEmailJob(data: EmailJobData, options = {}): Promise<void> {
+    if (!emailQueue) {
+      throw new Error('Email queue not available (build mode)');
+    }
     try {
       await emailQueue.add('send-email', data, {
         ...commonQueueOptions,
@@ -240,6 +269,9 @@ export class QueueManager {
    * Add an SMS sending job
    */
   static async addSMSJob(data: SMSJobData, options = {}): Promise<void> {
+    if (!smsQueue) {
+      throw new Error('SMS queue not available (build mode)');
+    }
     try {
       await smsQueue.add('send-sms', data, {
         ...commonQueueOptions,
@@ -256,6 +288,9 @@ export class QueueManager {
    * Add a delayed job
    */
   static async addDelayedJob(data: DelayJobData, options = {}): Promise<void> {
+    if (!delayQueue) {
+      throw new Error('Delay queue not available (build mode)');
+    }
     try {
       const delay = Math.max(0, data.executeAt.getTime() - Date.now());
       
@@ -275,6 +310,15 @@ export class QueueManager {
    * Get queue statistics
    */
   static async getQueueStats() {
+    if (isBuildTime) {
+      return {
+        workflow: { active: 0, waiting: 0, completed: 0, failed: 0, delayed: 0 },
+        email: { active: 0, waiting: 0, completed: 0, failed: 0, delayed: 0 },
+        sms: { active: 0, waiting: 0, completed: 0, failed: 0, delayed: 0 },
+        delay: { active: 0, waiting: 0, completed: 0, failed: 0, delayed: 0 },
+        timestamp: new Date(),
+      };
+    }
     try {
       const [workflowStats, emailStats, smsStats, delayStats] = await Promise.all([
         this.getIndividualQueueStats(workflowQueue, 'workflow'),
@@ -299,7 +343,18 @@ export class QueueManager {
   /**
    * Get statistics for an individual queue
    */
-  private static async getIndividualQueueStats(queue: Queue, name: string) {
+  private static async getIndividualQueueStats(queue: Queue | null, name: string) {
+    if (!queue) {
+      return {
+        name,
+        waiting: 0,
+        active: 0,
+        completed: 0,
+        failed: 0,
+        delayed: 0,
+        paused: false,
+      };
+    }
     try {
       const [waiting, active, completed, failed, delayed] = await Promise.all([
         queue.getWaiting(),

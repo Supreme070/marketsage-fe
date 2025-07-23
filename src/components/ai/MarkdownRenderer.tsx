@@ -8,7 +8,8 @@
 
 'use client';
 
-import React, { memo } from 'react';
+import type React from 'react';
+import { memo } from 'react';
 import { cn } from '@/lib/utils';
 
 interface MarkdownRendererProps {

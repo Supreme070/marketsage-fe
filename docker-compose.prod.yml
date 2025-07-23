@@ -64,6 +64,23 @@ services:
       - ALLOW_DEV_FALLBACK=false
       - FIELD_ENCRYPTION_KEY=your-32-char-encryption-key-here
       
+      # Social Media OAuth Configuration
+      - FACEBOOK_CLIENT_ID=${FACEBOOK_CLIENT_ID}
+      - FACEBOOK_CLIENT_SECRET=${FACEBOOK_CLIENT_SECRET}
+      - NEXT_PUBLIC_FACEBOOK_CLIENT_ID=${FACEBOOK_CLIENT_ID}
+      - INSTAGRAM_CLIENT_ID=${INSTAGRAM_CLIENT_ID}
+      - INSTAGRAM_CLIENT_SECRET=${INSTAGRAM_CLIENT_SECRET}
+      - NEXT_PUBLIC_INSTAGRAM_CLIENT_ID=${INSTAGRAM_CLIENT_ID}
+      - TWITTER_CLIENT_ID=${TWITTER_CLIENT_ID}
+      - TWITTER_CLIENT_SECRET=${TWITTER_CLIENT_SECRET}
+      - NEXT_PUBLIC_TWITTER_CLIENT_ID=${TWITTER_CLIENT_ID}
+      - LINKEDIN_CLIENT_ID=${LINKEDIN_CLIENT_ID}
+      - LINKEDIN_CLIENT_SECRET=${LINKEDIN_CLIENT_SECRET}
+      - NEXT_PUBLIC_LINKEDIN_CLIENT_ID=${LINKEDIN_CLIENT_ID}
+      - YOUTUBE_CLIENT_ID=${YOUTUBE_CLIENT_ID}
+      - YOUTUBE_CLIENT_SECRET=${YOUTUBE_CLIENT_SECRET}
+      - NEXT_PUBLIC_YOUTUBE_CLIENT_ID=${YOUTUBE_CLIENT_ID}
+      
       # OpenTelemetry Tracing Configuration
       - OTEL_ENABLED=true
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4318
@@ -207,7 +224,7 @@ services:
         timeout 60 npx tsx /app/src/scripts/seedWhatsAppCampaigns.ts || echo '⚠️ WhatsApp campaign seeding timed out' &&
         
         echo '🔄 Seeding workflows...' &&
-        timeout 60 node /app/src/scripts/seedWorkflows.js || echo '⚠️ Workflow seeding timed out' &&
+        timeout 120 node /app/src/scripts/seedWorkflows.js || (echo '❌ Workflow seeding failed or timed out' && echo 'Checking if workflows exist...' && PGPASSWORD=marketsage_password psql -h marketsage-db -U marketsage -d marketsage -c \"SELECT COUNT(*) as workflow_count FROM \\\"Workflow\\\";\" || echo 'Database query failed') &&
         
         echo '🛤️ Seeding journeys...' &&
         timeout 60 npx tsx /app/src/scripts/seedJourneys.ts || echo '⚠️ Journey seeding timed out' &&
@@ -227,8 +244,25 @@ services:
         echo '🧠 Seeding AI Intelligence data...' &&
         timeout 90 npx tsx /app/src/scripts/seed-ai-intelligence.ts || echo '⚠️ AI Intelligence seeding timed out' &&
         
+        echo '🤖 Seeding MCP Campaign Analytics data...' &&
+        timeout 60 npx tsx /app/src/scripts/seed-mcp-campaign-analytics.ts || echo '⚠️ MCP Campaign Analytics seeding timed out' &&
+        
+        echo '👥 Seeding MCP Customer Predictions data...' &&
+        timeout 60 npx tsx /app/src/scripts/seed-mcp-customer-predictions.ts || echo '⚠️ MCP Customer Predictions seeding timed out' &&
+        
+        echo '👁️ Seeding MCP Visitor Sessions data...' &&
+        timeout 60 npx tsx /app/src/scripts/seed-mcp-visitor-sessions.ts || echo '⚠️ MCP Visitor Sessions seeding timed out' &&
+        
+        echo '📊 Seeding MCP Monitoring Metrics data...' &&
+        timeout 60 npx tsx /app/src/scripts/seed-mcp-monitoring-metrics.ts || echo '⚠️ MCP Monitoring Metrics seeding timed out' &&
+        
         echo '🔗 Assigning contacts to current user...' &&
         timeout 60 npx tsx /app/src/scripts/assignContactsDocker.ts || echo '⚠️ Contact assignment timed out' &&
+        
+        echo '🔍 Verifying seed results...' &&
+        echo 'Checking workflow count...' &&
+        WORKFLOW_COUNT=\$(PGPASSWORD=marketsage_password psql -h marketsage-db -U marketsage -d marketsage -t -c \"SELECT COUNT(*) FROM \\\"Workflow\\\";\") &&
+        echo \"Created \$WORKFLOW_COUNT workflows\" &&
         
         echo '✅ Database seeded successfully!'
       "

@@ -25,7 +25,7 @@ import { persistentMemoryEngine, MemoryType } from './persistent-memory-engine';
 import { aiAuditTrailSystem } from './ai-audit-trail-system';
 import { MarketSageExplainableAI } from '@/lib/ml/explainable-ai';
 import { TrustAndRiskSystem } from './trust-and-risk-system';
-import { SafetyApprovalSystem, SafetyRule, OperationRequest, SafetyAssessment } from './safety-approval-system';
+import { SafetyApprovalSystem, SafetyRule, type OperationRequest, type SafetyAssessment } from './safety-approval-system';
 import { MultiAgentCoordinator } from './multi-agent-coordinator';
 
 const tracer = trace.getTracer('realtime-safety-intelligence-engine');

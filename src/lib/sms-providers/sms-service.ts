@@ -2,12 +2,13 @@ import type { SMSProvider, SMSResult } from './base-provider';
 import { MockSMSProvider } from './mock-provider';
 import { AfricasTalkingSMSProvider } from './africastalking-provider';
 import { TwilioSMSProvider } from './twilio-provider';
+import { TermiiSMSProvider } from './termii-provider';
 import { DatabaseSMSProvider } from './database-provider';
 import prisma from '@/lib/db/prisma';
 import { logger } from '@/lib/logger';
 
 // SMS provider types
-export type SMSProviderType = 'mock' | 'africastalking' | 'twilio' | 'database';
+export type SMSProviderType = 'mock' | 'africastalking' | 'twilio' | 'termii' | 'database';
 
 // SMS service for managing multiple providers
 export class SMSService {
@@ -20,6 +21,7 @@ export class SMSService {
     this.providers.set('mock', new MockSMSProvider());
     this.providers.set('africastalking', new AfricasTalkingSMSProvider());
     this.providers.set('twilio', new TwilioSMSProvider());
+    this.providers.set('termii', new TermiiSMSProvider());
     this.providers.set('database', new DatabaseSMSProvider());
 
     // Determine default provider based on configuration and environment
@@ -43,6 +45,11 @@ export class SMSService {
       return 'africastalking';
     }
 
+    const termii = this.providers.get('termii');
+    if (termii?.isConfigured()) {
+      return 'termii';
+    }
+
     const twilio = this.providers.get('twilio');
     if (twilio?.isConfigured()) {
       return 'twilio';
@@ -64,9 +71,12 @@ export class SMSService {
             provider: orgProvider.name
           } as SMSResult & { provider: string };
         }
+        
+        // Log fallback for platform default when no org provider exists
+        logger.info('No organization SMS provider found, using platform default SMS provider', { organizationId });
       }
 
-      // Fall back to default provider selection
+      // Fall back to default provider selection (platform-managed)
       const selectedProvider = providerType || this.defaultProvider;
       const provider = this.providers.get(selectedProvider);
 
@@ -85,7 +95,7 @@ export class SMSService {
       // Add provider info to result for tracking
       return {
         ...result,
-        provider: provider.name
+        provider: provider.name || 'platform-default'
       } as SMSResult & { provider: string };
     } catch (error) {
       logger.error('SMS service error:', { error, phoneNumber, organizationId });
@@ -171,6 +181,12 @@ export class SMSService {
             apiKey: smsConfig.apiKey || '',
             username: smsConfig.username || '',
             fromNumber: smsConfig.fromNumber || ''
+          });
+          break;
+        case 'TERMII':
+          provider = new TermiiSMSProvider({
+            apiKey: smsConfig.apiKey || '',
+            senderId: smsConfig.fromNumber || ''
           });
           break;
         default:

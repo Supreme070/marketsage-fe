@@ -551,7 +551,7 @@ export default function SMSSettingsPage() {
                   id="rateLimitPerMinute"
                   type="number"
                   value={settings.rateLimitPerMinute}
-                  onChange={(e) => setSettings(prev => ({ ...prev, rateLimitPerMinute: parseInt(e.target.value) }))}
+                  onChange={(e) => setSettings(prev => ({ ...prev, rateLimitPerMinute: Number.parseInt(e.target.value) }))}
                   min="1"
                   max="1000"
                 />
@@ -622,7 +622,7 @@ export default function SMSSettingsPage() {
                           ...prev, 
                           budgetAlert: { 
                             ...prev.budgetAlert, 
-                            monthlyLimit: parseInt(e.target.value) 
+                            monthlyLimit: Number.parseInt(e.target.value) 
                           }
                         }))}
                         min="1"
@@ -638,7 +638,7 @@ export default function SMSSettingsPage() {
                           ...prev, 
                           budgetAlert: { 
                             ...prev.budgetAlert, 
-                            alertThreshold: parseInt(e.target.value) 
+                            alertThreshold: Number.parseInt(e.target.value) 
                           }
                         }))}
                         min="1"

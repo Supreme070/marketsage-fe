@@ -595,7 +595,7 @@ class AgentCodeGenerationSafeModificationEngine extends EventEmitter {
   private securityContext: Map<string, any>;
   private validationRules: Map<string, ValidationRule[]>;
   private performanceBaselines: Map<string, PerformanceMetrics>;
-  private initialized: boolean = false;
+  private initialized = false;
   private tracer = trace.getTracer('agent-code-generation');
 
   private constructor() {

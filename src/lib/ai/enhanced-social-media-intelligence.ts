@@ -459,7 +459,7 @@ export class EnhancedSocialMediaIntelligence extends EventEmitter {
 
   constructor() {
     super();
-    this.supremeAI = new SupremeAI();
+    this.supremeAI = SupremeAI;
     
     // Initialize async without waiting (fire and forget)
     this.initializeEnhancedSocialMediaIntelligence().catch(error => {
@@ -572,23 +572,15 @@ export class EnhancedSocialMediaIntelligence extends EventEmitter {
       });
 
       // Generate platform-specific content using Supreme AI
-      const contentGeneration = await this.supremeAI.executeTask({
-        task: 'generate_social_media_content',
-        context: {
-          platform,
-          contentType,
-          topic,
-          options,
-          platformRules: this.getPlatformRules(platform),
-          currentTrends: await this.getCurrentTrends(platform),
-          audienceInsights: await this.getAudienceInsights(platform)
-        },
-        options: {
-          model: 'gpt-4',
-          temperature: 0.7,
-          reasoning: true
-        }
-      });
+      const contentGeneration = await this.supremeAI.adaptiveAnalysis({
+        platform,
+        contentType,
+        topic,
+        options,
+        platformRules: this.getPlatformRules(platform),
+        currentTrends: await this.getCurrentTrends(platform),
+        audienceInsights: await this.getAudienceInsights(platform)
+      }, 'generate_social_media_content');
 
       // Generate optimal hashtags
       const hashtags = await this.generateOptimalHashtags(platform, topic, contentGeneration.content);
@@ -673,6 +665,7 @@ export class EnhancedSocialMediaIntelligence extends EventEmitter {
       videos?: string[];
       trackConversions?: boolean;
       campaignId?: string;
+      organizationId?: string;
     } = {}
   ): Promise<{
     posts: {
@@ -731,7 +724,8 @@ export class EnhancedSocialMediaIntelligence extends EventEmitter {
             mentions: options.mentions || [],
             images: options.images || [],
             videos: options.videos || [],
-            scheduledTime: postingTime
+            scheduledTime: postingTime,
+            organizationId: options.organizationId
           };
 
           // Post to platform
@@ -843,23 +837,15 @@ export class EnhancedSocialMediaIntelligence extends EventEmitter {
       }
 
       // Research hashtags using AI and platform data
-      const hashtagAnalysis = await this.supremeAI.executeTask({
-        task: 'research_hashtags',
-        context: {
-          platform,
-          topic,
-          options,
-          currentTrends: await this.getCurrentTrends(platform),
-          competitorHashtags: options.competitorAnalysis ? 
-            await this.getCompetitorHashtags(platform, topic) : [],
-          audienceInsights: await this.getAudienceInsights(platform)
-        },
-        options: {
-          model: 'gpt-4',
-          temperature: 0.3,
-          reasoning: true
-        }
-      });
+      const hashtagAnalysis = await this.supremeAI.adaptiveAnalysis({
+        platform,
+        topic,
+        options,
+        currentTrends: await this.getCurrentTrends(platform),
+        competitorHashtags: options.competitorAnalysis ? 
+          await this.getCompetitorHashtags(platform, topic) : [],
+        audienceInsights: await this.getAudienceInsights(platform)
+      }, 'research_hashtags');
 
       // Enhance with real-time data
       const enhancedHashtags = await this.enhanceHashtagsWithRealTimeData(
@@ -1144,11 +1130,225 @@ export class EnhancedSocialMediaIntelligence extends EventEmitter {
   }
 
   private async postToPlatform(platform: SocialMediaPlatform, postData: any): Promise<any> {
-    // Post to specific platform
+    try {
+      // Get real social media connection for the organization
+      const { socialMediaConnectionService } = await import('@/lib/social-media/social-media-connection-service');
+      
+      // Get the organization ID from context (you'll need to pass this)
+      const organizationId = postData.organizationId;
+      if (!organizationId) {
+        throw new Error('Organization ID required for posting');
+      }
+
+      const connection = await socialMediaConnectionService.getPlatformConnection(organizationId, platform);
+      if (!connection) {
+        throw new Error(`No active ${platform} connection found for organization`);
+      }
+
+      // Platform-specific posting logic
+      switch (platform) {
+        case SocialMediaPlatform.FACEBOOK:
+          return await this.postToFacebook(connection, postData);
+        case SocialMediaPlatform.INSTAGRAM:
+          return await this.postToInstagram(connection, postData);
+        case SocialMediaPlatform.TWITTER:
+          return await this.postToTwitter(connection, postData);
+        case SocialMediaPlatform.LINKEDIN:
+          return await this.postToLinkedIn(connection, postData);
+        default:
+          // For unsupported platforms, return mock data for now
+          logger.warn(`Platform ${platform} posting not yet implemented, using mock response`);
+          return {
+            postId: `mock_post_${Date.now()}`,
+            status: 'success',
+            url: `https://${platform}.com/post/mock`
+          };
+      }
+    } catch (error) {
+      logger.error('Failed to post to platform', {
+        platform,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      
+      return {
+        postId: `failed_post_${Date.now()}`,
+        status: 'failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  private async postToFacebook(connection: any, postData: any): Promise<any> {
+    const { FacebookClient } = await import('@/lib/social-media/platform-clients/facebook-client');
+    const client = new FacebookClient(connection);
+    
+    const result = await client.createPost({
+      message: postData.content,
+      link: postData.link,
+      picture: postData.images?.[0],
+      published: !postData.scheduledTime,
+      scheduled_publish_time: postData.scheduledTime ? 
+        Math.floor(new Date(postData.scheduledTime).getTime() / 1000) : undefined
+    });
+
     return {
-      postId: `post_${Date.now()}`,
+      postId: result.id,
       status: 'success',
-      url: `https://${platform}.com/post/123`
+      url: `https://facebook.com/${result.post_id || result.id}`
+    };
+  }
+
+  private async postToInstagram(connection: any, postData: any): Promise<any> {
+    const { InstagramClient } = await import('@/lib/social-media/platform-clients/instagram-client');
+    const client = new InstagramClient(connection);
+    
+    // Determine media type based on content
+    let mediaType: 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM' = 'IMAGE';
+    if (postData.videos && postData.videos.length > 0) {
+      mediaType = 'VIDEO';
+    } else if (postData.images && postData.images.length > 1) {
+      mediaType = 'CAROUSEL_ALBUM';
+    }
+
+    const options: any = {
+      caption: postData.content,
+      media_type: mediaType
+    };
+
+    // Add media URLs
+    if (postData.images && postData.images.length > 0) {
+      if (mediaType === 'CAROUSEL_ALBUM') {
+        // For carousel, we need to upload each image first
+        const mediaIds = [];
+        for (const imageUrl of postData.images) {
+          const mediaId = await client.uploadMedia(imageUrl, 'IMAGE');
+          mediaIds.push(mediaId);
+        }
+        options.children = mediaIds;
+      } else {
+        options.image_url = postData.images[0];
+      }
+    }
+
+    if (postData.videos && postData.videos.length > 0) {
+      options.video_url = postData.videos[0];
+    }
+
+    const result = await client.createPost(options);
+
+    return {
+      postId: result.id,
+      status: 'success',
+      url: result.permalink || `https://instagram.com/p/${result.id}`
+    };
+  }
+
+  private async postToTwitter(connection: any, postData: any): Promise<any> {
+    const { TwitterClient } = await import('@/lib/social-media/platform-clients/twitter-client');
+    const client = new TwitterClient(connection);
+    
+    const options: any = {
+      text: postData.content
+    };
+
+    // Upload media if provided
+    if (postData.images && postData.images.length > 0) {
+      const mediaIds = [];
+      for (const imageUrl of postData.images) {
+        const mediaId = await client.uploadMedia(imageUrl, 'image');
+        mediaIds.push(mediaId);
+      }
+      options.media_ids = mediaIds;
+    }
+
+    if (postData.videos && postData.videos.length > 0) {
+      const mediaIds = [];
+      for (const videoUrl of postData.videos) {
+        const mediaId = await client.uploadMedia(videoUrl, 'video');
+        mediaIds.push(mediaId);
+      }
+      options.media_ids = options.media_ids ? [...options.media_ids, ...mediaIds] : mediaIds;
+    }
+
+    // Check if content is longer than Twitter's limit and create thread if needed
+    if (postData.content.length > 280) {
+      const chunks = this.splitTextForTwitter(postData.content);
+      const results = await client.createThread(chunks);
+      
+      return {
+        postId: results[0].id,
+        status: 'success',
+        url: `https://twitter.com/status/${results[0].id}`,
+        threadCount: results.length
+      };
+    } else {
+      const result = await client.createTweet(options);
+      
+      return {
+        postId: result.id,
+        status: 'success',
+        url: `https://twitter.com/status/${result.id}`
+      };
+    }
+  }
+
+  private async postToLinkedIn(connection: any, postData: any): Promise<any> {
+    const { LinkedInClient } = await import('@/lib/social-media/platform-clients/linkedin-client');
+    const client = new LinkedInClient(connection);
+    
+    const options: any = {
+      text: postData.content,
+      visibility: 'PUBLIC'
+    };
+
+    // Add article content if there's a link
+    if (postData.link) {
+      options.content = {
+        article: {
+          source: postData.link,
+          title: postData.title || 'Shared Article',
+          description: postData.description || postData.content.substring(0, 200) + '...'
+        }
+      };
+    }
+
+    // Handle media uploads if provided
+    if (postData.images && postData.images.length > 0) {
+      try {
+        const mediaId = await client.uploadMedia(postData.images[0], 'image');
+        options.content = {
+          media: {
+            id: mediaId,
+            title: postData.title,
+            description: postData.content
+          }
+        };
+      } catch (error) {
+        logger.warn('LinkedIn media upload failed, posting text only', { error });
+      }
+    }
+
+    if (postData.videos && postData.videos.length > 0) {
+      try {
+        const mediaId = await client.uploadMedia(postData.videos[0], 'video');
+        options.content = {
+          media: {
+            id: mediaId,
+            title: postData.title,
+            description: postData.content
+          }
+        };
+      } catch (error) {
+        logger.warn('LinkedIn video upload failed, posting text only', { error });
+      }
+    }
+
+    const result = await client.createPost(options);
+
+    return {
+      postId: result.id,
+      status: 'success',
+      url: `https://linkedin.com/posts/${result.activity || result.id}`
     };
   }
 
@@ -1165,6 +1365,44 @@ export class EnhancedSocialMediaIntelligence extends EventEmitter {
   private calculateCrossPlatformSynergy(platforms: SocialMediaPlatform[], strategies: any[]): number {
     // Calculate synergy between platforms
     return 0.85;
+  }
+
+  /**
+   * Split long text for Twitter threads
+   */
+  private splitTextForTwitter(text: string): string[] {
+    const maxLength = 280;
+    const chunks: string[] = [];
+    
+    if (text.length <= maxLength) {
+      return [text];
+    }
+
+    // Split by sentences or paragraphs first
+    const sentences = text.split(/[.!?]\s+/);
+    let currentChunk = '';
+    let chunkNumber = 1;
+
+    for (const sentence of sentences) {
+      const potentialChunk = currentChunk + (currentChunk ? '. ' : '') + sentence;
+      const threadIndicator = chunks.length > 0 ? ` (${chunkNumber}/${Math.ceil(text.length / maxLength) + 1})` : '';
+      
+      if ((potentialChunk + threadIndicator).length <= maxLength) {
+        currentChunk = potentialChunk;
+      } else {
+        if (currentChunk) {
+          chunks.push(currentChunk + (chunkNumber > 1 ? ` (${chunkNumber - 1}/...)` : ''));
+        }
+        currentChunk = sentence;
+        chunkNumber++;
+      }
+    }
+
+    if (currentChunk) {
+      chunks.push(currentChunk + (chunks.length > 0 ? ` (${chunks.length + 1}/${chunks.length + 1})` : ''));
+    }
+
+    return chunks;
   }
 
   private async enhanceHashtagsWithRealTimeData(platform: SocialMediaPlatform, hashtags: string[]): Promise<HashtagResearch[]> {

@@ -37,7 +37,31 @@ import {
   Network,
   Timer,
   Target,
-  Lightbulb
+  Lightbulb,
+  RotateCcw,
+  History,
+  LineChart,
+  FileText,
+  Download,
+  Upload,
+  Trash2,
+  Archive,
+  AlertCircle,
+  ChevronRight,
+  ChevronDown,
+  Copy,
+  ExternalLink,
+  Gauge,
+  Layers,
+  Lock,
+  Unlock,
+  MonitorSpeaker,
+  NotebookPen,
+  Shield as ShieldIcon,
+  Sparkles,
+  TrendingDown,
+  Truck,
+  Wrench
 } from 'lucide-react';
 import AITaskPreviewModal from './AITaskPreviewModal';
 import { useToast } from '@/components/ui/use-toast';
@@ -46,11 +70,12 @@ interface AITask {
   id: string;
   name: string;
   description: string;
-  type: 'analysis' | 'automation' | 'campaign' | 'optimization' | 'integration' | 'workflow';
+  type: 'analysis' | 'automation' | 'campaign' | 'optimization' | 'integration' | 'workflow' | 'segmentation' | 'reporting';
   priority: 'low' | 'medium' | 'high' | 'critical';
-  status: 'pending' | 'approved' | 'rejected' | 'running' | 'completed' | 'failed';
+  status: 'pending' | 'approved' | 'rejected' | 'running' | 'completed' | 'failed' | 'rolled_back';
   requiredPermissions: string[];
   estimatedDuration: number;
+  actualDuration?: number;
   resourceRequirements: {
     cpu: number;
     memory: number;
@@ -68,16 +93,60 @@ interface AITask {
   expectedOutputs: string[];
   dependencies: string[];
   rollbackPlan: string;
+  rollbackAvailable: boolean;
+  rollbackData?: any;
+  rollbackPerformed?: boolean;
+  rollbackReason?: string;
   confidenceScore: number;
   createdAt: Date;
+  completedAt?: Date;
   requestedBy: string;
   approvalRequired: boolean;
   autoApprove: boolean;
+  approvalId?: string;
+  executionId?: string;
+  auditTrail: string[];
+  warnings: string[];
+  errors: string[];
+  result?: any;
   schedule?: {
     type: 'immediate' | 'scheduled' | 'recurring';
     scheduledAt?: Date;
     recurrence?: string;
   };
+  performanceMetrics?: {
+    executionTime: number;
+    resourceUsage: {
+      cpu: number;
+      memory: number;
+    };
+    successRate: number;
+    userSatisfaction: number;
+  };
+}
+
+interface TaskMetrics {
+  totalExecutions: number;
+  successRate: number;
+  averageExecutionTime: number;
+  rollbackRate: number;
+  approvalRequiredRate: number;
+  riskDistribution: Record<string, number>;
+  performanceTrends: {
+    hourly: number[];
+    daily: number[];
+    weekly: number[];
+  };
+  commonErrors: string[];
+  userRoleStats: Record<string, number>;
+}
+
+interface RollbackCapability {
+  available: boolean;
+  strategy: 'automatic' | 'manual' | 'impossible';
+  steps: string[];
+  timeLimit: number;
+  dependencies: string[];
 }
 
 const AITaskApprovalInterface: React.FC = () => {
@@ -91,20 +160,28 @@ const AITaskApprovalInterface: React.FC = () => {
   const [selectedTask, setSelectedTask] = useState<AITask | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [taskMetrics, setTaskMetrics] = useState<TaskMetrics | null>(null);
+  const [rollbackCandidates, setRollbackCandidates] = useState<AITask[]>([]);
+  const [showMetrics, setShowMetrics] = useState(false);
+  const [showRollbackPanel, setShowRollbackPanel] = useState(false);
+  const [expandedTask, setExpandedTask] = useState<string | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [refreshInterval, setRefreshInterval] = useState(30000); // 30 seconds
   const { toast } = useToast();
 
-  // Mock data - in real app, this would come from API
+  // Enhanced mock data with comprehensive task execution features
   useEffect(() => {
     const mockTasks: AITask[] = [
       {
         id: 'task-1',
         name: 'Customer Segmentation Analysis',
         description: 'Analyze customer data to create intelligent segments for targeted marketing',
-        type: 'analysis',
+        type: 'segmentation',
         priority: 'high',
         status: 'pending',
         requiredPermissions: ['contacts:read', 'analytics:read'],
         estimatedDuration: 180000, // 3 minutes
+        actualDuration: 165000, // 2.75 minutes
         resourceRequirements: {
           cpu: 0.4,
           memory: 0.3,
@@ -130,11 +207,30 @@ const AITaskApprovalInterface: React.FC = () => {
         ],
         dependencies: ['Customer data sync', 'Analytics pipeline'],
         rollbackPlan: 'Remove created segments and restore previous configuration',
+        rollbackAvailable: true,
+        rollbackData: {
+          previousSegments: ['High Value', 'Regular', 'Inactive'],
+          backupTimestamp: new Date().toISOString()
+        },
         confidenceScore: 87,
         createdAt: new Date(Date.now() - 30 * 60 * 1000),
         requestedBy: 'Marketing Team',
         approvalRequired: true,
-        autoApprove: false
+        autoApprove: false,
+        executionId: 'exec_001',
+        auditTrail: [
+          'Task created by Marketing Team',
+          'Awaiting approval for execution',
+          'Risk assessment completed: medium'
+        ],
+        warnings: [],
+        errors: [],
+        performanceMetrics: {
+          executionTime: 165000,
+          resourceUsage: { cpu: 0.35, memory: 0.28 },
+          successRate: 94.5,
+          userSatisfaction: 4.2
+        }
       },
       {
         id: 'task-2',
@@ -300,7 +396,61 @@ const AITaskApprovalInterface: React.FC = () => {
 
     setTasks(mockTasks);
     setFilteredTasks(mockTasks);
+
+    // Load task metrics
+    const mockMetrics: TaskMetrics = {
+      totalExecutions: 342,
+      successRate: 94.2,
+      averageExecutionTime: 125000,
+      rollbackRate: 2.3,
+      approvalRequiredRate: 45.7,
+      riskDistribution: {
+        low: 45,
+        medium: 35,
+        high: 15,
+        critical: 5
+      },
+      performanceTrends: {
+        hourly: [12, 8, 15, 22, 18, 25, 30, 35, 42, 38, 45, 52, 48, 55, 60, 58, 62, 65, 70, 68, 45, 35, 25, 15],
+        daily: [180, 220, 195, 245, 210, 235, 260, 285, 310, 295, 320, 335, 350, 365, 380, 395, 410, 425, 440, 455, 470, 485, 500, 515, 530, 545, 560, 575, 590, 605],
+        weekly: [1200, 1350, 1280, 1420, 1380, 1450, 1520, 1480, 1580, 1620, 1750, 1680, 1820, 1880, 1920, 1950, 2020, 2080, 2150, 2180, 2250, 2320, 2380, 2450, 2520, 2580, 2650, 2720, 2780, 2850, 2920, 2980, 3050, 3120, 3180, 3250, 3320, 3380, 3450, 3520, 3580, 3650, 3720, 3780, 3850, 3920, 3980, 4050, 4120, 4180, 4250, 4320]
+      },
+      commonErrors: [
+        'Permission denied',
+        'Database timeout',
+        'Network connectivity issue',
+        'Resource limit exceeded',
+        'Invalid parameter format'
+      ],
+      userRoleStats: {
+        'USER': 180,
+        'ADMIN': 95,
+        'SUPER_ADMIN': 67
+      }
+    };
+
+    setTaskMetrics(mockMetrics);
+
+    // Load rollback candidates
+    const rollbackTasks = mockTasks.filter(task => 
+      task.status === 'completed' && 
+      task.rollbackAvailable && 
+      !task.rollbackPerformed
+    );
+    setRollbackCandidates(rollbackTasks);
   }, []);
+
+  // Auto-refresh functionality
+  useEffect(() => {
+    if (!autoRefresh) return;
+
+    const interval = setInterval(() => {
+      // In production, this would fetch real data
+      console.log('Auto-refreshing task data...');
+    }, refreshInterval);
+
+    return () => clearInterval(interval);
+  }, [autoRefresh, refreshInterval]);
 
   // Filter tasks based on search and filters
   useEffect(() => {
@@ -475,6 +625,180 @@ const AITaskApprovalInterface: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleRollbackTask = async (taskId: string, rollbackReason: string) => {
+    setIsLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      setTasks(prev => prev.map(task => 
+        task.id === taskId ? { 
+          ...task, 
+          status: 'rolled_back',
+          rollbackPerformed: true,
+          rollbackReason,
+          auditTrail: [
+            ...task.auditTrail,
+            `Rollback initiated: ${rollbackReason}`,
+            `Rollback completed at ${new Date().toISOString()}`
+          ]
+        } : task
+      ));
+      
+      // Remove from rollback candidates
+      setRollbackCandidates(prev => prev.filter(task => task.id !== taskId));
+      
+      toast({
+        title: "Task Rolled Back",
+        description: `Task successfully rolled back: ${rollbackReason}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to rollback task. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDownloadAuditLog = (task: AITask) => {
+    const auditData = {
+      taskId: task.id,
+      taskName: task.name,
+      executionId: task.executionId,
+      createdAt: task.createdAt,
+      completedAt: task.completedAt,
+      status: task.status,
+      auditTrail: task.auditTrail,
+      warnings: task.warnings,
+      errors: task.errors,
+      performanceMetrics: task.performanceMetrics,
+      rollbackData: task.rollbackData
+    };
+
+    const blob = new Blob([JSON.stringify(auditData, null, 2)], { 
+      type: 'application/json' 
+    });
+    
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `audit-log-${task.id}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Audit Log Downloaded",
+      description: `Audit log for task ${task.name} has been downloaded.`,
+    });
+  };
+
+  const handleBulkAction = async (action: string, taskIds: string[]) => {
+    setIsLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      switch (action) {
+        case 'approve':
+          setTasks(prev => prev.map(task => 
+            taskIds.includes(task.id) ? { ...task, status: 'approved' } : task
+          ));
+          break;
+        case 'reject':
+          setTasks(prev => prev.map(task => 
+            taskIds.includes(task.id) ? { ...task, status: 'rejected' } : task
+          ));
+          break;
+        case 'archive':
+          setTasks(prev => prev.filter(task => !taskIds.includes(task.id)));
+          break;
+      }
+      
+      toast({
+        title: "Bulk Action Completed",
+        description: `${action} applied to ${taskIds.length} task(s).`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to perform bulk action. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleExportData = (format: 'csv' | 'json' | 'excel') => {
+    let data: any;
+    let filename: string;
+    let mimeType: string;
+
+    switch (format) {
+      case 'csv':
+        const csvHeaders = [
+          'Task ID', 'Name', 'Type', 'Status', 'Priority', 'Risk Level', 
+          'Created At', 'Completed At', 'Execution Time', 'Success Rate'
+        ];
+        const csvRows = tasks.map(task => [
+          task.id,
+          task.name,
+          task.type,
+          task.status,
+          task.priority,
+          task.riskLevel,
+          task.createdAt.toISOString(),
+          task.completedAt?.toISOString() || 'N/A',
+          task.actualDuration || 'N/A',
+          task.performanceMetrics?.successRate || 'N/A'
+        ]);
+        data = [csvHeaders, ...csvRows].map(row => row.join(',')).join('\n');
+        filename = `task-data-${new Date().toISOString().split('T')[0]}.csv`;
+        mimeType = 'text/csv';
+        break;
+      
+      case 'json':
+        data = JSON.stringify(tasks, null, 2);
+        filename = `task-data-${new Date().toISOString().split('T')[0]}.json`;
+        mimeType = 'application/json';
+        break;
+      
+      case 'excel':
+        // For Excel export, we'll use JSON format with Excel-friendly structure
+        data = JSON.stringify({
+          metadata: {
+            exportedAt: new Date().toISOString(),
+            totalTasks: tasks.length,
+            metrics: taskMetrics
+          },
+          tasks: tasks
+        }, null, 2);
+        filename = `task-data-${new Date().toISOString().split('T')[0]}.json`;
+        mimeType = 'application/json';
+        break;
+    }
+
+    const blob = new Blob([data], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Data Exported",
+      description: `Task data exported as ${format.toUpperCase()} format.`,
+    });
   };
 
   const getTabCount = (status: string) => {

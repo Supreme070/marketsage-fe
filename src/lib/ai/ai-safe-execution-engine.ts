@@ -9,7 +9,7 @@
 
 import { 
   AIPermissionService, 
-  AIPermission, 
+  type AIPermission, 
   RiskLevel,
   checkAIPermission
 } from '@/lib/ai/ai-permission-system';

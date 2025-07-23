@@ -18,7 +18,7 @@ import { redisCache } from '@/lib/cache/redis-client';
 import { aiAuditTrailSystem } from '@/lib/ai/ai-audit-trail-system';
 import { aiOperationRollbackSystem } from '@/lib/ai/ai-operation-rollback-system';
 import { universalTaskExecutionEngine } from '@/lib/ai/universal-task-execution-engine';
-import { UserRole } from '@prisma/client';
+import type { UserRole } from '@prisma/client';
 
 // AI streaming event types
 export enum AIStreamEventType {
@@ -634,6 +634,148 @@ class AIStreamingService {
   }
 
   /**
+   * Stream performance metric
+   */
+  async streamPerformanceMetric(organizationId: string, metric: any) {
+    if (!this.io) return;
+
+    try {
+      // Broadcast performance metric to organization
+      this.io.to(`org_${organizationId}`).emit('performance_metric', {
+        id: this.generateMessageId(),
+        type: 'performance_metric',
+        timestamp: new Date(),
+        organizationId,
+        data: metric
+      });
+
+    } catch (error) {
+      logger.error('Failed to stream performance metric:', error);
+    }
+  }
+
+  /**
+   * Stream system health updates
+   */
+  async streamSystemHealth(organizationId: string, healthMetrics: any) {
+    if (!this.io) return;
+
+    try {
+      // Broadcast system health to all clients in the organization
+      this.io.to(`org_${organizationId}`).emit('system_health_update', {
+        id: this.generateMessageId(),
+        type: 'system_health',
+        timestamp: new Date(),
+        organizationId,
+        data: healthMetrics
+      });
+
+      // Also broadcast to system health subscribers
+      this.io.to('ai_system_status').emit('ai_stream_message', {
+        id: this.generateMessageId(),
+        type: AIStreamEventType.SYSTEM_STATUS,
+        priority: AIStreamPriority.MEDIUM,
+        timestamp: new Date(),
+        userId: 'system',
+        sessionId: 'system',
+        requestId: 'system_health',
+        data: healthMetrics,
+        metadata: {
+          organizationId,
+          context: healthMetrics
+        }
+      });
+
+    } catch (error) {
+      logger.error('Failed to stream system health:', error);
+    }
+  }
+
+  /**
+   * Stream task updates
+   */
+  async streamTaskUpdate(organizationId: string, taskUpdate: any) {
+    if (!this.io) return;
+
+    try {
+      // Broadcast task update to organization
+      this.io.to(`org_${organizationId}`).emit('task_update', {
+        id: this.generateMessageId(),
+        type: 'task_update',
+        timestamp: new Date(),
+        organizationId,
+        data: taskUpdate
+      });
+
+    } catch (error) {
+      logger.error('Failed to stream task update:', error);
+    }
+  }
+
+  /**
+   * Stream alerts
+   */
+  async streamAlert(organizationId: string, alert: any) {
+    if (!this.io) return;
+
+    try {
+      // Broadcast alert to organization
+      this.io.to(`org_${organizationId}`).emit('alert', {
+        id: this.generateMessageId(),
+        type: 'alert',
+        timestamp: new Date(),
+        organizationId,
+        data: alert
+      });
+
+    } catch (error) {
+      logger.error('Failed to stream alert:', error);
+    }
+  }
+
+  /**
+   * Stream alert resolution
+   */
+  async streamAlertResolution(organizationId: string, resolution: any) {
+    if (!this.io) return;
+
+    try {
+      // Broadcast alert resolution to organization
+      this.io.to(`org_${organizationId}`).emit('alert_resolution', {
+        id: this.generateMessageId(),
+        type: 'alert_resolution',
+        timestamp: new Date(),
+        organizationId,
+        data: resolution
+      });
+
+    } catch (error) {
+      logger.error('Failed to stream alert resolution:', error);
+    }
+  }
+
+  /**
+   * Stream discovery update
+   */
+  async streamDiscoveryUpdate(organizationId: string, discovery: any) {
+    if (!this.io) return;
+
+    try {
+      // Broadcast discovery update to organization
+      this.io.to(`org_${organizationId}`).emit('discovery_update', {
+        id: this.generateMessageId(),
+        type: 'discovery_update',
+        timestamp: new Date(),
+        organizationId,
+        data: discovery
+      });
+
+    } catch (error) {
+      logger.error('Failed to stream discovery update:', error);
+    }
+  }
+
+  /**
    * Send stream message to connected clients
    */
   private async sendStreamMessage(message: AIStreamMessage) {
@@ -917,7 +1059,7 @@ class AIStreamingService {
     userId: string,
     sessionId: string,
     requestId: string,
-    limit: number = 50
+    limit = 50
   ): Promise<AIStreamMessage[]> {
     try {
       const key = `ai_stream:${userId}:${sessionId}:${requestId}`;

@@ -575,7 +575,7 @@ export class DynamicSafetyRulesEngine {
    */
   async generateRealTimeSafetyRecommendations(
     organizationId: string,
-    timeWindow: number = 60 // minutes
+    timeWindow = 60 // minutes
   ): Promise<{
     recommendations: {
       type: string;

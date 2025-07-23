@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { leadPulseOfflineSyncService } from '@/lib/leadpulse/offline-sync-service';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';

@@ -22,7 +22,7 @@ enum UserRole {
 // Get user by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -33,7 +33,8 @@ export async function GET(
     }
 
     // Access params safely
-    const { id: userId } = await params;
+    const params = await context.params;
+    const { id: userId } = params;
 
     // Users can view their own profile, admins can view anyone
     if (
@@ -76,6 +77,7 @@ export async function GET(
 
     return NextResponse.json(user);
   } catch (error) {
+    console.error('Error in /api/users/[id]:', error);
     return handleApiError(error, "/api/users/[id]/route.ts");
   }
 }
@@ -83,7 +85,7 @@ export async function GET(
 // Update user by ID
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -94,7 +96,8 @@ export async function PATCH(
     }
 
     // Access params safely
-    const { id: userId } = await params;
+    const params = await context.params;
+    const { id: userId } = params;
 
     // Users can update their own basic info, admins can update anyone except super admins
     const canUpdateBasicInfo =
@@ -199,6 +202,7 @@ export async function PATCH(
 
     return NextResponse.json(updatedUser);
   } catch (error) {
+    console.error('Error in /api/users/[id]:', error);
     return handleApiError(error, "/api/users/[id]/route.ts");
   }
 }
@@ -206,7 +210,7 @@ export async function PATCH(
 // Delete user by ID
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -222,7 +226,8 @@ export async function DELETE(
     }
 
     // Access params safely
-    const { id: userId } = await params;
+    const params = await context.params;
+    const { id: userId } = params;
 
     // Get the user to check their role
     const user = await prisma.user.findUnique({
@@ -251,6 +256,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: "User successfully deactivated" });
   } catch (error) {
+    console.error('Error in /api/users/[id]:', error);
     return handleApiError(error, "/api/users/[id]/route.ts");
   }
 }

@@ -6,15 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
-  Instagram, 
   Facebook, 
   Twitter, 
   Linkedin, 
@@ -23,44 +20,23 @@ import {
   Send,
   Calendar,
   TrendingUp,
-  Users,
   Target,
   Zap,
   BarChart3,
   Hash,
   Eye,
   Heart,
-  MessageSquare,
-  Share2,
   Clock,
   Sparkles,
   Globe,
-  Settings,
   Plus,
-  Play,
-  Pause,
   RefreshCw,
   Download,
-  Upload,
-  ChevronRight,
-  AlertCircle,
   CheckCircle,
   Loader2,
-  Camera,
-  Video,
-  Image as ImageIcon,
-  Mic,
   FileText,
-  Star,
-  ThumbsUp,
-  Bookmark,
-  Filter,
-  Search,
-  ArrowUp,
-  ArrowDown,
-  ExternalLink,
   Copy,
-  MoreHorizontal
+  Instagram
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -71,28 +47,11 @@ const PlatformIcons = {
   twitter: Twitter,
   linkedin: Linkedin,
   youtube: Youtube,
-  tiktok: Video,
   telegram: MessageCircle,
-  pinterest: ImageIcon,
-  snapchat: Camera,
-  reddit: MessageSquare,
+  pinterest: FileText,
+  snapchat: FileText,
+  reddit: MessageCircle,
   whatsapp: MessageCircle
-};
-
-// Content type icons
-const ContentTypeIcons = {
-  post: FileText,
-  story: Camera,
-  reel: Video,
-  video: Video,
-  image: ImageIcon,
-  carousel: ImageIcon,
-  thread: MessageSquare,
-  live: Video,
-  short: Video,
-  article: FileText,
-  poll: BarChart3,
-  event: Calendar
 };
 
 interface SocialMediaOverview {
@@ -128,24 +87,6 @@ interface HashtagResearch {
   };
 }
 
-interface InfluencerProfile {
-  username: string;
-  display_name: string;
-  follower_count: number;
-  engagement_rate: number;
-  platform: string;
-  niche: string[];
-  location: string;
-  collaboration_potential: {
-    score: number;
-    reasons: string[];
-  };
-  contact_info: {
-    email?: string;
-    website?: string;
-  };
-}
-
 interface PlatformAnalytics {
   platform: string;
   analytics: {
@@ -175,7 +116,7 @@ interface PlatformAnalytics {
 
 export default function SocialMediaDashboard() {
   const { data: session } = useSession();
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("content");
   const [loading, setLoading] = useState(false);
   const [overview, setOverview] = useState<SocialMediaOverview | null>(null);
   
@@ -190,26 +131,29 @@ export default function SocialMediaDashboard() {
   // Hashtag Research States
   const [hashtagTopic, setHashtagTopic] = useState("");
   const [maxHashtags, setMaxHashtags] = useState(30);
-  const [hashtagDifficulty, setHashtagDifficulty] = useState("mixed");
   const [hashtagResults, setHashtagResults] = useState<HashtagResearch[]>([]);
   const [hashtagResearching, setHashtagResearching] = useState(false);
-  
-  // Influencer Research States
-  const [influencerNiche, setInfluencerNiche] = useState("");
-  const [minFollowers, setMinFollowers] = useState(1000);
-  const [maxFollowers, setMaxFollowers] = useState(100000);
-  const [influencerResults, setInfluencerResults] = useState<InfluencerProfile[]>([]);
-  const [influencerSearching, setInfluencerSearching] = useState(false);
   
   // Analytics States
   const [analyticsData, setAnalyticsData] = useState<PlatformAnalytics[]>([]);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
-  const [dateRange, setDateRange] = useState({ start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), end: new Date().toISOString() });
+  const [dateRange] = useState({ 
+    start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), 
+    end: new Date().toISOString() 
+  });
+  
+  // MCP Integration States
+  const [customerInsights, setCustomerInsights] = useState<any>(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  
+  // Connection Status State
+  const [connectionStatus, setConnectionStatus] = useState<Record<string, boolean>>({});
 
-  // Load overview data
+  // Load overview data and connection status
   useEffect(() => {
     if (session?.user) {
       loadOverview();
+      loadConnectionStatus();
     }
   }, [session]);
 
@@ -237,7 +181,13 @@ export default function SocialMediaDashboard() {
     }
 
     setContentGenerating(true);
+    setInsightsLoading(true);
+    
     try {
+      // Get customer insights from MCP
+      const insights = await getCustomerInsights();
+      setCustomerInsights(insights);
+      
       const response = await fetch('/api/ai/social-media-management', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -253,7 +203,8 @@ export default function SocialMediaDashboard() {
             include_mentions: false,
             visual_elements: true,
             call_to_action: true,
-            trending: true
+            trending: true,
+            customer_insights: insights // Pass MCP insights to AI
           }
         })
       });
@@ -271,6 +222,7 @@ export default function SocialMediaDashboard() {
       toast.error('Failed to generate content');
     } finally {
       setContentGenerating(false);
+      setInsightsLoading(false);
     }
   };
 
@@ -291,7 +243,7 @@ export default function SocialMediaDashboard() {
           platforms: selectedPlatforms,
           hashtag_options: {
             max_hashtags: maxHashtags,
-            difficulty: hashtagDifficulty,
+            difficulty: 'mixed',
             trending: true,
             competitor_analysis: true,
             audience_size: 'medium'
@@ -321,82 +273,58 @@ export default function SocialMediaDashboard() {
     }
   };
 
-  const searchInfluencers = async () => {
-    if (!influencerNiche.trim()) {
-      toast.error('Please enter a niche for influencer search');
-      return;
-    }
-
-    setInfluencerSearching(true);
-    try {
-      const response = await fetch('/api/ai/social-media-management', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'identify_influencers',
-          topic: influencerNiche,
-          platforms: selectedPlatforms,
-          influencer_options: {
-            follower_range: { min: minFollowers, max: maxFollowers },
-            engagement_rate: { min: 0.01, max: 0.20 },
-            language: 'en',
-            audience_match: 0.7,
-            brand_alignment: [influencerNiche]
-          }
-        })
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        const allInfluencers = data.data.influencer_identification.flatMap((result: any) => 
-          result.influencers.map((influencer: any) => ({
-            ...influencer,
-            platform: result.platform
-          }))
-        );
-        setInfluencerResults(allInfluencers);
-        toast.success('Influencer search completed!');
-      } else {
-        toast.error(data.message || 'Failed to search influencers');
-      }
-    } catch (error) {
-      console.error('Error searching influencers:', error);
-      toast.error('Failed to search influencers');
-    } finally {
-      setInfluencerSearching(false);
-    }
-  };
-
   const loadAnalytics = async () => {
     setAnalyticsLoading(true);
     try {
-      const response = await fetch('/api/ai/social-media-management', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'get_analytics',
-          platforms: selectedPlatforms,
-          analytics_options: {
+      // Load both social media analytics and campaign analytics via MCP
+      const [socialResponse, campaignResponse] = await Promise.all([
+        fetch('/api/ai/social-media-management', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'get_analytics',
+            platforms: selectedPlatforms,
+            analytics_options: {
+              time_range: {
+                start_date: dateRange.start,
+                end_date: dateRange.end
+              },
+              metrics: ['engagement', 'reach', 'impressions', 'clicks', 'conversions'],
+              competitor_analysis: true,
+              trend_analysis: true,
+              roi_analysis: true
+            }
+          })
+        }),
+        // Campaign Analytics via MCP
+        fetch('/api/ai/context', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'get_campaign_analytics',
+            platforms: selectedPlatforms,
             time_range: {
               start_date: dateRange.start,
               end_date: dateRange.end
-            },
-            metrics: ['engagement', 'reach', 'impressions', 'clicks', 'conversions'],
-            competitor_analysis: true,
-            trend_analysis: true,
-            roi_analysis: true
-          }
+            }
+          })
         })
-      });
+      ]);
 
-      const data = await response.json();
+      const socialData = await socialResponse.json();
+      const campaignData = await campaignResponse.json();
       
-      if (data.success) {
-        setAnalyticsData(data.data.platform_analytics);
+      if (socialData.success) {
+        // Merge social media analytics with campaign analytics
+        const enrichedAnalytics = socialData.data.platform_analytics.map((platform: any) => ({
+          ...platform,
+          campaignMetrics: campaignData.success ? campaignData.data.find((c: any) => c.platform === platform.platform) : null
+        }));
+        
+        setAnalyticsData(enrichedAnalytics);
         toast.success('Analytics loaded successfully!');
       } else {
-        toast.error(data.message || 'Failed to load analytics');
+        toast.error(socialData.message || 'Failed to load analytics');
       }
     } catch (error) {
       console.error('Error loading analytics:', error);
@@ -451,31 +379,84 @@ export default function SocialMediaDashboard() {
     return num.toString();
   };
 
+  const connectPlatform = (platform: string) => {
+    const callbackUrl = `${window.location.origin}/api/auth/callback/${platform}`;
+    
+    switch (platform) {
+      case 'facebook':
+        // Use our custom OAuth flow for Facebook
+        window.location.href = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${process.env.NEXT_PUBLIC_FACEBOOK_CLIENT_ID}&redirect_uri=${encodeURIComponent(callbackUrl)}&scope=pages_manage_posts,pages_read_engagement,pages_show_list,instagram_basic,instagram_content_publish&response_type=code`;
+        break;
+      case 'instagram':
+        // Instagram uses Facebook OAuth
+        window.location.href = `https://api.instagram.com/oauth/authorize?client_id=${process.env.NEXT_PUBLIC_INSTAGRAM_CLIENT_ID}&redirect_uri=${encodeURIComponent(callbackUrl)}&scope=user_profile,user_media&response_type=code`;
+        break;
+      case 'twitter':
+        // Use our custom OAuth flow for Twitter
+        const twitterState = Math.random().toString(36).substring(2, 15);
+        const twitterCodeChallenge = 'challenge'; // In production, generate proper PKCE challenge
+        window.location.href = `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${process.env.NEXT_PUBLIC_TWITTER_CLIENT_ID}&redirect_uri=${encodeURIComponent(callbackUrl)}&scope=tweet.read%20tweet.write%20users.read&state=${twitterState}&code_challenge=${twitterCodeChallenge}&code_challenge_method=plain`;
+        break;
+      case 'linkedin':
+        // Use our custom OAuth flow for LinkedIn
+        const linkedinState = Math.random().toString(36).substring(2, 15);
+        window.location.href = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${process.env.NEXT_PUBLIC_LINKEDIN_CLIENT_ID}&redirect_uri=${encodeURIComponent(callbackUrl)}&scope=r_liteprofile%20w_member_social&state=${linkedinState}`;
+        break;
+      case 'youtube':
+        // YouTube uses Google OAuth
+        window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(callbackUrl)}&scope=https://www.googleapis.com/auth/youtube.upload%20https://www.googleapis.com/auth/youtube&response_type=code&access_type=offline`;
+        break;
+      default:
+        toast.error(`${platform} connection not yet implemented`);
+    }
+  };
+
   const getPlatformIcon = (platform: string) => {
     const IconComponent = PlatformIcons[platform as keyof typeof PlatformIcons];
     return IconComponent ? <IconComponent className="h-4 w-4" /> : <Globe className="h-4 w-4" />;
   };
 
-  const getContentTypeIcon = (type: string) => {
-    const IconComponent = ContentTypeIcons[type as keyof typeof ContentTypeIcons];
-    return IconComponent ? <IconComponent className="h-4 w-4" /> : <FileText className="h-4 w-4" />;
-  };
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy': return 'bg-green-100 text-green-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'hard': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+  // MCP Integration for customer insights
+  const getCustomerInsights = async () => {
+    try {
+      const response = await fetch('/api/ai/context', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'get_customer_insights',
+          query: contentTopic || 'general content',
+          options: {
+            includeSegments: true,
+            includePredictions: true,
+            includeEngagement: true
+          }
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        return data.data;
+      }
+    } catch (error) {
+      console.error('Error fetching customer insights:', error);
     }
+    return null;
   };
 
-  const getTrendingColor = (status: string) => {
-    switch (status) {
-      case 'rising': return 'bg-green-100 text-green-800';
-      case 'stable': return 'bg-blue-100 text-blue-800';
-      case 'declining': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+  const loadConnectionStatus = async () => {
+    try {
+      const response = await fetch('/api/social-media/connections');
+      const data = await response.json();
+      
+      if (data.success) {
+        const status: Record<string, boolean> = {};
+        data.data.connections.forEach((conn: any) => {
+          status[conn.platform] = conn.isActive && (!conn.expiresAt || new Date(conn.expiresAt) > new Date());
+        });
+        setConnectionStatus(status);
+      }
+    } catch (error) {
+      console.error('Error loading connection status:', error);
     }
   };
 
@@ -503,12 +484,62 @@ export default function SocialMediaDashboard() {
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
+          <Button 
+            onClick={() => window.location.href = '/campaigns'}
+            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+          >
             <Plus className="h-4 w-4 mr-2" />
             New Campaign
           </Button>
         </div>
       </div>
+
+      {/* Social Media Accounts Connection */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            Connected Accounts
+          </CardTitle>
+          <CardDescription>
+            Connect your social media accounts to enable posting and analytics
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {[
+              { name: 'Facebook', icon: Facebook, platform: 'facebook' },
+              { name: 'Instagram', icon: Instagram, platform: 'instagram' },
+              { name: 'Twitter', icon: Twitter, platform: 'twitter' },
+              { name: 'LinkedIn', icon: Linkedin, platform: 'linkedin' },
+              { name: 'YouTube', icon: Youtube, platform: 'youtube' },
+              { name: 'Telegram', icon: MessageCircle, platform: 'telegram' }
+            ].map((platform) => {
+              const isConnected = connectionStatus[platform.platform] || false;
+              return (
+              <div key={platform.name} className="flex flex-col items-center p-3 border rounded-lg">
+                <platform.icon className={`h-8 w-8 mb-2 ${isConnected ? 'text-green-500' : 'text-gray-400'}`} />
+                <span className="text-sm font-medium">{platform.name}</span>
+                <div className="mt-2">
+                  {isConnected ? (
+                    <Badge variant="default" className="text-xs bg-green-100 text-green-800">Connected</Badge>
+                  ) : (
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="text-xs h-6"
+                      onClick={() => connectPlatform(platform.platform)}
+                    >
+                      Connect
+                    </Button>
+                  )}
+                </div>
+              </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Overview Cards */}
       {overview && (
@@ -569,86 +600,16 @@ export default function SocialMediaDashboard() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="content">Content Studio</TabsTrigger>
-          <TabsTrigger value="hashtags">Hashtag Research</TabsTrigger>
-          <TabsTrigger value="influencers">Influencer Hub</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Platform Performance
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {['Instagram', 'Facebook', 'Twitter', 'LinkedIn'].map((platform, index) => (
-                    <div key={platform} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {getPlatformIcon(platform.toLowerCase())}
-                        <span className="font-medium">{platform}</span>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-sm text-muted-foreground">
-                          {formatNumber(Math.floor(Math.random() * 50000) + 10000)} reach
-                        </div>
-                        <Progress value={Math.floor(Math.random() * 100)} className="w-20" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Content Calendar
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {[
-                    { time: '09:00 AM', platform: 'Instagram', type: 'Story', status: 'scheduled' },
-                    { time: '01:00 PM', platform: 'Facebook', type: 'Post', status: 'published' },
-                    { time: '05:00 PM', platform: 'Twitter', type: 'Thread', status: 'scheduled' },
-                    { time: '07:00 PM', platform: 'LinkedIn', type: 'Article', status: 'draft' }
-                  ].map((item, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="text-sm font-medium">{item.time}</div>
-                        <div className="flex items-center gap-2">
-                          {getPlatformIcon(item.platform.toLowerCase())}
-                          <span className="text-sm">{item.platform}</span>
-                        </div>
-                        <Badge variant="outline" className="text-xs">
-                          {item.type}
-                        </Badge>
-                      </div>
-                      <Badge variant={item.status === 'published' ? 'default' : item.status === 'scheduled' ? 'secondary' : 'outline'}>
-                        {item.status}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
         {/* Content Studio Tab */}
         <TabsContent value="content" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Content Generation Form */}
-            <Card>
+            <Card className="lg:col-span-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5" />
@@ -706,7 +667,7 @@ export default function SocialMediaDashboard() {
                 <div className="space-y-2">
                   <Label>Target Platforms</Label>
                   <div className="grid grid-cols-2 gap-2">
-                    {['facebook', 'instagram', 'twitter', 'linkedin', 'youtube', 'tiktok'].map((platform) => (
+                    {['facebook', 'instagram', 'twitter', 'linkedin', 'youtube', 'telegram'].map((platform) => (
                       <div key={platform} className="flex items-center space-x-2">
                         <Switch
                           id={platform}
@@ -736,96 +697,15 @@ export default function SocialMediaDashboard() {
               </CardContent>
             </Card>
 
-            {/* Generated Content Display */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Generated Content
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {generatedContent.length > 0 ? (
-                  <div className="space-y-4">
-                    {generatedContent.map((content, index) => (
-                      <div key={index} className="p-4 border rounded-lg space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            {getPlatformIcon(content.platform)}
-                            <span className="font-medium capitalize">{content.platform}</span>
-                          </div>
-                          <Badge variant="outline" className="text-xs">
-                            {(content.engagement_prediction * 100).toFixed(1)}% predicted engagement
-                          </Badge>
-                        </div>
-                        
-                        <div className="text-sm space-y-2">
-                          <div className="bg-muted/50 p-3 rounded-md">
-                            <p>{content.content}</p>
-                          </div>
-                          
-                          {content.hashtags && content.hashtags.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {content.hashtags.map((hashtag, i) => (
-                                <Badge key={i} variant="secondary" className="text-xs">
-                                  {hashtag}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-                          
-                          {content.optimal_timing && (
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <Clock className="h-3 w-3" />
-                              Best time to post: {content.optimal_timing}
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          <Button 
-                            size="sm" 
-                            onClick={() => postContent(content)}
-                            className="flex-1"
-                          >
-                            <Send className="h-3 w-3 mr-2" />
-                            Post Now
-                          </Button>
-                          <Button size="sm" variant="outline">
-                            <Calendar className="h-3 w-3 mr-2" />
-                            Schedule
-                          </Button>
-                          <Button size="sm" variant="outline">
-                            <Copy className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No content generated yet</p>
-                    <p className="text-sm">Enter a topic and generate AI-powered content</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Hashtag Research Tab */}
-        <TabsContent value="hashtags" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Hashtag Research Form */}
-            <Card>
+            {/* Hashtag Research Helper Panel */}
+            <Card className="lg:col-span-1">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Hash className="h-5 w-5" />
                   Hashtag Research
                 </CardTitle>
                 <CardDescription>
-                  Discover trending and relevant hashtags for your content
+                  Discover trending hashtags
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -833,38 +713,22 @@ export default function SocialMediaDashboard() {
                   <Label htmlFor="hashtag-topic">Research Topic</Label>
                   <Input
                     id="hashtag-topic"
-                    placeholder="e.g., digital marketing, AI, startup, fitness"
+                    placeholder="e.g., digital marketing, AI"
                     value={hashtagTopic}
                     onChange={(e) => setHashtagTopic(e.target.value)}
                   />
                 </div>
-
+                
                 <div className="space-y-2">
-                  <Label htmlFor="max-hashtags">Maximum Hashtags</Label>
-                  <Select value={maxHashtags.toString()} onValueChange={(value) => setMaxHashtags(parseInt(value))}>
+                  <Label htmlFor="max-hashtags">Max Hashtags</Label>
+                  <Select value={maxHashtags.toString()} onValueChange={(value) => setMaxHashtags(Number.parseInt(value))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="10">10 hashtags</SelectItem>
-                      <SelectItem value="20">20 hashtags</SelectItem>
-                      <SelectItem value="30">30 hashtags</SelectItem>
-                      <SelectItem value="50">50 hashtags</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="difficulty">Difficulty Level</Label>
-                  <Select value={hashtagDifficulty} onValueChange={setHashtagDifficulty}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="easy">Easy (Low competition)</SelectItem>
-                      <SelectItem value="medium">Medium (Moderate competition)</SelectItem>
-                      <SelectItem value="hard">Hard (High competition)</SelectItem>
-                      <SelectItem value="mixed">Mixed (All levels)</SelectItem>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="30">30</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -873,201 +737,131 @@ export default function SocialMediaDashboard() {
                   onClick={researchHashtags} 
                   disabled={hashtagResearching || !hashtagTopic.trim()}
                   className="w-full"
+                  size="sm"
                 >
                   {hashtagResearching ? (
                     <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Researching...</>
                   ) : (
-                    <><Hash className="h-4 w-4 mr-2" />Research Hashtags</>
+                    <><Hash className="h-4 w-4 mr-2" />Research</>
                   )}
                 </Button>
-              </CardContent>
-            </Card>
 
-            {/* Hashtag Results */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5" />
-                  Hashtag Results
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {hashtagResults.length > 0 ? (
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
-                    {hashtagResults.map((hashtag, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50">
-                        <div className="flex items-center gap-3">
-                          <div className="font-medium text-sm">{hashtag.hashtag}</div>
-                          <Badge className={`text-xs ${getDifficultyColor(hashtag.difficulty)}`}>
-                            {hashtag.difficulty}
-                          </Badge>
-                          <Badge className={`text-xs ${getTrendingColor(hashtag.trending_status)}`}>
-                            {hashtag.trending_status}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="text-xs text-muted-foreground">
-                            {formatNumber(hashtag.reach_potential)} reach
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {(hashtag.engagement_rate * 100).toFixed(1)}% eng.
-                          </div>
-                          <Button size="sm" variant="outline">
-                            <Copy className="h-3 w-3" />
-                          </Button>
-                        </div>
+                {hashtagResults.length > 0 && (
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {hashtagResults.slice(0, 10).map((hashtag, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 border rounded text-xs">
+                        <span className="font-medium">{hashtag.hashtag}</span>
+                        <Button size="sm" variant="outline" className="h-6 px-2">
+                          <Copy className="h-3 w-3" />
+                        </Button>
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Hash className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No hashtags researched yet</p>
-                    <p className="text-sm">Enter a topic to discover relevant hashtags</p>
+                )}
+
+                {/* Customer Insights from MCP */}
+                {insightsLoading && (
+                  <div className="text-center py-4">
+                    <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground">Loading customer insights...</p>
+                  </div>
+                )}
+                
+                {customerInsights && (
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <h4 className="text-xs font-medium mb-2 text-blue-700">Customer Insights</h4>
+                    <div className="space-y-1 text-xs text-blue-600">
+                      {customerInsights.segments && (
+                        <p>• Target: {customerInsights.segments.slice(0, 2).join(', ')}</p>
+                      )}
+                      {customerInsights.preferences && (
+                        <p>• Interests: {customerInsights.preferences.slice(0, 3).join(', ')}</p>
+                      )}
+                      {customerInsights.engagement && (
+                        <p>• Best time: {customerInsights.engagement.optimal_time}</p>
+                      )}
+                    </div>
                   </div>
                 )}
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
 
-        {/* Influencer Hub Tab */}
-        <TabsContent value="influencers" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Influencer Search Form */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Influencer Discovery
-                </CardTitle>
-                <CardDescription>
-                  Find relevant influencers for your brand and campaigns
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="influencer-niche">Niche/Industry</Label>
-                  <Input
-                    id="influencer-niche"
-                    placeholder="e.g., fitness, tech, fashion, food"
-                    value={influencerNiche}
-                    onChange={(e) => setInfluencerNiche(e.target.value)}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="min-followers">Min Followers</Label>
-                    <Input
-                      id="min-followers"
-                      type="number"
-                      placeholder="1000"
-                      value={minFollowers}
-                      onChange={(e) => setMinFollowers(parseInt(e.target.value) || 1000)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="max-followers">Max Followers</Label>
-                    <Input
-                      id="max-followers"
-                      type="number"
-                      placeholder="100000"
-                      value={maxFollowers}
-                      onChange={(e) => setMaxFollowers(parseInt(e.target.value) || 100000)}
-                    />
-                  </div>
-                </div>
-
-                <Button 
-                  onClick={searchInfluencers} 
-                  disabled={influencerSearching || !influencerNiche.trim()}
-                  className="w-full"
-                >
-                  {influencerSearching ? (
-                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Searching...</>
-                  ) : (
-                    <><Users className="h-4 w-4 mr-2" />Search Influencers</>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Influencer Results */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Star className="h-5 w-5" />
-                  Influencer Results
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {influencerResults.length > 0 ? (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {influencerResults.map((influencer, index) => (
-                      <div key={index} className="p-4 border rounded-lg space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold">
-                              {influencer.display_name.charAt(0)}
-                            </div>
-                            <div>
-                              <div className="font-medium">{influencer.display_name}</div>
-                              <div className="text-sm text-muted-foreground">@{influencer.username}</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {getPlatformIcon(influencer.platform)}
-                            <Badge variant="outline" className="text-xs">
-                              {(influencer.collaboration_potential.score * 100).toFixed(0)}% match
-                            </Badge>
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <div className="text-muted-foreground">Followers</div>
-                            <div className="font-medium">{formatNumber(influencer.follower_count)}</div>
-                          </div>
-                          <div>
-                            <div className="text-muted-foreground">Engagement</div>
-                            <div className="font-medium">{(influencer.engagement_rate * 100).toFixed(1)}%</div>
-                          </div>
-                          <div>
-                            <div className="text-muted-foreground">Location</div>
-                            <div className="font-medium">{influencer.location}</div>
-                          </div>
-                          <div>
-                            <div className="text-muted-foreground">Niche</div>
-                            <div className="font-medium">{influencer.niche.join(', ')}</div>
-                          </div>
-                        </div>
-                        
+          {/* Generated Content Display */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Generated Content
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {generatedContent.length > 0 ? (
+                <div className="space-y-4">
+                  {generatedContent.map((content, index) => (
+                    <div key={index} className="p-4 border rounded-lg space-y-3">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Button size="sm" className="flex-1">
-                            <MessageCircle className="h-3 w-3 mr-2" />
-                            Contact
-                          </Button>
-                          <Button size="sm" variant="outline">
-                            <ExternalLink className="h-3 w-3" />
-                          </Button>
-                          <Button size="sm" variant="outline">
-                            <Bookmark className="h-3 w-3" />
-                          </Button>
+                          {getPlatformIcon(content.platform)}
+                          <span className="font-medium capitalize">{content.platform}</span>
                         </div>
+                        <Badge variant="outline" className="text-xs">
+                          {(content.engagement_prediction * 100).toFixed(1)}% predicted engagement
+                        </Badge>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No influencers found yet</p>
-                    <p className="text-sm">Enter a niche to discover relevant influencers</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                      
+                      <div className="text-sm space-y-2">
+                        <div className="bg-muted/50 p-3 rounded-md">
+                          <p>{content.content}</p>
+                        </div>
+                        
+                        {content.hashtags && content.hashtags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {content.hashtags.map((hashtag, i) => (
+                              <Badge key={i} variant="secondary" className="text-xs">
+                                {hashtag}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {content.optimal_timing && (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            Best time to post: {content.optimal_timing}
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          size="sm" 
+                          onClick={() => postContent(content)}
+                          className="flex-1"
+                        >
+                          <Send className="h-3 w-3 mr-2" />
+                          Post Now
+                        </Button>
+                        <Button size="sm" variant="outline">
+                          <Calendar className="h-3 w-3 mr-2" />
+                          Schedule
+                        </Button>
+                        <Button size="sm" variant="outline">
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No content generated yet</p>
+                  <p className="text-sm">Enter a topic and generate AI-powered content</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Analytics Tab */}

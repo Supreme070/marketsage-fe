@@ -597,7 +597,7 @@ export class EngagementScoringEngine {
     return minutesSinceLastActivity < 5;
   }
   
-  private groupIntoSessions(touchpoints: any[], gapMinutes: number = 30): any[][] {
+  private groupIntoSessions(touchpoints: any[], gapMinutes = 30): any[][] {
     if (touchpoints.length === 0) return [];
     
     const sessions: any[][] = [];

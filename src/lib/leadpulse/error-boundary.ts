@@ -834,7 +834,7 @@ class LeadPulseErrorBoundary {
     operationName: string,
     context: ErrorContext,
     result: any,
-    ttl: number = 300000 // 5 minutes
+    ttl = 300000 // 5 minutes
   ): Promise<void> {
     try {
       const cacheKey = this.generateCacheKey(operationName, context);

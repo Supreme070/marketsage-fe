@@ -14,7 +14,7 @@ import {
   multiAgentCoordinator,
   type AIAgent,
   type AgentTask,
-  AgentType,
+  type AgentType,
   AgentStatus 
 } from '@/lib/ai/multi-agent-coordinator';
 import { 
@@ -1170,7 +1170,7 @@ class ContextAwareAgentBehaviorAdaptation extends EventEmitter {
   private async adjustAdaptationFrequency(agentId: string, multiplier: number): Promise<void> {
     // Adjust adaptation frequency
     const currentFreq = await redisCache.get(`adapt_freq:${agentId}`) || '300000';
-    const newFreq = Math.max(60000, parseInt(currentFreq) * multiplier);
+    const newFreq = Math.max(60000, Number.parseInt(currentFreq) * multiplier);
     
     await redisCache.set(`adapt_freq:${agentId}`, newFreq.toString(), 86400);
   }

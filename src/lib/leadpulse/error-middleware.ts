@@ -92,7 +92,7 @@ export function createErrorHandledRequest(request: NextRequest): ErrorHandledReq
 export function createErrorResponse(
   error: Error,
   fallbackData?: any,
-  status: number = 500
+  status = 500
 ): NextResponse {
   const isValidationError = status === 400;
   const isRateLimitError = status === 429;

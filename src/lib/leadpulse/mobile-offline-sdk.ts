@@ -60,7 +60,7 @@ export interface SyncError {
 export class LeadPulseMobileSDK {
   private config: MobileSDKConfig;
   private sessionId: string;
-  private isInitialized: boolean = false;
+  private isInitialized = false;
   private eventQueue: TrackingEvent[] = [];
   private syncStatus: SyncStatus;
   private syncTimer?: NodeJS.Timeout;
@@ -182,7 +182,7 @@ export class LeadPulseMobileSDK {
   /**
    * Manually trigger synchronization
    */
-  async sync(force: boolean = false): Promise<boolean> {
+  async sync(force = false): Promise<boolean> {
     if (!this.isInitialized) {
       throw new Error('SDK not initialized');
     }
@@ -289,7 +289,7 @@ export class LeadPulseMobileSDK {
   /**
    * Cache data for offline use
    */
-  async setCachedData(cacheKey: string, cacheType: string, data: any, ttlHours: number = 24): Promise<boolean> {
+  async setCachedData(cacheKey: string, cacheType: string, data: any, ttlHours = 24): Promise<boolean> {
     try {
       const response = await this.apiCall('POST', '/leadpulse/mobile/cache?action=set', {
         deviceId: this.config.deviceId,

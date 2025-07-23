@@ -1,4 +1,4 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import AITaskApprovalInterface from '@/components/ai/AITaskApprovalInterface';
 
 export const metadata: Metadata = {

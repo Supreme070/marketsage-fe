@@ -229,7 +229,7 @@ class ParallelExecutionEngine extends EventEmitter {
     },
     enabled: true
   };
-  private maxConcurrency: number = 10;
+  private maxConcurrency = 10;
   private resourceLimits = {
     cpu: 80, // 80% max CPU usage
     memory: 85, // 85% max memory usage

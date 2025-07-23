@@ -10,7 +10,7 @@
  * - GET /api/ai/seo-content-marketing - Get SEO analytics and content performance
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { logger } from '@/lib/logger';
@@ -600,7 +600,7 @@ async function handleSEOAudit(data: any, organizationId: string) {
       critical_issues: auditResult.technicalSEO.issues.filter(i => i.severity === 'critical').length,
       high_priority_issues: auditResult.technicalSEO.issues.filter(i => i.severity === 'high').length,
       total_issues: auditResult.technicalSEO.issues.length,
-      estimated_fix_time: auditResult.actionPlan.reduce((sum, action) => sum + parseFloat(action.timeline), 0),
+      estimated_fix_time: auditResult.actionPlan.reduce((sum, action) => sum + Number.parseFloat(action.timeline), 0),
       potential_impact: auditResult.actionPlan.reduce((sum, action) => sum + action.estimatedImpact, 0),
       competitors_analyzed: auditResult.competitorAnalysis.length,
       performance_score: auditResult.performanceMetrics.pageSpeed

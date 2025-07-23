@@ -434,7 +434,7 @@ export class WorkflowVersionControl {
   /**
    * Get deployment history for a workflow
    */
-  async getDeploymentHistory(workflowId: string, limit: number = 50) {
+  async getDeploymentHistory(workflowId: string, limit = 50) {
     try {
       return await this.getWorkflowDeployments(workflowId, limit);
     } catch (error) {

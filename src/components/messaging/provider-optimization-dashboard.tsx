@@ -123,7 +123,7 @@ export function ProviderOptimizationDashboard() {
     }
   };
 
-  const handleOptimizeProvider = async (channel: string, messageCount: number = 1000) => {
+  const handleOptimizeProvider = async (channel: string, messageCount = 1000) => {
     try {
       const response = await fetch('/api/messaging/optimization', {
         method: 'POST',

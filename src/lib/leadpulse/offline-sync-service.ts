@@ -172,8 +172,8 @@ export class LeadPulseOfflineSyncService {
    */
   async synchronizeOfflineData(
     deviceId: string,
-    connectionType: string = 'unknown',
-    networkSpeed: string = 'unknown'
+    connectionType = 'unknown',
+    networkSpeed = 'unknown'
   ): Promise<SyncResult> {
     let syncLogId: string | null = null;
 
@@ -544,7 +544,7 @@ export class LeadPulseOfflineSyncService {
     cacheKey: string,
     cacheType: string,
     data: any,
-    ttlHours: number = 24
+    ttlHours = 24
   ): Promise<void> {
     try {
       const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
@@ -764,7 +764,7 @@ export class LeadPulseOfflineSyncService {
   /**
    * Clean up old offline data
    */
-  async cleanupOldOfflineData(daysOld: number = 30): Promise<void> {
+  async cleanupOldOfflineData(daysOld = 30): Promise<void> {
     const cutoffDate = new Date(Date.now() - daysOld * 24 * 60 * 60 * 1000);
 
     try {

@@ -1,4 +1,4 @@
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import { PricingHeader } from "@/components/pricing/pricing-header";
 import { PricingTiers } from "@/components/pricing/pricing-tiers";
 import { PricingComparison } from "@/components/pricing/pricing-comparison";

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { workflowVersionControl } from '@/lib/workflow/version-control';
@@ -73,7 +73,7 @@ export async function GET(
 
     const workflowId = params.id;
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const limit = Number.parseInt(searchParams.get('limit') || '50');
 
     // Get deployment history
     const deployments = await workflowVersionControl.getDeploymentHistory(workflowId, limit);

@@ -89,7 +89,7 @@ class LeadPulseRateLimiter {
     try {
       this.redis = new Redis({
         host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
+        port: Number.parseInt(process.env.REDIS_PORT || '6379'),
         db: 1, // Use separate DB for rate limiting
         keyPrefix: 'leadpulse:ratelimit:',
         lazyConnect: true,
@@ -204,7 +204,7 @@ class LeadPulseRateLimiter {
       }
       
       const current = await this.redis.get(key);
-      const count = current ? parseInt(current) : 0;
+      const count = current ? Number.parseInt(current) : 0;
       const ttl = await this.redis.ttl(key);
       
       return {
@@ -528,7 +528,7 @@ function getClientIP(request: Request): string {
  * Rate limiting decorator for API route handlers
  */
 export function withRateLimit(type: RateLimitType, customConfig?: Partial<RateLimitConfig>) {
-  return function (target: any, propertyName: string, descriptor: PropertyDescriptor) {
+  return (target: any, propertyName: string, descriptor: PropertyDescriptor) => {
     const method = descriptor.value;
     
     descriptor.value = async function (request: Request, ...args: any[]) {

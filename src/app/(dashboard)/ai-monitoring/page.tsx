@@ -1,4 +1,4 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import AITaskMonitoringDashboard from '@/components/ai/AITaskMonitoringDashboard';
 
 export const metadata: Metadata = {

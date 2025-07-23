@@ -639,7 +639,7 @@ export class CustomerLifetimeValueModel {
           contactId: prediction.contactId,
           predictedValue: prediction.predictedCLV,
           confidenceLevel: prediction.confidence,
-          timeframe: parseInt(prediction.timeHorizon.split('_')[0]), // Extract months from "12_months"
+          timeframe: Number.parseInt(prediction.timeHorizon.split('_')[0]), // Extract months from "12_months"
           segments: JSON.stringify({
             valueSegment: prediction.valueSegment,
             confidenceInterval: prediction.confidenceInterval,

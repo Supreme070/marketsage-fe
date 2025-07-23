@@ -6,11 +6,11 @@
  */
 
 import { logger } from '@/lib/logger';
-import { SupremeAI } from '@/lib/ai/supreme-ai-engine';
+import type { SupremeAI } from '@/lib/ai/supreme-ai-engine';
 import { 
   AutonomousSegmentDiscovery, 
-  DiscoveredPattern, 
-  SuggestedSegment, 
+  type DiscoveredPattern, 
+  type SuggestedSegment, 
   SegmentationFeatures,
   SegmentPerformanceMetrics,
   MicroSegment,
@@ -28,8 +28,8 @@ export class ClusteringAlgorithms {
    */
   static async kMeansCluster(
     featureMatrix: number[][],
-    k: number = 5,
-    maxIterations: number = 100
+    k = 5,
+    maxIterations = 100
   ): Promise<{
     clusters: number;
     labels: number[];
@@ -77,8 +77,8 @@ export class ClusteringAlgorithms {
    */
   static async dbscanCluster(
     featureMatrix: number[][],
-    eps: number = 0.5,
-    minPts: number = 5
+    eps = 0.5,
+    minPts = 5
   ): Promise<{
     clusters: number;
     labels: number[];
@@ -138,7 +138,7 @@ export class ClusteringAlgorithms {
 
   private static assignClusters(data: number[][], centroids: number[][]): number[] {
     return data.map(point => {
-      let minDistance = Infinity;
+      let minDistance = Number.POSITIVE_INFINITY;
       let clusterLabel = 0;
 
       centroids.forEach((centroid, index) => {
@@ -252,7 +252,7 @@ export class ClusteringAlgorithms {
         : 0;
 
       // Calculate b(i) - minimum average distance to points in other clusters
-      let b = Infinity;
+      let b = Number.POSITIVE_INFINITY;
       for (const otherLabel of uniqueLabels) {
         if (otherLabel === currentLabel || otherLabel === -1) continue;
 
@@ -262,7 +262,7 @@ export class ClusteringAlgorithms {
       }
 
       // Calculate silhouette score for this point
-      const silhouette = b === Infinity ? 0 : (b - a) / Math.max(a, b);
+      const silhouette = b === Number.POSITIVE_INFINITY ? 0 : (b - a) / Math.max(a, b);
       totalScore += silhouette;
       validPoints++;
     }

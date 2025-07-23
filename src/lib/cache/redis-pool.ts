@@ -40,11 +40,10 @@ class RedisConnectionPool {
        process.env.BUILDING === 'true' ||
        process.argv.includes('build'));
 
-    if (!this.isBuildTime) {
-      this.initialize();
-    } else {
-      logger.info('Build time detected - skipping Redis pool initialization');
-    }
+    // PERMANENTLY DISABLED - We only need redis-client.ts and redis.ts
+    // This pool was creating duplicate connections
+    console.log('Redis connection pool disabled - using individual clients instead');
+    logger.info('Using redis-client.ts and redis.ts instead of connection pool');
   }
 
   /**

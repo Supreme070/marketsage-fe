@@ -1,3 +1,7 @@
+import prisma from '@/lib/db/prisma';
+import { logger } from '@/lib/logger';
+import crypto from 'crypto';
+
 interface WhatsAppResult {
   success: boolean;
   messageId?: string;
@@ -66,6 +70,7 @@ export class WhatsAppService {
   private accessToken: string;
   private phoneNumberId: string;
   private version = 'v21.0';
+  private organizationProviders: Map<string, { accessToken: string; phoneNumberId: string }> = new Map();
 
   constructor() {
     this.accessToken = process.env.WHATSAPP_ACCESS_TOKEN || '';
@@ -73,10 +78,89 @@ export class WhatsAppService {
   }
 
   /**
+   * Decrypt sensitive data
+   */
+  private decrypt(encryptedText: string): string {
+    try {
+      const key = process.env.ENCRYPTION_KEY || 'default-key-for-development';
+      const decipher = crypto.createDecipher('aes-256-cbc', key);
+      let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      return decrypted;
+    } catch (error) {
+      logger.error('Decryption failed:', error);
+      return encryptedText;
+    }
+  }
+
+  /**
+   * Get organization-specific WhatsApp provider configuration
+   */
+  async getOrganizationProvider(organizationId: string): Promise<{ accessToken: string; phoneNumberId: string } | null> {
+    try {
+      // Check cache first
+      const cacheKey = `whatsapp_${organizationId}`;
+      if (this.organizationProviders.has(cacheKey)) {
+        return this.organizationProviders.get(cacheKey) || null;
+      }
+
+      // Get from database
+      const whatsappConfig = await prisma.whatsAppBusinessConfig.findFirst({
+        where: {
+          organizationId,
+          isActive: true
+        }
+      });
+
+      if (!whatsappConfig) {
+        return null;
+      }
+
+      // Decrypt the access token
+      const accessToken = this.decrypt(whatsappConfig.accessToken);
+      
+      const provider = {
+        accessToken,
+        phoneNumberId: whatsappConfig.phoneNumberId
+      };
+
+      // Cache the provider
+      this.organizationProviders.set(cacheKey, provider);
+      
+      return provider;
+    } catch (error) {
+      logger.error('Error getting organization WhatsApp provider:', { error, organizationId });
+      return null;
+    }
+  }
+
+  /**
+   * Clear organization provider cache
+   */
+  clearOrganizationCache(organizationId: string): void {
+    const cacheKey = `whatsapp_${organizationId}`;
+    this.organizationProviders.delete(cacheKey);
+  }
+
+  /**
    * Send a text message via WhatsApp Business API
    */
-  async sendTextMessage(to: string, message: string): Promise<WhatsAppResult> {
+  async sendTextMessage(to: string, message: string, organizationId?: string): Promise<WhatsAppResult> {
     try {
+      let accessToken = this.accessToken;
+      let phoneNumberId = this.phoneNumberId;
+      
+      // If organization ID is provided, try to get organization-specific provider
+      if (organizationId) {
+        const orgProvider = await this.getOrganizationProvider(organizationId);
+        if (orgProvider) {
+          accessToken = orgProvider.accessToken;
+          phoneNumberId = orgProvider.phoneNumberId;
+        } else {
+          logger.info('No organization WhatsApp provider found, using platform default WhatsApp provider', { organizationId });
+        }
+      }
+
       // Remove any non-digit characters from phone number
       const cleanPhoneNumber = to.replace(/\D/g, '');
       
@@ -85,7 +169,7 @@ export class WhatsAppService {
         ? cleanPhoneNumber 
         : '234' + cleanPhoneNumber.replace(/^0/, '');
 
-      const url = `https://graph.facebook.com/${this.version}/${this.phoneNumberId}/messages`;
+      const url = `https://graph.facebook.com/${this.version}/${phoneNumberId}/messages`;
       
       const payload = {
         messaging_product: 'whatsapp',
@@ -99,7 +183,7 @@ export class WhatsAppService {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.accessToken}`,
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
@@ -117,7 +201,7 @@ export class WhatsAppService {
       };
 
     } catch (error) {
-      console.error('WhatsApp sending error:', error);
+      logger.error('WhatsApp sending error:', error);
       
       // If we don't have proper API credentials, simulate success for development
       if (!this.accessToken || !this.phoneNumberId) {
@@ -592,6 +676,45 @@ export class WhatsAppService {
   }
 
   /**
+   * Test organization WhatsApp configuration
+   */
+  async testOrganizationWhatsApp(organizationId: string, testPhoneNumber: string, testMessage?: string): Promise<WhatsAppResult> {
+    const provider = await this.getOrganizationProvider(organizationId);
+    
+    if (!provider) {
+      return {
+        success: false,
+        error: {
+          message: 'WhatsApp provider not configured for this organization',
+          code: 'PROVIDER_NOT_CONFIGURED'
+        }
+      };
+    }
+
+    if (!provider.accessToken || !provider.phoneNumberId) {
+      return {
+        success: false,
+        error: {
+          message: 'WhatsApp provider configuration is incomplete',
+          code: 'PROVIDER_NOT_CONFIGURED'
+        }
+      };
+    }
+
+    // Get organization info for branding
+    const organization = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { name: true }
+    });
+
+    const orgName = organization?.name || 'MarketSage';
+    const message = testMessage || `Test message from ${orgName} WhatsApp service - ${new Date().toISOString()}`;
+
+    // Send test message using organization's provider
+    return this.sendTextMessage(testPhoneNumber, message, organizationId);
+  }
+
+  /**
    * Check if WhatsApp Business API is properly configured
    */
   isConfigured(): boolean {
@@ -603,6 +726,6 @@ export class WhatsAppService {
 export const whatsappService = new WhatsAppService();
 
 // Legacy function for backward compatibility
-export async function sendWhatsAppMessage(phoneNumber: string, message: string): Promise<WhatsAppResult> {
-  return whatsappService.sendTextMessage(phoneNumber, message);
+export async function sendWhatsAppMessage(phoneNumber: string, message: string, organizationId?: string): Promise<WhatsAppResult> {
+  return whatsappService.sendTextMessage(phoneNumber, message, organizationId);
 }

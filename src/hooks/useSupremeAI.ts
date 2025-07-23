@@ -185,7 +185,7 @@ export const useSupremeAI = () => {
     return { type: 'question' };
   }, []);
 
-  const sendMessage = useCallback(async (content: string, useStreaming: boolean = true) => {
+  const sendMessage = useCallback(async (content: string, useStreaming = true) => {
     if (!content.trim() || !chatSession) return;
 
     const userMessage: ChatMessage = {

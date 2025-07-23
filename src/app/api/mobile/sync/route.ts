@@ -4,7 +4,7 @@
  * Handle offline task synchronization for mobile devices
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { mobileTaskNotificationSystem } from '@/lib/mobile/task-notification-system';

@@ -290,7 +290,7 @@ export class WorkflowQueueMonitor {
       try {
         const redisInfo = await redisCache.info('clients');
         const connectedClients = redisInfo.match(/connected_clients:(\d+)/);
-        redisConnections = connectedClients ? parseInt(connectedClients[1]) : 0;
+        redisConnections = connectedClients ? Number.parseInt(connectedClients[1]) : 0;
       } catch (redisError) {
         logger.warn('Could not get Redis connection info:', redisError);
       }

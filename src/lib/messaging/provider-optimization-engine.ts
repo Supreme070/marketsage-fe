@@ -11,7 +11,7 @@
  */
 
 import prisma from '@/lib/db/prisma';
-import { MasterAccountManager, masterAccountsConfig, MasterAccountConfig } from '@/lib/config/master-accounts';
+import { MasterAccountManager, masterAccountsConfig, type MasterAccountConfig } from '@/lib/config/master-accounts';
 import { logger } from '@/lib/logger';
 
 export interface ProviderMetrics {

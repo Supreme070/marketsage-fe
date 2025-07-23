@@ -21,6 +21,7 @@ import {
   BarChart3,
   AlertCircle,
   Check,
+  CheckCircle,
   X,
   Zap,
   Shield,

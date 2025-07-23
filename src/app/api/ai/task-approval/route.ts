@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { aiAuditTrailSystem } from '@/lib/ai/ai-audit-trail-system';
 import { aiStreamingService } from '@/lib/websocket/ai-streaming-service';
-import { UserRole } from '@prisma/client';
+import type { UserRole } from '@prisma/client';
 
 /**
  * AI Task Approval API

@@ -3,6 +3,7 @@
 import { Toaster } from "sonner";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Header } from "@/components/ui/header";
+import { NavigationBreadcrumb } from "@/components/ui/navigation-breadcrumb";
 import AuthCheck from "@/components/auth/auth-check";
 import { useTheme } from "next-themes";
 import { useState, useEffect } from "react";
@@ -40,6 +41,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <Header />
           <main className="flex-1 overflow-y-auto">
             <div className="container mx-auto py-6 px-4 md:px-6 lg:px-8">
+              <NavigationBreadcrumb className="mb-6" />
               {children}
             </div>
           </main>

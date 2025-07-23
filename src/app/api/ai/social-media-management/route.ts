@@ -10,13 +10,13 @@
  * - GET /api/ai/social-media-management - Get social media analytics and status
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { 
   getEnhancedSocialMediaIntelligence,
-  SocialMediaPlatform,
+  type SocialMediaPlatform,
   SocialContentType,
   EngagementType
 } from '@/lib/ai/enhanced-social-media-intelligence';
@@ -403,7 +403,10 @@ async function handlePostAutonomously(data: any, organizationId: string) {
     const result = await getSocialMediaIntelligence().postAutonomously(
       data.content,
       data.platforms,
-      data.posting_options || {}
+      {
+        ...data.posting_options || {},
+        organizationId // Pass organizationId to the posting method
+      }
     );
 
     logger.info('Autonomous posting completed', {

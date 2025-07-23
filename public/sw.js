@@ -10,6 +10,7 @@ const IMAGE_CACHE = 'marketsage-images-v1';
 const STATIC_FILES = [
   '/',
   '/dashboard',
+  '/admin',
   '/manifest.json',
   '/offline.html',
   // Add critical CSS and JS files here
@@ -89,6 +90,11 @@ self.addEventListener('fetch', (event) => {
 
   // Skip non-GET requests and external requests
   if (request.method !== 'GET' || !url.origin.includes(self.location.origin)) {
+    return;
+  }
+
+  // Skip service worker for admin routes to prevent offline page interference
+  if (url.pathname.startsWith('/admin')) {
     return;
   }
 

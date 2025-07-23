@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import type React from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -76,7 +77,7 @@ export function CreditPurchaseModal({
   };
 
   const handleCustomAmount = (value: string) => {
-    const numValue = parseFloat(value);
+    const numValue = Number.parseFloat(value);
     if (!isNaN(numValue) && numValue >= 10 && numValue <= 10000) {
       setAmount(numValue);
     }

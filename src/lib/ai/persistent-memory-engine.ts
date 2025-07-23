@@ -652,7 +652,7 @@ export class PersistentMemoryEngine {
       const hash = this.simpleHash(text);
       return Array.from({length: 512}, (_, i) => (hash + i) % 100 / 100);
     } catch (error) {
-      logger.error('Failed to generate embedding', { error, text: text.substring(0, 100) });
+      logger.error('Failed to generate embedding', { error, text: text ? text.substring(0, 100) : 'undefined' });
       return Array.from({length: 512}, () => Math.random());
     }
   }
@@ -911,7 +911,7 @@ export class PersistentMemoryEngine {
       if (context.conversationHistory.length > 0) {
         const recentMessages = context.conversationHistory.slice(-5);
         const conversationSummary = recentMessages
-          .map(msg => `${msg.role}: ${msg.content.substring(0, 100)}...`)
+          .map(msg => `${msg.role}: ${msg.content ? msg.content.substring(0, 100) : 'undefined'}...`)
           .join(' ');
         summaryParts.push(`Recent conversation: ${conversationSummary}`);
       }
@@ -924,7 +924,7 @@ export class PersistentMemoryEngine {
         
         if (importantMemories.length > 0) {
           const memorySummary = importantMemories
-            .map(m => `${m.type}: ${m.content.substring(0, 80)}...`)
+            .map(m => `${m.type}: ${m.content ? m.content.substring(0, 80) : 'undefined'}...`)
             .join(' ');
           summaryParts.push(`Important memories: ${memorySummary}`);
         }
@@ -944,7 +944,7 @@ export class PersistentMemoryEngine {
       }
 
       const summary = summaryParts.join(' | ');
-      return summary.substring(0, 1000); // Limit summary length
+      return summary ? summary.substring(0, 1000) : ''; // Limit summary length
 
     } catch (error) {
       logger.error('Failed to generate context summary', { error, sessionId: context.sessionId });
@@ -1227,7 +1227,7 @@ export class PersistentMemoryEngine {
     userId: string,
     organizationId: string,
     shareType?: 'READ' | 'WRITE' | 'REFERENCE',
-    limit: number = 20
+    limit = 20
   ): Promise<PersistentMemory[]> {
     try {
       const whereClause: any = {
@@ -1483,7 +1483,7 @@ export class PersistentMemoryEngine {
   private consolidateEpisodicContent(memories: any[]): string {
     const contents = memories.map(m => m.content);
     const summary = `Episodic sequence: ${contents.join(' → ')}`;
-    return summary.substring(0, 500);
+    return summary ? summary.substring(0, 500) : '';
   }
 
   private calculateConsolidatedImportance(memories: any[]): number {

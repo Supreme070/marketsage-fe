@@ -543,7 +543,7 @@ class MonteCarloTreeSearchEngine extends EventEmitter {
           searchId,
           rootNode,
           currentIteration: 0,
-          bestReward: -Infinity,
+          bestReward: Number.NEGATIVE_INFINITY,
           bestAction: null,
           startTime,
           lastImprovement: startTime,
@@ -684,7 +684,7 @@ class MonteCarloTreeSearchEngine extends EventEmitter {
   private selectUCB1(node: MCTSNode): MCTSNode {
     const c = this.configuration.explorationConstant;
     let bestChild: MCTSNode | null = null;
-    let bestValue = -Infinity;
+    let bestValue = Number.NEGATIVE_INFINITY;
 
     for (const child of node.children) {
       if (child.visits === 0) {
@@ -743,7 +743,7 @@ class MonteCarloTreeSearchEngine extends EventEmitter {
   private selectThompsonSampling(node: MCTSNode): MCTSNode {
     // Sample from beta distribution for each child
     let bestChild: MCTSNode | null = null;
-    let bestSample = -Infinity;
+    let bestSample = Number.NEGATIVE_INFINITY;
 
     for (const child of node.children) {
       // Beta distribution parameters (simplified)
@@ -920,7 +920,7 @@ class MonteCarloTreeSearchEngine extends EventEmitter {
   private selectHeuristicAction(actions: MarketingAction[], state: MarketingState): MarketingAction {
     // Score actions based on heuristics
     let bestAction = actions[0];
-    let bestScore = -Infinity;
+    let bestScore = Number.NEGATIVE_INFINITY;
 
     for (const action of actions) {
       let score = 0;

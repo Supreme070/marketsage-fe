@@ -9,7 +9,7 @@
  * - GET /api/ai/autonomous-segmentation - Get segmentation status and results
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { logger } from '@/lib/logger';

@@ -620,13 +620,13 @@ export default function AdvancedAnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Link href="/analytics/realtime">
+                <Link href="/leadpulse/analytics/realtime">
                   <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center">
                     <Activity className="h-6 w-6 mb-2" />
                     <span>Real-time Analytics</span>
                   </Button>
                 </Link>
-                <Link href="/analytics/funnels">
+                <Link href="/leadpulse/analytics/funnels">
                   <Button variant="outline" className="w-full h-20 flex flex-col items-center justify-center">
                     <TrendingDown className="h-6 w-6 mb-2" />
                     <span>Funnel Analysis</span>

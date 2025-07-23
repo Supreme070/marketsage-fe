@@ -38,8 +38,8 @@
 import prisma from '@/lib/db/prisma';
 import { logger } from '@/lib/logger';
 import { SupremeAI } from '@/lib/ai/supreme-ai-engine';
-import { getCLVPredictionModel, CLVPrediction } from '@/lib/ml/customer-lifetime-value-model';
-import { getChurnPredictionModel, ChurnPrediction } from '@/lib/ml/churn-prediction-model';
+import { getCLVPredictionModel, type CLVPrediction } from '@/lib/ml/customer-lifetime-value-model';
+import { getChurnPredictionModel, type ChurnPrediction } from '@/lib/ml/churn-prediction-model';
 import { predictContactLTV } from '@/lib/predictive-analytics/lifetime-value-prediction';
 import { crossChannelAIIntelligence } from '@/lib/ai/cross-channel-ai-intelligence';
 
@@ -566,7 +566,7 @@ export class RevenueOptimizationEngine {
    */
   async executeChurnPrevention(
     organizationId: string,
-    riskThreshold: number = 0.6
+    riskThreshold = 0.6
   ): Promise<{ 
     customersAnalyzed: number;
     atRiskCustomers: number;
@@ -832,11 +832,11 @@ export class RevenueOptimizationEngine {
         segmentId: 'vip_customers',
         segmentName: 'VIP Customers',
         criteria: {
-          ltvRange: { min: 10000, max: Infinity },
+          ltvRange: { min: 10000, max: Number.POSITIVE_INFINITY },
           churnProbabilityRange: { min: 0, max: 0.3 },
           engagementLevel: 'super_engaged',
-          transactionFrequency: { min: 5, max: Infinity },
-          customerAge: { min: 90, max: Infinity },
+          transactionFrequency: { min: 5, max: Number.POSITIVE_INFINITY },
+          customerAge: { min: 90, max: Number.POSITIVE_INFINITY },
           preferredChannels: ['email', 'whatsapp'],
           behavioralTags: ['high_value', 'loyal', 'advocate']
         },

@@ -10,11 +10,11 @@ const { randomUUID } = require('crypto');
 // Load environment variables
 dotenv.config();
 
-// Create Prisma client with direct connection to database
+// Create Prisma client with environment variable connection
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: "postgresql://marketsage:marketsage_password@marketsage-db:5432/marketsage?schema=public"
+      url: process.env.DATABASE_URL || "postgresql://marketsage:marketsage_password@marketsage-db:5432/marketsage?schema=public"
     }
   }
 });

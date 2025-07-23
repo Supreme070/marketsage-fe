@@ -107,7 +107,13 @@ export default function SegmentsPage() {
     async function fetchSegments() {
       try {
         setLoading(true);
-        const response = await fetch('/api/segments');
+        const response = await fetch('/api/segments', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include'
+        });
         if (!response.ok) {
           throw new Error('Failed to fetch segments');
         }
@@ -149,6 +155,7 @@ export default function SegmentsPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           name: newSegment.name,
           description: newSegment.description,
@@ -213,6 +220,7 @@ export default function SegmentsPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(editFormData),
       });
 
@@ -256,6 +264,7 @@ export default function SegmentsPage() {
       setDeleting(true);
       const response = await fetch(`/api/segments/${selectedSegment.id}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
 
       if (!response.ok) {

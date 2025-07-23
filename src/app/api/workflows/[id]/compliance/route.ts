@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { workflowComplianceChecker } from '@/lib/workflow/compliance-checker';
@@ -71,8 +71,8 @@ export async function POST(
         complianceContext,
         overallCompliance: {
           isCompliant: overallScore >= 80,
-          score: parseFloat(overallScore.toFixed(1)),
-          riskScore: parseFloat(averageRiskScore.toFixed(1)),
+          score: Number.parseFloat(overallScore.toFixed(1)),
+          riskScore: Number.parseFloat(averageRiskScore.toFixed(1)),
           totalChecks,
           compliantChecks,
           nonCompliantChecks: totalChecks - compliantChecks
@@ -130,7 +130,7 @@ export async function GET(
 
     const workflowId = params.id;
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const limit = Number.parseInt(searchParams.get('limit') || '50');
     const status = searchParams.get('status');
     const severity = searchParams.get('severity');
 
@@ -192,9 +192,9 @@ export async function GET(
         summary: {
           totalChecks,
           compliantChecks,
-          complianceRate: parseFloat(((compliantChecks / totalChecks) * 100).toFixed(1)),
+          complianceRate: Number.parseFloat(((compliantChecks / totalChecks) * 100).toFixed(1)),
           activeViolations,
-          overallScore: parseFloat(overallScore.toFixed(1))
+          overallScore: Number.parseFloat(overallScore.toFixed(1))
         },
         recentChecks: checks.map(check => ({
           id: check.id,

@@ -5,7 +5,7 @@
  * Supports job creation, status checking, and queue management
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { aiJobQueue, addAIJob, getAIJobStatus, getAIJobStats, cancelAIJob } from '@/lib/queue/ai-job-queue';

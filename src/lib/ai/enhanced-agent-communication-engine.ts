@@ -42,7 +42,7 @@ import { trace } from '@opentelemetry/api';
 import { EventEmitter } from 'events';
 import { 
   multiAgentCoordinator, 
-  AIAgent, 
+  type AIAgent, 
   AgentMessage, 
   MessageType, 
   CollaborationSession,

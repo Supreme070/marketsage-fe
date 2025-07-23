@@ -13,6 +13,7 @@ import {
   validationError 
 } from "@/lib/errors";
 import { smsService } from "@/lib/sms-providers/sms-service";
+import { getBirthdayAutoDetectionSystem } from "@/lib/campaigns/birthday-auto-detection";
 
 //  Schema for SMS campaign validation with phone number validation
 const campaignSchema = z.object({
@@ -28,6 +29,18 @@ const campaignSchema = z.object({
   content: z.string().optional(),
   listIds: z.array(z.string()).optional(),
   segmentIds: z.array(z.string()).optional(),
+  // A/B Testing
+  enableABTesting: z.boolean().default(false),
+  // Geo-targeting
+  enableGeoTargeting: z.boolean().default(false),
+  targetCountries: z.array(z.string()).default([]),
+  targetStates: z.array(z.string()).default([]),
+  targetCities: z.array(z.string()).default([]),
+  // Birthday targeting
+  enableBirthdayTargeting: z.boolean().default(false),
+  birthdayTiming: z.enum(['on_birthday', 'day_before', 'week_before']).default('on_birthday'),
+  birthdayOfferType: z.enum(['discount', 'freebie', 'exclusive_access', 'personalized_gift']).default('discount'),
+  birthdayOfferValue: z.number().min(0).max(100).default(15),
 });
 
 // GET SMS campaigns endpoint
@@ -242,7 +255,32 @@ export async function POST(request: NextRequest) {
       return campaign;
     });
 
-    return NextResponse.json(newCampaign, { status: 201 });
+    // If birthday targeting is enabled, trigger birthday detection for the organization
+    if (campaignData.enableBirthdayTargeting) {
+      try {
+        const birthdaySystem = getBirthdayAutoDetectionSystem();
+        
+        // Run birthday detection to identify upcoming birthdays and automatically
+        // create birthday campaigns based on the template settings from this campaign
+        await birthdaySystem.runDailyBirthdayDetection(session.user.organizationId);
+        
+        console.log(`Birthday detection triggered for SMS campaign: ${newCampaign.id}`);
+      } catch (birthdayError) {
+        // Log birthday detection error but don't fail the campaign creation
+        console.error("Birthday detection failed:", birthdayError);
+      }
+    }
+
+    return NextResponse.json({
+      ...newCampaign,
+      birthdayIntegration: campaignData.enableBirthdayTargeting ? {
+        enabled: true,
+        timing: campaignData.birthdayTiming,
+        offerType: campaignData.birthdayOfferType,
+        offerValue: campaignData.birthdayOfferValue,
+        message: "Birthday detection has been triggered for this SMS campaign"
+      } : null
+    }, { status: 201 });
   } catch (error: any) {
     console.error("Error creating SMS campaign:", error);
     

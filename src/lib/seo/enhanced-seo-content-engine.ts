@@ -345,7 +345,7 @@ export class EnhancedSEOContentEngine extends EventEmitter {
    */
   async researchKeywords(
     topic: string,
-    targetMarket: string = 'global',
+    targetMarket = 'global',
     options: {
       maxKeywords?: number;
       includeLocalSEO?: boolean;
@@ -456,7 +456,7 @@ export class EnhancedSEOContentEngine extends EventEmitter {
   async generateSEOContent(
     primaryKeyword: string,
     contentType: 'blog' | 'landing' | 'product' | 'service' | 'local',
-    targetMarket: string = 'global',
+    targetMarket = 'global',
     options: {
       wordCount?: number;
       includeViralElements?: boolean;
@@ -602,7 +602,7 @@ export class EnhancedSEOContentEngine extends EventEmitter {
   async createViralContent(
     topic: string,
     platforms: string[] = ['facebook', 'twitter', 'instagram', 'linkedin'],
-    targetMarket: string = 'global',
+    targetMarket = 'global',
     options: {
       contentType?: 'blog' | 'social' | 'video' | 'infographic';
       trendingTopics?: boolean;
@@ -830,7 +830,7 @@ export class EnhancedSEOContentEngine extends EventEmitter {
    */
   async createContentCluster(
     mainTopic: string,
-    targetMarket: string = 'global',
+    targetMarket = 'global',
     options: {
       clusterSize?: number;
       includeLocalSEO?: boolean;

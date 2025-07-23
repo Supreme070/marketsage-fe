@@ -57,7 +57,7 @@ export function getAutonomousSegmentationEngine(): AutonomousCustomerSegmentatio
 export async function discoverAutonomousSegments(
   organizationId: string,
   algorithm: 'kmeans' | 'hierarchical' | 'dbscan' | 'gaussian_mixture' | 'neural_clustering' = 'kmeans',
-  minCustomers: number = 50
+  minCustomers = 50
 ) {
   const engine = getAutonomousSegmentationEngine();
   return engine.discoverAutonomousSegments(organizationId, algorithm, minCustomers);
@@ -93,7 +93,7 @@ export async function createMicroSegments(
 export async function predictSegmentTransitions(
   customerId: string,
   organizationId: string,
-  timeHorizon: number = 30
+  timeHorizon = 30
 ) {
   const engine = getAutonomousSegmentationEngine();
   return engine.predictSegmentTransitions(customerId, organizationId, timeHorizon);

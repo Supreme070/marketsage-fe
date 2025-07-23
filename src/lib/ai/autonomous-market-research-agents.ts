@@ -14,7 +14,7 @@ import {
   multiAgentCoordinator,
   type AIAgent,
   type AgentTask,
-  AgentType,
+  type AgentType,
   AgentStatus 
 } from '@/lib/ai/multi-agent-coordinator';
 import { 
@@ -1416,7 +1416,7 @@ class AutonomousMarketResearchAgents extends EventEmitter {
   private researchAgents: Map<string, AIAgent>;
   private dataSources: Map<string, DataSource>;
   private marketIntelligence: Map<string, MarketIntelligence>;
-  private initialized: boolean = false;
+  private initialized = false;
   private tracer = trace.getTracer('autonomous-market-research');
 
   private constructor() {

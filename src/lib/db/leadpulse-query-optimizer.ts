@@ -96,7 +96,7 @@ export class LeadPulseQueryOptimizer {
       ]);
 
       // Optimized: Fetch touchpoints separately to avoid N+1 queries
-      let touchpointsMap = new Map();
+      const touchpointsMap = new Map();
       if (visitors.length > 0) {
         const visitorIds = visitors.map(v => v.id);
         const touchpoints = await prisma.leadPulseTouchpoint.findMany({

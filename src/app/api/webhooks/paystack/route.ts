@@ -118,6 +118,14 @@ export async function POST(request: Request) {
                 })
               }
             });
+
+            // Activate subscription and grant permissions
+            const { SubscriptionService } = await import("@/lib/subscription-service");
+            await SubscriptionService.activateSubscription(
+              transaction.subscription.organizationId,
+              transaction.subscription.planId,
+              transaction.subscription.plan?.interval as "monthly" | "annually" || "monthly"
+            );
           }
         }
 

@@ -530,7 +530,7 @@ export class AutonomousCustomerSegmentationEngine extends EventEmitter {
   async discoverAutonomousSegments(
     organizationId: string,
     algorithm: 'kmeans' | 'hierarchical' | 'dbscan' | 'gaussian_mixture' | 'neural_clustering' = 'kmeans',
-    minCustomers: number = 50
+    minCustomers = 50
   ): Promise<AutonomousSegmentDiscovery> {
     const span = this.tracer.startSpan('discover-autonomous-segments');
     
@@ -787,7 +787,7 @@ export class AutonomousCustomerSegmentationEngine extends EventEmitter {
   async predictSegmentTransitions(
     customerId: string,
     organizationId: string,
-    timeHorizon: number = 30 // days
+    timeHorizon = 30 // days
   ): Promise<SegmentTransition[]> {
     const span = this.tracer.startSpan('predict-segment-transitions');
     

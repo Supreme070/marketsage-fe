@@ -19,7 +19,7 @@ import { trace } from '@opentelemetry/api';
 import { redisCache } from '@/lib/cache/redis-client';
 import { persistentMemoryEngine } from '@/lib/ai/persistent-memory-engine';
 import { dynamicSafetyRulesEngine } from '@/lib/ai/dynamic-safety-rules-engine';
-import { UserRole } from '@prisma/client';
+import type { UserRole } from '@prisma/client';
 import prisma from '@/lib/db/prisma';
 
 // Audit event types

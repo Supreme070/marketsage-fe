@@ -9,7 +9,7 @@
  * - GET /api/ai/revenue-optimization - Get revenue intelligence and optimization status
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { logger } from '@/lib/logger';
@@ -20,8 +20,8 @@ import {
   executeAutonomousChurnPrevention,
   executeAutonomousLTVMaximization,
   getOrganizationRevenueIntelligence,
-  RevenueGoal,
-  OptimizationConstraint
+  type RevenueGoal,
+  type OptimizationConstraint
 } from '@/lib/ai/revenue-optimization-engine';
 import { z } from 'zod';
 

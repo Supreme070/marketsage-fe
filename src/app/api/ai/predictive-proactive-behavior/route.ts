@@ -10,7 +10,7 @@
  * - GET /api/ai/predictive-proactive-behavior - Get predictive insights and proactive analytics
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { logger } from '@/lib/logger';
@@ -21,14 +21,14 @@ import {
   SystemNeedPrediction,
   UserRequirementPrediction,
   ActionResult,
-  InsightType,
+  type InsightType,
   InsightCategory,
-  TimeHorizon,
-  Priority,
-  AutomationLevel,
-  ResourceType,
-  Urgency,
-  AfricanRegion,
+  type TimeHorizon,
+  type Priority,
+  type AutomationLevel,
+  type ResourceType,
+  type Urgency,
+  type AfricanRegion,
   generatePredictiveInsights,
   executeProactiveActions,
   predictSystemNeeds,
@@ -473,7 +473,7 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('user_id');
     const timeHorizon = searchParams.get('time_horizon') as TimeHorizon || 'short_term';
     const insightType = searchParams.get('insight_type') as InsightType;
-    const confidenceThreshold = parseFloat(searchParams.get('confidence_threshold') || '0.7');
+    const confidenceThreshold = Number.parseFloat(searchParams.get('confidence_threshold') || '0.7');
 
     const engine = getPredictiveProactiveEngine();
     let result;

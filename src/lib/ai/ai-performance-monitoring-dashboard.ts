@@ -306,8 +306,10 @@ class AIPerformanceMonitoringDashboard {
       this.metrics.set(organizationId, orgMetrics);
 
       // Cache in Redis
-      await redisCache.set(`ai_metric:${organizationId}:${type}:${metricId}`, // 1 hour TTL
-        JSON.stringify(metric, 3600)
+      await redisCache.set(
+        `ai_metric:${organizationId}:${type}:${metricId}`,
+        JSON.stringify(metric),
+        3600 // 1 hour TTL
       );
 
       // Store in persistent memory for long-term analysis
@@ -475,8 +477,10 @@ class AIPerformanceMonitoringDashboard {
     this.alerts.set(alertData.organizationId, orgAlerts);
 
     // Cache alert
-    await redisCache.set(`ai_alert:${alertId}`, // 24 hours TTL
-      JSON.stringify(alert, 86400)
+    await redisCache.set(
+      `ai_alert:${alertId}`,
+      JSON.stringify(alert),
+      86400 // 24 hours TTL
     );
 
     // Log alert
@@ -911,7 +915,7 @@ class AIPerformanceMonitoringDashboard {
   /**
    * Get alerts for organization
    */
-  getAlerts(organizationId: string, resolved: boolean = false): Alert[] {
+  getAlerts(organizationId: string, resolved = false): Alert[] {
     const orgAlerts = this.alerts.get(organizationId) || [];
     return orgAlerts.filter(alert => alert.resolved === resolved);
   }

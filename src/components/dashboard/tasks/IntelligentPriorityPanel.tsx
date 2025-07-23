@@ -46,7 +46,7 @@ import {
   Globe
 } from "lucide-react";
 import { toast } from "sonner";
-import { type TaskPriorityScore, type PriorityFactors } from "@/lib/ai/intelligent-task-prioritizer";
+import type { TaskPriorityScore, PriorityFactors } from "@/lib/ai/intelligent-task-prioritizer";
 
 interface IntelligentPriorityPanelProps {
   isOpen?: boolean;

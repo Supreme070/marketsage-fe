@@ -287,7 +287,7 @@ export function LogoMorph({ scrolled }: LogoMorphProps) {
                   className="absolute inset-0 text-blue-500"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: [0, 0.5, 0] }}
-                  transition={{ duration: 3, repeat: Infinity, delay: 0 }}
+                  transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, delay: 0 }}
                 >
                   M
                 </motion.span>
@@ -299,7 +299,7 @@ export function LogoMorph({ scrolled }: LogoMorphProps) {
                   className="absolute inset-0 text-purple-500"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: [0, 0.5, 0] }}
-                  transition={{ duration: 3, repeat: Infinity, delay: 1.5 }}
+                  transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, delay: 1.5 }}
                 >
                   S
                 </motion.span>

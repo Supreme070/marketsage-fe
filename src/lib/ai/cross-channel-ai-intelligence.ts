@@ -43,7 +43,7 @@ import { aiStreamingService } from '@/lib/websocket/ai-streaming-service';
 import { aiAuditTrailSystem } from '@/lib/ai/ai-audit-trail-system';
 import { persistentMemoryEngine } from '@/lib/ai/persistent-memory-engine';
 import { autonomousDecisionEngine } from '@/lib/ai/autonomous-decision-engine';
-import { UserRole } from '@prisma/client';
+import type { UserRole } from '@prisma/client';
 import prisma from '@/lib/db/prisma';
 
 // Channel types - ENHANCED with social media channels
@@ -495,7 +495,7 @@ class CrossChannelAIIntelligence {
   async analyzeCustomerProfile(
     contactId: string,
     organizationId: string,
-    includePersonalizedRecommendations: boolean = true
+    includePersonalizedRecommendations = true
   ): Promise<CrossChannelCustomerProfile> {
     const span = this.tracer.startSpan('analyze-customer-profile');
     
@@ -717,7 +717,7 @@ class CrossChannelAIIntelligence {
     campaign: CrossChannelCampaign,
     organizationId: string,
     userId: string,
-    enableStreaming: boolean = false
+    enableStreaming = false
   ): Promise<{ success: boolean; campaignId: string; metrics: any; insights: PerformanceInsight[] }> {
     const span = this.tracer.startSpan('execute-cross-channel-campaign');
     const sessionId = `campaign_session_${Date.now()}`;

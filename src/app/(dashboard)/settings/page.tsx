@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { 
   Select,
@@ -1038,7 +1039,7 @@ export default function SettingsPage() {
                       onChange={(e) => {
                         setSecurityConfig(prev => ({
                           ...prev,
-                          passwordPolicy: { ...prev.passwordPolicy, minLength: parseInt(e.target.value) }
+                          passwordPolicy: { ...prev.passwordPolicy, minLength: Number.parseInt(e.target.value) }
                         }));
                       }}
                       min="6"
@@ -1053,7 +1054,7 @@ export default function SettingsPage() {
                       onChange={(e) => {
                         setSecurityConfig(prev => ({
                           ...prev,
-                          passwordPolicy: { ...prev.passwordPolicy, expiration: parseInt(e.target.value) }
+                          passwordPolicy: { ...prev.passwordPolicy, expiration: Number.parseInt(e.target.value) }
                         }));
                       }}
                       min="30"
@@ -1122,7 +1123,7 @@ export default function SettingsPage() {
                     onChange={(e) => {
                       setSecurityConfig(prev => ({
                         ...prev,
-                        sessionTimeout: parseInt(e.target.value)
+                        sessionTimeout: Number.parseInt(e.target.value)
                       }));
                     }}
                     min="5"

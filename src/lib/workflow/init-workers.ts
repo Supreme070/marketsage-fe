@@ -16,8 +16,19 @@ let workersInitialized = false;
  * This function should be called once when the application starts
  */
 export async function initializeWorkflowWorkers(): Promise<void> {
+  // Skip worker initialization during build time
+  const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build' || 
+    process.env.BUILDING === 'true' ||
+    process.argv.includes('build') ||
+    (process.argv.includes('next') && process.argv.includes('build'));
+
+  if (isBuildTime) {
+    logger.info('Skipping workflow workers initialization during build');
+    return;
+  }
+
   if (workersInitialized) {
-    logger.info('Workflow workers already initialized');
+    logger.warn('Workflow workers already running');
     return;
   }
 

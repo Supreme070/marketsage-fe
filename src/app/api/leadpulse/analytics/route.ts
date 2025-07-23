@@ -240,7 +240,7 @@ export async function GET(request: NextRequest) {
       eventType: searchParams.get('eventType'),
       groupBy: searchParams.get('groupBy'),
       includeDetails: searchParams.get('includeDetails') === 'true',
-      limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : undefined,
+      limit: searchParams.get('limit') ? Number.parseInt(searchParams.get('limit')!) : undefined,
     };
     
     // Skip validation for simple analytics queries (traffic, heatmap, abtests)

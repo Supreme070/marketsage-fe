@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { leadPulseOfflineSyncService } from '@/lib/leadpulse/offline-sync-service';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
@@ -119,7 +119,7 @@ export async function DELETE(request: NextRequest) {
       }, { status: 400 });
     }
 
-    let whereCondition: any = { deviceId };
+    const whereCondition: any = { deviceId };
     
     if (cacheKey) {
       whereCondition.cacheKey = cacheKey;

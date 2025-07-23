@@ -33,8 +33,8 @@ export abstract class BaseSMSProvider implements SMSProvider {
       return false;
     }
     
-    // Enhanced African country codes with specific validations
-    const africanCountryValidation = [
+    // Enhanced country codes with specific validations (African + US)
+    const countryValidation = [
       { code: '234', minLength: 13, maxLength: 13 }, // Nigeria: +234XXXXXXXXXX
       { code: '254', minLength: 12, maxLength: 12 }, // Kenya: +254XXXXXXXXX
       { code: '27', minLength: 11, maxLength: 11 },   // South Africa: +27XXXXXXXXX
@@ -45,10 +45,11 @@ export abstract class BaseSMSProvider implements SMSProvider {
       { code: '225', minLength: 12, maxLength: 12 },  // Ivory Coast: +225XXXXXXXXX
       { code: '223', minLength: 11, maxLength: 11 },  // Mali: +223XXXXXXXX
       { code: '221', minLength: 12, maxLength: 12 },  // Senegal: +221XXXXXXXXX
+      { code: '1', minLength: 11, maxLength: 11 },     // US/Canada: +1XXXXXXXXXX
     ];
     
     // Check for international format with country codes
-    for (const country of africanCountryValidation) {
+    for (const country of countryValidation) {
       if (cleanPhoneNumber.startsWith(country.code)) {
         return cleanPhoneNumber.length >= country.minLength && 
                cleanPhoneNumber.length <= country.maxLength;

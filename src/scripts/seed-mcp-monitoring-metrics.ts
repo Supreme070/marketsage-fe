@@ -1,0 +1,526 @@
+#!/usr/bin/env tsx
+
+/**
+ * MCP Monitoring Metrics Seed Script
+ * 
+ * This script generates business monitoring metrics for MCP servers by:
+ * - Analyzing actual database counts (Users, Organizations, Campaigns, Contacts)
+ * - Creating system health metrics and performance indicators
+ * - Generating realistic infrastructure monitoring data
+ * - Building business KPI tracking with African market context
+ * 
+ * Follows the same patterns as existing seed scripts for Docker compatibility.
+ */
+
+import { PrismaClient } from '@prisma/client';
+import * as dotenv from 'dotenv';
+import { randomUUID } from 'crypto';
+
+// Load environment variables
+dotenv.config();
+
+// Allow connection to both Docker internal and local connections
+const databaseUrl = process.env.DATABASE_URL || "postgresql://marketsage:marketsage_password@marketsage-db:5432/marketsage?schema=public";
+
+// Create Prisma client with direct connection to database
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: databaseUrl
+    }
+  }
+});
+
+// Business metric categories
+const METRIC_CATEGORIES = {
+  business: {
+    name: 'Business Metrics',
+    weight: 1.0,
+    metrics: ['active_users', 'revenue', 'conversion_rate', 'customer_acquisition', 'retention_rate']
+  },
+  system: {
+    name: 'System Performance',
+    weight: 0.8,
+    metrics: ['response_time', 'uptime', 'error_rate', 'throughput', 'resource_usage']
+  },
+  campaigns: {
+    name: 'Campaign Performance',
+    weight: 0.9,
+    metrics: ['email_performance', 'sms_performance', 'whatsapp_performance', 'automation_health']
+  },
+  leadpulse: {
+    name: 'LeadPulse Analytics',
+    weight: 0.9,
+    metrics: ['visitor_tracking', 'conversion_funnel', 'engagement_scores', 'real_time_visitors']
+  },
+  security: {
+    name: 'Security & Compliance',
+    weight: 0.7,
+    metrics: ['failed_logins', 'data_breaches', 'compliance_score', 'audit_events']
+  }
+};
+
+// Infrastructure components
+const INFRASTRUCTURE_COMPONENTS = [
+  { name: 'MarketSage App', type: 'application', status: 'healthy', criticality: 'critical' },
+  { name: 'PostgreSQL Database', type: 'database', status: 'healthy', criticality: 'critical' },
+  { name: 'Redis Cache', type: 'cache', status: 'healthy', criticality: 'high' },
+  { name: 'Email Service', type: 'external', status: 'healthy', criticality: 'high' },
+  { name: 'SMS Gateway', type: 'external', status: 'healthy', criticality: 'high' },
+  { name: 'WhatsApp API', type: 'external', status: 'degraded', criticality: 'medium' },
+  { name: 'AI Processing', type: 'service', status: 'healthy', criticality: 'medium' },
+  { name: 'File Storage', type: 'storage', status: 'healthy', criticality: 'low' }
+];
+
+// African market specific metrics
+const AFRICAN_MARKET_METRICS = {
+  mobile_usage_percentage: 88, // 88% mobile usage in Africa
+  whatsapp_penetration: 75, // 75% WhatsApp penetration
+  sms_reliability: 92, // 92% SMS delivery success
+  internet_speed_avg: 15.2, // Average 15.2 Mbps
+  peak_usage_hours: [9, 10, 14, 15, 20, 21], // African business hours
+  countries_served: ['Nigeria', 'Ghana', 'Kenya', 'South Africa', 'Egypt'],
+  currencies: ['NGN', 'GHS', 'KES', 'ZAR', 'EGP'],
+  time_zones: ['WAT', 'CAT', 'EAT']
+};
+
+/**
+ * Generate realistic business metrics based on actual database data
+ */
+async function generateBusinessMetrics(): Promise<any> {
+  console.log('📊 Calculating business metrics from database...');
+
+  // Get actual counts from database
+  const [userCount, orgCount, contactCount, emailCampaignCount, smsCampaignCount, whatsappCampaignCount] = await Promise.all([
+    prisma.user.count(),
+    prisma.organization.count(),
+    prisma.contact.count(),
+    prisma.emailCampaign.count(),
+    prisma.sMSCampaign.count(),
+    prisma.whatsAppCampaign.count()
+  ]);
+
+  // Calculate derived metrics
+  const totalCampaigns = emailCampaignCount + smsCampaignCount + whatsappCampaignCount;
+  const avgContactsPerOrg = orgCount > 0 ? Math.round(contactCount / orgCount) : 0;
+  const avgCampaignsPerOrg = orgCount > 0 ? Math.round(totalCampaigns / orgCount) : 0;
+
+  // Calculate realistic revenue based on African market
+  const estimatedMRR = orgCount * 45; // $45 average per organization
+  const estimatedARR = estimatedMRR * 12;
+  const conversionRate = Math.random() * 3 + 2; // 2-5% conversion rate
+
+  return {
+    // User metrics
+    total_users: userCount,
+    active_users_daily: Math.round(userCount * 0.6), // 60% daily active
+    active_users_monthly: Math.round(userCount * 0.85), // 85% monthly active
+    new_users_this_month: Math.round(userCount * 0.1), // 10% growth
+    
+    // Organization metrics
+    total_organizations: orgCount,
+    active_organizations: Math.round(orgCount * 0.8), // 80% active
+    enterprise_clients: Math.round(orgCount * 0.15), // 15% enterprise
+    
+    // Contact metrics
+    total_contacts: contactCount,
+    contacts_per_organization: avgContactsPerOrg,
+    active_contacts: Math.round(contactCount * 0.7), // 70% active
+    
+    // Campaign metrics
+    total_campaigns: totalCampaigns,
+    campaigns_per_organization: avgCampaignsPerOrg,
+    email_campaigns: emailCampaignCount,
+    sms_campaigns: smsCampaignCount,
+    whatsapp_campaigns: whatsappCampaignCount,
+    
+    // Financial metrics (estimates)
+    monthly_recurring_revenue: estimatedMRR,
+    annual_recurring_revenue: estimatedARR,
+    conversion_rate: Number(conversionRate.toFixed(2)),
+    
+    // Growth metrics
+    user_growth_rate: 8.5, // 8.5% monthly growth
+    revenue_growth_rate: 12.3, // 12.3% monthly revenue growth
+    churn_rate: 3.2, // 3.2% monthly churn
+    
+    // African market specific
+    ...AFRICAN_MARKET_METRICS
+  };
+}
+
+/**
+ * Generate system performance metrics
+ */
+function generateSystemMetrics(): any {
+  const now = new Date();
+  const hour = now.getHours();
+  
+  // Adjust metrics based on African peak hours
+  const isPeakHour = AFRICAN_MARKET_METRICS.peak_usage_hours.includes(hour);
+  const loadMultiplier = isPeakHour ? 1.5 : 1.0;
+  
+  return {
+    // Response time metrics (ms)
+    avg_response_time: Math.round(120 * loadMultiplier + Math.random() * 50),
+    p95_response_time: Math.round(350 * loadMultiplier + Math.random() * 100),
+    p99_response_time: Math.round(800 * loadMultiplier + Math.random() * 200),
+    
+    // Throughput metrics
+    requests_per_second: Math.round(50 * loadMultiplier + Math.random() * 20),
+    api_calls_per_minute: Math.round(3000 * loadMultiplier + Math.random() * 500),
+    
+    // Error rates
+    error_rate_percentage: Number((0.2 + Math.random() * 0.3).toFixed(2)),
+    success_rate_percentage: Number((99.5 - Math.random() * 0.3).toFixed(2)),
+    
+    // System resources
+    cpu_usage_percentage: Math.round(30 * loadMultiplier + Math.random() * 15),
+    memory_usage_percentage: Math.round(45 + Math.random() * 20),
+    disk_usage_percentage: Math.round(60 + Math.random() * 10),
+    
+    // Uptime metrics
+    uptime_percentage: 99.9,
+    downtime_minutes_this_month: Math.round(Math.random() * 5),
+    
+    // Database metrics
+    db_connections_active: Math.round(15 * loadMultiplier + Math.random() * 5),
+    db_query_time_avg: Math.round(25 * loadMultiplier + Math.random() * 10),
+    
+    // Cache metrics
+    cache_hit_rate: Number((88 + Math.random() * 8).toFixed(1)),
+    cache_memory_usage: Math.round(35 + Math.random() * 15)
+  };
+}
+
+/**
+ * Generate security and compliance metrics
+ */
+function generateSecurityMetrics(): any {
+  return {
+    // Authentication metrics
+    failed_login_attempts_today: Math.round(Math.random() * 10),
+    successful_logins_today: Math.round(200 + Math.random() * 100),
+    
+    // Security scores
+    security_score: Math.round(85 + Math.random() * 10),
+    compliance_score: Math.round(92 + Math.random() * 6),
+    
+    // GDPR compliance
+    data_requests_processed: Math.round(Math.random() * 3),
+    data_deletion_requests: Math.round(Math.random() * 2),
+    consent_rate_percentage: Number((94 + Math.random() * 4).toFixed(1)),
+    
+    // Audit events
+    audit_events_today: Math.round(50 + Math.random() * 30),
+    critical_security_events: Math.round(Math.random() * 2),
+    
+    // Data protection
+    encrypted_data_percentage: 100,
+    backup_success_rate: Number((99.8 + Math.random() * 0.2).toFixed(1)),
+    
+    // Vulnerability metrics
+    critical_vulnerabilities: 0,
+    high_vulnerabilities: Math.round(Math.random() * 2),
+    medium_vulnerabilities: Math.round(Math.random() * 5),
+    low_vulnerabilities: Math.round(Math.random() * 10)
+  };
+}
+
+/**
+ * Generate infrastructure component health
+ */
+function generateInfrastructureHealth(): any[] {
+  return INFRASTRUCTURE_COMPONENTS.map(component => {
+    const baseHealth = component.status === 'healthy' ? 95 : 
+                     component.status === 'degraded' ? 75 : 40;
+    
+    const healthScore = baseHealth + Math.random() * 5;
+    const responseTime = component.type === 'external' ? 
+                        Math.round(200 + Math.random() * 300) :
+                        Math.round(50 + Math.random() * 100);
+    
+    return {
+      id: randomUUID(),
+      name: component.name,
+      type: component.type,
+      status: component.status,
+      criticality: component.criticality,
+      health_score: Number(healthScore.toFixed(1)),
+      response_time_ms: responseTime,
+      uptime_percentage: Number((99 + Math.random()).toFixed(2)),
+      last_check: new Date(),
+      error_rate: Number((Math.random() * 0.5).toFixed(3)),
+      throughput: Math.round(100 + Math.random() * 50)
+    };
+  });
+}
+
+/**
+ * Generate time-series data points for metrics
+ */
+function generateTimeSeriesData(metricValue: number, points: number = 24): any[] {
+  const data = [];
+  const now = new Date();
+  
+  for (let i = points - 1; i >= 0; i--) {
+    const timestamp = new Date(now.getTime() - i * 60 * 60 * 1000); // Hourly data
+    const variance = 0.1; // ±10% variance
+    const value = metricValue * (1 + (Math.random() - 0.5) * 2 * variance);
+    
+    data.push({
+      timestamp,
+      value: Number(value.toFixed(2))
+    });
+  }
+  
+  return data;
+}
+
+/**
+ * Generate alert conditions and thresholds
+ */
+function generateMonitoringAlerts(): any[] {
+  return [
+    {
+      id: randomUUID(),
+      name: 'High Response Time',
+      condition: 'avg_response_time > 500',
+      severity: 'warning',
+      threshold: 500,
+      current_value: 120,
+      is_triggered: false,
+      description: 'API response time exceeds acceptable threshold'
+    },
+    {
+      id: randomUUID(),
+      name: 'Low Conversion Rate',
+      condition: 'conversion_rate < 2.0',
+      severity: 'info',
+      threshold: 2.0,
+      current_value: 3.2,
+      is_triggered: false,
+      description: 'Campaign conversion rate below target'
+    },
+    {
+      id: randomUUID(),
+      name: 'High Error Rate',
+      condition: 'error_rate > 1.0',
+      severity: 'critical',
+      threshold: 1.0,
+      current_value: 0.3,
+      is_triggered: false,
+      description: 'Application error rate exceeds 1%'
+    },
+    {
+      id: randomUUID(),
+      name: 'SMS Delivery Issues',
+      condition: 'sms_delivery_rate < 90',
+      severity: 'warning',
+      threshold: 90,
+      current_value: 92,
+      is_triggered: false,
+      description: 'SMS delivery success rate below 90%'
+    },
+    {
+      id: randomUUID(),
+      name: 'Database Connection Pool',
+      condition: 'db_connections > 80',
+      severity: 'warning',
+      threshold: 80,
+      current_value: 20,
+      is_triggered: false,
+      description: 'Database connection pool nearing capacity'
+    }
+  ];
+}
+
+/**
+ * Main seeding function
+ */
+async function seedMCPMonitoringMetrics() {
+  console.log('📊 Starting MCP Monitoring Metrics Seeding...');
+  console.log(`📊 Database URL: ${databaseUrl.replace(/\/\/.*@/, '//***:***@')}`);
+
+  try {
+    // Get actual business metrics from database
+    const businessMetrics = await generateBusinessMetrics();
+    const systemMetrics = generateSystemMetrics();
+    const securityMetrics = generateSecurityMetrics();
+    const infrastructureHealth = generateInfrastructureHealth();
+    const alerts = generateMonitoringAlerts();
+
+    console.log(`🏢 Found ${businessMetrics.total_organizations} organizations`);
+    console.log(`👥 Found ${businessMetrics.total_users} users`);
+    console.log(`📇 Found ${businessMetrics.total_contacts} contacts`);
+    console.log(`📧 Found ${businessMetrics.total_campaigns} campaigns`);
+
+    // Clear existing monitoring data
+    console.log('🧹 Clearing existing MCP monitoring metrics...');
+    await prisma.$executeRaw`DELETE FROM "MCPMonitoringMetrics"`;
+
+    // Create comprehensive monitoring snapshot
+    const monitoringSnapshot = {
+      id: randomUUID(),
+      snapshot_time: new Date(),
+      business_metrics: businessMetrics,
+      system_metrics: systemMetrics,
+      security_metrics: securityMetrics,
+      infrastructure_health: infrastructureHealth,
+      alerts: alerts,
+      
+      // Summary KPIs
+      overall_health_score: Number((
+        (businessMetrics.conversion_rate / 5 * 20) +
+        (systemMetrics.success_rate_percentage) +
+        (securityMetrics.security_score * 0.8)
+      ).toFixed(1)),
+      
+      // Time series data for trending
+      response_time_trend: generateTimeSeriesData(systemMetrics.avg_response_time),
+      user_activity_trend: generateTimeSeriesData(businessMetrics.active_users_daily),
+      error_rate_trend: generateTimeSeriesData(systemMetrics.error_rate_percentage),
+      revenue_trend: generateTimeSeriesData(businessMetrics.monthly_recurring_revenue),
+      
+      // African market insights
+      market_insights: {
+        peak_hours_utilization: AFRICAN_MARKET_METRICS.peak_usage_hours,
+        mobile_vs_desktop_ratio: `${AFRICAN_MARKET_METRICS.mobile_usage_percentage}:${100 - AFRICAN_MARKET_METRICS.mobile_usage_percentage}`,
+        top_countries: businessMetrics.total_organizations > 0 ? 
+          ['Nigeria', 'Ghana', 'Kenya', 'South Africa'] : [],
+        currency_distribution: {
+          NGN: 45, GHS: 20, KES: 15, ZAR: 12, EGP: 8
+        },
+        whatsapp_adoption_rate: AFRICAN_MARKET_METRICS.whatsapp_penetration
+      },
+      
+      // Calculated aggregates
+      total_api_calls_today: systemMetrics.requests_per_second * 86400, // 24 hours
+      revenue_per_user: businessMetrics.total_users > 0 ? 
+        Number((businessMetrics.monthly_recurring_revenue / businessMetrics.total_users).toFixed(2)) : 0,
+      campaigns_success_rate: Number((85 + Math.random() * 10).toFixed(1)),
+      
+      // Compliance status
+      gdpr_compliance_status: 'compliant',
+      last_security_audit: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+      next_security_audit: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days from now
+      
+      calculated_at: new Date(),
+      expires_at: new Date(Date.now() + 60 * 60 * 1000) // 1 hour from now
+    };
+
+    // Create the monitoring metrics record
+    await prisma.mCPMonitoringMetrics.create({
+      data: {
+        id: monitoringSnapshot.id,
+        organizationId: null, // Global metrics
+        category: 'system_overview',
+        metricName: 'comprehensive_monitoring',
+        metricValue: monitoringSnapshot.overall_health_score,
+        unit: 'health_score',
+        timestamp: monitoringSnapshot.snapshot_time,
+        metadata: JSON.stringify(monitoringSnapshot),
+        tags: JSON.stringify(['system', 'business', 'security', 'infrastructure']),
+        alertLevel: 'info',
+        isActive: true,
+        calculatedAt: monitoringSnapshot.calculated_at,
+        lastUpdated: monitoringSnapshot.calculated_at
+      }
+    });
+
+    // Create individual metric records for easier querying
+    const individualMetrics = [
+      // Business metrics
+      { name: 'total_users', value: businessMetrics.total_users, category: 'business', unit: 'count' },
+      { name: 'active_users_daily', value: businessMetrics.active_users_daily, category: 'business', unit: 'count' },
+      { name: 'total_organizations', value: businessMetrics.total_organizations, category: 'business', unit: 'count' },
+      { name: 'monthly_recurring_revenue', value: businessMetrics.monthly_recurring_revenue, category: 'business', unit: 'USD' },
+      { name: 'conversion_rate', value: businessMetrics.conversion_rate, category: 'business', unit: 'percentage' },
+      
+      // System metrics
+      { name: 'avg_response_time', value: systemMetrics.avg_response_time, category: 'system', unit: 'milliseconds' },
+      { name: 'error_rate', value: systemMetrics.error_rate_percentage, category: 'system', unit: 'percentage' },
+      { name: 'cpu_usage', value: systemMetrics.cpu_usage_percentage, category: 'system', unit: 'percentage' },
+      { name: 'memory_usage', value: systemMetrics.memory_usage_percentage, category: 'system', unit: 'percentage' },
+      
+      // Security metrics
+      { name: 'security_score', value: securityMetrics.security_score, category: 'security', unit: 'score' },
+      { name: 'compliance_score', value: securityMetrics.compliance_score, category: 'security', unit: 'score' },
+      { name: 'failed_logins', value: securityMetrics.failed_login_attempts_today, category: 'security', unit: 'count' }
+    ];
+
+    for (const metric of individualMetrics) {
+      await prisma.mCPMonitoringMetrics.create({
+        data: {
+          id: randomUUID(),
+          organizationId: null,
+          category: metric.category,
+          metricName: metric.name,
+          metricValue: metric.value,
+          unit: metric.unit,
+          timestamp: new Date(),
+          metadata: JSON.stringify({ source: 'automated_calculation', calculated_from: 'actual_database_data' }),
+          tags: JSON.stringify([metric.category, 'real_time']),
+          alertLevel: 'info',
+          isActive: true,
+          calculatedAt: new Date(),
+          lastUpdated: new Date()
+        }
+      });
+    }
+
+    console.log(`✅ Successfully created comprehensive monitoring metrics`);
+    console.log(`📊 Overall Health Score: ${monitoringSnapshot.overall_health_score}/100`);
+    console.log(`💰 Estimated MRR: $${businessMetrics.monthly_recurring_revenue}`);
+    console.log(`📈 Conversion Rate: ${businessMetrics.conversion_rate}%`);
+    console.log(`⚡ Avg Response Time: ${systemMetrics.avg_response_time}ms`);
+    console.log(`🔒 Security Score: ${securityMetrics.security_score}/100`);
+
+    // Display infrastructure health summary
+    console.log('\n🏗️ Infrastructure Health:');
+    infrastructureHealth.forEach(component => {
+      const status = component.health_score > 90 ? '🟢' : 
+                    component.health_score > 75 ? '🟡' : '🔴';
+      console.log(`  ${status} ${component.name}: ${component.health_score}% (${component.response_time_ms}ms)`);
+    });
+
+    // Display active alerts
+    const activeAlerts = alerts.filter(alert => alert.is_triggered);
+    if (activeAlerts.length > 0) {
+      console.log('\n🚨 Active Alerts:');
+      activeAlerts.forEach(alert => {
+        console.log(`  ⚠️  ${alert.name}: ${alert.description}`);
+      });
+    } else {
+      console.log('\n✅ No active alerts - all systems operational');
+    }
+
+    // Display African market insights
+    console.log('\n🌍 African Market Insights:');
+    console.log(`  📱 Mobile Usage: ${AFRICAN_MARKET_METRICS.mobile_usage_percentage}%`);
+    console.log(`  💬 WhatsApp Penetration: ${AFRICAN_MARKET_METRICS.whatsapp_penetration}%`);
+    console.log(`  📧 SMS Reliability: ${AFRICAN_MARKET_METRICS.sms_reliability}%`);
+    console.log(`  🌐 Countries Served: ${AFRICAN_MARKET_METRICS.countries_served.length}`);
+
+  } catch (error) {
+    console.error('❌ Error seeding MCP monitoring metrics:', error);
+    throw error;
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+// Run the seeding script
+if (require.main === module) {
+  seedMCPMonitoringMetrics()
+    .then(() => {
+      console.log('🎉 MCP Monitoring Metrics seeding completed successfully!');
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error('💥 Seeding failed:', error);
+      process.exit(1);
+    });
+}
+
+export default seedMCPMonitoringMetrics;

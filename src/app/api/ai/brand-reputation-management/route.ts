@@ -13,7 +13,7 @@
  * It does NOT execute autonomous brand protection actions.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { logger } from '@/lib/logger';
@@ -24,11 +24,11 @@ import {
   ReputationMetrics,
   MonitoringChannel,
   NotificationSettings,
-  MonitoringRule,
+  type MonitoringRule,
   AlertType,
   AlertSeverity,
   ThreatLevel,
-  AfricanRegion,
+  type AfricanRegion,
   NotificationChannel,
   StakeholderMapping,
   startBrandMonitoring,
@@ -486,7 +486,7 @@ export async function GET(request: NextRequest) {
 
       case 'get_real_time_mentions':
         result = await getRealTimeMentions({
-          limit: parseInt(searchParams.get('limit') || '50'),
+          limit: Number.parseInt(searchParams.get('limit') || '50'),
           platform: searchParams.get('platform') || undefined
         });
         break;
@@ -500,14 +500,14 @@ export async function GET(request: NextRequest) {
 
       case 'get_influencer_mentions':
         result = await getInfluencerMentions({
-          min_influence: parseFloat(searchParams.get('min_influence') || '0.7'),
-          limit: parseInt(searchParams.get('limit') || '20')
+          min_influence: Number.parseFloat(searchParams.get('min_influence') || '0.7'),
+          limit: Number.parseInt(searchParams.get('limit') || '20')
         });
         break;
 
       case 'get_alert_summary':
         result = await getAlertSummary({
-          days: parseInt(searchParams.get('days') || '7')
+          days: Number.parseInt(searchParams.get('days') || '7')
         });
         break;
 

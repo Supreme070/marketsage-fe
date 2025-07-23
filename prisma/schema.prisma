@@ -60,6 +60,7 @@ model Organization {
   tasks              Task[]
   smsProviders       SMSProvider[]
   whatsappConfigs    WhatsAppBusinessConfig[]
+  emailProviders     EmailProvider[]
   emailDomainConfigs EmailDomainConfig[]
 
   // AI Intelligence Relations
@@ -69,6 +70,9 @@ model Organization {
 
   // Analytics Relations
   conversionFunnels ConversionFunnel[]
+  
+  // Social Media Relations
+  socialMediaAccounts SocialMediaAccount[]
 
   // Unified Messaging Service fields
   messagingModel     String  @default("customer_managed") // customer_managed | platform_managed
@@ -82,6 +86,13 @@ model Organization {
   // Unified Messaging Relations
   messagingUsage     MessagingUsage[]
   creditTransactions CreditTransaction[]
+
+  // MCP Relations
+  mcpCampaignMetrics    MCPCampaignMetrics[]
+  mcpCustomerPredictions MCPCustomerPredictions[]
+  mcpVisitorSessions    MCPVisitorSessions[]
+  mcpMonitoringMetrics  MCPMonitoringMetrics[]
+  
 }
 
 // User model for authentication and platform access
@@ -95,15 +106,26 @@ model User {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   lastLogin      DateTime?
+  lastLoginAt    DateTime? // Alternative field name for consistency
+  lastActivityAt DateTime? // Track last activity timestamp
   isActive       Boolean   @default(true)
   role           UserRole  @default(USER)
   organizationId String?
   company        String?
+  
+  // Admin Management Fields
+  isSuspended     Boolean   @default(false) // Whether the user is suspended
+  suspendedAt     DateTime? // When the user was suspended
+  suspendedBy     String?   // Admin who suspended the user
+  suspensionReason String?  // Reason for suspension
+  adminNotes      String?   // Admin notes about the user
+  lastActiveAt    DateTime? // Last activity timestamp for admin tracking
 
   // Relations
   organization           Organization?           @relation(fields: [organizationId], references: [id])
   accounts               Account[]
   sessions               Session[]
+  socialMediaAccounts    SocialMediaAccount[]    @relation("SocialMediaAccountUser")
   contacts               Contact[]               @relation("CreatedBy")
   emailCampaigns         EmailCampaign[]         @relation("CampaignCreator")
   emailTemplates         EmailTemplate[]         @relation("TemplateCreator")
@@ -133,11 +155,23 @@ model User {
   aiCustomerSegments AI_CustomerSegment[] @relation("UserToCustomerSegment")
   aiChatHistory      AI_ChatHistory[]     @relation("UserToChatHistory")
   aiTools            AI_Tool[]            @relation("UserToAITool")
+  aiMemories         AIMemory[]           @relation("UserToAIMemory")
+  aiOrgMemories      AIMemory[]           @relation("OrgToAIMemory")
 
   // New relations
   activities    UserActivity[]
   notifications Notification[]
   preferences   UserPreference?
+
+  // Admin relations
+  adminAuditLogs           AdminAuditLog[]   @relation("AdminAuditLogs")
+  adminSessions            AdminSession[]    @relation("AdminSessions")
+  securityEventsCreated    SecurityEvent[]   @relation("SecurityEvents")
+  securityEventsResolved   SecurityEvent[]   @relation("SecurityEventResolver")
+  supportTicketsCreated    SupportTicket[]   @relation("UserSupportTickets")
+  supportTicketsAssigned   SupportTicket[]   @relation("AssignedSupportTickets")
+  supportMessagesSent      SupportMessage[]  @relation("SupportMessageSender")
+  systemAlertsResolved     SystemAlert[]     @relation("SystemAlertResolver")
 
   // LeadPulse Form Builder relations
   createdForms LeadPulseForm[] @relation("FormCreator")
@@ -193,7 +227,16 @@ model User {
   createdCampaigns          LeadPulseCampaign[]          @relation("CampaignCreator")
   createdConversionWindows  LeadPulseConversionWindow[]  @relation("ConversionWindowCreator")
 
+  // Admin Management Relations
+  adminNotesCreated     AdminNote[]      @relation("CreatedAdminNotes")
+  adminNotesUpdated     AdminNote[]      @relation("UpdatedAdminNotes") 
+  adminNotesAboutMe     AdminNote[]      @relation("UserAdminNotes")
+
   @@index([email])
+  @@index([lastLoginAt])
+  @@index([lastActivityAt])
+  @@index([suspendedAt])
+  @@index([suspendedBy])
 }
 
 // User Preferences model
@@ -343,6 +386,9 @@ model Contact {
   // History relations
   smsHistory      SMSHistory[]
   whatsappHistory WhatsAppHistory[]
+
+  // MCP Relations
+  mcpCustomerPredictions MCPCustomerPredictions[]
 
   @@index([organizationId])
 }
@@ -1103,6 +1149,8 @@ model LeadPulseDataRetention {
 // =================================================================
 
 enum SecurityEventType {
+  LOGIN_ATTEMPT
+  FAILED_LOGIN
   SUSPICIOUS_ACTIVITY
   RATE_LIMIT_EXCEEDED
   INVALID_INPUT
@@ -1113,6 +1161,11 @@ enum SecurityEventType {
   MALICIOUS_FILE_UPLOAD
   XSS_ATTEMPT
   SQL_INJECTION_ATTEMPT
+  PRIVILEGE_ESCALATION
+  MALICIOUS_REQUEST
+  PASSWORD_RESET
+  ACCOUNT_LOCKED
+  API_ABUSE
 }
 
 enum SecuritySeverity {
@@ -1974,6 +2027,58 @@ model AI_Tool {
   createdBy User @relation("UserToAITool", fields: [createdById], references: [id], onDelete: Cascade)
 }
 
+model AIMemory {
+  id               String   @id @default(cuid())
+  userId           String
+  organizationId   String
+  type             String
+  content          String
+  metadata         String?  // JSON
+  importance       Float    @default(0.5)
+  tags             String[] @default([])
+  embedding        Float[]  @default([])
+  sessionId        String?
+  relatedMemories  String[] @default([])
+  accessCount      Int      @default(0)
+  lastAccessed     DateTime @default(now())
+  expiresAt        DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  user         User @relation("UserToAIMemory", fields: [userId], references: [id], onDelete: Cascade)
+  organization User @relation("OrgToAIMemory", fields: [organizationId], references: [id], onDelete: Cascade)
+  conversationMessages AIConversationMessage[] @relation("ConversationToMemory")
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([type])
+  @@index([sessionId])
+  @@index([importance])
+  @@index([lastAccessed])
+  @@index([expiresAt])
+  @@map("ai_memory")
+}
+
+model AIConversationMessage {
+  id        String   @id @default(cuid())
+  sessionId String
+  role      String   // 'user' | 'assistant' | 'system'
+  content   String
+  metadata  String?  // JSON
+  memoryId  String?
+  timestamp DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  memory AIMemory? @relation("ConversationToMemory", fields: [memoryId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId])
+  @@index([timestamp])
+  @@map("ai_conversation_message")
+}
+
 // LeadPulse models
 model LeadPulseVisitor {
   id              String   @id @default(cuid())
@@ -2681,6 +2786,47 @@ model WhatsAppBusinessConfig {
   verificationStatus String   @default("pending") // pending, verified, failed
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+model EmailProvider {
+  id                String   @id @default(cuid())
+  organizationId    String   @unique
+  providerType      String   // mailgun, sendgrid, smtp, postmark, ses
+  name              String   // User-friendly name for the provider
+  apiKey            String?  // Encrypted API key for API-based providers
+  apiSecret         String?  // Encrypted API secret if needed
+  domain            String?  // Sending domain for providers that require it
+  
+  // SMTP Configuration
+  smtpHost          String?
+  smtpPort          Int?
+  smtpUsername      String?
+  smtpPassword      String?  // Encrypted
+  smtpSecure        Boolean  @default(true)
+  
+  // Sender Configuration
+  fromEmail         String
+  fromName          String?
+  replyToEmail      String?
+  
+  // Tracking Configuration
+  trackingDomain    String?
+  enableTracking    Boolean  @default(true)
+  
+  // Status and Verification
+  isActive          Boolean  @default(false)
+  verificationStatus String  @default("pending") // pending, verified, failed
+  lastTested        DateTime?
+  testStatus        String? // success, failed, pending
+  
+  // Metadata
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -4353,4 +4499,490 @@ enum TimeUnit {
   DAYS
   WEEKS
   MONTHS
+}
+
+// MCP (Model Context Protocol) Tables
+// These tables store data specifically for MCP servers to provide real analytics
+
+// MCP Campaign Metrics - Real campaign performance data for Campaign Analytics Server
+model MCPCampaignMetrics {
+  id           String   @id @default(cuid())
+  campaignId   String   // Reference to actual campaign (EmailCampaign, SMSCampaign, etc.)
+  campaignType String   // EMAIL, SMS, WHATSAPP
+  campaignName String
+  organizationId String
+
+  // Core metrics
+  sent         Int      @default(0)
+  delivered    Int      @default(0)
+  opened       Int      @default(0)
+  clicked      Int      @default(0)
+  converted    Int      @default(0)
+  bounced      Int      @default(0)
+  unsubscribed Int      @default(0)
+  responded    Int      @default(0)
+
+  // Calculated rates
+  openRate       Float @default(0)
+  clickRate      Float @default(0)
+  conversionRate Float @default(0)
+  bounceRate     Float @default(0)
+  responseRate   Float @default(0)
+
+  // Financial metrics
+  revenue Float @default(0)
+  cost    Float @default(0)
+  roi     Float @default(0)
+
+  // A/B testing data
+  abTestData Json? // Stores A/B test results and variants
+
+  // Metadata
+  calculatedAt DateTime @default(now())
+  lastUpdated  DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([campaignType, organizationId])
+  @@index([calculatedAt])
+}
+
+// MCP Customer Predictions - AI-generated customer insights for Customer Data Server
+model MCPCustomerPredictions {
+  id             String   @id @default(cuid())
+  contactId      String
+  organizationId String
+
+  // Prediction scores
+  churnRisk       Float    // 0-100 likelihood of churning
+  lifetimeValue   Float    // Predicted customer lifetime value
+  engagementScore Int      // 0-100 engagement score
+  segment         String   // Customer segment assignment
+
+  // Behavioral insights
+  lastActivityDate   DateTime
+  nextBestAction     String   // Recommended action
+  preferredChannel   String   // EMAIL, SMS, WHATSAPP
+  behavioralScores   Json     // Mobile usage, price sensitivity, etc.
+  insights           Json     // Array of actionable insights
+
+  // Prediction metadata
+  confidenceScore Int      @default(85) // 0-100 confidence in predictions
+  calculatedAt    DateTime @default(now())
+  lastUpdated     DateTime @updatedAt
+
+  // Relations
+  contact      Contact      @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([segment, organizationId])
+  @@index([churnRisk])
+  @@index([calculatedAt])
+}
+
+// MCP Visitor Sessions - Enhanced visitor tracking for LeadPulse Server
+model MCPVisitorSessions {
+  id         String   @id @default(cuid())
+  sessionId  String   @unique
+  organizationId String
+
+  // Visitor identification
+  fingerprint String
+  ipAddress   String
+  userAgent   String
+
+  // Device information
+  device   String // mobile, desktop, tablet
+  browser  String
+  os       String
+
+  // Location data
+  city     String
+  country  String
+  region   String
+  timezone String
+
+  // Session metrics
+  sessionStart DateTime
+  sessionEnd   DateTime
+  duration     Int      // Session duration in seconds
+  pagesViewed  Int      @default(0)
+  interactions Int      @default(0)
+
+  // Engagement metrics
+  engagementScore Int   @default(0) // 0-100
+  conversionValue Float @default(0)
+  bounceRate      Float @default(0)
+
+  // Traffic source
+  trafficSource String  // google, direct, facebook, etc.
+  trafficMedium String  // organic, cpc, social, email, etc.
+  referrer      String?
+  utmCampaign   String?
+
+  // Journey data
+  pageViews        Json    // Array of page views with timestamps
+  journeyPattern   String  // mobile_first_explorer, business_decision_maker, etc.
+  characteristics  Json    // Array of behavioral characteristics
+
+  // Status
+  isActive     Boolean @default(false)
+  hasConverted Boolean @default(false)
+
+  // Metadata
+  calculatedAt DateTime @default(now())
+  lastUpdated  DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, sessionStart])
+  @@index([isActive])
+  @@index([hasConverted])
+  @@index([journeyPattern])
+}
+
+// MCP Monitoring Metrics - System and business metrics for Monitoring Server
+model MCPMonitoringMetrics {
+  id             String   @id @default(cuid())
+  organizationId String?  // Null for global metrics
+
+  // Metric identification
+  category    String // business, system, security, infrastructure
+  metricName  String
+  metricValue Float
+  unit        String // count, percentage, milliseconds, USD, etc.
+
+  // Metadata
+  timestamp   DateTime @default(now())
+  metadata    Json?    // Additional metric data, time series, etc.
+  tags        Json?    // Array of tags for filtering
+
+  // Alert configuration
+  alertLevel String  @default("info") // info, warning, critical
+  isActive   Boolean @default(true)
+
+  // Metadata
+  calculatedAt DateTime @default(now())
+  lastUpdated  DateTime @updatedAt
+
+  // Relations
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([category, metricName])
+  @@index([timestamp])
+  @@index([alertLevel, isActive])
+}
+
+// Social Media Account model for multi-tenant OAuth connections
+model SocialMediaAccount {
+  id             String    @id @default(cuid())
+  organizationId String
+  userId         String
+  platform       String    // facebook, instagram, twitter, linkedin, youtube, etc.
+  accountId      String    // Platform-specific account ID
+  accountName    String?   // Display name of the account
+  accessToken    String    // Encrypted OAuth access token
+  refreshToken   String?   // Encrypted OAuth refresh token
+  expiresAt      DateTime? // Token expiration time
+  scope          Json      @default("[]") // OAuth scopes granted
+  isActive       Boolean   @default(true)
+  lastSync       DateTime? // Last successful API call
+  metadata       Json      @default("{}") // Platform-specific metadata
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation("SocialMediaAccountUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([platform])
+  @@index([organizationId, platform])
+  @@index([isActive])
+}
+
+// =====================================================================
+// ADMIN PORTAL MODELS
+// =====================================================================
+
+// Administrative audit logging for all admin actions
+model AdminAuditLog {
+  id          String   @id @default(cuid())
+  adminUserId String   // ID of the admin who performed the action
+  adminEmail  String   // Email of the admin for easier tracking
+  action      String   // Action performed (CREATE, UPDATE, DELETE, VIEW, IMPERSONATE, etc.)
+  resource    String   // Resource type (users, organizations, campaigns, etc.)
+  resourceId  String?  // ID of the affected resource
+  details     Json?    // Additional context, before/after values
+  ipAddress   String?  // IP address of the admin
+  userAgent   String?  // User agent of the admin
+  sessionId   String?  // Admin session ID
+  timestamp   DateTime @default(now())
+  
+  // Relations
+  admin User @relation("AdminAuditLogs", fields: [adminUserId], references: [id])
+
+  @@index([adminUserId])
+  @@index([action])
+  @@index([resource])
+  @@index([timestamp])
+  @@index([adminEmail])
+}
+
+// System health metrics for monitoring
+model SystemMetrics {
+  id              String   @id @default(cuid())
+  metricType      String   // cpu_usage, memory_usage, disk_usage, database_connections, etc.
+  value           Float    // The actual metric value
+  unit            String   // percentage, bytes, count, etc.
+  source          String   // server name or service identifier
+  timestamp       DateTime @default(now())
+  metadata        Json?    // Additional metric data
+  
+  @@index([metricType])
+  @@index([timestamp])
+  @@index([source])
+}
+
+// Security events and incidents
+model SecurityEvent {
+  id          String            @id @default(cuid())
+  eventType   SecurityEventType // LOGIN_ATTEMPT, SUSPICIOUS_ACTIVITY, etc.
+  severity    SecuritySeverity  // LOW, MEDIUM, HIGH, CRITICAL
+  title       String            // Brief description
+  description String?           // Detailed description
+  userId      String?           // User involved (if applicable)
+  ipAddress   String?           // IP address involved
+  userAgent   String?           // User agent
+  location    String?           // Geographic location
+  resolved    Boolean           @default(false)
+  resolvedBy  String?           // Admin who resolved it
+  resolvedAt  DateTime?         // When it was resolved
+  metadata    Json?             // Additional event data
+  timestamp   DateTime          @default(now())
+  
+  // Relations
+  user     User? @relation("SecurityEvents", fields: [userId], references: [id])
+  resolver User? @relation("SecurityEventResolver", fields: [resolvedBy], references: [id])
+
+  @@index([eventType])
+  @@index([severity])
+  @@index([timestamp])
+  @@index([resolved])
+  @@index([userId])
+}
+
+// Message queue status and monitoring
+model MessageQueue {
+  id             String                @id @default(cuid())
+  queueName      String                // email, sms, whatsapp, ai_processing, etc.
+  status         MessageQueueStatus    // ACTIVE, PAUSED, ERROR, MAINTENANCE
+  totalJobs      Int                   @default(0)
+  pendingJobs    Int                   @default(0) // Jobs waiting to be processed (pending)
+  processingJobs Int                   @default(0) // Jobs currently being processed (processing)
+  completedJobs  Int                   @default(0) // Successfully completed jobs (completed)
+  failedJobs     Int                   @default(0) // Failed jobs (failed)
+  stuckJobs      Int                   @default(0) // Jobs stuck in processing state (stuck)
+  lastProcessed  DateTime?             // Last time a job was processed
+  avgProcessTime Float?                // Average processing time in seconds
+  errorRate      Float                 @default(0) // Percentage
+  throughput     Float                 @default(0) // Jobs per minute
+  isHealthy      Boolean               @default(true) // Overall queue health status
+  timestamp      DateTime              @default(now()) // When these metrics were recorded
+  metadata       Json?                 // Additional queue data
+  updatedAt      DateTime              @updatedAt
+  
+  @@unique([queueName])
+  @@index([status])
+  @@index([queueName])
+  @@index([timestamp])
+  @@index([isHealthy])
+}
+
+// Support ticket management
+model SupportTicket {
+  id          String              @id @default(cuid())
+  ticketId    String              @unique // Human-readable ticket ID (e.g., MS-2024-001)
+  userId      String?             // User who created the ticket
+  userEmail   String              // Email of the ticket creator
+  subject     String              // Ticket subject
+  description String              // Initial ticket description
+  status      SupportTicketStatus @default(OPEN)
+  priority    SupportPriority     @default(MEDIUM)
+  category    String?             // billing, technical, feature_request, etc.
+  assignedTo  String?             // Admin assigned to handle the ticket
+  tags        String[]            @default([]) // Tags for categorization
+  metadata    Json?               // Additional ticket data
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  resolvedAt  DateTime?           // When the ticket was resolved
+  
+  // Relations
+  user     User?            @relation("UserSupportTickets", fields: [userId], references: [id])
+  assignee User?            @relation("AssignedSupportTickets", fields: [assignedTo], references: [id])
+  messages SupportMessage[]
+
+  @@index([status])
+  @@index([priority])
+  @@index([userId])
+  @@index([assignedTo])
+  @@index([createdAt])
+}
+
+// Support ticket messages/replies
+model SupportMessage {
+  id           String        @id @default(cuid())
+  ticketId     String        // Reference to the support ticket
+  senderId     String?       // User who sent the message (null for system messages)
+  senderType   SenderType    // USER, ADMIN, SYSTEM
+  message      String        // Message content
+  attachments  String[]      @default([]) // File URLs
+  isInternal   Boolean       @default(false) // Internal admin notes
+  createdAt    DateTime      @default(now())
+  
+  // Relations
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender User?         @relation("SupportMessageSender", fields: [senderId], references: [id])
+
+  @@index([ticketId])
+  @@index([createdAt])
+}
+
+// System alerts for admins
+model SystemAlert {
+  id          String           @id @default(cuid())
+  alertType   SystemAlertType  // PERFORMANCE, ERROR, SECURITY, CAPACITY, etc.
+  severity    AlertSeverity    // LOW, MEDIUM, HIGH, CRITICAL
+  title       String           // Alert title
+  description String           // Alert description
+  source      String           // System component that triggered the alert
+  triggered   Boolean          @default(true)
+  resolved    Boolean          @default(false)
+  resolvedBy  String?          // Admin who resolved it
+  resolvedAt  DateTime?        // When it was resolved
+  metadata    Json?            // Additional alert data
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  
+  // Relations
+  resolver User? @relation("SystemAlertResolver", fields: [resolvedBy], references: [id])
+
+  @@index([alertType])
+  @@index([severity])
+  @@index([resolved])
+  @@index([createdAt])
+}
+
+// Admin session tracking
+model AdminSession {
+  id           String    @id @default(cuid())
+  userId       String    // Admin user ID
+  sessionToken String    @unique // Session token for identification
+  ipAddress    String?   // IP address of the admin session
+  userAgent    String?   // User agent string
+  location     String?   // Geographic location (city, country)
+  loginAt      DateTime  @default(now()) // When the session started
+  lastActivity DateTime  @default(now()) // Last activity in this session
+  logoutAt     DateTime? // When the session ended (null for active sessions)
+  isActive     Boolean   @default(true) // Whether session is still active
+  metadata     Json?     // Additional session data (browser, OS, etc.)
+  
+  // Relations
+  user User @relation("AdminSessions", fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([sessionToken])
+  @@index([loginAt])
+  @@index([isActive])
+  @@index([ipAddress])
+}
+
+
+// =====================================================================
+// ADMIN ENUMS
+// =====================================================================
+
+
+enum MessageQueueStatus {
+  ACTIVE
+  PAUSED
+  ERROR
+  MAINTENANCE
+  OFFLINE
+}
+
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_FOR_RESPONSE
+  RESOLVED
+  CLOSED
+  ESCALATED
+}
+
+enum SupportPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+  CRITICAL
+}
+
+enum SenderType {
+  USER
+  ADMIN
+  SYSTEM
+}
+
+enum SystemAlertType {
+  PERFORMANCE
+  ERROR
+  SECURITY
+  CAPACITY
+  MAINTENANCE
+  DEPLOYMENT
+  BILLING
+  INTEGRATION
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// =====================================================================
+// Admin Notes model for admin user management
+// =====================================================================
+model AdminNote {
+  id        String    @id @default(cuid())
+  userId    String    // User this note is about
+  note      String    // The note content
+  type      NoteType  @default(INFO) // INFO, WARNING, CRITICAL
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  
+  // Admin who created/updated the note
+  createdById String
+  updatedById String?
+  
+  // Relations
+  user        User @relation("UserAdminNotes", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy   User @relation("CreatedAdminNotes", fields: [createdById], references: [id])
+  updatedBy   User? @relation("UpdatedAdminNotes", fields: [updatedById], references: [id])
+  
+  @@index([userId])
+  @@index([createdById])
+  @@index([type])
+  @@index([createdAt])
+}
+
+enum NoteType {
+  INFO
+  WARNING
+  CRITICAL
 }
