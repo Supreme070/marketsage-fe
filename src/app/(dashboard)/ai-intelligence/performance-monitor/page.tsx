@@ -83,7 +83,7 @@ export default function PerformanceMonitor() {
     setIsLoading(true);
     try {
       // Fetch real API metrics
-      const metricsResponse = await fetch('/api/monitoring/performance');
+      const metricsResponse = await fetch('/api/v2/monitoring/performance');
       if (metricsResponse.ok) {
         const metricsData = await metricsResponse.json();
         setApiMetrics(metricsData.apiMetrics || generateMockAPIMetrics());
@@ -96,7 +96,7 @@ export default function PerformanceMonitor() {
       }
 
       // Fetch performance alerts
-      const alertsResponse = await fetch('/api/monitoring/alerts');
+      const alertsResponse = await fetch('/api/v2/monitoring/alerts');
       if (alertsResponse.ok) {
         const alertsData = await alertsResponse.json();
         setPerformanceAlerts(alertsData.alerts || generateMockAlerts());

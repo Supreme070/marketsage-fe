@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod';
-import { BaseMCPServer } from './base-mcp-server';
+import { HTTPBaseMCPServer } from './http-base-mcp-server';
 import { 
   type MCPAuthContext, 
   type MCPServerConfig,
@@ -20,7 +20,7 @@ import {
 import { prisma } from '../../lib/db/prisma';
 import { defaultMCPConfig } from '../config/mcp-config';
 
-export class LeadPulseMCPServer extends BaseMCPServer {
+export class LeadPulseMCPServer extends HTTPBaseMCPServer {
   constructor(config?: Partial<MCPServerConfig>) {
     super({
       ...defaultMCPConfig.servers.leadpulse,
@@ -1898,7 +1898,7 @@ export class LeadPulseMCPServer extends BaseMCPServer {
     let priority = 1;
 
     // Calculate overall intent score from signals
-    let intentScore = currentSession.intentScore || 0;
+    const intentScore = currentSession.intentScore || 0;
     
     // Analyze engagement signals
     if (signals.engagementSignals.length > 2) {

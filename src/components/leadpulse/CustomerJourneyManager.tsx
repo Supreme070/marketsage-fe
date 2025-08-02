@@ -172,8 +172,8 @@ export default function CustomerJourneyManager({ className }: CustomerJourneyMan
     try {
       setIsLoading(true);
       const [customersRes, stagesRes] = await Promise.all([
-        fetch(`/api/leadpulse/customers?stage=${filterStage}&status=${filterStatus}&sort=${sortBy}&search=${searchQuery}`),
-        fetch('/api/leadpulse/journey-stages')
+        fetch(`/api/v2/leadpulse/customers?stage=${filterStage}&status=${filterStatus}&sort=${sortBy}&search=${searchQuery}`),
+        fetch('/api/v2/leadpulse/journey-stages')
       ]);
 
       if (customersRes.ok && stagesRes.ok) {

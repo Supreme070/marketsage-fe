@@ -127,7 +127,7 @@ export const clientAuthEventHandler = {
     try {
       const sessionId = 'session_' + Date.now();
       
-      const response = await fetch('/api/leadpulse/auth-integration?action=process-authentication', {
+      const response = await fetch('/api/v2/leadpulse/auth-integration?action=process-authentication', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -172,7 +172,7 @@ export const clientAuthEventHandler = {
     metadata: Record<string, any> = {}
   ): Promise<boolean> {
     try {
-      const response = await fetch('/api/leadpulse/auth-integration?action=track-action', {
+      const response = await fetch('/api/v2/leadpulse/auth-integration?action=track-action', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -209,7 +209,7 @@ export const clientAuthEventHandler = {
       }
 
       // Fetch from API
-      const response = await fetch(`/api/leadpulse/auth-integration?action=get-authenticated-visitor&visitorFingerprint=${visitorFingerprint}`);
+      const response = await fetch(`/api/v2/leadpulse/auth-integration?action=get-authenticated-visitor&visitorFingerprint=${visitorFingerprint}`);
       
       if (response.ok) {
         const result = await response.json();

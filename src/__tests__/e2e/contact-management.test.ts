@@ -80,7 +80,7 @@ test.describe('Contact Management & Segmentation', () => {
       // Verify import results
       await expect(page.locator('[data-testid="import-success"]')).toBeVisible();
       const importCount = await page.textContent('[data-testid="import-count"]');
-      expect(parseInt(importCount || '0')).toBeGreaterThan(0);
+      expect(Number.parseInt(importCount || '0')).toBeGreaterThan(0);
       
       // Test export functionality
       await page.click('[data-testid="export-contacts"]');

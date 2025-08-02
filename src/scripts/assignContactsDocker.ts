@@ -8,7 +8,7 @@ dotenv.config();
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: process.env.DATABASE_URL || "postgresql://marketsage:marketsage_password@marketsage-db:5432/marketsage?schema=public"
+      url: process.env.DATABASE_URL || "postgresql://marketsage:marketsage_password@postgres:5432/marketsage?schema=public"
     }
   }
 });

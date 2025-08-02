@@ -163,7 +163,7 @@ export default function CreateSMSCampaign() {
         return;
       }
 
-      const response = await fetch("/api/sms/campaigns", {
+      const response = await fetch("/api/v2/sms/campaigns", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

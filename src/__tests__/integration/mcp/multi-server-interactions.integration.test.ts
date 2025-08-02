@@ -16,7 +16,7 @@ import {
   PerformanceTracker,
   testConfig
 } from './setup';
-import { MCPAuthContext } from '../../../mcp/types/mcp-types';
+import type { MCPAuthContext } from '../../../mcp/types/mcp-types';
 
 describe('Multi-Server MCP Interactions Integration Tests', () => {
   let campaignServer: CampaignAnalyticsMCPServer;

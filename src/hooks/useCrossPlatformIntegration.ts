@@ -84,7 +84,7 @@ export function useCrossPlatformIntegration() {
 
     try {
       const response = await fetch(
-        `/api/integrations/cross-platform?action=integrations&organizationId=${session.user.organizationId}`,
+        `/api/v2/integrations/cross-platform?action=integrations&organizationId=${session.user.organizationId}`,
         {
           method: 'GET',
           headers: {
@@ -243,7 +243,7 @@ export function useCrossPlatformIntegration() {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const response = await fetch('/api/integrations/cross-platform', {
+      const response = await fetch('/api/v2/integrations/cross-platform', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -293,7 +293,7 @@ export function useCrossPlatformIntegration() {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const response = await fetch('/api/integrations/cross-platform', {
+      const response = await fetch('/api/v2/integrations/cross-platform', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -342,7 +342,7 @@ export function useCrossPlatformIntegration() {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const response = await fetch('/api/integrations/cross-platform', {
+      const response = await fetch('/api/v2/integrations/cross-platform', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

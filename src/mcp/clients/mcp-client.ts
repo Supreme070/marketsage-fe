@@ -256,7 +256,11 @@ export class MarketSageMCPClient {
         },
         take: options.limit || 10,
         include: {
-          segments: options.includeSegments || false
+          segmentMembers: options.includeSegments ? {
+            include: {
+              segment: true
+            }
+          } : false
         }
       });
 
@@ -290,7 +294,11 @@ export class MarketSageMCPClient {
           organizationId: orgId
         },
         include: {
-          segments: options.includeSegments || false
+          segmentMembers: options.includeSegments ? {
+            include: {
+              segment: true
+            }
+          } : false
         }
       });
 

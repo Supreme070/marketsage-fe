@@ -311,7 +311,7 @@ export class MessagingErrorHandler {
                       error?.headers?.['retry-after'];
     
     if (retryAfter) {
-      const seconds = parseInt(retryAfter, 10);
+      const seconds = Number.parseInt(retryAfter, 10);
       return isNaN(seconds) ? null : seconds * 1000;
     }
     
@@ -321,7 +321,7 @@ export class MessagingErrorHandler {
   /**
    * Calculate retry delay with exponential backoff
    */
-  private calculateRetryDelay(provider: string, attempt: number = 1): number {
+  private calculateRetryDelay(provider: string, attempt = 1): number {
     const baseDelay = this.config.retryDelay;
     const exponentialDelay = baseDelay * Math.pow(2, attempt - 1);
     const jitter = Math.random() * 1000; // Add jitter to prevent thundering herd

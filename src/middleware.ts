@@ -7,6 +7,31 @@ import { setTenantContext, clearTenantContext } from '@/lib/tenant/edge-tenant-c
 import { applyCorsHeaders, handlePreflightRequest, validateCors } from '@/lib/security/cors-config';
 
 /**
+ * Validate token with backend API for enhanced security
+ */
+async function validateTokenWithBackend(token: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3006'}/api/v2/auth/verify-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      return result.success && result.data?.valid;
+    }
+    
+    return false;
+  } catch (error) {
+    logger.error('Backend token validation failed:', error);
+    return false;
+  }
+}
+
+/**
  * Middleware for the MarketSage application
  * - Handles API errors consistently
  * - Adds security headers
@@ -14,6 +39,16 @@ import { applyCorsHeaders, handlePreflightRequest, validateCors } from '@/lib/se
  */
 export async function middleware(request: NextRequest) {
   try {
+    // Handle subdomain routing for admin portal
+    const hostname = request.headers.get('host') || '';
+    const isAdminSubdomain = hostname.startsWith('admin.');
+    
+    // Redirect admin subdomain to admin routes
+    if (isAdminSubdomain && !request.nextUrl.pathname.startsWith('/admin')) {
+      const adminPath = request.nextUrl.pathname === '/' ? '/admin/dashboard' : `/admin${request.nextUrl.pathname}`;
+      return NextResponse.rewrite(new URL(adminPath, request.url));
+    }
+    
     // Process API routes with consistent headers and tenant context
     if (request.nextUrl.pathname.startsWith('/api')) {
       // Handle CORS preflight requests

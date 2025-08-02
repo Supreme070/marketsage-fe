@@ -152,7 +152,7 @@ export function AfricanWorkflowTemplates() {
     try {
       setDeployingTemplate(templateId);
       
-      const response = await fetch('/api/workflows/templates/african', {
+      const response = await fetch('/api/v2/workflows/templates/african', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

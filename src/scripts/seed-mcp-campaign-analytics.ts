@@ -20,7 +20,7 @@ import { randomUUID } from 'crypto';
 dotenv.config();
 
 // Allow connection to both Docker internal and local connections
-const databaseUrl = process.env.DATABASE_URL || "postgresql://marketsage:marketsage_password@marketsage-db:5432/marketsage?schema=public";
+const databaseUrl = process.env.DATABASE_URL || "postgresql://marketsage:marketsage_password@localhost:5432/marketsage?schema=public";
 
 // Create Prisma client with direct connection to database
 const prisma = new PrismaClient({
@@ -220,13 +220,13 @@ async function seedMCPCampaignAnalytics() {
     // Get existing campaigns from database
     const [emailCampaigns, smsCampaigns, whatsappCampaigns, organizations] = await Promise.all([
       prisma.emailCampaign.findMany({
-        include: { organization: true }
+        include: { organization: true, createdBy: true }
       }),
       prisma.sMSCampaign.findMany({
-        include: { organization: true }
+        include: { createdBy: true }
       }),
       prisma.whatsAppCampaign.findMany({
-        include: { organization: true }
+        include: { createdBy: true }
       }),
       prisma.organization.findMany()
     ]);
@@ -254,7 +254,7 @@ async function seedMCPCampaignAnalytics() {
           campaignId: campaign.id,
           campaignType: 'EMAIL',
           campaignName: campaign.name,
-          organizationId: campaign.organizationId,
+          organizationId: campaign.organizationId || 'default-org-001',
           ...metrics,
           abTestData: abTest ? JSON.stringify(abTest) : null,
           calculatedAt: new Date(),
@@ -277,7 +277,7 @@ async function seedMCPCampaignAnalytics() {
           campaignId: campaign.id,
           campaignType: 'SMS',
           campaignName: campaign.name,
-          organizationId: campaign.organizationId,
+          organizationId: 'default-org-001',
           ...metrics,
           abTestData: abTest ? JSON.stringify(abTest) : null,
           calculatedAt: new Date(),
@@ -300,7 +300,7 @@ async function seedMCPCampaignAnalytics() {
           campaignId: campaign.id,
           campaignType: 'WHATSAPP',
           campaignName: campaign.name,
-          organizationId: campaign.organizationId,
+          organizationId: 'default-org-001',
           ...metrics,
           abTestData: abTest ? JSON.stringify(abTest) : null,
           calculatedAt: new Date(),

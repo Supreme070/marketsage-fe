@@ -74,7 +74,7 @@ export default function IntegrationsPage() {
   useEffect(() => {
     const fetchIntegrations = async () => {
       try {
-        const response = await fetch('/api/integrations');
+        const response = await fetch('/api/v2/integrations');
         
         if (!response.ok) {
           throw new Error('Failed to fetch integrations');

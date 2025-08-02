@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { isAuthorizedAdmin, getAdminPermissions, AdminPermissions } from '@/lib/admin-config';
+import { isAuthorizedAdmin, getAdminPermissions, type AdminPermissions } from '@/lib/admin-config';
 import { adminSecurityMiddleware, defaultAdminSecurityConfig } from '@/lib/admin-security-middleware';
 
 /**

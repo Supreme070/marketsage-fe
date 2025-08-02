@@ -101,7 +101,7 @@ export default function AIIntelligenceOverview() {
       let conversionsData: any[] = [];
 
       // 1. Fetch real customer/contact data
-      const contactsResponse = await fetch('/api/contacts');
+      const contactsResponse = await fetch('/api/v2/contacts');
       if (contactsResponse.ok) {
         contactsData = await contactsResponse.json();
         const totalCustomers = contactsData.length || 0;
@@ -114,7 +114,7 @@ export default function AIIntelligenceOverview() {
       }
 
       // Generate AI insights using Supreme-AI v3
-      const aiInsightsResponse = await fetch('/api/ai/supreme-v3', {
+      const aiInsightsResponse = await fetch('/api/v2/ai/supreme-v3', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -138,9 +138,9 @@ export default function AIIntelligenceOverview() {
 
       // 2. Fetch real campaign performance data
       const [emailCampaigns, smsCampaigns, whatsappCampaigns] = await Promise.all([
-        fetch('/api/email/campaigns').then(r => r.ok ? r.json() : []),
-        fetch('/api/sms/campaigns').then(r => r.ok ? r.json() : []),
-        fetch('/api/whatsapp/campaigns').then(r => r.ok ? r.json() : [])
+        fetch('/api/v2/email/campaigns').then(r => r.ok ? r.json() : []),
+        fetch('/api/v2/sms/campaigns').then(r => r.ok ? r.json() : []),
+        fetch('/api/v2/whatsapp/campaigns').then(r => r.ok ? r.json() : [])
       ]);
 
       // Calculate real content ratings from campaign performance
@@ -179,7 +179,7 @@ export default function AIIntelligenceOverview() {
       setContentRatings(realContentRatings);
 
       // 3. Fetch real conversion data
-      const conversionsResponse = await fetch('/api/conversions');
+      const conversionsResponse = await fetch('/api/v2/conversions');
       if (conversionsResponse.ok) {
         conversionsData = await conversionsResponse.json();
         const conversionRate = calculateConversionRate(conversionsData);
@@ -193,7 +193,7 @@ export default function AIIntelligenceOverview() {
       }
 
       // 4. Fetch real customer segments data
-      const segmentsResponse = await fetch('/api/segments');
+      const segmentsResponse = await fetch('/api/v2/segments');
       if (segmentsResponse.ok) {
         const segmentsData = await segmentsResponse.json();
         const realCustomerInsights = await buildCustomerInsights(segmentsData, contactsData);
@@ -201,7 +201,7 @@ export default function AIIntelligenceOverview() {
       }
 
       // 5. Generate AI-powered market opportunities from real data using Supreme-AI v3
-      const aiAnalysisResponse = await fetch('/api/ai/supreme-v3', {
+      const aiAnalysisResponse = await fetch('/api/v2/ai/supreme-v3', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -399,7 +399,7 @@ export default function AIIntelligenceOverview() {
 
   const fetchSupremeAIStatus = async () => {
     try {
-      const response = await fetch('/api/ai/supreme-v3', {
+      const response = await fetch('/api/v2/ai/supreme-v3', {
         method: 'GET'
       });
       
@@ -422,7 +422,7 @@ export default function AIIntelligenceOverview() {
 
   const fetchPredictiveModels = async () => {
     try {
-      const response = await fetch('/api/ai/supreme-v3', {
+      const response = await fetch('/api/v2/ai/supreme-v3', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -477,7 +477,7 @@ export default function AIIntelligenceOverview() {
 
   const fetchMarketIntelligence = async () => {
     try {
-      const response = await fetch('/api/ai/supreme-v3', {
+      const response = await fetch('/api/v2/ai/supreme-v3', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -533,7 +533,7 @@ export default function AIIntelligenceOverview() {
 
   const fetchFederatedLearningData = async () => {
     try {
-      const response = await fetch('/api/ai/supreme-v3', {
+      const response = await fetch('/api/v2/ai/supreme-v3', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -581,7 +581,7 @@ export default function AIIntelligenceOverview() {
 
     try {
       // Call Supreme-AI v3 API to get detailed market analysis
-      const response = await fetch('/api/ai/supreme-v3', {
+      const response = await fetch('/api/v2/ai/supreme-v3', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

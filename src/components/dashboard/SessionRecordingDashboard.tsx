@@ -89,7 +89,7 @@ export default function SessionRecordingDashboard({
   const loadRecordings = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/leadpulse/analytics/session-recording');
+      const response = await fetch('/api/v2/leadpulse/analytics/session-recording');
       const data = await response.json();
       
       if (data.recordings) {
@@ -105,7 +105,7 @@ export default function SessionRecordingDashboard({
   // Load full recording data for replay
   const loadFullRecording = async (sessionId: string) => {
     try {
-      const response = await fetch(`/api/leadpulse/analytics/session-recording?sessionId=${sessionId}`);
+      const response = await fetch(`/api/v2/leadpulse/analytics/session-recording?sessionId=${sessionId}`);
       const data = await response.json();
       setFullRecordingData(data);
       setIsPlayerOpen(true);

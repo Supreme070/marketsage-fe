@@ -100,7 +100,7 @@ export function WhatsAppBusinessSetup() {
     setIsValidatingWebhook(true);
 
     try {
-      const response = await fetch('/api/onboarding/validate-whatsapp-webhook', {
+      const response = await fetch('/api/v2/onboarding/validate-whatsapp-webhook', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -156,7 +156,7 @@ export function WhatsAppBusinessSetup() {
     setIsConfiguring(true);
 
     try {
-      const response = await fetch('/api/onboarding/configure-whatsapp', {
+      const response = await fetch('/api/v2/onboarding/configure-whatsapp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(configuration)
@@ -203,7 +203,7 @@ export function WhatsAppBusinessSetup() {
     setIsTesting(true);
 
     try {
-      const response = await fetch('/api/onboarding/test-whatsapp', {
+      const response = await fetch('/api/v2/onboarding/test-whatsapp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

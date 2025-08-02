@@ -1,14 +1,10 @@
 import { type NextAuthOptions, getServerSession, type DefaultSession } from "next-auth";
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import { PrismaClient } from "@prisma/client";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import FacebookProvider from "next-auth/providers/facebook";
 import TwitterProvider from "next-auth/providers/twitter";
 import LinkedInProvider from "next-auth/providers/linkedin";
-// Temporarily comment out bcrypt
-// import { compare } from "bcrypt";
-import { randomUUID } from "crypto";
+import { apiClient } from "@/lib/api-client";
 
 // Extend NextAuth types for our custom fields
 declare module 'next-auth' {
@@ -22,6 +18,8 @@ declare module 'next-auth' {
       id: string;
       role: string;
     } & DefaultSession['user'];
+    accessToken?: string;
+    organizationId?: string;
   }
 }
 
@@ -29,10 +27,12 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id: string;
     role: string;
+    accessToken?: string;
+    organizationId?: string;
   }
 }
 
-// Define UserRole enum to match Prisma schema
+// Define UserRole enum to match backend schema
 export enum UserRole {
   USER = "USER",
   ADMIN = "ADMIN",
@@ -40,47 +40,7 @@ export enum UserRole {
   SUPER_ADMIN = "SUPER_ADMIN"
 }
 
-// Initialize Prisma Client
-const prisma = new PrismaClient();
-
-// Development user accounts with correct passwords matching README
-const DEV_USERS = [
-  { 
-    email: "supreme@marketsage.africa", 
-    name: "Supreme Admin", 
-    role: UserRole.SUPER_ADMIN,
-    password: "MS_Super2025!"
-  },
-  { 
-    email: "anita@marketsage.africa", 
-    name: "Anita Manager", 
-    role: UserRole.ADMIN,
-    password: "MS_Admin2025!"
-  },
-  { 
-    email: "kola@marketsage.africa", 
-    name: "Kola Techleads", 
-    role: UserRole.IT_ADMIN,
-    password: "MS_ITAdmin2025!"
-  },
-  { 
-    email: "user@marketsage.africa", 
-    name: "Regular User", 
-    role: UserRole.USER,
-    password: "MS_User2025!"
-  }
-];
-
-// Test development users with simple passwords
-const TEST_USERS = [
-  { email: "admin@marketsage.local", password: "password1234" },
-  { email: "user@marketsage.local", password: "Password123" },
-  { email: "testadmin@marketsage.local", password: "test1234" },
-  { email: "test@marketsage.local", password: "password123" }
-];
-
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
   secret: process.env.NEXTAUTH_SECRET,
   session: {
     strategy: "jwt",
@@ -94,19 +54,55 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+      profile(profile) {
+        return {
+          id: profile.sub,
+          email: profile.email,
+          name: profile.name,
+          image: profile.picture,
+          role: UserRole.USER,
+        };
+      },
     }),
     FacebookProvider({
       clientId: process.env.FACEBOOK_CLIENT_ID || "",
       clientSecret: process.env.FACEBOOK_CLIENT_SECRET || "",
+      profile(profile) {
+        return {
+          id: profile.id,
+          email: profile.email,
+          name: profile.name,
+          image: profile.picture?.data?.url,
+          role: UserRole.USER,
+        };
+      },
     }),
     TwitterProvider({
       clientId: process.env.TWITTER_CLIENT_ID || "",
       clientSecret: process.env.TWITTER_CLIENT_SECRET || "",
       version: "2.0",
+      profile(profile) {
+        return {
+          id: profile.data.id,
+          email: profile.data.email,
+          name: profile.data.name,
+          image: profile.data.profile_image_url,
+          role: UserRole.USER,
+        };
+      },
     }),
     LinkedInProvider({
       clientId: process.env.LINKEDIN_CLIENT_ID || "",
       clientSecret: process.env.LINKEDIN_CLIENT_SECRET || "",
+      profile(profile) {
+        return {
+          id: profile.id,
+          email: profile.email,
+          name: profile.name,
+          image: profile.picture,
+          role: UserRole.USER,
+        };
+      },
     }),
     CredentialsProvider({
       name: "Credentials",
@@ -120,149 +116,25 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          // Check for development users with specific passwords (from README)
-          const devUser = DEV_USERS.find(u => u.email === credentials.email);
-          const testUser = TEST_USERS.find(u => u.email === credentials.email);
+          // Use API client to authenticate with backend
+          const response = await apiClient.login(credentials.email, credentials.password);
           
-          // First check if it's a development user with matching password
-          if (devUser && credentials.password === devUser.password) {
-            try {
-              // Check if user exists in the database
-              let dbUser = await prisma.user.findUnique({
-                where: { email: credentials.email },
-                select: {
-                  id: true,
-                  email: true,
-                  name: true,
-                  role: true,
-                  image: true,
-                  password: true
-                }
-              });
-              
-              // If not found in DB, create the user
-              if (!dbUser) {
-                const now = new Date();
-                dbUser = await prisma.user.create({
-                  data: {
-                    id: randomUUID(),
-                    email: devUser.email,
-                    name: devUser.name,
-                    role: devUser.role,
-                    password: devUser.password, // Store the actual password
-                    createdAt: now,
-                    updatedAt: now
-                  },
-                  select: {
-                    id: true,
-                    email: true,
-                    name: true,
-                    role: true,
-                    image: true,
-                    password: true
-                  }
-                });
-              }
-              
-              if (dbUser) {
-                return {
-                  id: dbUser.id,
-                  email: dbUser.email,
-                  name: dbUser.name || devUser.name,
-                  role: dbUser.role,
-                  image: dbUser.image,
-                };
-              }
-            } catch (err) {
-              console.error("Error with dev user:", err);
-            }
-              
-            // Fallback: just return enough user data for auth to work
-            return {
-              id: "fallback-id-" + Math.random().toString(36).substring(2, 10),
-              email: devUser.email,
-              name: devUser.name,
-              role: devUser.role,
-            };
-          }
-          
-          // Next check if it's a test user with matching password
-          if (testUser && credentials.password === testUser.password) {
-            try {
-              // Check if user exists in the database
-              const dbUser = await prisma.user.findUnique({
-                where: { email: credentials.email },
-                select: {
-                  id: true,
-                  email: true,
-                  name: true,
-                  role: true,
-                  image: true
-                }
-              });
-              
-              if (!dbUser) {
-                return null;
-              }
-              
-              return {
-                id: dbUser.id,
-                email: dbUser.email,
-                name: dbUser.name,
-                role: dbUser.role,
-                image: dbUser.image,
-              };
-            } catch (err) {
-              console.error("Error with test user:", err);
-              return null;
-            }
-          }
-        
-          // Regular user login process
-          try {
-            const user = await prisma.user.findUnique({
-              where: {
-                email: credentials.email,
-              },
-              select: {
-                id: true,
-                email: true,
-                name: true,
-                role: true,
-                image: true,
-                password: true
-              }
-            });
+          if (response.success && response.data) {
+            const { user, token } = response.data;
             
-            if (!user || !user.password) {
-              return null;
-            }
-
-            // For development, bypass bcrypt check and compare directly
-            const isPasswordValid = credentials.password === user.password;
-            
-            if (!isPasswordValid) {
-              return null;
-            }
-
-            // Update lastLogin timestamp
-            await prisma.user.update({
-              where: { id: user.id },
-              data: { lastLogin: new Date() },
-              select: { id: true } // Minimal selection
-            });
-
+            // Store token in user object for use in callbacks
             return {
               id: user.id,
               email: user.email,
               name: user.name,
               role: user.role,
-              image: user.image,
+              image: user.image || null,
+              accessToken: token,
+              organizationId: user.organizationId,
             };
-          } catch (err) {
-            console.error("Error with regular user login:", err);
-            return null;
           }
+          
+          return null;
         } catch (error) {
           console.error("Auth error:", error);
           return null;
@@ -270,16 +142,58 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
-  session: {
-    strategy: 'jwt',
-  },
   callbacks: {
+    async signIn({ user, account, profile }) {
+      if (account?.provider !== 'credentials') {
+        // Handle OAuth providers - register/login user via backend API
+        try {
+          // Try to authenticate with backend using OAuth data
+          const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3006'}/api/v2/auth/oauth`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              provider: account?.provider,
+              providerId: user.id,
+              email: user.email,
+              name: user.name,
+              image: user.image,
+            }),
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+              // Store backend user data and token
+              user.id = result.data.user.id;
+              user.role = result.data.user.role;
+              user.accessToken = result.data.token;
+              user.organizationId = result.data.user.organizationId;
+              return true;
+            }
+          }
+          
+          // If backend call fails, still allow the login but with limited functionality
+          user.role = user.role || UserRole.USER;
+          return true;
+        } catch (error) {
+          console.error('OAuth backend authentication failed:', error);
+          // Allow login to continue with limited functionality
+          user.role = user.role || UserRole.USER;
+          return true;
+        }
+      }
+      return true;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.email = user.email;
         token.role = user.role;
         token.name = user.name;
+        token.accessToken = user.accessToken;
+        token.organizationId = user.organizationId;
       }
       return token;
     },
@@ -289,6 +203,8 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role as string;
         session.user.email = token.email as string;
         session.user.name = token.name as string;
+        session.accessToken = token.accessToken as string;
+        session.organizationId = token.organizationId as string;
       }
       return session;
     },

@@ -36,7 +36,7 @@ export default function EmailTestPage() {
     setIsLoading(true);
     
     try {
-      const response = await fetch('/api/email/test', {
+      const response = await fetch('/api/v2/email/test', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

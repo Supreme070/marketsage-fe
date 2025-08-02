@@ -134,7 +134,7 @@ export default function CommandCenterDashboard() {
   const loadAIInsights = async () => {
     setAiInsightsLoading(true);
     try {
-      const response = await fetch('/api/ai/supreme-v3', {
+      const response = await fetch('/api/v2/ai/supreme-v3', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -170,7 +170,7 @@ export default function CommandCenterDashboard() {
   // Load predictive metrics
   const loadPredictiveMetrics = async () => {
     try {
-      const response = await fetch('/api/ai/supreme-v3', {
+      const response = await fetch('/api/v2/ai/supreme-v3', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -205,8 +205,8 @@ export default function CommandCenterDashboard() {
     setLoading(true);
     try {
       const [dashboardResponse, decisionResponse] = await Promise.all([
-        fetch('/api/dashboard'),
-        fetch('/api/dashboard/decision-support')
+        fetch('/api/v2/dashboard'),
+        fetch('/api/v2/dashboard/decision-support')
       ]);
 
       if (dashboardResponse.ok && decisionResponse.ok) {
@@ -452,7 +452,7 @@ export default function CommandCenterDashboard() {
 
   const trackDashboardAction = async (action: string, module: string) => {
     try {
-      await fetch('/api/dashboard/overview', {
+      await fetch('/api/v2/dashboard/overview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, module, metadata: { timeRange } })

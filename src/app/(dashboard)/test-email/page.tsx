@@ -37,7 +37,7 @@ export default function TestEmailPage() {
     setQuickResult(null);
     
     try {
-      const response = await fetch('/api/test-email', {
+      const response = await fetch('/api/v2/test-email', {
         method: 'GET',
       });
       
@@ -68,7 +68,7 @@ export default function TestEmailPage() {
     setCustomResult(null);
     
     try {
-      const response = await fetch('/api/test-email', {
+      const response = await fetch('/api/v2/test-email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { io, type Socket } from 'socket.io-client';
 import { useAdmin } from '@/components/admin/AdminProvider';
 import { AdminEventType } from '@/lib/websocket/admin-realtime-service';
 

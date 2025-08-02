@@ -6,7 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp, BarChart3, DollarSign, CheckCircle2 } from "lucide-react";
 import { fetchConversionData } from '@/lib/conversions';
-import type { EntityType } from '@prisma/client';
+// Define EntityType locally to remove Prisma dependency
+type EntityType = 'EMAIL_CAMPAIGN' | 'SMS_CAMPAIGN' | 'WHATSAPP_CAMPAIGN' | 'WORKFLOW' | 'SEGMENT' | 'CONTACT' | 'LIST';
 
 interface ConversionMetricsProps {
   entityType?: EntityType;

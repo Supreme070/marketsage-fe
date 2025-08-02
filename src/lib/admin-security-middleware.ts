@@ -9,7 +9,7 @@
  * - Suspicious activity detection
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getClientIP } from '@/lib/utils';
 import { logSQLInjectionAttempt, logXSSAttempt, logRateLimitExceeded, logSuspiciousActivity } from '@/lib/security';
 

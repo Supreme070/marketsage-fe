@@ -179,7 +179,7 @@ export default function AdvancedTriggerPanel({
 
     setIsEvaluating(true);
     try {
-      const response = await fetch('/api/workflows/advanced-trigger', {
+      const response = await fetch('/api/v2/workflows/advanced-trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -223,7 +223,7 @@ export default function AdvancedTriggerPanel({
 
     setIsTriggering(true);
     try {
-      const response = await fetch('/api/workflows/advanced-trigger', {
+      const response = await fetch('/api/v2/workflows/advanced-trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

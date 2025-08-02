@@ -96,9 +96,9 @@ export default function AIFeedbackInterface() {
       setLoading(true);
       
       const [feedbackResponse, pendingResponse, analyticsResponse] = await Promise.all([
-        fetch('/api/ai/feedback?action=list'),
-        fetch('/api/ai/feedback?action=pending-actions'),
-        fetch('/api/ai/feedback?action=analytics')
+        fetch('/api/v2/ai/feedback?action=list'),
+        fetch('/api/v2/ai/feedback?action=pending-actions'),
+        fetch('/api/v2/ai/feedback?action=analytics')
       ]);
 
       if (feedbackResponse.ok) {
@@ -125,7 +125,7 @@ export default function AIFeedbackInterface() {
 
   const submitFeedback = async (actionId: string, feedbackType: 'positive' | 'negative' | 'neutral', rating: number, comments?: string) => {
     try {
-      const response = await fetch('/api/ai/feedback', {
+      const response = await fetch('/api/v2/ai/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

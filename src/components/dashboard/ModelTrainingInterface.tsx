@@ -106,9 +106,9 @@ export default function ModelTrainingInterface() {
       setLoading(true);
       
       const [jobsResponse, modelsResponse, schedulesResponse] = await Promise.all([
-        fetch('/api/ml/training?action=list-jobs'),
-        fetch('/api/ml/training?action=model-metrics'),
-        fetch('/api/ml/training?action=schedules')
+        fetch('/api/v2/ml/training?action=list-jobs'),
+        fetch('/api/v2/ml/training?action=model-metrics'),
+        fetch('/api/v2/ml/training?action=schedules')
       ]);
 
       if (jobsResponse.ok) {
@@ -135,7 +135,7 @@ export default function ModelTrainingInterface() {
 
   const startTraining = async (modelType: string, hyperparameters = {}) => {
     try {
-      const response = await fetch('/api/ml/training', {
+      const response = await fetch('/api/v2/ml/training', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -158,7 +158,7 @@ export default function ModelTrainingInterface() {
 
   const stopTraining = async (jobId: string) => {
     try {
-      const response = await fetch('/api/ml/training', {
+      const response = await fetch('/api/v2/ml/training', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

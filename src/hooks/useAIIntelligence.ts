@@ -98,7 +98,7 @@ function useAICRUD<T>(
   const create = useCallback(async (newRecord: Omit<T, 'id' | 'createdAt' | 'updatedAt'>) => {
     setLoading(true);
     try {
-      const response = await fetch('/api/ai/intelligence', {
+      const response = await fetch('/api/v2/ai/intelligence', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type, data: newRecord, userId })
@@ -124,7 +124,7 @@ function useAICRUD<T>(
   const update = useCallback(async (id: string, updates: Partial<T>) => {
     setLoading(true);
     try {
-      const response = await fetch('/api/ai/intelligence', {
+      const response = await fetch('/api/v2/ai/intelligence', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, type, data: updates, userId })
@@ -198,7 +198,7 @@ export function useContentAnalysis(userId?: string) {
   // Content-specific methods
   const analyzeAndSave = useCallback(async (title: string, content: string) => {
     // First analyze the content using Supreme-AI
-    const analysisResponse = await fetch('/api/ai/supreme-v3', {
+    const analysisResponse = await fetch('/api/v2/ai/supreme-v3', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -247,7 +247,7 @@ export function useCustomerSegments(userId?: string) {
     customers: any[]
   ) => {
     // First analyze customers using Supreme-AI
-    const analysisResponse = await fetch('/api/ai/supreme-v3', {
+    const analysisResponse = await fetch('/api/v2/ai/supreme-v3', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

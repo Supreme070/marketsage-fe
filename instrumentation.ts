@@ -11,5 +11,14 @@ export async function register() {
     if (isTelemetryEnabled()) {
       initializeTelemetry();
     }
+
+    // Initialize MCP servers
+    try {
+      const { initializeMCPServers } = await import('./src/mcp/mcp-server-manager');
+      await initializeMCPServers();
+      console.log('✅ MCP servers initialized successfully');
+    } catch (error) {
+      console.error('❌ Failed to initialize MCP servers:', error);
+    }
   }
 }

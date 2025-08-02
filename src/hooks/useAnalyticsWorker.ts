@@ -326,7 +326,7 @@ export function useBatchProcessor() {
   const processBatches = useCallback(async (
     data: any[],
     taskType: string,
-    batchSize: number = 100,
+    batchSize = 100,
     options: any = {}
   ) => {
     if (!workerReady) {

@@ -1,67 +1,42 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import prisma from "@/lib/db/prisma";
-import { 
-  handleApiError, 
-  unauthorized, 
-  forbidden,
-  notFound,
-  validationError 
-} from "@/lib/errors";
+import type { NextRequest } from "next/server";
+import { proxyToBackend } from "@/lib/api-proxy";
 
-// Get user details by ID
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const session = await getServerSession(authOptions);
+export async function GET(request: NextRequest, context: { params: Promise<Record<string, string>> }) {
+  const params = await context.params;
+  const backendPath = request.url.split('/api/')[1].split('?')[0];
+  return proxyToBackend(request, {
+    backendPath,
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-  // Check if user is authenticated
-  if (!session || !session.user) {
-    return unauthorized();
-  }
+export async function POST(request: NextRequest, context: { params: Promise<Record<string, string>> }) {
+  const params = await context.params;
+  const backendPath = request.url.split('/api/')[1].split('?')[0];
+  return proxyToBackend(request, {
+    backendPath,
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-  const { id: userId } = await params;
+export async function PATCH(request: NextRequest, context: { params: Promise<Record<string, string>> }) {
+  const params = await context.params;
+  const backendPath = request.url.split('/api/')[1].split('?')[0];
+  return proxyToBackend(request, {
+    backendPath,
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-  // Users can view their own details, admins can view anyone
-  if (
-    session.user.id !== userId &&
-    session.user.role !== "SUPER_ADMIN" &&
-    session.user.role !== "ADMIN" &&
-    session.user.role !== "IT_ADMIN"
-  ) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-        lastLogin: true,
-        image: true,
-      },
-    });
-
-    if (!user) {
-      return notFound("User not found");
-    }
-
-    return NextResponse.json({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      createdAt: user.createdAt,
-      lastLogin: user.lastLogin || new Date().toISOString(),
-      image: user.image,
-    });
-  } catch (error) {
-    return handleApiError(error, "/api/users/[id]/details/route.ts");
-  }
-} 
+export async function DELETE(request: NextRequest, context: { params: Promise<Record<string, string>> }) {
+  const params = await context.params;
+  const backendPath = request.url.split('/api/')[1].split('?')[0];
+  return proxyToBackend(request, {
+    backendPath,
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}

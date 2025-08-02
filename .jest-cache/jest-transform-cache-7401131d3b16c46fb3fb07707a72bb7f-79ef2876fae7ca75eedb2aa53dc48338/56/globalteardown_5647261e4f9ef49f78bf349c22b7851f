@@ -1,0 +1,38 @@
+81ebb7ff3f50891079133c5c42ca2d93
+"use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+Object.defineProperty(exports, "default", {
+    enumerable: true,
+    get: function() {
+        return _default;
+    }
+});
+const _child_process = require("child_process");
+const _util = require("util");
+const execAsync = (0, _util.promisify)(_child_process.exec);
+/**
+ * Global teardown for MarketSage E2E tests
+ * Cleans up test data and stops services
+ */ async function globalTeardown(config) {
+    console.log('🧹 Cleaning up MarketSage E2E test environment...');
+    try {
+        // 1. Stop MCP servers
+        console.log('🔗 Stopping MCP servers...');
+        await execAsync('pkill -f "mcp-server" || true');
+        // 2. Clean up test database
+        console.log('📊 Cleaning up test database...');
+        await execAsync('npm run db:reset');
+        // 3. Remove authentication files
+        console.log('🗑️ Removing test authentication...');
+        await execAsync('rm -f src/__tests__/e2e/auth.json');
+        console.log('✅ E2E test environment cleaned up!');
+    } catch (error) {
+        console.error('❌ Failed to cleanup E2E environment:', error);
+    // Don't throw error in teardown to avoid hiding test failures
+    }
+}
+const _default = globalTeardown;
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi9Vc2Vycy9zdXByZW1lL0Rlc2t0b3AvbWFya2V0c2FnZS9zcmMvX190ZXN0c19fL2UyZS9nbG9iYWwtdGVhcmRvd24udHMiXSwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0IHsgRnVsbENvbmZpZyB9IGZyb20gJ0BwbGF5d3JpZ2h0L3Rlc3QnO1xuaW1wb3J0IHsgZXhlYyB9IGZyb20gJ2NoaWxkX3Byb2Nlc3MnO1xuaW1wb3J0IHsgcHJvbWlzaWZ5IH0gZnJvbSAndXRpbCc7XG5cbmNvbnN0IGV4ZWNBc3luYyA9IHByb21pc2lmeShleGVjKTtcblxuLyoqXG4gKiBHbG9iYWwgdGVhcmRvd24gZm9yIE1hcmtldFNhZ2UgRTJFIHRlc3RzXG4gKiBDbGVhbnMgdXAgdGVzdCBkYXRhIGFuZCBzdG9wcyBzZXJ2aWNlc1xuICovXG5hc3luYyBmdW5jdGlvbiBnbG9iYWxUZWFyZG93bihjb25maWc6IEZ1bGxDb25maWcpIHtcbiAgY29uc29sZS5sb2coJ/Cfp7kgQ2xlYW5pbmcgdXAgTWFya2V0U2FnZSBFMkUgdGVzdCBlbnZpcm9ubWVudC4uLicpO1xuXG4gIHRyeSB7XG4gICAgLy8gMS4gU3RvcCBNQ1Agc2VydmVyc1xuICAgIGNvbnNvbGUubG9nKCfwn5SXIFN0b3BwaW5nIE1DUCBzZXJ2ZXJzLi4uJyk7XG4gICAgYXdhaXQgZXhlY0FzeW5jKCdwa2lsbCAtZiBcIm1jcC1zZXJ2ZXJcIiB8fCB0cnVlJyk7XG5cbiAgICAvLyAyLiBDbGVhbiB1cCB0ZXN0IGRhdGFiYXNlXG4gICAgY29uc29sZS5sb2coJ/Cfk4ogQ2xlYW5pbmcgdXAgdGVzdCBkYXRhYmFzZS4uLicpO1xuICAgIGF3YWl0IGV4ZWNBc3luYygnbnBtIHJ1biBkYjpyZXNldCcpO1xuXG4gICAgLy8gMy4gUmVtb3ZlIGF1dGhlbnRpY2F0aW9uIGZpbGVzXG4gICAgY29uc29sZS5sb2coJ/Cfl5HvuI8gUmVtb3ZpbmcgdGVzdCBhdXRoZW50aWNhdGlvbi4uLicpO1xuICAgIGF3YWl0IGV4ZWNBc3luYygncm0gLWYgc3JjL19fdGVzdHNfXy9lMmUvYXV0aC5qc29uJyk7XG5cbiAgICBjb25zb2xlLmxvZygn4pyFIEUyRSB0ZXN0IGVudmlyb25tZW50IGNsZWFuZWQgdXAhJyk7XG4gIH0gY2F0Y2ggKGVycm9yKSB7XG4gICAgY29uc29sZS5lcnJvcign4p2MIEZhaWxlZCB0byBjbGVhbnVwIEUyRSBlbnZpcm9ubWVudDonLCBlcnJvcik7XG4gICAgLy8gRG9uJ3QgdGhyb3cgZXJyb3IgaW4gdGVhcmRvd24gdG8gYXZvaWQgaGlkaW5nIHRlc3QgZmFpbHVyZXNcbiAgfVxufVxuXG5leHBvcnQgZGVmYXVsdCBnbG9iYWxUZWFyZG93bjsiXSwibmFtZXMiOlsiZXhlY0FzeW5jIiwicHJvbWlzaWZ5IiwiZXhlYyIsImdsb2JhbFRlYXJkb3duIiwiY29uZmlnIiwiY29uc29sZSIsImxvZyIsImVycm9yIl0sIm1hcHBpbmdzIjoiOzs7OytCQWlDQTs7O2VBQUE7OzsrQkFoQ3FCO3NCQUNLO0FBRTFCLE1BQU1BLFlBQVlDLElBQUFBLGVBQVMsRUFBQ0MsbUJBQUk7QUFFaEM7OztDQUdDLEdBQ0QsZUFBZUMsZUFBZUMsTUFBa0I7SUFDOUNDLFFBQVFDLEdBQUcsQ0FBQztJQUVaLElBQUk7UUFDRixzQkFBc0I7UUFDdEJELFFBQVFDLEdBQUcsQ0FBQztRQUNaLE1BQU1OLFVBQVU7UUFFaEIsNEJBQTRCO1FBQzVCSyxRQUFRQyxHQUFHLENBQUM7UUFDWixNQUFNTixVQUFVO1FBRWhCLGlDQUFpQztRQUNqQ0ssUUFBUUMsR0FBRyxDQUFDO1FBQ1osTUFBTU4sVUFBVTtRQUVoQkssUUFBUUMsR0FBRyxDQUFDO0lBQ2QsRUFBRSxPQUFPQyxPQUFPO1FBQ2RGLFFBQVFFLEtBQUssQ0FBQyx3Q0FBd0NBO0lBQ3RELDhEQUE4RDtJQUNoRTtBQUNGO01BRUEsV0FBZUoifQ==

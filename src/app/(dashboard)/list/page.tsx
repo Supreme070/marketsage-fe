@@ -96,7 +96,7 @@ export default function ListsPage() {
     async function fetchLists() {
       try {
         setLoading(true);
-        const response = await fetch('/api/lists', {
+        const response = await fetch('/api/v2/lists', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -127,7 +127,7 @@ export default function ListsPage() {
   const handleCreateList = async () => {
     try {
       setCreating(true);
-      const response = await fetch('/api/lists', {
+      const response = await fetch('/api/v2/lists', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

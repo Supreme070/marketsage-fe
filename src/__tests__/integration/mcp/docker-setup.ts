@@ -24,7 +24,7 @@ export async function dockerPreTestSetup(): Promise<void> {
     // Check available memory
     try {
       const memInfo = execSync('cat /proc/meminfo | grep MemAvailable', { encoding: 'utf8' });
-      const availableMemory = parseInt(memInfo.split(':')[1].trim().split(' ')[0]);
+      const availableMemory = Number.parseInt(memInfo.split(':')[1].trim().split(' ')[0]);
       const availableMemoryMB = Math.round(availableMemory / 1024);
       
       console.log(`   Available memory: ${availableMemoryMB}MB`);

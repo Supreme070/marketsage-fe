@@ -5,7 +5,7 @@
  * with MCP integration and fallback mechanisms.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { Server as IOServer } from 'socket.io';
 import { getMCPVisitorData, getMCPVisitorInsights, getMCPVisitorLocations } from '@/lib/leadpulse/mcp-data-provider';
 import { logger } from '@/lib/logger';

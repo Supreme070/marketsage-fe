@@ -3,7 +3,7 @@
  * Provides SMS sending capabilities using Termii API
  */
 
-import { SMSProvider, SMSResult, SMSConfig } from './base-provider';
+import type { SMSProvider, SMSResult, SMSConfig } from './base-provider';
 import { logger } from '@/lib/logger';
 
 export interface TermiiConfig extends SMSConfig {
@@ -94,7 +94,7 @@ export class TermiiSMSProvider implements SMSProvider {
         return {
           success: true,
           messageId: responseData.message_id,
-          cost: responseData.balance ? parseFloat(responseData.balance) : undefined,
+          cost: responseData.balance ? Number.parseFloat(responseData.balance) : undefined,
           metadata: {
             provider: 'termii',
             channel: this.config.channel,
@@ -210,7 +210,7 @@ export class TermiiSMSProvider implements SMSProvider {
       if (response.ok && data.balance !== undefined) {
         return {
           success: true,
-          balance: parseFloat(data.balance),
+          balance: Number.parseFloat(data.balance),
           currency: data.currency || 'NGN'
         };
       } else {

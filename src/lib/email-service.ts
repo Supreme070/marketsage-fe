@@ -2,195 +2,28 @@
  * Email Service
  * 
  * This module provides email sending functionality with integrated tracking
- * for opens and clicks. It works with various email service providers through
- * a provider abstraction layer.
+ * for opens and clicks. It works with the API client to communicate with
+ * the backend email service.
  */
 
-import { ActivityType, EntityType, CampaignStatus } from '@prisma/client';
-import { addTrackingPixel, addLinkTracking } from '@/lib/trackingUtils';
-import prisma from '@/lib/db/prisma';
+import { apiClient } from '@/lib/api-client';
+import type {
+  EmailOptions,
+  EmailSendResult,
+  CampaignSendResult,
+  ContactInfo,
+} from '@/lib/api/types/communications';
 import { logger } from '@/lib/logger';
+import { addTrackingPixel, addLinkTracking } from '@/lib/trackingUtils';
 import { randomUUID } from 'crypto';
-import { getBestSendTime } from '@/lib/engagement-tracking';
-import { stringify } from 'querystring';
-import nodemailer from 'nodemailer';
-import { emailService } from '@/lib/email-providers/email-service';
 
-interface EmailProvider {
-  sendEmail: (options: EmailOptions) => Promise<EmailSendResult>;
-  name: string;
-}
-
-export interface EmailOptions {
-  to: string | string[];
-  from: string;
-  subject: string;
-  html: string;
-  text?: string;
-  replyTo?: string;
-  attachments?: EmailAttachment[];
-  metadata?: Record<string, any>;
-}
-
-export interface EmailAttachment {
-  filename: string;
-  content: Buffer | string;
-  contentType?: string;
-}
-
-export interface EmailSendResult {
-  success: boolean;
-  messageId?: string;
-  error?: Error;
-  provider: string;
-}
-
-// Simple in-memory provider for development/testing
-class DevelopmentEmailProvider implements EmailProvider {
-  name = 'development';
-  
-  async sendEmail(options: EmailOptions): Promise<EmailSendResult> {
-    // Log the email instead of sending it
-    logger.info('Development email provider - email would be sent', {
-      to: options.to,
-      from: options.from,
-      subject: options.subject,
-      htmlLength: options.html.length,
-    });
-    
-    return {
-      success: true,
-      messageId: `dev-${randomUUID()}`,
-      provider: this.name,
-    };
-  }
-}
-
-// Configurable SMTP provider with Nodemailer
-class SmtpEmailProvider implements EmailProvider {
-  name = 'smtp';
-  private config: Record<string, any>;
-  
-  constructor(config: Record<string, any>) {
-    this.config = config;
-  }
-  
-  async sendEmail(options: EmailOptions): Promise<EmailSendResult> {
-    try {
-      // Create transporter
-      const transporter = nodemailer.createTransport({
-        host: this.config.host,
-        port: this.config.port,
-        secure: this.config.secure, // true for 465, false for other ports
-        auth: {
-          user: this.config.auth.user,
-          pass: this.config.auth.pass,
-        },
-        tls: {
-          rejectUnauthorized: process.env.NODE_ENV !== 'production'
-        }
-      });
-
-      // Send email with anti-spam headers
-      const info = await transporter.sendMail({
-        from: `"${options.from || 'MarketSage'}" <${this.config.auth.user}>`,
-        to: Array.isArray(options.to) ? options.to.join(', ') : options.to,
-        subject: options.subject,
-        text: options.text,
-        html: options.html,
-        replyTo: options.replyTo,
-        headers: {
-          'X-Mailer': 'MarketSage Email Platform v1.0',
-          'X-Priority': '3',
-          'X-MSMail-Priority': 'Normal',
-          'Importance': 'Normal',
-          'List-Unsubscribe': `<mailto:unsubscribe@marketsage.africa>, <https://marketsage.africa/unsubscribe?email=${encodeURIComponent(Array.isArray(options.to) ? options.to[0] : options.to)}>`,
-          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-          'Return-Path': this.config.auth.user,
-          'Message-ID': `<${randomUUID()}@marketsage.africa>`,
-          'X-Auto-Response-Suppress': 'OOF, DR, RN, NRN, AutoReply',
-          'Precedence': 'bulk',
-          'X-Spam-Status': 'No',
-          'X-Entity-ID': 'MarketSage-Platform',
-          'Organization': 'MarketSage - Smart Marketing Solutions',
-        },
-        attachments: options.attachments?.map(att => ({
-          filename: att.filename,
-          content: att.content,
-          contentType: att.contentType,
-        })),
-      });
-
-      logger.info('Email sent successfully via SMTP', {
-        to: options.to,
-        subject: options.subject,
-        messageId: info.messageId,
-        smtpHost: this.config.host,
-      });
-      
-      return {
-        success: true,
-        messageId: info.messageId,
-        provider: this.name,
-      };
-    } catch (error) {
-      logger.error('Failed to send email via SMTP', error);
-      return {
-        success: false,
-        error: error as Error,
-        provider: this.name,
-      };
-    }
-  }
-}
-
-// Get the appropriate email provider based on configuration
-function getEmailProvider(): EmailProvider {
-  // Read settings from environment
-  const provider = process.env.EMAIL_PROVIDER || 'development';
-  
-  switch (provider) {
-    case 'smtp':
-      return new SmtpEmailProvider({
-        host: process.env.SMTP_HOST || 'localhost',
-        port: Number.parseInt(process.env.SMTP_PORT || '25'),
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-      });
-    case 'development':
-    default:
-      return new DevelopmentEmailProvider();
-  }
-}
-
-// Get organization-specific email provider or fallback to default
-async function getOrganizationEmailProvider(organizationId?: string): Promise<EmailProvider> {
-  if (organizationId) {
-    try {
-      const orgProvider = await emailService.getOrganizationProvider(organizationId);
-      if (orgProvider) {
-        // Wrap the organization provider to match the expected interface
-        return {
-          name: orgProvider.name,
-          sendEmail: async (options: EmailOptions) => {
-            return orgProvider.sendEmail(options);
-          }
-        };
-      }
-    } catch (error) {
-      logger.warn('Failed to get organization email provider, falling back to default:', { 
-        error, 
-        organizationId 
-      });
-    }
-  }
-  
-  // Fallback to default provider
-  return getEmailProvider();
-}
+// Re-export types from API client for backward compatibility
+export type {
+  EmailOptions,
+  EmailAttachment,
+  EmailSendResult,
+  CampaignSendResult,
+} from '@/lib/api/types/communications';
 
 /**
  * Apply contact-specific personalization to content
@@ -228,23 +61,22 @@ function personalizeContent(content: string, contact: any): string {
  * @returns The result of the send operation
  */
 export async function sendTrackedEmail(
-  contact: { id: string; email: string; [key: string]: any },
+  contact: ContactInfo,
   campaignId: string,
   options: Omit<EmailOptions, 'to'>,
   organizationId?: string
 ): Promise<EmailSendResult> {
   try {
     if (!contact.email) {
-      logger.warn('Cannot send email to contact without email address', { contactId: contact.id });
+      logger.warn('Cannot send email to contact without email address', { 
+        contactId: contact.id 
+      });
       return {
         success: false,
         error: new Error('Contact has no email address'),
         provider: 'none',
       };
     }
-    
-    // Get the email provider (organization-specific or default)
-    const provider = await getOrganizationEmailProvider(organizationId);
     
     // Personalize the content
     let personalizedHtml = personalizeContent(options.html, contact);
@@ -260,58 +92,21 @@ export async function sendTrackedEmail(
     personalizedHtml = enhanceEmailForDeliverability(personalizedHtml);
     
     // Generate plain text version for better deliverability  
-    const finalPersonalizedText = generatePlainTextVersion(personalizedHtml, contact);
+    const finalPersonalizedText = personalizedText || generatePlainTextVersion(personalizedHtml, contact);
     
-    // Send the email
-    const result = await provider.sendEmail({
-      ...options,
-      to: contact.email,
-      html: personalizedHtml,
-      text: finalPersonalizedText,
-    });
+    // Send the email via API client
+    const result = await apiClient.communications.sendEmail(
+      contact,
+      campaignId,
+      {
+        ...options,
+        html: personalizedHtml,
+        text: finalPersonalizedText,
+      },
+      organizationId
+    );
     
-    // Record the send activity if successful (only if campaignId corresponds to a real campaign)
     if (result.success) {
-      try {
-        // Check if this is a real campaign or a test
-        const campaignExists = await prisma.emailCampaign.findUnique({
-          where: { id: campaignId },
-          select: { id: true }
-        });
-
-        // Only create activity record for real campaigns
-        if (campaignExists) {
-          await prisma.emailActivity.create({
-            data: {
-              id: randomUUID(),
-              campaignId,
-              contactId: contact.id,
-              type: ActivityType.SENT,
-              metadata: JSON.stringify({
-                messageId: result.messageId,
-                provider: provider.name,
-                ...options.metadata,
-              }),
-            },
-          });
-        } else {
-          // For test emails, just log the success
-          logger.info('Test email sent successfully (no activity record created)', {
-            contactId: contact.id,
-            testCampaignId: campaignId,
-            messageId: result.messageId,
-          });
-        }
-      } catch (activityError) {
-        // Don't fail the email send if activity recording fails
-        logger.warn('Failed to record email activity, but email was sent successfully', {
-          contactId: contact.id,
-          campaignId,
-          messageId: result.messageId,
-          error: activityError
-        });
-      }
-      
       logger.info('Email sent and activity recorded', {
         contactId: contact.id,
         campaignId,
@@ -340,138 +135,46 @@ export async function sendTrackedEmail(
 export async function sendCampaign(
   campaignId: string,
   useOptimalSendTime = false
-): Promise<{
-  success: boolean;
-  totalContacts: number;
-  sentCount: number;
-  failedCount: number;
-  details: Record<string, any>;
-}> {
+): Promise<CampaignSendResult> {
   try {
-    // Fetch the campaign
-    const campaign = await prisma.emailCampaign.findUnique({
-      where: { id: campaignId },
-      include: {
-        template: true,
-        organization: true,
-        lists: {
-          include: {
-            members: {
-              include: {
-                contact: true,
-              },
-            },
-          },
-        },
-        segments: true,
-      },
+    // Send the campaign via API client
+    const result = await apiClient.communications.sendCampaign({
+      campaignId,
+      useOptimalSendTime,
     });
     
-    if (!campaign) {
-      throw new Error(`Campaign not found: ${campaignId}`);
-    }
-    
-    // Get unique contacts from lists and segments
-    const uniqueContacts = new Map();
-    
-    // Add contacts from lists
-    for (const list of campaign.lists) {
-      for (const member of list.members) {
-        uniqueContacts.set(member.contact.id, member.contact);
-      }
-    }
-    
-    // In a real implementation, we'd also resolve contacts from segments
-    // This is simplified for brevity
-    
-    // Prepare base email options
-    const baseOptions: Omit<EmailOptions, 'to'> = {
-      from: campaign.from,
-      subject: campaign.subject,
-      html: campaign.content || (campaign.template?.content || ''),
-      replyTo: campaign.replyTo || undefined,
-      metadata: {
-        campaignId,
-        campaignName: campaign.name,
-      },
-    };
-    
-    // Send to each contact
-    const results = {
-      totalContacts: uniqueContacts.size,
-      sentCount: 0,
-      failedCount: 0,
-      details: {} as Record<string, string>,
-    };
-    
-    for (const contact of uniqueContacts.values()) {
-      try {
-        if (useOptimalSendTime) {
-          // Get optimal send time for this contact
-          const optimalTime = await getBestSendTime(contact.id);
-          if (optimalTime && optimalTime.confidence > 0.5) {
-            // Schedule email for optimal time
-            // This would be implemented with a job queue in production
-            // Simplified for this implementation
-            logger.info('Would schedule email for optimal time', {
-              contactId: contact.id,
-              dayOfWeek: optimalTime.dayOfWeek,
-              hourOfDay: optimalTime.hourOfDay,
-            });
-            
-            // Record as a scheduled activity
-            await prisma.emailActivity.create({
-              data: {
-                id: randomUUID(),
-                campaignId,
-                contactId: contact.id,
-                type: ActivityType.SENT, // Using SENT since SCHEDULED might not be available
-                metadata: JSON.stringify({
-                  scheduled: true,
-                  optimalSendTime: optimalTime,
-                }),
-              },
-            });
-            
-            results.sentCount++;
-            continue;
-          }
-        }
-        
-        // Send immediately if not using optimal time or no optimal time found
-        const result = await sendTrackedEmail(contact, campaignId, baseOptions, campaign.organizationId);
-        
-        if (result.success) {
-          results.sentCount++;
-        } else {
-          results.failedCount++;
-          if (contact.id && result.error?.message) {
-            results.details[contact.id] = result.error.message;
-          }
-        }
-      } catch (error) {
-        results.failedCount++;
-        const contactId = contact.id || 'unknown';
-        results.details[contactId] = (error as Error).message || 'Unknown error';
-      }
-    }
-    
-    // Update campaign status
-    await prisma.emailCampaign.update({
-      where: { id: campaignId },
-      data: {
-        status: CampaignStatus.SENT,
-        sentAt: new Date(),
-      },
-    });
-    
-    return {
-      success: results.sentCount > 0,
-      ...results,
-    };
+    return result;
   } catch (error) {
     logger.error('Error sending campaign', error);
     throw error;
+  }
+}
+
+/**
+ * Send email using organization-specific provider
+ * 
+ * @param organizationId The organization ID
+ * @param options The email options
+ * @returns The result of the send operation
+ */
+export async function sendOrganizationEmail(
+  organizationId: string,
+  options: EmailOptions
+): Promise<EmailSendResult> {
+  try {
+    const result = await apiClient.communications.sendOrganizationEmail(
+      organizationId,
+      options
+    );
+    
+    return result;
+  } catch (error) {
+    logger.error('Error sending organization email:', { error, organizationId });
+    return {
+      success: false,
+      error: error instanceof Error ? error : new Error('Unknown error'),
+      provider: 'error'
+    };
   }
 }
 
@@ -612,33 +315,3 @@ To unsubscribe: mailto:unsubscribe@marketsage.africa?subject=Unsubscribe
 
   return plainText;
 }
-
-/**
- * Send email using organization-specific provider
- * 
- * @param organizationId The organization ID
- * @param options The email options
- * @returns The result of the send operation
- */
-export async function sendOrganizationEmail(
-  organizationId: string,
-  options: EmailOptions
-): Promise<EmailSendResult> {
-  try {
-    const result = await emailService.sendEmail(organizationId, options);
-    
-    return {
-      success: result.success,
-      messageId: result.messageId,
-      error: result.error,
-      provider: (result as any).provider || 'unknown'
-    };
-  } catch (error) {
-    logger.error('Error sending organization email:', { error, organizationId });
-    return {
-      success: false,
-      error: error instanceof Error ? error : new Error('Unknown error'),
-      provider: 'error'
-    };
-  }
-} 

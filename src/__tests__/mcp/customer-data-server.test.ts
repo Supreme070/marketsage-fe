@@ -14,7 +14,7 @@
  */
 
 import { CustomerDataMCPServer } from '../../mcp/servers/customer-data-server';
-import { MCPServerConfig } from '../../mcp/config/mcp-config';
+import type { MCPServerConfig } from '../../mcp/config/mcp-config';
 import { MCPAuthContext, MCPValidationError, CustomerQuery } from '../../mcp/types/mcp-types';
 import { 
   mockPrismaClient, 

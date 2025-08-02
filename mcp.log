@@ -1,0 +1,98 @@
+🚀 Starting MarketSage with MCP Servers...
+📡 Starting MCP Servers...
+Starting Customer Data MCP Server on port 3001...
+Starting Campaign Analytics MCP Server on port 3002...
+Starting LeadPulse MCP Server on port 3003...
+Starting External Services MCP Server on port 3004...
+Starting Monitoring MCP Server on port 3005...
+⏳ Waiting for MCP servers to initialize...
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/Users/supreme/Desktop/marketsage/src/mcp/servers/customer-data-server.js' imported from /Users/supreme/Desktop/marketsage/[eval]
+    at new NodeError (node:internal/errors:405:5)
+    at finalizeResolution (node:internal/modules/esm/resolve:327:11)
+    at moduleResolve (node:internal/modules/esm/resolve:980:10)
+    at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:404:12)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:373:25)
+    at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+    at ModuleLoader.import (node:internal/modules/esm/loader:336:34)
+    at importModuleDynamically (node:internal/process/execution:87:29)
+    at importModuleDynamicallyWrapper (node:internal/vm/module:432:21) {
+  url: 'file:///Users/supreme/Desktop/marketsage/src/mcp/servers/customer-data-server.js',
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/Users/supreme/Desktop/marketsage/src/mcp/servers/leadpulse-server.js' imported from /Users/supreme/Desktop/marketsage/[eval]
+    at new NodeError (node:internal/errors:405:5)
+    at finalizeResolution (node:internal/modules/esm/resolve:327:11)
+    at moduleResolve (node:internal/modules/esm/resolve:980:10)
+    at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:404:12)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:373:25)
+    at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+    at ModuleLoader.import (node:internal/modules/esm/loader:336:34)
+    at importModuleDynamically (node:internal/process/execution:87:29)
+    at importModuleDynamicallyWrapper (node:internal/vm/module:432:21) {
+  url: 'file:///Users/supreme/Desktop/marketsage/src/mcp/servers/leadpulse-server.js',
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/Users/supreme/Desktop/marketsage/src/mcp/servers/monitoring-server.js' imported from /Users/supreme/Desktop/marketsage/[eval]
+    at new NodeError (node:internal/errors:405:5)
+    at finalizeResolution (node:internal/modules/esm/resolve:327:11)
+    at moduleResolve (node:internal/modules/esm/resolve:980:10)
+    at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:404:12)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:373:25)
+    at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+    at ModuleLoader.import (node:internal/modules/esm/loader:336:34)
+    at importModuleDynamically (node:internal/process/execution:87:29)
+    at importModuleDynamicallyWrapper (node:internal/vm/module:432:21) {
+  url: 'file:///Users/supreme/Desktop/marketsage/src/mcp/servers/monitoring-server.js',
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/Users/supreme/Desktop/marketsage/src/mcp/servers/external-services-server.js' imported from /Users/supreme/Desktop/marketsage/[eval]
+    at new NodeError (node:internal/errors:405:5)
+    at finalizeResolution (node:internal/modules/esm/resolve:327:11)
+    at moduleResolve (node:internal/modules/esm/resolve:980:10)
+    at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:404:12)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:373:25)
+    at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+    at ModuleLoader.import (node:internal/modules/esm/loader:336:34)
+    at importModuleDynamically (node:internal/process/execution:87:29)
+    at importModuleDynamicallyWrapper (node:internal/vm/module:432:21) {
+  url: 'file:///Users/supreme/Desktop/marketsage/src/mcp/servers/external-services-server.js',
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/Users/supreme/Desktop/marketsage/src/mcp/servers/campaign-analytics-server.js' imported from /Users/supreme/Desktop/marketsage/[eval]
+    at new NodeError (node:internal/errors:405:5)
+    at finalizeResolution (node:internal/modules/esm/resolve:327:11)
+    at moduleResolve (node:internal/modules/esm/resolve:980:10)
+    at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:404:12)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:373:25)
+    at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+    at ModuleLoader.import (node:internal/modules/esm/loader:336:34)
+    at importModuleDynamically (node:internal/process/execution:87:29)
+    at importModuleDynamicallyWrapper (node:internal/vm/module:432:21) {
+  url: 'file:///Users/supreme/Desktop/marketsage/src/mcp/servers/campaign-analytics-server.js',
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+🏥 Checking MCP server health...
+⚠️ MCP server on port 3001 may still be starting...
+⚠️ MCP server on port 3002 may still be starting...
+⚠️ MCP server on port 3003 may still be starting...
+⚠️ MCP server on port 3004 may still be starting...
+⚠️ MCP server on port 3005 may still be starting...
+🌐 Starting Next.js application...
+
+> marketsage@0.1.0 start
+> next start -H 0.0.0.0
+
+ ⨯ Failed to start server
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at <unknown> (Error: listen EADDRINUSE: address already in use 0.0.0.0:3000) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
+}

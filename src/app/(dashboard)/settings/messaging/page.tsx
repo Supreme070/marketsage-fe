@@ -161,7 +161,7 @@ export default function MessagingSettingsPage() {
 
   const loadMessagingConfig = async () => {
     try {
-      const response = await fetch('/api/messaging/config');
+      const response = await fetch('/api/v2/messaging/config');
       if (response.ok) {
         const data = await response.json();
         setConfig(data);
@@ -173,7 +173,7 @@ export default function MessagingSettingsPage() {
 
   const loadUsageAnalytics = async () => {
     try {
-      const response = await fetch('/api/messaging/usage');
+      const response = await fetch('/api/v2/messaging/usage');
       if (response.ok) {
         const data = await response.json();
         setUsage(data.summary);
@@ -186,7 +186,7 @@ export default function MessagingSettingsPage() {
   const handleModelChange = async (newModel: 'customer_managed' | 'platform_managed') => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/messaging/config', {
+      const response = await fetch('/api/v2/messaging/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messagingModel: newModel })
@@ -205,7 +205,7 @@ export default function MessagingSettingsPage() {
   const handleCreditSettings = async (settings: Partial<MessagingConfig>) => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/messaging/config', {
+      const response = await fetch('/api/v2/messaging/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings)
@@ -224,7 +224,7 @@ export default function MessagingSettingsPage() {
   const handleTopUpCredits = async (amount: number) => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/messaging/credits/purchase', {
+      const response = await fetch('/api/v2/messaging/credits/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount, paymentMethod: 'paystack' })
@@ -251,7 +251,7 @@ export default function MessagingSettingsPage() {
   const handleManualTopUp = async (amount: number) => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/messaging/credits/purchase', {
+      const response = await fetch('/api/v2/messaging/credits/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount, paymentMethod: 'manual' })

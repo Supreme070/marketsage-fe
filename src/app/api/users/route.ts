@@ -1,160 +1,34 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { hash } from "bcrypt";
-import prisma from "@/lib/db/prisma";
-import type { DockerSafeUserCreate } from "@/lib/types/prisma";
-import { 
-  handleApiError, 
-  unauthorized, 
-  forbidden,
-  notFound,
-  validationError 
-} from "@/lib/errors";
+import type { NextRequest } from "next/server";
+import { proxyToBackend } from "@/lib/api-proxy";
 
-// Helper function to get tags from string
-function getTagsFromString(tagsString: string | null): string[] {
-  if (!tagsString) return [];
-  try {
-    return JSON.parse(tagsString);
-  } catch (e) {
-    return [];
-  }
-}
-
-// Helper function to add tags to contacts
-function addTagsToContacts(contacts: any[]): any[] {
-  return contacts.map(contact => ({
-    ...contact,
-    tags: getTagsFromString(contact.tagsString),
-  }));
-}
-
-// Get all users - only accessible by Super Admin and Admin
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-
-  // Check if user is authenticated
-  if (!session || !session.user) {
-    return unauthorized();
-  }
-
-  // Check if user is admin or super admin
-  if (session.user.role !== "SUPER_ADMIN" && session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  try {
-    // Get all users
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true,
-        lastLogin: true,
-        isActive: true,
-        // Don't include password hash
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-
-    // Super Admins can see all users
-    if (session.user.role === "SUPER_ADMIN") {
-      return NextResponse.json(users);
-    }
-
-    // Regular admins can't see super admins
-    const filteredUsers = users.filter((user) => user.role !== "SUPER_ADMIN");
-    return NextResponse.json(filteredUsers);
-  } catch (error) {
-    return handleApiError(error, "/api/users/route.ts");
-  }
+  return proxyToBackend(request, {
+    backendPath: 'users',
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
 }
 
-// Create a new user - Super Admin can create any role, Admin can only create regular users
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  return proxyToBackend(request, {
+    backendPath: 'users',
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-  // Check if user is authenticated and has permission
-  if (!session || !session.user) {
-    return unauthorized();
-  }
+export async function PATCH(request: NextRequest) {
+  return proxyToBackend(request, {
+    backendPath: 'users',
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-  // Only admins and super admins can create users
-  if (session.user.role !== "SUPER_ADMIN" && session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  try {
-    const body = await request.json();
-    const { name, email, password, role } = body;
-
-    // Validate input
-    if (!name || !email || !password) {
-      return NextResponse.json(
-        { error: "Name, email and password are required" },
-        { status: 400 }
-      );
-    }
-
-    // Check if email is already in use
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (existingUser) {
-      return NextResponse.json(
-        { error: "Email already in use" },
-        { status: 400 }
-      );
-    }
-
-    // Role-based permission check
-    const userRole = role || "USER";
-
-    // If not a super admin, can only create regular users
-    if (session.user.role !== "SUPER_ADMIN") {
-      if (userRole !== "USER") {
-        return NextResponse.json(
-          { error: "You can only create regular users" },
-          { status: 403 }
-        );
-      }
-    }
-
-    // Hash the password
-    const hashedPassword = await hash(password, 10);
-
-    // Create a Docker-safe user input
-    const userData: DockerSafeUserCreate = {
-      name,
-      email,
-      password: hashedPassword,
-      role: userRole,
-      emailVerified: new Date() // Auto-verify for now
-    };
-
-    // Create the user with our Docker-compatible data structure
-    const newUser = await prisma.user.create({
-      // Using 'as any' to avoid type conflicts in Docker environment
-      data: userData as any,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-        // Don't include password
-      },
-    });
-
-    return NextResponse.json(newUser, { status: 201 });
-  } catch (error) {
-    return handleApiError(error, "/api/users/route.ts");
-  }
+export async function DELETE(request: NextRequest) {
+  return proxyToBackend(request, {
+    backendPath: 'users',
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
 }

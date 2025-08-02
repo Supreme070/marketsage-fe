@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import type React from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";

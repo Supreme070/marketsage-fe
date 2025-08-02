@@ -153,7 +153,7 @@ describe('Docker Environment Integration Tests', () => {
       try {
         // Check container memory usage
         const memInfo = execSync('cat /proc/meminfo | grep MemAvailable', { encoding: 'utf8' });
-        const availableMemory = parseInt(memInfo.split(':')[1].trim().split(' ')[0]);
+        const availableMemory = Number.parseInt(memInfo.split(':')[1].trim().split(' ')[0]);
         
         expect(availableMemory).toBeGreaterThan(100000); // At least 100MB available
         

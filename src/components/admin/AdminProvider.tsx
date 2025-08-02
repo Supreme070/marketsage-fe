@@ -1,9 +1,10 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import type React from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { Session } from "next-auth";
-import { getAdminConfig, getAdminPermissions, isAuthorizedAdmin, AdminPermissions } from "@/lib/admin-config";
+import type { Session } from "next-auth";
+import { getAdminConfig, getAdminPermissions, isAuthorizedAdmin, type AdminPermissions } from "@/lib/admin-config";
 
 interface AdminContextType {
   session: Session;

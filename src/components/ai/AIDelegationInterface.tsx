@@ -145,7 +145,7 @@ const AIDelegationInterface: React.FC = () => {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/ai/delegation');
+      const response = await fetch('/api/v2/ai/delegation');
       if (!response.ok) throw new Error('Failed to fetch delegation data');
       
       const result = await response.json();
@@ -236,7 +236,7 @@ const AIDelegationInterface: React.FC = () => {
     }
 
     try {
-      const response = await fetch('/api/ai/delegation', {
+      const response = await fetch('/api/v2/ai/delegation', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -283,7 +283,7 @@ const AIDelegationInterface: React.FC = () => {
 
   const handleRevokeGrant = async (grantId: string) => {
     try {
-      const response = await fetch(`/api/ai/delegation?grantId=${grantId}&reason=Manual revocation`, {
+      const response = await fetch(`/api/v2/ai/delegation?grantId=${grantId}&reason=Manual revocation`, {
         method: 'DELETE',
       });
 

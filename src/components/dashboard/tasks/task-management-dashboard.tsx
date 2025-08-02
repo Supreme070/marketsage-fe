@@ -47,7 +47,7 @@ export function TaskManagementDashboard() {
   const generateAISuggestions = async () => {
     setIsGeneratingAI(true);
     try {
-      const response = await fetch('/api/ai/tasks/suggest', {
+      const response = await fetch('/api/v2/ai/tasks/suggest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

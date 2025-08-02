@@ -3,7 +3,7 @@
  * Provides email sending capabilities using Postmark API
  */
 
-import { EmailProvider, EmailOptions, EmailResult, EmailStats } from './base-provider';
+import type { EmailProvider, EmailOptions, EmailResult, EmailStats } from './base-provider';
 import { logger } from '@/lib/logger';
 
 export interface PostmarkConfig {

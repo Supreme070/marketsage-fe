@@ -1,100 +1,39 @@
-import { type NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
-import { prisma } from '@/lib/db/prisma';
+import type { NextRequest } from "next/server";
+import { proxyToBackend } from "@/lib/api-proxy";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { testId: string } }
-) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+// Auto-converted to proxy pattern
+export async function GET(request: NextRequest, context?: any) {
+  const backendPath = request.url.replace('/api/', '').split('?')[0];
+  return proxyToBackend(request, {
+    backendPath,
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-    const { testId } = params;
+export async function POST(request: NextRequest, context?: any) {
+  const backendPath = request.url.replace('/api/', '').split('?')[0];
+  return proxyToBackend(request, {
+    backendPath,
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-    // Verify test exists and user has access
-    const test = await prisma.leadPulseABTest.findFirst({
-      where: {
-        id: testId,
-        form: {
-          organization: {
-            users: {
-              some: {
-                userId: session.user.id
-              }
-            }
-          }
-        }
-      }
-    });
+export async function PATCH(request: NextRequest, context?: any) {
+  const backendPath = request.url.replace('/api/', '').split('?')[0];
+  return proxyToBackend(request, {
+    backendPath,
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-    if (!test) {
-      return NextResponse.json(
-        { error: 'Test not found or access denied' },
-        { status: 404 }
-      );
-    }
-
-    // Check if test can be paused
-    if (test.status !== 'RUNNING') {
-      return NextResponse.json(
-        { error: 'Only running tests can be paused' },
-        { status: 400 }
-      );
-    }
-
-    const pausedAt = new Date();
-
-    // Pause the test
-    await prisma.leadPulseABTest.update({
-      where: { id: testId },
-      data: {
-        status: 'PAUSED',
-        pausedAt,
-        variants: {
-          updateMany: {
-            where: { testId },
-            data: {
-              status: 'PAUSED',
-              pausedAt
-            }
-          }
-        }
-      }
-    });
-
-    // Log the test pause event
-    await prisma.leadPulseAnalytics.create({
-      data: {
-        visitorId: 'system',
-        event: 'ab_test_paused',
-        data: {
-          testId,
-          testName: test.name,
-          pausedBy: session.user.id,
-          reason: 'manual_pause'
-        }
-      }
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: 'A/B test paused successfully',
-      test: {
-        id: test.id,
-        status: 'PAUSED',
-        pausedAt: pausedAt.toISOString()
-      }
-    });
-
-  } catch (error) {
-    console.error('Error pausing A/B test:', error);
-    return NextResponse.json(
-      { error: 'Failed to pause A/B test' },
-      { status: 500 }
-    );
-  }
+export async function DELETE(request: NextRequest, context?: any) {
+  const backendPath = request.url.replace('/api/', '').split('?')[0];
+  return proxyToBackend(request, {
+    backendPath,
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
 }

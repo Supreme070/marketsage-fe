@@ -68,7 +68,7 @@ export function WhatsAppComposeModal({ isOpen, onClose, contact }: WhatsAppCompo
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/whatsapp/send', {
+      const response = await fetch('/api/v2/whatsapp/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

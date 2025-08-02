@@ -672,7 +672,7 @@ export function AnomalyDetectionSystem({
   };
 
   // Resolve anomaly
-  const resolveAnomaly = (anomalyId: string, resolution: string = 'Manually resolved') => {
+  const resolveAnomaly = (anomalyId: string, resolution = 'Manually resolved') => {
     setAnomalies(prev => prev.map(a => {
       if (a.id === anomalyId) {
         const resolved = {

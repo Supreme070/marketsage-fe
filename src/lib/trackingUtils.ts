@@ -115,7 +115,7 @@ export async function trackEngagement(
   metadata?: Record<string, any>
 ): Promise<boolean> {
   try {
-    const response = await fetch('/api/engagements/track', {
+    const response = await fetch('/api/v2/engagements/track', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -1,0 +1,59 @@
+import { PrismaClient } from '@prisma/client';
+
+interface RetryOptions {
+  maxRetries?: number;
+  retryDelay?: number;
+  backoffFactor?: number;
+}
+
+export async function withRetry<T>(
+  operation: () => Promise<T>,
+  options: RetryOptions = {}
+): Promise<T> {
+  const { maxRetries = 3, retryDelay = 1000, backoffFactor = 2 } = options;
+  
+  let lastError: Error;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error as Error;
+      console.log(`Attempt ${attempt}/${maxRetries} failed:`, error);
+      
+      if (attempt < maxRetries) {
+        const delay = retryDelay * Math.pow(backoffFactor, attempt - 1);
+        console.log(`Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw lastError!;
+}
+
+export function createPrismaClientWithRetry(): PrismaClient {
+  const databaseUrl = process.env.DATABASE_URL || 
+    "postgresql://marketsage:marketsage_password@localhost:5432/marketsage?schema=public";
+  
+  console.log(`Connecting to database with URL pattern: ${databaseUrl.replace(/:[^@]*@/, ':***@')}`);
+  
+  return new PrismaClient({
+    datasources: {
+      db: {
+        url: databaseUrl
+      }
+    },
+    log: ['error', 'warn']
+  });
+}
+
+export async function testConnection(prisma: PrismaClient): Promise<boolean> {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return true;
+  } catch (error) {
+    console.error('Database connection test failed:', error);
+    return false;
+  }
+}

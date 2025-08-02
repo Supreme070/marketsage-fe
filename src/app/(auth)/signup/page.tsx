@@ -53,7 +53,7 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch('/api/v2/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

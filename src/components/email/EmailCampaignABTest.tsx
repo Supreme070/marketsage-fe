@@ -35,7 +35,7 @@ export default function EmailCampaignABTest({
   // Fetch active tests when component loads
   const fetchActiveTests = async () => {
     try {
-      const response = await fetch(`/api/ab-tests?entityType=EMAIL_CAMPAIGN&entityId=${campaignId}`);
+      const response = await fetch(`/api/v2/ab-tests?entityType=EMAIL_CAMPAIGN&entityId=${campaignId}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch A/B tests');
@@ -62,7 +62,7 @@ export default function EmailCampaignABTest({
     setLoading(true);
     
     try {
-      const response = await fetch('/api/email/campaigns/ab-tests', {
+      const response = await fetch('/api/v2/email/campaigns/ab-tests', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -95,7 +95,7 @@ export default function EmailCampaignABTest({
   // View test results
   const viewTestResults = async (testId: string) => {
     try {
-      const response = await fetch(`/api/ab-tests?id=${testId}`);
+      const response = await fetch(`/api/v2/ab-tests?id=${testId}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch test results');
@@ -113,7 +113,7 @@ export default function EmailCampaignABTest({
   // Start a test
   const startTest = async (testId: string) => {
     try {
-      const response = await fetch(`/api/ab-tests/${testId}`, {
+      const response = await fetch(`/api/v2/ab-tests/${testId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -139,7 +139,7 @@ export default function EmailCampaignABTest({
   // Stop a test
   const stopTest = async (testId: string) => {
     try {
-      const response = await fetch(`/api/ab-tests/${testId}`, {
+      const response = await fetch(`/api/v2/ab-tests/${testId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -165,7 +165,7 @@ export default function EmailCampaignABTest({
   // Delete a test
   const deleteTest = async (testId: string) => {
     try {
-      const response = await fetch(`/api/ab-tests/${testId}`, {
+      const response = await fetch(`/api/v2/ab-tests/${testId}`, {
         method: 'DELETE',
       });
       

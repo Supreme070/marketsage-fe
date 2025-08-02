@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/prisma';
 
 export interface AdminRequestLog {
@@ -230,7 +230,7 @@ export class AdminRequestLogger {
     req: NextRequest,
     response: NextResponse,
     userInfo?: { id: string; role: string },
-    duration: number = 0,
+    duration = 0,
     error?: Error
   ): Promise<AdminRequestLog> {
     const url = new URL(req.url);
@@ -335,7 +335,7 @@ export class AdminRequestLogger {
 
   private calculateResponseSize(response: NextResponse): number {
     const contentLength = response.headers.get('content-length');
-    return contentLength ? parseInt(contentLength, 10) : 0;
+    return contentLength ? Number.parseInt(contentLength, 10) : 0;
   }
 
   private logToConsole(log: AdminRequestLog): void {
@@ -479,7 +479,7 @@ export const adminRequestLogger = new AdminRequestLogger();
  * Middleware wrapper for admin request logging
  */
 export function withAdminRequestLogging(handler: Function) {
-  return async function(req: NextRequest, ...args: any[]) {
+  return async (req: NextRequest, ...args: any[]) => {
     const startTime = Date.now();
     let response: NextResponse;
     let error: Error | undefined;
@@ -522,9 +522,9 @@ export async function getLogsHandler(req: Request) {
     userId: url.searchParams.get('userId') || undefined,
     method: url.searchParams.get('method') || undefined,
     statusCode: url.searchParams.get('statusCode') ? 
-      parseInt(url.searchParams.get('statusCode')!) : undefined,
+      Number.parseInt(url.searchParams.get('statusCode')!) : undefined,
     limit: url.searchParams.get('limit') ? 
-      parseInt(url.searchParams.get('limit')!) : 100
+      Number.parseInt(url.searchParams.get('limit')!) : 100
   };
 
   const logs = adminRequestLogger.getLogs(filter);

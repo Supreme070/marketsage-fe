@@ -390,7 +390,7 @@ export async function resetTestData(): Promise<void> {
  * Performance measurement utilities
  */
 export class PerformanceTracker {
-  private startTime: number = 0;
+  private startTime = 0;
   private measurements: Map<string, number[]> = new Map();
 
   start(): void {

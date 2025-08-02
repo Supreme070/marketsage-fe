@@ -38,7 +38,7 @@ export async function createSubjectLineTest(
     }));
     
     // Create the A/B test
-    const response = await fetch('/api/ab-tests', {
+    const response = await fetch('/api/v2/ab-tests', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

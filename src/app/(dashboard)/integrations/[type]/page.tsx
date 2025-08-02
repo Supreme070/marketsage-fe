@@ -203,7 +203,7 @@ export default function IntegrationConnectionPage({ params }: IntegrationPagePro
     setTestResult(null);
     
     try {
-      const response = await fetch("/api/integrations/test", {
+      const response = await fetch("/api/v2/integrations/test", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

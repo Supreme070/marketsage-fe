@@ -26,7 +26,7 @@ export default function WorkflowPerformancePage() {
 
     setControlLoading(true);
     try {
-      const response = await fetch("/api/workflows/performance", {
+      const response = await fetch("/api/v2/workflows/performance", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -103,9 +103,9 @@ export default function TrafficConversionFunnels({ className }: TrafficConversio
   const fetchFunnelData = async () => {
     try {
       const [funnelsResponse, insightsResponse, sourcesResponse] = await Promise.all([
-        fetch(`/api/leadpulse/conversion-funnels?timeRange=${timeRange}`),
-        fetch('/api/leadpulse/funnel-insights'),
-        fetch(`/api/leadpulse/traffic-sources?timeRange=${timeRange}`)
+        fetch(`/api/v2/leadpulse/conversion-funnels?timeRange=${timeRange}`),
+        fetch('/api/v2/leadpulse/funnel-insights'),
+        fetch(`/api/v2/leadpulse/traffic-sources?timeRange=${timeRange}`)
       ]);
 
       // Use mock data for demo

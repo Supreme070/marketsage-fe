@@ -423,7 +423,7 @@ export default function WorkflowEditor({
             ...workflow,
           };
 
-          const response = await fetch('/api/workflows', {
+          const response = await fetch('/api/v2/workflows', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod';
-import { BaseMCPServer } from './base-mcp-server';
+import { HTTPBaseMCPServer } from './http-base-mcp-server';
 import { 
   type MCPAuthContext, 
   type MCPServerConfig,
@@ -21,7 +21,7 @@ import { defaultMCPConfig } from '../config/mcp-config';
 import { logger } from '../../lib/logger';
 import { prisma } from '../../lib/db/prisma';
 
-export class MonitoringMCPServer extends BaseMCPServer {
+export class MonitoringMCPServer extends HTTPBaseMCPServer {
   constructor(config?: Partial<MCPServerConfig>) {
     super({
       ...defaultMCPConfig.servers.monitoring,

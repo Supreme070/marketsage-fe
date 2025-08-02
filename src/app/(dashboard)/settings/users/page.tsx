@@ -87,7 +87,7 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/users");
+      const response = await fetch("/api/v2/users");
       if (!response.ok) {
         throw new Error("Failed to fetch users");
       }
@@ -129,7 +129,7 @@ export default function UsersPage() {
     
     setInviteLoading(true);
     try {
-      const response = await fetch("/api/users", {
+      const response = await fetch("/api/v2/users", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -170,7 +170,7 @@ export default function UsersPage() {
   // Toggle user active status
   const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
     try {
-      const response = await fetch(`/api/users/${userId}`, {
+      const response = await fetch(`/api/v2/users/${userId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

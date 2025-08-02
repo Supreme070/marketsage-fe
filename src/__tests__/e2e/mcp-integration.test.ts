@@ -182,7 +182,7 @@ test.describe('MCP Integration & Fallback', () => {
       
       // Verify acceptable response times (< 1000ms)
       const responseTime = await page.textContent('[data-testid="avg-response-time"]');
-      const responseTimeMs = parseInt(responseTime?.replace(/[^\d]/g, '') || '0');
+      const responseTimeMs = Number.parseInt(responseTime?.replace(/[^\d]/g, '') || '0');
       expect(responseTimeMs).toBeLessThan(1000);
       
       // Test server connectivity

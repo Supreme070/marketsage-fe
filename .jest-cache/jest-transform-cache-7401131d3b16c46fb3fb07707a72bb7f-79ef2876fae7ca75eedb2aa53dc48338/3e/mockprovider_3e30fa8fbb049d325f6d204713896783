@@ -1,0 +1,53 @@
+e406be0a82c2ce68ced536bb9a2c6844
+"use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+Object.defineProperty(exports, "MockSMSProvider", {
+    enumerable: true,
+    get: function() {
+        return MockSMSProvider;
+    }
+});
+const _baseprovider = require("./base-provider");
+class MockSMSProvider extends _baseprovider.BaseSMSProvider {
+    async sendSMS(phoneNumber, message) {
+        try {
+            // Validate phone number format
+            if (!this.validatePhoneNumber(phoneNumber)) {
+                return {
+                    success: false,
+                    error: {
+                        message: `Invalid phone number format: ${phoneNumber}`,
+                        code: 'INVALID_PHONE_NUMBER'
+                    }
+                };
+            }
+            console.log(`[MOCK SMS] Sending to ${phoneNumber}: ${message}`);
+            // Simulate a small delay
+            await new Promise((resolve)=>setTimeout(resolve, 100));
+            // Simulate success with realistic message ID
+            return {
+                success: true,
+                messageId: `mock_sms_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+            };
+        } catch (error) {
+            return {
+                success: false,
+                error: {
+                    message: error instanceof Error ? error.message : 'Mock SMS sending failed',
+                    code: 'MOCK_ERROR'
+                }
+            };
+        }
+    }
+    isConfigured() {
+        // Mock provider is always "configured" for development
+        return true;
+    }
+    constructor(...args){
+        super(...args), this.name = 'Mock SMS Provider';
+    }
+}
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi9Vc2Vycy9zdXByZW1lL0Rlc2t0b3AvbWFya2V0c2FnZS9zcmMvbGliL3Ntcy1wcm92aWRlcnMvbW9jay1wcm92aWRlci50cyJdLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgeyBCYXNlU01TUHJvdmlkZXIsIHR5cGUgU01TUmVzdWx0IH0gZnJvbSAnLi9iYXNlLXByb3ZpZGVyJztcblxuLy8gTW9jayBTTVMgcHJvdmlkZXIgZm9yIGRldmVsb3BtZW50IGFuZCB0ZXN0aW5nXG5leHBvcnQgY2xhc3MgTW9ja1NNU1Byb3ZpZGVyIGV4dGVuZHMgQmFzZVNNU1Byb3ZpZGVyIHtcbiAgbmFtZSA9ICdNb2NrIFNNUyBQcm92aWRlcic7XG5cbiAgYXN5bmMgc2VuZFNNUyhwaG9uZU51bWJlcjogc3RyaW5nLCBtZXNzYWdlOiBzdHJpbmcpOiBQcm9taXNlPFNNU1Jlc3VsdD4ge1xuICAgIHRyeSB7XG4gICAgICAvLyBWYWxpZGF0ZSBwaG9uZSBudW1iZXIgZm9ybWF0XG4gICAgICBpZiAoIXRoaXMudmFsaWRhdGVQaG9uZU51bWJlcihwaG9uZU51bWJlcikpIHtcbiAgICAgICAgcmV0dXJuIHtcbiAgICAgICAgICBzdWNjZXNzOiBmYWxzZSxcbiAgICAgICAgICBlcnJvcjoge1xuICAgICAgICAgICAgbWVzc2FnZTogYEludmFsaWQgcGhvbmUgbnVtYmVyIGZvcm1hdDogJHtwaG9uZU51bWJlcn1gLFxuICAgICAgICAgICAgY29kZTogJ0lOVkFMSURfUEhPTkVfTlVNQkVSJ1xuICAgICAgICAgIH1cbiAgICAgICAgfTtcbiAgICAgIH1cblxuICAgICAgY29uc29sZS5sb2coYFtNT0NLIFNNU10gU2VuZGluZyB0byAke3Bob25lTnVtYmVyfTogJHttZXNzYWdlfWApO1xuICAgICAgXG4gICAgICAvLyBTaW11bGF0ZSBhIHNtYWxsIGRlbGF5XG4gICAgICBhd2FpdCBuZXcgUHJvbWlzZShyZXNvbHZlID0+IHNldFRpbWVvdXQocmVzb2x2ZSwgMTAwKSk7XG4gICAgICBcbiAgICAgIC8vIFNpbXVsYXRlIHN1Y2Nlc3Mgd2l0aCByZWFsaXN0aWMgbWVzc2FnZSBJRFxuICAgICAgcmV0dXJuIHtcbiAgICAgICAgc3VjY2VzczogdHJ1ZSxcbiAgICAgICAgbWVzc2FnZUlkOiBgbW9ja19zbXNfJHtEYXRlLm5vdygpfV8ke01hdGgucmFuZG9tKCkudG9TdHJpbmcoMzYpLnN1YnN0cigyLCA5KX1gLFxuICAgICAgfTtcbiAgICB9IGNhdGNoIChlcnJvcikge1xuICAgICAgcmV0dXJuIHtcbiAgICAgICAgc3VjY2VzczogZmFsc2UsXG4gICAgICAgIGVycm9yOiB7XG4gICAgICAgICAgbWVzc2FnZTogZXJyb3IgaW5zdGFuY2VvZiBFcnJvciA/IGVycm9yLm1lc3NhZ2UgOiAnTW9jayBTTVMgc2VuZGluZyBmYWlsZWQnLFxuICAgICAgICAgIGNvZGU6ICdNT0NLX0VSUk9SJ1xuICAgICAgICB9LFxuICAgICAgfTtcbiAgICB9XG4gIH1cblxuICBpc0NvbmZpZ3VyZWQoKTogYm9vbGVhbiB7XG4gICAgLy8gTW9jayBwcm92aWRlciBpcyBhbHdheXMgXCJjb25maWd1cmVkXCIgZm9yIGRldmVsb3BtZW50XG4gICAgcmV0dXJuIHRydWU7XG4gIH1cbn0iXSwibmFtZXMiOlsiTW9ja1NNU1Byb3ZpZGVyIiwiQmFzZVNNU1Byb3ZpZGVyIiwic2VuZFNNUyIsInBob25lTnVtYmVyIiwibWVzc2FnZSIsInZhbGlkYXRlUGhvbmVOdW1iZXIiLCJzdWNjZXNzIiwiZXJyb3IiLCJjb2RlIiwiY29uc29sZSIsImxvZyIsIlByb21pc2UiLCJyZXNvbHZlIiwic2V0VGltZW91dCIsIm1lc3NhZ2VJZCIsIkRhdGUiLCJub3ciLCJNYXRoIiwicmFuZG9tIiwidG9TdHJpbmciLCJzdWJzdHIiLCJFcnJvciIsImlzQ29uZmlndXJlZCIsIm5hbWUiXSwibWFwcGluZ3MiOiI7Ozs7K0JBR2FBOzs7ZUFBQUE7Ozs4QkFIbUM7QUFHekMsTUFBTUEsd0JBQXdCQyw2QkFBZTtJQUdsRCxNQUFNQyxRQUFRQyxXQUFtQixFQUFFQyxPQUFlLEVBQXNCO1FBQ3RFLElBQUk7WUFDRiwrQkFBK0I7WUFDL0IsSUFBSSxDQUFDLElBQUksQ0FBQ0MsbUJBQW1CLENBQUNGLGNBQWM7Z0JBQzFDLE9BQU87b0JBQ0xHLFNBQVM7b0JBQ1RDLE9BQU87d0JBQ0xILFNBQVMsQ0FBQyw2QkFBNkIsRUFBRUQsYUFBYTt3QkFDdERLLE1BQU07b0JBQ1I7Z0JBQ0Y7WUFDRjtZQUVBQyxRQUFRQyxHQUFHLENBQUMsQ0FBQyxzQkFBc0IsRUFBRVAsWUFBWSxFQUFFLEVBQUVDLFNBQVM7WUFFOUQseUJBQXlCO1lBQ3pCLE1BQU0sSUFBSU8sUUFBUUMsQ0FBQUEsVUFBV0MsV0FBV0QsU0FBUztZQUVqRCw2Q0FBNkM7WUFDN0MsT0FBTztnQkFDTE4sU0FBUztnQkFDVFEsV0FBVyxDQUFDLFNBQVMsRUFBRUMsS0FBS0MsR0FBRyxHQUFHLENBQUMsRUFBRUMsS0FBS0MsTUFBTSxHQUFHQyxRQUFRLENBQUMsSUFBSUMsTUFBTSxDQUFDLEdBQUcsSUFBSTtZQUNoRjtRQUNGLEVBQUUsT0FBT2IsT0FBTztZQUNkLE9BQU87Z0JBQ0xELFNBQVM7Z0JBQ1RDLE9BQU87b0JBQ0xILFNBQVNHLGlCQUFpQmMsUUFBUWQsTUFBTUgsT0FBTyxHQUFHO29CQUNsREksTUFBTTtnQkFDUjtZQUNGO1FBQ0Y7SUFDRjtJQUVBYyxlQUF3QjtRQUN0Qix1REFBdUQ7UUFDdkQsT0FBTztJQUNUOztRQXhDSyxxQkFDTEMsT0FBTzs7QUF3Q1QifQ==

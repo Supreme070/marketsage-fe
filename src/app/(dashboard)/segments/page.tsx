@@ -107,7 +107,7 @@ export default function SegmentsPage() {
     async function fetchSegments() {
       try {
         setLoading(true);
-        const response = await fetch('/api/segments', {
+        const response = await fetch('/api/v2/segments', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -150,7 +150,7 @@ export default function SegmentsPage() {
       }
       
       setCreating(true);
-      const response = await fetch('/api/segments', {
+      const response = await fetch('/api/v2/segments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

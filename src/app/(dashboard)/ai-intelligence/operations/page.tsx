@@ -71,10 +71,10 @@ export default function AIOperationsHub() {
 
         // Fetch operational metrics and system health
         const [metricsRes, tasksRes, healthRes, alertsRes] = await Promise.all([
-          fetch('/api/ai/performance-monitoring', { credentials: 'include' }),
-          fetch('/api/ai/task-monitoring', { credentials: 'include' }),
-          fetch('/api/ai/health-check', { credentials: 'include' }),
-          fetch('/api/monitoring/alerts', { credentials: 'include' })
+          fetch('/api/v2/ai/performance-monitoring', { credentials: 'include' }),
+          fetch('/api/v2/ai/task-monitoring', { credentials: 'include' }),
+          fetch('/api/v2/ai/health-check', { credentials: 'include' }),
+          fetch('/api/v2/monitoring/alerts', { credentials: 'include' })
         ]);
 
         // Process metrics data

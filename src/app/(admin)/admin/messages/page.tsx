@@ -77,7 +77,7 @@ export default function AdminMessagesPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const response = await fetch('/api/admin/messages');
+        const response = await fetch('/api/v2/admin/messages');
         if (!response.ok) {
           throw new Error('Failed to fetch messages data');
         }

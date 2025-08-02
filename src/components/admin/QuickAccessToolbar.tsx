@@ -43,7 +43,7 @@ export function QuickAccessToolbar() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('/api/admin/quick-stats');
+        const response = await fetch('/api/v2/admin/quick-stats');
         if (response.ok) {
           const data = await response.json();
           setStats(data);
@@ -66,7 +66,7 @@ export function QuickAccessToolbar() {
 
     const interval = setInterval(async () => {
       try {
-        const response = await fetch('/api/admin/quick-stats');
+        const response = await fetch('/api/v2/admin/quick-stats');
         if (response.ok) {
           const data = await response.json();
           setStats(data);

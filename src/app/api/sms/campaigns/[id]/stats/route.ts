@@ -1,83 +1,36 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { PrismaClient, ActivityType } from "@prisma/client";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import prisma from "@/lib/db/prisma";
-import { 
-  handleApiError, 
-  unauthorized, 
-  forbidden,
-  notFound,
-  validationError 
-} from "@/lib/errors";
+import type { NextRequest } from "next/server";
+import { proxyToBackend } from "@/lib/api-proxy";
 
-// GET SMS campaign statistics
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const session = await getServerSession(authOptions);
+// Proxy sms/campaigns/[id]/stats to NestJS backend
 
-  // Check if user is authenticated
-  if (!session || !session.user) {
-    return unauthorized();
-  }
+export async function GET(request: NextRequest, context?: any) {
+  return proxyToBackend(request, {
+    backendPath: 'sms/campaigns/[id]/stats',
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-  // Access params safely in Next.js 15
-  const { id: campaignId } = await params;
+export async function POST(request: NextRequest, context?: any) {
+  return proxyToBackend(request, {
+    backendPath: 'sms/campaigns/[id]/stats',
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-  try {
-    // Check if campaign exists and user has access
-    const campaign = await prisma.sMSCampaign.findUnique({
-      where: { id: campaignId },
-    });
+export async function PATCH(request: NextRequest, context?: any) {
+  return proxyToBackend(request, {
+    backendPath: 'sms/campaigns/[id]/stats',
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-    if (!campaign) {
-      return notFound("Campaign not found");
-    }
-
-    // Check if user has access to this campaign
-    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN" || session.user.role === "IT_ADMIN";
-    if (!isAdmin && campaign.createdById !== session.user.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    // Get campaign statistics
-    const activityStats = await prisma.sMSActivity.groupBy({
-      by: ['type'],
-      where: {
-        campaignId,
-      },
-      _count: {
-        type: true,
-      },
-    });
-
-    // Get total recipient count
-    const totalRecipients = await prisma.sMSActivity.count({
-      where: {
-        campaignId,
-      },
-    });
-
-    // Transform activity stats into a more usable format
-    const typeCounts = activityStats.reduce((acc: Record<string, number>, stat) => {
-      acc[stat.type] = stat._count.type;
-      return acc;
-    }, {});
-
-    // Calculate percentages
-    const stats = {
-      totalRecipients,
-      sent: typeCounts[ActivityType.SENT] || 0,
-      delivered: typeCounts[ActivityType.DELIVERED] || 0,
-      failed: typeCounts[ActivityType.FAILED] || 0,
-      deliveryRate: totalRecipients > 0 ? ((typeCounts[ActivityType.DELIVERED] || 0) / totalRecipients) * 100 : 0,
-      failureRate: totalRecipients > 0 ? ((typeCounts[ActivityType.FAILED] || 0) / totalRecipients) * 100 : 0,
-    };
-
-    return NextResponse.json(stats);
-  } catch (error) {
-    return handleApiError(error, "/api/sms/campaigns/[id]/stats/route.ts");
-  }
-} 
+export async function DELETE(request: NextRequest, context?: any) {
+  return proxyToBackend(request, {
+    backendPath: 'sms/campaigns/[id]/stats',
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}

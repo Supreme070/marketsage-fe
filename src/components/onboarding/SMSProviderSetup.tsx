@@ -210,7 +210,7 @@ export function SMSProviderSetup() {
     setIsConfiguring(true);
 
     try {
-      const response = await fetch('/api/onboarding/configure-sms', {
+      const response = await fetch('/api/v2/onboarding/configure-sms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -260,7 +260,7 @@ export function SMSProviderSetup() {
     setIsTesting(true);
 
     try {
-      const response = await fetch('/api/onboarding/test-sms', {
+      const response = await fetch('/api/v2/onboarding/test-sms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

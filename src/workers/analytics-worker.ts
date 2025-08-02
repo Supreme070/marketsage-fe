@@ -9,7 +9,7 @@
 interface AnalyticsWorkerMessage {
   id: string;
   type: 'segment_visitors' | 'calculate_stats' | 'predict_churn' | 'analyze_patterns' | 'process_funnel';
-  data: any;
+  data: unknown;
   options?: {
     batchSize?: number;
     parallel?: boolean;
@@ -20,7 +20,7 @@ interface AnalyticsWorkerMessage {
 interface AnalyticsWorkerResponse {
   id: string;
   type: string;
-  result: any;
+  result: unknown;
   error?: string;
   progress?: number;
   timestamp: number;
@@ -44,7 +44,7 @@ interface VisitorData {
   deviceType: string;
   engagementScore: number;
   tags: string[];
-  customAttributes: Record<string, any>;
+  customAttributes: Record<string, unknown>;
 }
 
 interface SegmentationCriteria {
@@ -142,7 +142,7 @@ interface FunnelAnalysis {
 
 // Machine Learning utilities
 class MLUtils {
-  static kMeansCluster(data: number[][], k: number, maxIterations: number = 100): number[][] {
+  static kMeansCluster(data: number[][], k: number, maxIterations = 100): number[][] {
     const centroids: number[][] = [];
     const assignments: number[] = [];
     
@@ -158,7 +158,7 @@ class MLUtils {
       // Assign points to nearest centroid
       const newAssignments: number[] = [];
       for (let i = 0; i < data.length; i++) {
-        let minDistance = Infinity;
+        let minDistance = Number.POSITIVE_INFINITY;
         let nearestCentroid = 0;
         
         for (let j = 0; j < centroids.length; j++) {

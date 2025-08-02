@@ -8,7 +8,7 @@ const { randomUUID } = require('crypto');
 
 // Allow connection to both Docker internal and local connections
 const databaseUrl = process.env.DATABASE_URL || 
-  "postgresql://marketsage:marketsage_password@marketsage-db:5432/marketsage?schema=public";
+  "postgresql://marketsage:marketsage_password@postgres:5432/marketsage?schema=public";
 
 console.log(`Connecting to database with URL pattern: ${databaseUrl.replace(/password.*@/, "password@")}`);
 

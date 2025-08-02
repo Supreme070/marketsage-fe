@@ -518,7 +518,7 @@ export function PerformanceMonitor({
 
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Refresh:</span>
-              <Select value={refreshInterval.toString()} onValueChange={(value) => setRefreshInterval(parseInt(value))}>
+              <Select value={refreshInterval.toString()} onValueChange={(value) => setRefreshInterval(Number.parseInt(value))}>
                 <SelectTrigger className="w-24">
                   <SelectValue />
                 </SelectTrigger>

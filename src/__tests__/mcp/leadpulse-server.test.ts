@@ -18,7 +18,7 @@
  */
 
 import { LeadPulseMCPServer } from '../../mcp/servers/leadpulse-server';
-import { MCPServerConfig } from '../../mcp/config/mcp-config';
+import type { MCPServerConfig } from '../../mcp/config/mcp-config';
 import { MCPAuthContext, MCPValidationError, LeadPulseQuery } from '../../mcp/types/mcp-types';
 import { 
   mockPrismaClient, 

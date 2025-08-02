@@ -1,57 +1,39 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import prisma from "@/lib/db/prisma";
+import type { NextRequest } from "next/server";
+import { proxyToBackend } from "@/lib/api-proxy";
 
-export async function GET(request: Request) {
-  try {
-    const session = await getServerSession(authOptions);
+// Auto-converted to proxy pattern
+export async function GET(request: NextRequest, context?: any) {
+  const backendPath = request.url.replace('/api/', '').split('?')[0];
+  return proxyToBackend(request, {
+    backendPath,
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+export async function POST(request: NextRequest, context?: any) {
+  const backendPath = request.url.replace('/api/', '').split('?')[0];
+  return proxyToBackend(request, {
+    backendPath,
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-    // Get user's organization
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { organizationId: true }
-    });
+export async function PATCH(request: NextRequest, context?: any) {
+  const backendPath = request.url.replace('/api/', '').split('?')[0];
+  return proxyToBackend(request, {
+    backendPath,
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-    if (!user?.organizationId) {
-      return NextResponse.json(
-        { error: "Organization not found" },
-        { status: 404 }
-      );
-    }
-
-    // Get all transactions for the organization
-    const transactions = await prisma.transaction.findMany({
-      where: {
-        subscription: {
-          organizationId: user.organizationId
-        }
-      },
-      include: {
-        subscription: {
-          include: {
-            plan: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: "desc"
-      }
-    });
-
-    return NextResponse.json(transactions);
-  } catch (error) {
-    console.error("Failed to fetch transactions:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch transactions" },
-      { status: 500 }
-    );
-  }
-} 
+export async function DELETE(request: NextRequest, context?: any) {
+  const backendPath = request.url.replace('/api/', '').split('?')[0];
+  return proxyToBackend(request, {
+    backendPath,
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}

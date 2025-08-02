@@ -140,7 +140,7 @@ describe('African Market Mobile Compatibility Tests', () => {
         const buttons = screen.getAllByRole('button');
         buttons.forEach(button => {
           const styles = window.getComputedStyle(button);
-          const minSize = parseInt(styles.minHeight) || parseInt(styles.height);
+          const minSize = Number.parseInt(styles.minHeight) || Number.parseInt(styles.height);
           expect(minSize).toBeGreaterThanOrEqual(44);
         });
         
@@ -482,7 +482,7 @@ describe('African Market Mobile Compatibility Tests', () => {
         const textElements = screen.getAllByTestId('readable-text');
         textElements.forEach(element => {
           const styles = window.getComputedStyle(element);
-          const fontSize = parseInt(styles.fontSize);
+          const fontSize = Number.parseInt(styles.fontSize);
           expect(fontSize).toBeGreaterThanOrEqual(16);
         });
       });

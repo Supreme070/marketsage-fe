@@ -134,7 +134,7 @@ export function SmartTaskTemplates() {
   const fetchTemplateRecommendations = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/ai/tasks/templates?action=recommendations');
+      const response = await fetch('/api/v2/ai/tasks/templates?action=recommendations');
       const data = await response.json();
 
       if (data.success) {
@@ -153,7 +153,7 @@ export function SmartTaskTemplates() {
   const generateTaskSuggestions = async (triggerEvent: string) => {
     setLoading(true);
     try {
-      const response = await fetch('/api/ai/tasks/templates', {
+      const response = await fetch('/api/v2/ai/tasks/templates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -195,7 +195,7 @@ export function SmartTaskTemplates() {
 
   const applyTemplate = async (templateId: string, customizationData?: any) => {
     try {
-      const response = await fetch('/api/ai/tasks/templates', {
+      const response = await fetch('/api/v2/ai/tasks/templates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -231,7 +231,7 @@ export function SmartTaskTemplates() {
   const analyzeAndImprove = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/ai/tasks/templates?action=analyze');
+      const response = await fetch('/api/v2/ai/tasks/templates?action=analyze');
       const data = await response.json();
 
       if (data.success) {

@@ -1,0 +1,77 @@
+Creating new Prisma client instance
+Initializing Redis client for local environment: redis://localhost:6379
+[2025-07-28T06:27:31.435Z] WARN: Using default encryption key in development - DO NOT USE IN PRODUCTION
+Using default audit integrity key in development - DO NOT USE IN PRODUCTION
+[2025-07-28T06:27:31.436Z] INFO: Audit hash chain initialized
+🚀 Starting MCP Servers for Testing...
+
+Starting Customer Data MCP Server on port 3001...
+SSE MCP Server started on port 3001/mcp
+SSE transport on port 3001 is already started
+HTTP MCP Server marketsage-customer-server started on port 3001
+✅ Customer Data MCP Server started on port 3001
+Starting Campaign Analytics MCP Server on port 3002...
+SSE MCP Server started on port 3002/mcp
+SSE transport on port 3002 is already started
+HTTP MCP Server marketsage-campaign-server started on port 3002
+✅ Campaign Analytics MCP Server started on port 3002
+Starting LeadPulse MCP Server on port 3003...
+SSE MCP Server started on port 3003/mcp
+SSE transport on port 3003 is already started
+HTTP MCP Server marketsage-leadpulse-server started on port 3003
+✅ LeadPulse MCP Server started on port 3003
+Starting External Services MCP Server on port 3004...
+SSE MCP Server started on port 3004/mcp
+SSE transport on port 3004 is already started
+HTTP MCP Server marketsage-services-server started on port 3004
+✅ External Services MCP Server started on port 3004
+Starting Monitoring MCP Server on port 3005...
+SSE MCP Server started on port 3005/mcp
+SSE transport on port 3005 is already started
+HTTP MCP Server marketsage-monitoring-server started on port 3005
+✅ Monitoring MCP Server started on port 3005
+
+✅ All 5 MCP servers started successfully
+
+🏥 Health checking MCP servers...
+Redis client connected
+✅ Customer Data (port 3001): healthy
+✅ Campaign Analytics (port 3002): healthy
+✅ LeadPulse (port 3003): healthy
+✅ External Services (port 3004): healthy
+✅ Monitoring (port 3005): healthy
+✅ All MCP servers passed health checks
+
+🎯 MCP servers are ready for Supreme-AI v3 connectivity testing
+📍 Press Ctrl+C to stop all servers
+🔗 Test connectivity with: npx tsx src/scripts/test-supreme-ai-mcp-connectivity.ts
+
+Successfully connected to database
+SSE MCP Server on port 3001 closed
+SSE MCP Server on port 3002 closed
+SSE MCP Server on port 3003 closed
+SSE MCP Server on port 3004 closed
+SSE MCP Server on port 3005 closed
+
+🧹 Received SIGTERM, shutting down MCP servers...
+Stopping Customer Data MCP server...
+Stopping HTTP MCP Server marketsage-customer-server...
+HTTP MCP Server marketsage-customer-server stopped
+✅ Customer Data MCP server stopped
+Stopping Campaign Analytics MCP server...
+Stopping HTTP MCP Server marketsage-campaign-server...
+HTTP MCP Server marketsage-campaign-server stopped
+✅ Campaign Analytics MCP server stopped
+Stopping LeadPulse MCP server...
+Stopping HTTP MCP Server marketsage-leadpulse-server...
+HTTP MCP Server marketsage-leadpulse-server stopped
+✅ LeadPulse MCP server stopped
+Stopping External Services MCP server...
+Stopping HTTP MCP Server marketsage-services-server...
+HTTP MCP Server marketsage-services-server stopped
+✅ External Services MCP server stopped
+Stopping Monitoring MCP server...
+Stopping HTTP MCP Server marketsage-monitoring-server...
+HTTP MCP Server marketsage-monitoring-server stopped
+✅ Monitoring MCP server stopped
+✅ All MCP servers stopped

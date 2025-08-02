@@ -147,15 +147,15 @@ export default function CustomerIntelligenceDashboard() {
       };
 
       const [churnData, clvData, segmentData, governanceData] = await Promise.all([
-        fetchWithFallback('/api/ml/churn-prediction?action=predictions', {
+        fetchWithFallback('/api/v2/ml/churn-prediction?action=predictions', {
           success: true,
           data: { predictions: [], model: { accuracy: 0.85, lastTrained: new Date().toISOString() } }
         }),
-        fetchWithFallback('/api/ml/clv-prediction?action=predictions', {
+        fetchWithFallback('/api/v2/ml/clv-prediction?action=predictions', {
           success: true,
           data: { predictions: [], model: { accuracy: 0.82, lastTrained: new Date().toISOString() } }
         }),
-        fetchWithFallback('/api/ml/customer-segmentation?action=analytics', {
+        fetchWithFallback('/api/v2/ml/customer-segmentation?action=analytics', {
           success: true,
           data: { 
             overview: { totalCustomers: 0, totalSegments: 3 },
@@ -163,7 +163,7 @@ export default function CustomerIntelligenceDashboard() {
             analytics: { engagement: { high: 0, medium: 0, low: 0 } }
           }
         }),
-        fetchWithFallback('/api/ai/governance?action=metrics', {
+        fetchWithFallback('/api/v2/ai/governance?action=metrics', {
           success: true,
           data: { 
             decisions: { approved: 0, rejected: 0, pending: 0 },

@@ -137,7 +137,7 @@ export default function WorkflowsPage() {
     generateAIRecommendations: async (workflowType: string, context: any) => {
       setLoadingAI(true);
       try {
-        const response = await fetch('/api/ai/supreme-v3', {
+        const response = await fetch('/api/v2/ai/supreme-v3', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -190,7 +190,7 @@ export default function WorkflowsPage() {
     analyzeWorkflowPerformance: async (workflow: WorkflowData) => {
       setLoadingAI(true);
       try {
-        const response = await fetch('/api/ai/supreme-v3', {
+        const response = await fetch('/api/v2/ai/supreme-v3', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -244,7 +244,7 @@ export default function WorkflowsPage() {
     generateAfricanOptimizations: async (workflow: WorkflowData) => {
       setLoadingAI(true);
       try {
-        const response = await fetch('/api/ai/supreme-v3', {
+        const response = await fetch('/api/v2/ai/supreme-v3', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -303,7 +303,7 @@ export default function WorkflowsPage() {
     // Real-time Workflow Metrics
     loadRealTimeMetrics: async (workflowId: string) => {
       try {
-        const response = await fetch('/api/ai/supreme-v3', {
+        const response = await fetch('/api/v2/ai/supreme-v3', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -445,7 +445,7 @@ export default function WorkflowsPage() {
     const fetchWorkflows = async () => {
       setLoading(true);
       try {
-        const response = await fetch("/api/workflows");
+        const response = await fetch("/api/v2/workflows");
         
         if (response.status === 401) {
           setError("Authentication required. Please log in again.");
@@ -715,7 +715,7 @@ export default function WorkflowsPage() {
   // Update workflow status
   const updateWorkflowStatus = async (id: string, status: "ACTIVE" | "INACTIVE" | "PAUSED" | "ARCHIVED") => {
     try {
-      const response = await fetch(`/api/workflows/${id}`, {
+      const response = await fetch(`/api/v2/workflows/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -748,7 +748,7 @@ export default function WorkflowsPage() {
     }
     
     try {
-      const response = await fetch(`/api/workflows/${id}`, {
+      const response = await fetch(`/api/v2/workflows/${id}`, {
         method: "DELETE",
       });
       
@@ -772,7 +772,7 @@ export default function WorkflowsPage() {
   const duplicateWorkflow = async (id: string) => {
     try {
       // First, get the workflow to duplicate
-      const response = await fetch(`/api/workflows/${id}`);
+      const response = await fetch(`/api/v2/workflows/${id}`);
       
       if (!response.ok) {
         throw new Error("Failed to fetch workflow for duplication");
@@ -789,7 +789,7 @@ export default function WorkflowsPage() {
       };
       
       // Create the duplicate
-      const createResponse = await fetch("/api/workflows", {
+      const createResponse = await fetch("/api/v2/workflows", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

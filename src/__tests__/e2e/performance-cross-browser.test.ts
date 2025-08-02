@@ -337,7 +337,7 @@ test.describe('Performance & Cross-Browser Tests', () => {
         // Verify element is properly rendered
         expect(styles.display).not.toBe('none');
         expect(styles.visibility).toBe('visible');
-        expect(parseFloat(styles.opacity)).toBeGreaterThan(0);
+        expect(Number.parseFloat(styles.opacity)).toBeGreaterThan(0);
       }
     });
 

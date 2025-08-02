@@ -17,7 +17,7 @@
  */
 
 import { CampaignAnalyticsMCPServer } from '../../mcp/servers/campaign-analytics-server';
-import { MCPServerConfig } from '../../mcp/config/mcp-config';
+import type { MCPServerConfig } from '../../mcp/config/mcp-config';
 import { MCPAuthContext, MCPValidationError, CampaignAnalyticsQuery } from '../../mcp/types/mcp-types';
 import { 
   mockPrismaClient, 

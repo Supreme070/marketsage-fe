@@ -1,91 +1,39 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import prisma from "@/lib/db/prisma";
-import { initializeTransaction } from "@/lib/paystack";
-import { nanoid } from "nanoid";
-import type { User, Organization } from "@prisma/client";
+import type { NextRequest } from "next/server";
+import { proxyToBackend } from "@/lib/api-proxy";
 
-interface UserWithOrganization extends User {
-  organization: Organization | null;
+// Auto-converted to proxy pattern
+export async function GET(request: NextRequest, context?: any) {
+  const backendPath = request.url.replace('/api/', '').split('?')[0];
+  return proxyToBackend(request, {
+    backendPath,
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
 }
 
-export async function POST(request: Request) {
-  try {
-    const session = await getServerSession(authOptions);
+export async function POST(request: NextRequest, context?: any) {
+  const backendPath = request.url.replace('/api/', '').split('?')[0];
+  return proxyToBackend(request, {
+    backendPath,
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+export async function PATCH(request: NextRequest, context?: any) {
+  const backendPath = request.url.replace('/api/', '').split('?')[0];
+  return proxyToBackend(request, {
+    backendPath,
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-    const body = await request.json();
-    const { planId } = body;
-
-    // Get the user's organization
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      include: { organization: true }
-    }) as UserWithOrganization | null;
-
-    if (!user?.organization) {
-      return NextResponse.json(
-        { error: "Organization not found" },
-        { status: 404 }
-      );
-    }
-
-    // Get the subscription plan
-    const plan = await prisma.subscriptionPlan.findUnique({
-      where: { id: planId }
-    });
-
-    if (!plan) {
-      return NextResponse.json(
-        { error: "Plan not found" },
-        { status: 404 }
-      );
-    }
-
-    // Generate a unique reference
-    const reference = `pay_${nanoid()}`;
-
-    // Create a pending transaction
-    const transaction = await prisma.transaction.create({
-      data: {
-        amount: plan.price,
-        currency: plan.currency,
-        paystackReference: reference,
-        subscription: {
-          create: {
-            organization: { connect: { id: user.organization.id } },
-            plan: { connect: { id: plan.id } },
-            status: "TRIALING",
-          }
-        }
-      }
-    });
-
-    // Initialize payment with Paystack
-    const paymentData = await initializeTransaction({
-      email: user.email,
-      amount: plan.price,
-      reference,
-      metadata: {
-        planId: plan.id,
-        organizationId: user.organization.id,
-        transactionId: transaction.id
-      }
-    });
-
-    return NextResponse.json(paymentData);
-  } catch (error) {
-    console.error("Payment initialization failed:", error);
-    return NextResponse.json(
-      { error: "Failed to initialize payment" },
-      { status: 500 }
-    );
-  }
-} 
+export async function DELETE(request: NextRequest, context?: any) {
+  const backendPath = request.url.replace('/api/', '').split('?')[0];
+  return proxyToBackend(request, {
+    backendPath,
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}

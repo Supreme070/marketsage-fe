@@ -157,7 +157,7 @@ export default function IntelligentPriorityPanel({
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/ai/tasks/prioritize', {
+      const response = await fetch('/api/v2/ai/tasks/prioritize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -199,7 +199,7 @@ export default function IntelligentPriorityPanel({
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/ai/tasks/prioritize', {
+      const response = await fetch('/api/v2/ai/tasks/prioritize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -236,7 +236,7 @@ export default function IntelligentPriorityPanel({
   const bulkRecalculate = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/ai/tasks/prioritize', {
+      const response = await fetch('/api/v2/ai/tasks/prioritize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

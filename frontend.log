@@ -1,0 +1,21 @@
+
+> marketsage@0.1.0 dev
+> next dev -H 0.0.0.0
+
+   ▲ Next.js 15.3.4
+   - Local:        http://localhost:3000
+   - Network:      http://0.0.0.0:3000
+   - Environments: .env
+   - Experiments (use with caution):
+     ✓ optimizeCss
+
+ ✓ Starting...
+ ✓ Ready in 2.2s
+ ✓ Compiled /middleware in 397ms (256 modules)
+[2025-07-30T13:13:25.015Z] INFO: API Request: GET /api/v2/health {"method":"GET","path":"/api/v2/health","query":{},"ip":"127.0.0.1","userAgent":"curl/8.7.1","tenantId":"anonymous"}
+ ○ Compiling /api/v2/[[...path]] ...
+ ✓ Compiled /api/v2/[[...path]] in 684ms (411 modules)
+ GET /api/v2/health 200 in 1057ms
+[2025-07-30T13:13:43.107Z] INFO: API Request: GET /api/v2/health/simple {"method":"GET","path":"/api/v2/health/simple","query":{},"ip":"127.0.0.1","userAgent":"curl/8.7.1","tenantId":"anonymous"}
+ GET /api/v2/health/simple 200 in 33ms
+[?25h

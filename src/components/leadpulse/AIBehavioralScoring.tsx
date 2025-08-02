@@ -140,9 +140,9 @@ export default function AIBehavioralScoring({ className }: AIBehavioralScoringPr
     try {
       setRefreshing(true);
       const [scoresResponse, predictionsResponse, insightsResponse] = await Promise.all([
-        fetch(`/api/leadpulse/ai/behavioral-scores?sort=${sortBy}&segment=${filterSegment}`),
-        fetch('/api/leadpulse/ai/score-predictions'),
-        fetch('/api/leadpulse/ai/behavioral-insights')
+        fetch(`/api/v2/leadpulse/ai/behavioral-scores?sort=${sortBy}&segment=${filterSegment}`),
+        fetch('/api/v2/leadpulse/ai/score-predictions'),
+        fetch('/api/v2/leadpulse/ai/behavioral-insights')
       ]);
 
       // Use mock data for demo

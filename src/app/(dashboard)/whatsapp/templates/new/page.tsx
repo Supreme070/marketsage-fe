@@ -48,7 +48,7 @@ export default function NewWhatsAppTemplatePage() {
         )
       };
 
-      const response = await fetch("/api/whatsapp/templates", {
+      const response = await fetch("/api/v2/whatsapp/templates", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

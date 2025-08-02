@@ -134,7 +134,7 @@ export default function AdminAIPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const response = await fetch('/api/admin/ai');
+        const response = await fetch('/api/v2/admin/ai');
         if (!response.ok) {
           throw new Error('Failed to fetch AI data');
         }

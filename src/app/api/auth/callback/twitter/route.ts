@@ -6,7 +6,7 @@
  * Stores access tokens for organization's Twitter account
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { socialMediaConnectionService } from '@/lib/social-media/social-media-connection-service';

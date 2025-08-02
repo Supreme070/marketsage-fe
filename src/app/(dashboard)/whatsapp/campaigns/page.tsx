@@ -63,7 +63,7 @@ export default function WhatsAppCampaignsPage() {
   const createSampleData = async () => {
     try {
       setIsCreatingSampleData(true);
-      const response = await fetch('/api/seed', {
+      const response = await fetch('/api/v2/seed', {
         method: 'POST'
       });
       

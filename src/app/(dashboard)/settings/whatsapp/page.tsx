@@ -74,7 +74,7 @@ export default function WhatsAppSettingsPage() {
 
   const loadWhatsAppConfig = async () => {
     try {
-      const response = await fetch('/api/whatsapp/config');
+      const response = await fetch('/api/v2/whatsapp/config');
       if (response.ok) {
         const data = await response.json();
         setConfig(data);
@@ -113,7 +113,7 @@ export default function WhatsAppSettingsPage() {
     setIsLoading(true);
     try {
       const method = config.isConfigured ? 'PUT' : 'POST';
-      const response = await fetch('/api/whatsapp/config', {
+      const response = await fetch('/api/v2/whatsapp/config', {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -158,7 +158,7 @@ export default function WhatsAppSettingsPage() {
 
     setIsTesting(true);
     try {
-      const response = await fetch('/api/whatsapp/config', {
+      const response = await fetch('/api/v2/whatsapp/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -2,7 +2,7 @@
 
 // Lists
 export const getLists = async () => {
-  const response = await fetch('/api/lists');
+  const response = await fetch('/api/v2/lists');
   if (!response.ok) {
     throw new Error('Failed to fetch lists');
   }
@@ -18,7 +18,7 @@ export const getListById = async (id: string) => {
 };
 
 export const getListsWithContactCount = async () => {
-  const response = await fetch('/api/lists?includeCount=true');
+  const response = await fetch('/api/v2/lists?includeCount=true');
   if (!response.ok) {
     throw new Error('Failed to fetch lists with contact count');
   }
@@ -27,7 +27,7 @@ export const getListsWithContactCount = async () => {
 
 // Segments
 export const getSegments = async () => {
-  const response = await fetch('/api/segments');
+  const response = await fetch('/api/v2/segments');
   if (!response.ok) {
     throw new Error('Failed to fetch segments');
   }
@@ -43,7 +43,7 @@ export const getSegmentById = async (id: string) => {
 };
 
 export const getSegmentsWithContactCount = async () => {
-  const response = await fetch('/api/segments?includeCount=true');
+  const response = await fetch('/api/v2/segments?includeCount=true');
   if (!response.ok) {
     throw new Error('Failed to fetch segments with contact count');
   }
@@ -52,7 +52,7 @@ export const getSegmentsWithContactCount = async () => {
 
 // Email Templates
 export const getEmailTemplates = async () => {
-  const response = await fetch('/api/email/templates');
+  const response = await fetch('/api/v2/email/templates');
   if (!response.ok) {
     throw new Error('Failed to fetch email templates');
   }
@@ -69,7 +69,7 @@ export const getEmailTemplateById = async (id: string) => {
 
 // Email Campaigns
 export const getEmailCampaigns = async () => {
-  const response = await fetch('/api/email/campaigns');
+  const response = await fetch('/api/v2/email/campaigns');
   if (!response.ok) {
     throw new Error('Failed to fetch email campaigns');
   }
@@ -94,7 +94,7 @@ export const getEmailCampaignStats = async (id: string) => {
 
 // SMS Templates
 export const getSMSTemplates = async () => {
-  const response = await fetch('/api/sms/templates');
+  const response = await fetch('/api/v2/sms/templates');
   if (!response.ok) {
     throw new Error('Failed to fetch SMS templates');
   }
@@ -111,7 +111,7 @@ export const getSMSTemplateById = async (id: string) => {
 
 // SMS Campaigns
 export const getSMSCampaigns = async () => {
-  const response = await fetch('/api/sms/campaigns');
+  const response = await fetch('/api/v2/sms/campaigns');
   if (!response.ok) {
     throw new Error('Failed to fetch SMS campaigns');
   }
@@ -149,7 +149,7 @@ export const getSMSCampaignStats = async (id: string) => {
 
 // Contacts
 export const getContacts = async () => {
-  const response = await fetch('/api/contacts');
+  const response = await fetch('/api/v2/contacts');
   if (!response.ok) {
     throw new Error('Failed to fetch contacts');
   }
@@ -167,7 +167,7 @@ export const getContactById = async (id: string) => {
 // WhatsApp Templates
 export const getWhatsAppTemplates = async () => {
   try {
-    const response = await fetch('/api/whatsapp/templates');
+    const response = await fetch('/api/v2/whatsapp/templates');
     
     if (response.status === 404) {
       console.warn('WhatsApp templates endpoint not found, returning empty array');
@@ -196,7 +196,7 @@ export const getWhatsAppTemplateById = async (id: string) => {
 
 // WhatsApp Campaigns
 export const getWhatsAppCampaigns = async () => {
-  const response = await fetch('/api/whatsapp/campaigns');
+  const response = await fetch('/api/v2/whatsapp/campaigns');
   if (!response.ok) {
     throw new Error('Failed to fetch WhatsApp campaigns');
   }

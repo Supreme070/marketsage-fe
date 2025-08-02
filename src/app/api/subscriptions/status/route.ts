@@ -1,42 +1,34 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { SubscriptionService } from "@/lib/subscription-service";
-import prisma from "@/lib/db/prisma";
+import type { NextRequest } from "next/server";
+import { proxyToBackend } from "@/lib/api-proxy";
 
-export async function GET(request: Request) {
-  try {
-    const session = await getServerSession(authOptions);
+export async function GET(request: NextRequest) {
+  return proxyToBackend(request, {
+    backendPath: 'subscriptions/status',
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+export async function POST(request: NextRequest) {
+  return proxyToBackend(request, {
+    backendPath: 'subscriptions/status',
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-    // Get user's organization
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { organizationId: true },
-    });
+export async function PATCH(request: NextRequest) {
+  return proxyToBackend(request, {
+    backendPath: 'subscriptions/status',
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-    if (!user?.organizationId) {
-      return NextResponse.json(
-        { error: "Organization not found" },
-        { status: 404 }
-      );
-    }
-
-    // Get subscription status
-    const status = await SubscriptionService.getSubscriptionStatus(user.organizationId);
-
-    return NextResponse.json(status);
-  } catch (error) {
-    console.error("Failed to fetch subscription status:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch subscription status" },
-      { status: 500 }
-    );
-  }
+export async function DELETE(request: NextRequest) {
+  return proxyToBackend(request, {
+    backendPath: 'subscriptions/status',
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
 }

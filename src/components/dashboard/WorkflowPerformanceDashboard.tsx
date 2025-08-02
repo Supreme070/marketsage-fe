@@ -86,7 +86,7 @@ export default function WorkflowPerformanceDashboard() {
   // Fetch performance data
   const fetchPerformanceData = async () => {
     try {
-      const response = await fetch("/api/workflows/performance");
+      const response = await fetch("/api/v2/workflows/performance");
       if (!response.ok) {
         throw new Error("Failed to fetch performance data");
       }

@@ -74,8 +74,8 @@ export default function BirthdayCampaignDashboard() {
       setLoading(true);
       
       const [dashboardResponse, performanceResponse] = await Promise.all([
-        fetch('/api/campaigns/birthday-detection?action=dashboard'),
-        fetch('/api/campaigns/birthday-detection?action=performance&days=30')
+        fetch('/api/v2/campaigns/birthday-detection?action=dashboard'),
+        fetch('/api/v2/campaigns/birthday-detection?action=performance&days=30')
       ]);
 
       if (dashboardResponse.ok) {
@@ -99,7 +99,7 @@ export default function BirthdayCampaignDashboard() {
     try {
       setLoading(true);
       
-      const response = await fetch('/api/campaigns/birthday-detection?action=trigger-detection', {
+      const response = await fetch('/api/v2/campaigns/birthday-detection?action=trigger-detection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -123,7 +123,7 @@ export default function BirthdayCampaignDashboard() {
 
   const previewDetection = async () => {
     try {
-      const response = await fetch('/api/campaigns/birthday-detection?action=preview', {
+      const response = await fetch('/api/v2/campaigns/birthday-detection?action=preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({})

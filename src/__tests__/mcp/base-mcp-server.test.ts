@@ -15,8 +15,8 @@
  */
 
 import { BaseMCPServer } from '../../mcp/servers/base-mcp-server';
-import { MCPServerConfig } from '../../mcp/config/mcp-config';
-import { MCPAuthContext, MCPAuthenticationError, MCPAuthorizationError, MCPRateLimitError, MCPValidationError } from '../../mcp/types/mcp-types';
+import type { MCPServerConfig } from '../../mcp/config/mcp-config';
+import { type MCPAuthContext, MCPAuthenticationError, MCPAuthorizationError, MCPRateLimitError, MCPValidationError } from '../../mcp/types/mcp-types';
 import { 
   mockPrismaClient, 
   mockRedisClient, 

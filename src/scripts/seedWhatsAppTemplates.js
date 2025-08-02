@@ -14,7 +14,7 @@ dotenv.config();
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: "postgresql://marketsage:marketsage_password@marketsage-db:5432/marketsage?schema=public"
+      url: "postgresql://marketsage:marketsage_password@postgres:5432/marketsage?schema=public"
     }
   }
 });

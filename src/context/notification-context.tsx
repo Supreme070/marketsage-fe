@@ -42,7 +42,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     if (session?.user && status === 'authenticated') {
       setLoading(true);
       try {
-        const res = await fetch('/api/notifications');
+        const res = await fetch('/api/v2/notifications');
         if (res.ok) {
           const data = await res.json();
           // Convert string timestamps to Date objects
@@ -81,7 +81,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   
   const markAsRead = async (id: string) => {
     try {
-      const res = await fetch(`/api/notifications/${id}/read`, {
+      const res = await fetch(`/api/v2/notifications/${id}/read`, {
         method: 'POST',
       });
       
@@ -98,7 +98,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   
   const markAllAsRead = async () => {
     try {
-      const res = await fetch('/api/notifications/read', {
+      const res = await fetch('/api/v2/notifications/read', {
         method: 'POST',
       });
       

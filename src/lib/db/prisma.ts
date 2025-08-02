@@ -60,6 +60,53 @@ const createPrismaClient = (): CustomPrismaClient => {
     } as CustomPrismaClient;
   }
 
+  // ENFORCE API-ONLY MODE: Block direct database access when API-only mode is enabled
+  if (process.env.NEXT_PUBLIC_USE_API_ONLY === 'true') {
+    console.warn('⚠️  API-ONLY MODE: Direct database access blocked. Use API endpoints instead.');
+    return {
+      $healthCheck: async () => {
+        console.warn('⚠️  API-ONLY MODE: Database health check blocked. Check backend API health instead.');
+        return false;
+      },
+      $reconnect: async () => {
+        console.warn('⚠️  API-ONLY MODE: Database reconnect blocked.');
+        return false;
+      },
+      $connect: async () => {
+        console.warn('⚠️  API-ONLY MODE: Database connect blocked.');
+      },
+      $disconnect: async () => {
+        console.warn('⚠️  API-ONLY MODE: Database disconnect blocked.');
+      },
+      $queryRaw: async () => {
+        throw new Error('⚠️  API-ONLY MODE: Direct database queries blocked. Use API endpoints instead.');
+      },
+      $on: () => {
+        throw new Error('⚠️  API-ONLY MODE: Database event listeners blocked.');
+      },
+      $use: () => {
+        throw new Error('⚠️  API-ONLY MODE: Database middleware blocked.');
+      },
+      $transaction: async () => {
+        throw new Error('⚠️  API-ONLY MODE: Direct database transactions blocked. Use API endpoints instead.');
+      },
+      // Block all model operations with dynamic getters
+      ...new Proxy({}, {
+        get(target, prop) {
+          if (typeof prop === 'string' && !prop.startsWith('$')) {
+            // This is likely a model name (user, contact, campaign, etc.)
+            return new Proxy({}, {
+              get(modelTarget, operation) {
+                throw new Error(`⚠️  API-ONLY MODE: Direct database operation blocked: ${prop}.${String(operation)}(). Use /api/v2/${prop}/* endpoints instead.`);
+              }
+            });
+          }
+          return undefined;
+        }
+      }),
+    } as unknown as CustomPrismaClient;
+  }
+
   try {
     // Set up Prisma client with appropriate options
     const clientOptions: any = {
@@ -127,6 +174,10 @@ if (typeof window !== 'undefined') {
     $use: () => ({ mock: true }),
     $transaction: async (arg: any) => arg instanceof Function ? arg([]) : [],
   } as unknown as CustomPrismaClient;
+} else if (process.env.NEXT_PUBLIC_USE_API_ONLY === 'true') {
+  // API-ONLY MODE: Block all database operations
+  console.warn('🚧 INITIALIZATION: API-ONLY MODE ENABLED - Database operations will be blocked');
+  prisma = createPrismaClient(); // This will return the blocked client
 } else {
   try {
     // Use cached client if available (in development)

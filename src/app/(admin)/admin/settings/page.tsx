@@ -137,11 +137,11 @@ export default function AdminSettingsPage() {
       try {
         // Load all settings data in parallel
         const [staffResponse, securityResponse, notificationResponse, systemResponse, logsResponse] = await Promise.all([
-          fetch('/api/admin/settings?type=staff'),
-          fetch('/api/admin/settings?type=security'),
-          fetch('/api/admin/settings?type=notifications'),
-          fetch('/api/admin/settings?type=system'),
-          fetch('/api/admin/settings?type=logs')
+          fetch('/api/v2/admin/settings?type=staff'),
+          fetch('/api/v2/admin/settings?type=security'),
+          fetch('/api/v2/admin/settings?type=notifications'),
+          fetch('/api/v2/admin/settings?type=system'),
+          fetch('/api/v2/admin/settings?type=logs')
         ]);
 
         // Parse responses
@@ -253,7 +253,7 @@ export default function AdminSettingsPage() {
     try {
       // Save all settings in parallel
       const saveRequests = [
-        fetch('/api/admin/settings', {
+        fetch('/api/v2/admin/settings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -262,7 +262,7 @@ export default function AdminSettingsPage() {
             ...securitySettings
           })
         }),
-        fetch('/api/admin/settings', {
+        fetch('/api/v2/admin/settings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -271,7 +271,7 @@ export default function AdminSettingsPage() {
             ...notificationSettings
           })
         }),
-        fetch('/api/admin/settings', {
+        fetch('/api/v2/admin/settings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -280,7 +280,7 @@ export default function AdminSettingsPage() {
             ...systemSettings
           })
         }),
-        fetch('/api/admin/settings', {
+        fetch('/api/v2/admin/settings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

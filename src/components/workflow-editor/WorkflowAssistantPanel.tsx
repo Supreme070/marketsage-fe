@@ -97,7 +97,7 @@ export default function WorkflowAssistantPanel({
           const workflowId = workflowElement?.getAttribute('data-workflow-id');
           
           if (workflowId) {
-            const response = await fetch('/api/ai/workflows/enhance', {
+            const response = await fetch('/api/v2/ai/workflows/enhance', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',

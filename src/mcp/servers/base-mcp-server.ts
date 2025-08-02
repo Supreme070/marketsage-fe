@@ -27,7 +27,7 @@ import {
   MCPValidationError
 } from '../types/mcp-types';
 
-import { type MCPServerConfig } from '../config/mcp-config';
+import type { MCPServerConfig } from '../config/mcp-config';
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../lib/auth';
@@ -433,7 +433,7 @@ export abstract class BaseMCPServer {
   /**
    * Validate input data using Zod schema with comprehensive error handling
    */
-  protected validateInput<T>(schema: z.ZodSchema<T>, data: unknown, context: string = 'input'): T {
+  protected validateInput<T>(schema: z.ZodSchema<T>, data: unknown, context = 'input'): T {
     try {
       return schema.parse(data);
     } catch (error) {
@@ -728,7 +728,7 @@ export abstract class BaseMCPServer {
       
       // Get current count
       const currentCountStr = await redisCache.get<string>(rateLimitKey);
-      const currentCount = currentCountStr ? parseInt(currentCountStr, 10) : 0;
+      const currentCount = currentCountStr ? Number.parseInt(currentCountStr, 10) : 0;
       
       // Get remaining time
       let remainingTime = 0;

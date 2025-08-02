@@ -59,7 +59,7 @@ export default function SMSTemplatesPage() {
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
-        const response = await fetch("/api/sms/templates");
+        const response = await fetch("/api/v2/sms/templates");
         if (!response.ok) {
           throw new Error("Failed to fetch SMS templates");
         }

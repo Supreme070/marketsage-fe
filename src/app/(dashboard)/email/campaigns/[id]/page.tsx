@@ -217,7 +217,7 @@ export default function CampaignDetailPage() {
       };
       
       // Create the duplicate
-      const createResponse = await fetch('/api/email/campaigns', {
+      const createResponse = await fetch('/api/v2/email/campaigns', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

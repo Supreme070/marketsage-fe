@@ -131,21 +131,21 @@ export default function CreateCampaignPage() {
       setIsLoadingData(true);
       try {
         // Fetch templates
-        const templatesResponse = await fetch("/api/email/templates");
+        const templatesResponse = await fetch("/api/v2/email/templates");
         if (templatesResponse.ok) {
           const templatesData = await templatesResponse.json();
           setTemplates(templatesData);
         }
 
         // Fetch lists
-        const listsResponse = await fetch("/api/lists");
+        const listsResponse = await fetch("/api/v2/lists");
         if (listsResponse.ok) {
           const listsData = await listsResponse.json();
           setLists(listsData);
         }
 
         // Fetch segments
-        const segmentsResponse = await fetch("/api/segments");
+        const segmentsResponse = await fetch("/api/v2/segments");
         if (segmentsResponse.ok) {
           const segmentsData = await segmentsResponse.json();
           setSegments(segmentsData);
@@ -225,7 +225,7 @@ export default function CreateCampaignPage() {
         return;
       }
 
-      const response = await fetch("/api/email/campaigns", {
+      const response = await fetch("/api/v2/email/campaigns", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

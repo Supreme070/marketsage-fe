@@ -30,8 +30,8 @@ import type {
   InsightItem,
   VisitorSegment 
 } from '@/lib/leadpulse/dataProvider';
-import { 
-  type MCPAuthContext
+import type { 
+  MCPAuthContext
 } from '../mcp/types/mcp-types';
 
 interface UseMCPLeadPulseOptions {

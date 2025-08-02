@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 
 // Rate limiting store (in production, use Redis)
 class RateLimitStore {
@@ -183,8 +183,7 @@ export async function adminRateLimitWithUser(
 export function withAdminRateLimit(
   operation: 'standard' | 'strict' | 'bulk' | 'auth' = 'standard'
 ) {
-  return function (handler: Function) {
-    return async function(req: NextRequest, ...args: any[]) {
+  return (handler: Function) => async (req: NextRequest, ...args: any[]) => {
       const rateLimitResult = await adminRateLimit(req, adminRateLimitConfigs[operation]);
       
       if (!rateLimitResult.allowed) {
@@ -193,7 +192,6 @@ export function withAdminRateLimit(
 
       return handler(req, ...args);
     };
-  };
 }
 
 /**

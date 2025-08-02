@@ -7,7 +7,8 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import type React from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -515,13 +516,13 @@ export function VirtualScrollVisitorList({
                       type="number"
                       placeholder="Min"
                       value={filters.minEngagement}
-                      onChange={(e) => updateFilters({ minEngagement: parseInt(e.target.value) || 0 })}
+                      onChange={(e) => updateFilters({ minEngagement: Number.parseInt(e.target.value) || 0 })}
                     />
                     <Input
                       type="number"
                       placeholder="Max"
                       value={filters.maxEngagement}
-                      onChange={(e) => updateFilters({ maxEngagement: parseInt(e.target.value) || 100 })}
+                      onChange={(e) => updateFilters({ maxEngagement: Number.parseInt(e.target.value) || 100 })}
                     />
                   </div>
                 </div>

@@ -6,13 +6,13 @@
  */
 
 import { z } from 'zod';
-import { BaseMCPServer } from './base-mcp-server';
+import { HTTPBaseMCPServer } from './http-base-mcp-server';
 import { 
   type MCPAuthContext, 
   type MCPServerConfig,
   CampaignAnalyticsQuerySchema,
   type CampaignAnalyticsQuery,
-  CampaignAnalytics,
+  type CampaignAnalytics,
   MCPAuthorizationError,
   MCPValidationError
 } from '../types/mcp-types';
@@ -20,7 +20,7 @@ import {
 import { prisma } from '../../lib/db/prisma';
 import { defaultMCPConfig } from '../config/mcp-config';
 
-export class CampaignAnalyticsMCPServer extends BaseMCPServer {
+export class CampaignAnalyticsMCPServer extends HTTPBaseMCPServer {
   constructor(config?: Partial<MCPServerConfig>) {
     super({
       ...defaultMCPConfig.servers.campaign,
@@ -1368,7 +1368,7 @@ export class CampaignAnalyticsMCPServer extends BaseMCPServer {
   /**
    * Calculate confidence interval for a proportion
    */
-  private calculateConfidenceInterval(value: number, sampleSize: number, confidenceLevel: number = 0.95): any {
+  private calculateConfidenceInterval(value: number, sampleSize: number, confidenceLevel = 0.95): any {
     const p = value / 100; // Convert percentage to proportion
     const n = sampleSize;
     const zAlpha = 1.96; // 95% confidence level

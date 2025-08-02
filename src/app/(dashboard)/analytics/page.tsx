@@ -91,7 +91,7 @@ export default function AdvancedAnalyticsPage() {
     generateBusinessIntelligence: async (timeRange: string, metrics: string[]) => {
       setIsRefreshing(true);
       try {
-        const response = await fetch('/api/ai/supreme-v3', {
+        const response = await fetch('/api/v2/ai/supreme-v3', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -124,7 +124,7 @@ export default function AdvancedAnalyticsPage() {
 
     generatePredictiveAnalytics: async (baseData: any) => {
       try {
-        const response = await fetch('/api/ai/supreme-v3', {
+        const response = await fetch('/api/v2/ai/supreme-v3', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -152,7 +152,7 @@ export default function AdvancedAnalyticsPage() {
     generateCustomReport: async (reportConfig: any) => {
       setIsGeneratingReport(true);
       try {
-        const response = await fetch('/api/ai/supreme-v3', {
+        const response = await fetch('/api/v2/ai/supreme-v3', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -182,7 +182,7 @@ export default function AdvancedAnalyticsPage() {
 
     performCohortAnalysis: async (userSegments: any) => {
       try {
-        const response = await fetch('/api/ai/supreme-v3', {
+        const response = await fetch('/api/v2/ai/supreme-v3', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

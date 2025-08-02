@@ -365,7 +365,7 @@ describe('Supreme AI v3 MCP Integration', () => {
         console.log(JSON.stringify(context.monitoring, null, 2));
       }
       
-      console.log('\n' + '='.repeat(50));
+      console.log(`\n${'='.repeat(50)}`);
       
       // Verify logger was called with real data info
       expect(logger.info).toHaveBeenCalledWith(

@@ -1,7 +1,14 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { UserRole } from "@prisma/client";
+// Define UserRole enum locally to remove Prisma dependency
+export enum UserRole {
+  USER = "USER",
+  ADMIN = "ADMIN", 
+  IT_ADMIN = "IT_ADMIN",
+  SUPER_ADMIN = "SUPER_ADMIN",
+  AI_AGENT = "AI_AGENT"
+}
 import { hasRequiredRole } from "@/components/auth/role-based-component";
 
 /**

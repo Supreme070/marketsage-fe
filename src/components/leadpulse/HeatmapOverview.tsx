@@ -93,8 +93,8 @@ export default function HeatmapOverview({ className }: HeatmapOverviewProps) {
   const fetchHeatmapData = async () => {
     try {
       const [pagesResponse, insightsResponse] = await Promise.all([
-        fetch(`/api/leadpulse/heatmaps?device=${deviceFilter}`),
-        fetch('/api/leadpulse/heatmap-insights')
+        fetch(`/api/v2/leadpulse/heatmaps?device=${deviceFilter}`),
+        fetch('/api/v2/leadpulse/heatmap-insights')
       ]);
 
       // Use mock data for demo

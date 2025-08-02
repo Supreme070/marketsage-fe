@@ -154,7 +154,7 @@ export async function getABTest(id: string): Promise<ABTest | null> {
  */
 export async function createABTest(data: ABTestFormData): Promise<string | null> {
   try {
-    const response = await fetch('/api/ab-tests', {
+    const response = await fetch('/api/v2/ab-tests', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -183,7 +183,7 @@ export async function createABTest(data: ABTestFormData): Promise<string | null>
  */
 export async function updateABTest(id: string, data: Partial<ABTestFormData>): Promise<boolean> {
   try {
-    const response = await fetch('/api/ab-tests', {
+    const response = await fetch('/api/v2/ab-tests', {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

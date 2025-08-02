@@ -2740,7 +2740,7 @@ Deliver professional, efficient automation solutions that drive business growth 
   private async executeTaskViaAPI(taskType: string, parameters: any, userId: string): Promise<any> {
     // Fallback execution for unsupported task types
     try {
-      const response = await fetch('/api/ai/execute-task', {
+      const response = await fetch('/api/v2/ai/execute-task', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ taskType, parameters, userId })

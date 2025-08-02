@@ -36,7 +36,7 @@ export function getAdminConfig(): AdminConfig {
     'marketsage.africa'
   ];
   
-  const sessionTimeout = parseInt(process.env.ADMIN_SESSION_TIMEOUT || '1800'); // 30 minutes default
+  const sessionTimeout = Number.parseInt(process.env.ADMIN_SESSION_TIMEOUT || '1800'); // 30 minutes default
   const twoFactorRequired = process.env.ADMIN_2FA_REQUIRED === 'true';
   const ipWhitelistEnabled = process.env.ADMIN_IP_WHITELIST_ENABLED === 'true';
   

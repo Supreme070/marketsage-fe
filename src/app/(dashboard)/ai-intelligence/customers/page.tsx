@@ -62,9 +62,9 @@ export default function CustomerIntelligenceHub() {
 
         // Fetch customer metrics
         const [contactsRes, segmentsRes, insightsRes] = await Promise.all([
-          fetch('/api/contacts', { credentials: 'include' }),
-          fetch('/api/segments', { credentials: 'include' }),
-          fetch('/api/ai/intelligence?type=customer_insights', { 
+          fetch('/api/v2/contacts', { credentials: 'include' }),
+          fetch('/api/v2/segments', { credentials: 'include' }),
+          fetch('/api/v2/ai/intelligence?type=customer_insights', { 
             credentials: 'include',
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -122,7 +122,7 @@ export default function CustomerIntelligenceHub() {
 
         // Calculate additional metrics from AI
         try {
-          const metricsRes = await fetch('/api/ai/predictive', {
+          const metricsRes = await fetch('/api/v2/ai/predictive', {
             credentials: 'include',
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

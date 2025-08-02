@@ -1,287 +1,36 @@
-import { NextResponse } from 'next/server';
-import prisma from "@/lib/db/prisma";
-import { redisCache } from "@/lib/cache/redis-client";
-import { trace } from '@opentelemetry/api';
-import { 
-  handleApiError, 
-  unauthorized, 
-  forbidden,
-  notFound,
-  validationError 
-} from "@/lib/errors";
+import type { NextRequest } from "next/server";
+import { proxyToBackend } from "@/lib/api-proxy";
 
-// Health check with Prometheus metrics format and OpenTelemetry tracing
-export async function GET(request: Request) {
-  const tracer = trace.getTracer('marketsage-health');
-  
-  return tracer.startActiveSpan('health-check-api', async (span) => {
-    try {
-      const { searchParams } = new URL(request.url);
-      const format = searchParams.get('format');
-      
-      span.setAttributes({
-        'http.method': 'GET',
-        'http.route': '/api/health',
-        'request.format': format || 'json',
-        'service.name': 'marketsage',
-      });
+// Proxy health to NestJS backend
 
-      const startTime = Date.now();
-      
-      // Perform health checks with tracing
-      const healthChecks = await performHealthChecks();
-      const responseTime = Date.now() - startTime;
-      
-      span.setAttributes({
-        'app.health.overall': healthChecks.overall,
-        'app.health.database': healthChecks.database,
-        'app.health.response_time_ms': responseTime,
-      });
-
-      // Return Prometheus metrics format if requested
-      if (format === 'prometheus') {
-        span.setStatus({ code: 1 }); // OK
-        return new Response(generatePrometheusMetrics(healthChecks, responseTime), {
-          headers: { 'Content-Type': 'text/plain; version=0.0.4' },
-          status: 200
-        });
-      }
-
-      // Return JSON format (default)
-      span.setStatus({ code: 1 }); // OK
-      // Prepare system info based on environment
-      const systemInfo = process.env.NODE_ENV === 'production' 
-        ? undefined  // Hide system details in production
-        : {
-            nodeVersion: process.version,
-            platform: process.platform,
-            arch: process.arch
-          };
-
-      const telemetryInfo = process.env.NODE_ENV === 'production'
-        ? { enabled: !!process.env.OTEL_ENABLED }  // Only show if enabled in production
-        : {
-            enabled: true,
-            endpoint: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://tempo:4318'
-          };
-
-      return NextResponse.json({
-        status: healthChecks.overall ? 'healthy' : 'unhealthy',
-        timestamp: new Date().toISOString(),
-        service: 'marketsage',
-        version: process.env.APP_VERSION || '1.0.0',
-        environment: process.env.NODE_ENV || 'development',
-        responseTime: `${responseTime}ms`,
-        checks: healthChecks,
-        uptime: process.uptime(),
-        memory: process.env.NODE_ENV === 'production' ? undefined : process.memoryUsage(),
-        system: systemInfo,
-        telemetry: telemetryInfo
-      }, { 
-        status: healthChecks.overall ? 200 : 503 
-      });
-
-    } catch (error) {
-      console.error('Health check failed:', error);
-      
-      span.setStatus({ code: 2, message: String(error) }); // ERROR
-      span.setAttributes({
-        'error.message': String(error),
-        'app.health.status': 'error',
-      });
-      
-      const { searchParams } = new URL(request.url);
-      const format = searchParams.get('format');
-      
-      if (format === 'prometheus') {
-        return new Response(generateErrorMetrics(), {
-          headers: { 'Content-Type': 'text/plain; version=0.0.4' },
-          status: 500
-        });
-      }
-
-      return NextResponse.json({
-        status: 'error',
-        timestamp: new Date().toISOString(),
-        service: 'marketsage',
-        error: 'Health check failed',
-        telemetry: process.env.NODE_ENV === 'production'
-          ? { enabled: !!process.env.OTEL_ENABLED }
-          : {
-              enabled: true,
-              endpoint: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://tempo:4318'
-            }
-      }, { status: 500 });
-    } finally {
-      span.end();
-    }
+export async function GET(request: NextRequest, context?: any) {
+  return proxyToBackend(request, {
+    backendPath: 'health',
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
   });
 }
 
-async function performHealthChecks() {
-  const checks = {
-    database: false,
-    redis: false,
-    ai: false,
-    external_apis: false,
-    overall: false,
-    redis_memory: null as any,
-    redis_details: null as any
-  };
-
-  try {
-    // Database health check
-    try {
-      await prisma.$queryRaw`SELECT 1`;
-      checks.database = true;
-    } catch (error) {
-      console.error('Database health check failed:', error);
-    }
-
-    // Redis health check with memory monitoring
-    try {
-      const isConnected = await redisCache.ping();
-      checks.redis = isConnected;
-      
-      if (isConnected) {
-        const memoryInfo = await redisCache.getMemoryInfo();
-        if (memoryInfo) {
-          checks.redis_memory = {
-            used_memory_human: memoryInfo.used_memory_human,
-            memory_usage_percentage: Math.round(memoryInfo.memory_usage_percentage * 10) / 10,
-            maxmemory_human: memoryInfo.maxmemory_human,
-            hit_rate: Math.round(memoryInfo.hit_rate * 10) / 10,
-            status: memoryInfo.memory_usage_percentage > 90 ? 'critical' : 
-                   memoryInfo.memory_usage_percentage > 75 ? 'warning' : 'healthy'
-          };
-          
-          // Detailed metrics for monitoring systems
-          checks.redis_details = {
-            connected_clients: memoryInfo.connected_clients,
-            keyspace_hits: memoryInfo.keyspace_hits,
-            keyspace_misses: memoryInfo.keyspace_misses,
-            uptime_hours: Math.round(memoryInfo.uptime_in_seconds / 3600 * 10) / 10
-          };
-        }
-      }
-    } catch (error) {
-      console.error('Redis health check failed:', error);
-      checks.redis = false;
-    }
-
-    // AI system health check
-    try {
-      // Check if AI endpoints are responsive
-      checks.ai = true; // Placeholder
-    } catch (error) {
-      console.error('AI health check failed:', error);
-    }
-
-    // External APIs health check - Enhanced with AI integration testing
-    try {
-      // Import integration testing engine
-      const { integrationTestingEngine } = await import('@/lib/ai/integration-testing-engine');
-      const integrationHealth = await integrationTestingEngine.performIntegrationHealthCheck();
-      
-      // Consider external APIs healthy if overall score > 70
-      checks.external_apis = integrationHealth.overall.score > 70;
-      
-      // Add detailed integration metrics to response
-      checks.integration_details = {
-        overallScore: integrationHealth.overall.score,
-        healthyCount: integrationHealth.metrics.healthyCount,
-        unhealthyCount: integrationHealth.metrics.unhealthyCount,
-        averageResponseTime: integrationHealth.metrics.averageResponseTime,
-        riskLevel: integrationHealth.insights.riskLevel,
-        trending: integrationHealth.insights.trending
-      };
-    } catch (error) {
-      console.error('AI Integration testing failed:', error);
-      checks.external_apis = false;
-    }
-
-    // Overall health
-    checks.overall = checks.database && checks.redis && checks.ai;
-
-  } catch (error) {
-    console.error('Health checks failed:', error);
-  }
-
-  return checks;
+export async function POST(request: NextRequest, context?: any) {
+  return proxyToBackend(request, {
+    backendPath: 'health',
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
 }
 
-function generatePrometheusMetrics(healthChecks: any, responseTime: number) {
-  const timestamp = Date.now();
-  
-  let redisMetrics = '';
-  if (healthChecks.redis_memory) {
-    const memory = healthChecks.redis_memory;
-    const details = healthChecks.redis_details;
-    
-    redisMetrics = `
-
-# HELP marketsage_redis_memory_usage_percentage Redis memory usage percentage
-# TYPE marketsage_redis_memory_usage_percentage gauge
-marketsage_redis_memory_usage_percentage ${memory.memory_usage_percentage} ${timestamp}
-
-# HELP marketsage_redis_hit_rate_percentage Redis cache hit rate percentage
-# TYPE marketsage_redis_hit_rate_percentage gauge
-marketsage_redis_hit_rate_percentage ${memory.hit_rate} ${timestamp}
-
-# HELP marketsage_redis_connected_clients Number of connected Redis clients
-# TYPE marketsage_redis_connected_clients gauge
-marketsage_redis_connected_clients ${details.connected_clients} ${timestamp}
-
-# HELP marketsage_redis_keyspace_operations_total Total Redis keyspace operations
-# TYPE marketsage_redis_keyspace_operations_total counter
-marketsage_redis_keyspace_operations_total{type="hits"} ${details.keyspace_hits} ${timestamp}
-marketsage_redis_keyspace_operations_total{type="misses"} ${details.keyspace_misses} ${timestamp}
-
-# HELP marketsage_redis_uptime_hours Redis uptime in hours
-# TYPE marketsage_redis_uptime_hours gauge
-marketsage_redis_uptime_hours ${details.uptime_hours} ${timestamp}`;
-  }
-  
-  return `
-# HELP marketsage_health_check Application health check status
-# TYPE marketsage_health_check gauge
-marketsage_health_check{component="overall"} ${healthChecks.overall ? 1 : 0} ${timestamp}
-marketsage_health_check{component="database"} ${healthChecks.database ? 1 : 0} ${timestamp}
-marketsage_health_check{component="redis"} ${healthChecks.redis ? 1 : 0} ${timestamp}
-marketsage_health_check{component="ai"} ${healthChecks.ai ? 1 : 0} ${timestamp}
-marketsage_health_check{component="external_apis"} ${healthChecks.external_apis ? 1 : 0} ${timestamp}
-
-# HELP marketsage_response_time_milliseconds Health check response time
-# TYPE marketsage_response_time_milliseconds gauge
-marketsage_response_time_milliseconds ${responseTime} ${timestamp}
-
-# HELP marketsage_uptime_seconds Application uptime in seconds
-# TYPE marketsage_uptime_seconds counter
-marketsage_uptime_seconds ${process.uptime()} ${timestamp}
-
-# HELP marketsage_memory_usage_bytes Memory usage in bytes
-# TYPE marketsage_memory_usage_bytes gauge
-marketsage_memory_usage_bytes{type="rss"} ${process.memoryUsage().rss} ${timestamp}
-marketsage_memory_usage_bytes{type="heapTotal"} ${process.memoryUsage().heapTotal} ${timestamp}
-marketsage_memory_usage_bytes{type="heapUsed"} ${process.memoryUsage().heapUsed} ${timestamp}
-marketsage_memory_usage_bytes{type="external"} ${process.memoryUsage().external} ${timestamp}${redisMetrics}
-
-# HELP marketsage_info Application information
-# TYPE marketsage_info gauge
-marketsage_info{version="${process.env.APP_VERSION || '1.0.0'}",environment="${process.env.NODE_ENV || 'development'}",node_version="${process.version}"} 1 ${timestamp}
-`.trim();
+export async function PATCH(request: NextRequest, context?: any) {
+  return proxyToBackend(request, {
+    backendPath: 'health',
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
 }
 
-function generateErrorMetrics() {
-  const timestamp = Date.now();
-  
-  return `
-# HELP marketsage_health_check Application health check status
-# TYPE marketsage_health_check gauge
-marketsage_health_check{component="overall"} 0 ${timestamp}
-
-# HELP marketsage_health_check_error Health check error occurred
-# TYPE marketsage_health_check_error gauge
-marketsage_health_check_error 1 ${timestamp}
-`.trim();
+export async function DELETE(request: NextRequest, context?: any) {
+  return proxyToBackend(request, {
+    backendPath: 'health',
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
 }

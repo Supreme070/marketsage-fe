@@ -43,6 +43,18 @@ export interface MCPResourceContent {
 }
 
 // ============================================================================
+// Server Configuration Types
+// ============================================================================
+
+export interface MCPServerConfig {
+  name: string;
+  port: number;
+  enabled: boolean;
+  description?: string;
+  capabilities?: string[];
+}
+
+// ============================================================================
 // Tool Types
 // ============================================================================
 

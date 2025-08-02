@@ -163,7 +163,7 @@ export function TaskDependencyManager() {
 
   const fetchHealthMetrics = async () => {
     try {
-      const response = await fetch('/api/tasks/dependencies?action=health');
+      const response = await fetch('/api/v2/tasks/dependencies?action=health');
       const data = await response.json();
 
       if (data.success) {
@@ -190,7 +190,7 @@ export function TaskDependencyManager() {
         depth: dependencyDepth.toString()
       });
 
-      const response = await fetch(`/api/tasks/dependencies?${params}`);
+      const response = await fetch(`/api/v2/tasks/dependencies?${params}`);
       const data = await response.json();
 
       if (data.success) {
@@ -225,7 +225,7 @@ export function TaskDependencyManager() {
         african_optimization: africanOptimization.toString()
       });
 
-      const response = await fetch(`/api/tasks/dependencies?${params}`);
+      const response = await fetch(`/api/v2/tasks/dependencies?${params}`);
       const data = await response.json();
 
       if (data.success) {
@@ -247,7 +247,7 @@ export function TaskDependencyManager() {
   const resolveConflicts = async (conflictIds: string[]) => {
     setLoading(true);
     try {
-      const response = await fetch('/api/tasks/dependencies', {
+      const response = await fetch('/api/v2/tasks/dependencies', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

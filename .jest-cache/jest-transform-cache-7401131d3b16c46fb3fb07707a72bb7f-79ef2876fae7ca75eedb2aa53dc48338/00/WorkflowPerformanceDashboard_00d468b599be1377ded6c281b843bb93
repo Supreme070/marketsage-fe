@@ -1,0 +1,693 @@
+0d2140825405e83c067924729af4f321
+"use client";
+"use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+Object.defineProperty(exports, "default", {
+    enumerable: true,
+    get: function() {
+        return WorkflowPerformanceDashboard;
+    }
+});
+const _jsxruntime = require("react/jsx-runtime");
+const _react = require("react");
+const _card = require("../ui/card");
+const _badge = require("../ui/badge");
+const _button = require("../ui/button");
+const _progress = require("../ui/progress");
+const _alert = require("../ui/alert");
+const _lucidereact = require("lucide-react");
+const _framermotion = require("framer-motion");
+function WorkflowPerformanceDashboard() {
+    const [dashboardData, setDashboardData] = (0, _react.useState)(null);
+    const [loading, setLoading] = (0, _react.useState)(true);
+    const [error, setError] = (0, _react.useState)(null);
+    const [autoRefresh, setAutoRefresh] = (0, _react.useState)(true);
+    // Fetch performance data
+    const fetchPerformanceData = async ()=>{
+        try {
+            const response = await fetch("/api/workflows/performance");
+            if (!response.ok) {
+                throw new Error("Failed to fetch performance data");
+            }
+            const data = await response.json();
+            setDashboardData(data);
+            setError(null);
+        } catch (err) {
+            console.error("Error fetching performance data:", err);
+            setError(err instanceof Error ? err.message : "Unknown error");
+        } finally{
+            setLoading(false);
+        }
+    };
+    // Auto-refresh effect
+    (0, _react.useEffect)(()=>{
+        fetchPerformanceData();
+        if (autoRefresh) {
+            const interval = setInterval(fetchPerformanceData, 30000); // Refresh every 30 seconds
+            return ()=>clearInterval(interval);
+        }
+    }, [
+        autoRefresh
+    ]);
+    const getSeverityColor = (severity)=>{
+        switch(severity){
+            case "CRITICAL":
+                return "destructive";
+            case "HIGH":
+                return "destructive";
+            case "MEDIUM":
+                return "default";
+            case "LOW":
+                return "secondary";
+            default:
+                return "outline";
+        }
+    };
+    const getHealthStatus = (value, thresholds)=>{
+        if (value <= thresholds.good) return {
+            status: "good",
+            color: "text-green-600"
+        };
+        if (value <= thresholds.warning) return {
+            status: "warning",
+            color: "text-yellow-600"
+        };
+        return {
+            status: "critical",
+            color: "text-red-600"
+        };
+    };
+    if (loading) {
+        return /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+            className: "flex items-center justify-center h-64",
+            children: [
+                /*#__PURE__*/ (0, _jsxruntime.jsx)(_lucidereact.RefreshCw, {
+                    className: "h-8 w-8 animate-spin text-primary"
+                }),
+                /*#__PURE__*/ (0, _jsxruntime.jsx)("span", {
+                    className: "ml-2",
+                    children: "Loading performance metrics..."
+                })
+            ]
+        });
+    }
+    if (error) {
+        return /*#__PURE__*/ (0, _jsxruntime.jsxs)(_alert.Alert, {
+            variant: "destructive",
+            children: [
+                /*#__PURE__*/ (0, _jsxruntime.jsx)(_lucidereact.AlertCircle, {
+                    className: "h-4 w-4"
+                }),
+                /*#__PURE__*/ (0, _jsxruntime.jsx)(_alert.AlertTitle, {
+                    children: "Error Loading Performance Data"
+                }),
+                /*#__PURE__*/ (0, _jsxruntime.jsxs)(_alert.AlertDescription, {
+                    children: [
+                        error,
+                        /*#__PURE__*/ (0, _jsxruntime.jsxs)(_button.Button, {
+                            variant: "outline",
+                            size: "sm",
+                            className: "ml-4",
+                            onClick: fetchPerformanceData,
+                            children: [
+                                /*#__PURE__*/ (0, _jsxruntime.jsx)(_lucidereact.RefreshCw, {
+                                    className: "h-4 w-4 mr-2"
+                                }),
+                                "Retry"
+                            ]
+                        })
+                    ]
+                })
+            ]
+        });
+    }
+    if (!dashboardData) {
+        return /*#__PURE__*/ (0, _jsxruntime.jsxs)(_alert.Alert, {
+            children: [
+                /*#__PURE__*/ (0, _jsxruntime.jsx)(_lucidereact.AlertCircle, {
+                    className: "h-4 w-4"
+                }),
+                /*#__PURE__*/ (0, _jsxruntime.jsx)(_alert.AlertTitle, {
+                    children: "No Data Available"
+                }),
+                /*#__PURE__*/ (0, _jsxruntime.jsx)(_alert.AlertDescription, {
+                    children: "Performance monitoring data is not available."
+                })
+            ]
+        });
+    }
+    const { systemHealth, workflowMetrics, activeAlerts, bottlenecks } = dashboardData;
+    return /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+        className: "space-y-6",
+        children: [
+            /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                className: "flex items-center justify-between",
+                children: [
+                    /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                        children: [
+                            /*#__PURE__*/ (0, _jsxruntime.jsx)("h2", {
+                                className: "text-3xl font-bold tracking-tight",
+                                children: "Performance Dashboard"
+                            }),
+                            /*#__PURE__*/ (0, _jsxruntime.jsx)("p", {
+                                className: "text-muted-foreground",
+                                children: "Real-time workflow system monitoring"
+                            })
+                        ]
+                    }),
+                    /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                        className: "flex items-center space-x-2",
+                        children: [
+                            /*#__PURE__*/ (0, _jsxruntime.jsxs)(_button.Button, {
+                                variant: autoRefresh ? "default" : "outline",
+                                size: "sm",
+                                onClick: ()=>setAutoRefresh(!autoRefresh),
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxruntime.jsx)(_lucidereact.Activity, {
+                                        className: "h-4 w-4 mr-2"
+                                    }),
+                                    "Auto-refresh ",
+                                    autoRefresh ? "On" : "Off"
+                                ]
+                            }),
+                            /*#__PURE__*/ (0, _jsxruntime.jsxs)(_button.Button, {
+                                variant: "outline",
+                                size: "sm",
+                                onClick: fetchPerformanceData,
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxruntime.jsx)(_lucidereact.RefreshCw, {
+                                        className: "h-4 w-4 mr-2"
+                                    }),
+                                    "Refresh"
+                                ]
+                            })
+                        ]
+                    })
+                ]
+            }),
+            activeAlerts.length > 0 && /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                className: "space-y-3",
+                children: [
+                    /*#__PURE__*/ (0, _jsxruntime.jsx)("h3", {
+                        className: "text-lg font-semibold",
+                        children: "Active Alerts"
+                    }),
+                    activeAlerts.map((alert)=>/*#__PURE__*/ (0, _jsxruntime.jsx)(_framermotion.motion.div, {
+                            initial: {
+                                opacity: 0,
+                                y: 20
+                            },
+                            animate: {
+                                opacity: 1,
+                                y: 0
+                            },
+                            className: "border rounded-lg p-4",
+                            children: /*#__PURE__*/ (0, _jsxruntime.jsxs)(_alert.Alert, {
+                                variant: alert.severity === "CRITICAL" || alert.severity === "HIGH" ? "destructive" : "default",
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxruntime.jsx)(_lucidereact.AlertCircle, {
+                                        className: "h-4 w-4"
+                                    }),
+                                    /*#__PURE__*/ (0, _jsxruntime.jsxs)(_alert.AlertTitle, {
+                                        className: "flex items-center justify-between",
+                                        children: [
+                                            /*#__PURE__*/ (0, _jsxruntime.jsx)("span", {
+                                                children: alert.alertType.replace(/_/g, " ")
+                                            }),
+                                            /*#__PURE__*/ (0, _jsxruntime.jsx)(_badge.Badge, {
+                                                variant: getSeverityColor(alert.severity),
+                                                children: alert.severity
+                                            })
+                                        ]
+                                    }),
+                                    /*#__PURE__*/ (0, _jsxruntime.jsxs)(_alert.AlertDescription, {
+                                        children: [
+                                            alert.message,
+                                            /*#__PURE__*/ (0, _jsxruntime.jsx)("br", {}),
+                                            /*#__PURE__*/ (0, _jsxruntime.jsx)("small", {
+                                                className: "text-muted-foreground",
+                                                children: new Date(alert.timestamp).toLocaleString()
+                                            })
+                                        ]
+                                    })
+                                ]
+                            })
+                        }, alert.id))
+                ]
+            }),
+            /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4",
+                children: [
+                    /*#__PURE__*/ (0, _jsxruntime.jsxs)(_card.Card, {
+                        children: [
+                            /*#__PURE__*/ (0, _jsxruntime.jsxs)(_card.CardHeader, {
+                                className: "flex flex-row items-center justify-between space-y-0 pb-2",
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxruntime.jsx)(_card.CardTitle, {
+                                        className: "text-sm font-medium",
+                                        children: "Queue Depth"
+                                    }),
+                                    /*#__PURE__*/ (0, _jsxruntime.jsx)(_lucidereact.Activity, {
+                                        className: "h-4 w-4 text-muted-foreground"
+                                    })
+                                ]
+                            }),
+                            /*#__PURE__*/ (0, _jsxruntime.jsxs)(_card.CardContent, {
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxruntime.jsx)("div", {
+                                        className: "text-2xl font-bold",
+                                        children: systemHealth.queueDepth
+                                    }),
+                                    /*#__PURE__*/ (0, _jsxruntime.jsx)("p", {
+                                        className: "text-xs text-muted-foreground",
+                                        children: systemHealth.queueDepth > 50 ? "High queue load" : "Normal queue load"
+                                    })
+                                ]
+                            })
+                        ]
+                    }),
+                    /*#__PURE__*/ (0, _jsxruntime.jsxs)(_card.Card, {
+                        children: [
+                            /*#__PURE__*/ (0, _jsxruntime.jsxs)(_card.CardHeader, {
+                                className: "flex flex-row items-center justify-between space-y-0 pb-2",
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxruntime.jsx)(_card.CardTitle, {
+                                        className: "text-sm font-medium",
+                                        children: "Active Executions"
+                                    }),
+                                    /*#__PURE__*/ (0, _jsxruntime.jsx)(_lucidereact.Zap, {
+                                        className: "h-4 w-4 text-muted-foreground"
+                                    })
+                                ]
+                            }),
+                            /*#__PURE__*/ (0, _jsxruntime.jsxs)(_card.CardContent, {
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxruntime.jsx)("div", {
+                                        className: "text-2xl font-bold",
+                                        children: systemHealth.activeExecutions
+                                    }),
+                                    /*#__PURE__*/ (0, _jsxruntime.jsx)("p", {
+                                        className: "text-xs text-muted-foreground",
+                                        children: "Currently running workflows"
+                                    })
+                                ]
+                            })
+                        ]
+                    }),
+                    /*#__PURE__*/ (0, _jsxruntime.jsxs)(_card.Card, {
+                        children: [
+                            /*#__PURE__*/ (0, _jsxruntime.jsxs)(_card.CardHeader, {
+                                className: "flex flex-row items-center justify-between space-y-0 pb-2",
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxruntime.jsx)(_card.CardTitle, {
+                                        className: "text-sm font-medium",
+                                        children: "Success Rate"
+                                    }),
+                                    /*#__PURE__*/ (0, _jsxruntime.jsx)(_lucidereact.CheckCircle, {
+                                        className: "h-4 w-4 text-muted-foreground"
+                                    })
+                                ]
+                            }),
+                            /*#__PURE__*/ (0, _jsxruntime.jsxs)(_card.CardContent, {
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                        className: "text-2xl font-bold",
+                                        children: [
+                                            systemHealth.completedLastHour + systemHealth.failedLastHour > 0 ? Math.round(systemHealth.completedLastHour / (systemHealth.completedLastHour + systemHealth.failedLastHour) * 100) : 0,
+                                            "%"
+                                        ]
+                                    }),
+                                    /*#__PURE__*/ (0, _jsxruntime.jsx)("p", {
+                                        className: "text-xs text-muted-foreground",
+                                        children: "Last hour performance"
+                                    })
+                                ]
+                            })
+                        ]
+                    }),
+                    /*#__PURE__*/ (0, _jsxruntime.jsxs)(_card.Card, {
+                        children: [
+                            /*#__PURE__*/ (0, _jsxruntime.jsxs)(_card.CardHeader, {
+                                className: "flex flex-row items-center justify-between space-y-0 pb-2",
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxruntime.jsx)(_card.CardTitle, {
+                                        className: "text-sm font-medium",
+                                        children: "Avg Response Time"
+                                    }),
+                                    /*#__PURE__*/ (0, _jsxruntime.jsx)(_lucidereact.Clock, {
+                                        className: "h-4 w-4 text-muted-foreground"
+                                    })
+                                ]
+                            }),
+                            /*#__PURE__*/ (0, _jsxruntime.jsxs)(_card.CardContent, {
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                        className: "text-2xl font-bold",
+                                        children: [
+                                            Math.round(systemHealth.avgResponseTime / 1000),
+                                            "s"
+                                        ]
+                                    }),
+                                    /*#__PURE__*/ (0, _jsxruntime.jsx)("p", {
+                                        className: "text-xs text-muted-foreground",
+                                        children: "Average execution time"
+                                    })
+                                ]
+                            })
+                        ]
+                    })
+                ]
+            }),
+            /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                className: "grid grid-cols-1 md:grid-cols-3 gap-4",
+                children: [
+                    /*#__PURE__*/ (0, _jsxruntime.jsxs)(_card.Card, {
+                        children: [
+                            /*#__PURE__*/ (0, _jsxruntime.jsx)(_card.CardHeader, {
+                                children: /*#__PURE__*/ (0, _jsxruntime.jsxs)(_card.CardTitle, {
+                                    className: "flex items-center",
+                                    children: [
+                                        /*#__PURE__*/ (0, _jsxruntime.jsx)(_lucidereact.Gauge, {
+                                            className: "h-4 w-4 mr-2"
+                                        }),
+                                        "Memory Usage"
+                                    ]
+                                })
+                            }),
+                            /*#__PURE__*/ (0, _jsxruntime.jsx)(_card.CardContent, {
+                                children: /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                    className: "space-y-2",
+                                    children: [
+                                        /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                            className: "flex justify-between",
+                                            children: [
+                                                /*#__PURE__*/ (0, _jsxruntime.jsx)("span", {
+                                                    children: "Current"
+                                                }),
+                                                /*#__PURE__*/ (0, _jsxruntime.jsxs)("span", {
+                                                    className: getHealthStatus(systemHealth.memoryUsage, {
+                                                        good: 0.7,
+                                                        warning: 0.85
+                                                    }).color,
+                                                    children: [
+                                                        Math.round(systemHealth.memoryUsage * 100),
+                                                        "%"
+                                                    ]
+                                                })
+                                            ]
+                                        }),
+                                        /*#__PURE__*/ (0, _jsxruntime.jsx)(_progress.Progress, {
+                                            value: systemHealth.memoryUsage * 100,
+                                            className: "h-2"
+                                        })
+                                    ]
+                                })
+                            })
+                        ]
+                    }),
+                    /*#__PURE__*/ (0, _jsxruntime.jsxs)(_card.Card, {
+                        children: [
+                            /*#__PURE__*/ (0, _jsxruntime.jsx)(_card.CardHeader, {
+                                children: /*#__PURE__*/ (0, _jsxruntime.jsxs)(_card.CardTitle, {
+                                    className: "flex items-center",
+                                    children: [
+                                        /*#__PURE__*/ (0, _jsxruntime.jsx)(_lucidereact.Server, {
+                                            className: "h-4 w-4 mr-2"
+                                        }),
+                                        "CPU Usage"
+                                    ]
+                                })
+                            }),
+                            /*#__PURE__*/ (0, _jsxruntime.jsx)(_card.CardContent, {
+                                children: /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                    className: "space-y-2",
+                                    children: [
+                                        /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                            className: "flex justify-between",
+                                            children: [
+                                                /*#__PURE__*/ (0, _jsxruntime.jsx)("span", {
+                                                    children: "Current"
+                                                }),
+                                                /*#__PURE__*/ (0, _jsxruntime.jsxs)("span", {
+                                                    className: getHealthStatus(systemHealth.cpuUsage, {
+                                                        good: 0.7,
+                                                        warning: 0.85
+                                                    }).color,
+                                                    children: [
+                                                        Math.round(systemHealth.cpuUsage * 100),
+                                                        "%"
+                                                    ]
+                                                })
+                                            ]
+                                        }),
+                                        /*#__PURE__*/ (0, _jsxruntime.jsx)(_progress.Progress, {
+                                            value: systemHealth.cpuUsage * 100,
+                                            className: "h-2"
+                                        })
+                                    ]
+                                })
+                            })
+                        ]
+                    }),
+                    /*#__PURE__*/ (0, _jsxruntime.jsxs)(_card.Card, {
+                        children: [
+                            /*#__PURE__*/ (0, _jsxruntime.jsx)(_card.CardHeader, {
+                                children: /*#__PURE__*/ (0, _jsxruntime.jsxs)(_card.CardTitle, {
+                                    className: "flex items-center",
+                                    children: [
+                                        /*#__PURE__*/ (0, _jsxruntime.jsx)(_lucidereact.Database, {
+                                            className: "h-4 w-4 mr-2"
+                                        }),
+                                        "Connections"
+                                    ]
+                                })
+                            }),
+                            /*#__PURE__*/ (0, _jsxruntime.jsx)(_card.CardContent, {
+                                children: /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                    className: "space-y-2",
+                                    children: [
+                                        /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                            className: "flex justify-between",
+                                            children: [
+                                                /*#__PURE__*/ (0, _jsxruntime.jsx)("span", {
+                                                    children: "Database"
+                                                }),
+                                                /*#__PURE__*/ (0, _jsxruntime.jsx)("span", {
+                                                    children: systemHealth.databaseConnections
+                                                })
+                                            ]
+                                        }),
+                                        /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                            className: "flex justify-between",
+                                            children: [
+                                                /*#__PURE__*/ (0, _jsxruntime.jsx)("span", {
+                                                    children: "Redis"
+                                                }),
+                                                /*#__PURE__*/ (0, _jsxruntime.jsx)("span", {
+                                                    children: systemHealth.redisConnections
+                                                })
+                                            ]
+                                        })
+                                    ]
+                                })
+                            })
+                        ]
+                    })
+                ]
+            }),
+            /*#__PURE__*/ (0, _jsxruntime.jsxs)(_card.Card, {
+                children: [
+                    /*#__PURE__*/ (0, _jsxruntime.jsxs)(_card.CardHeader, {
+                        children: [
+                            /*#__PURE__*/ (0, _jsxruntime.jsx)(_card.CardTitle, {
+                                children: "Workflow Performance"
+                            }),
+                            /*#__PURE__*/ (0, _jsxruntime.jsx)(_card.CardDescription, {
+                                children: "Performance metrics for active workflows"
+                            })
+                        ]
+                    }),
+                    /*#__PURE__*/ (0, _jsxruntime.jsx)(_card.CardContent, {
+                        children: workflowMetrics.length === 0 ? /*#__PURE__*/ (0, _jsxruntime.jsx)("p", {
+                            className: "text-muted-foreground text-center py-8",
+                            children: "No active workflow metrics available"
+                        }) : /*#__PURE__*/ (0, _jsxruntime.jsx)("div", {
+                            className: "space-y-4",
+                            children: workflowMetrics.slice(0, 5).map((workflow)=>/*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                    className: "border rounded-lg p-4",
+                                    children: [
+                                        /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                            className: "flex items-center justify-between mb-2",
+                                            children: [
+                                                /*#__PURE__*/ (0, _jsxruntime.jsxs)("h4", {
+                                                    className: "font-medium",
+                                                    children: [
+                                                        "Workflow ",
+                                                        workflow.workflowId.slice(0, 8),
+                                                        "..."
+                                                    ]
+                                                }),
+                                                /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                                    className: "flex items-center space-x-2",
+                                                    children: [
+                                                        /*#__PURE__*/ (0, _jsxruntime.jsxs)(_badge.Badge, {
+                                                            variant: workflow.successRate > 0.9 ? "default" : workflow.successRate > 0.7 ? "secondary" : "destructive",
+                                                            children: [
+                                                                Math.round(workflow.successRate * 100),
+                                                                "% Success"
+                                                            ]
+                                                        }),
+                                                        /*#__PURE__*/ (0, _jsxruntime.jsxs)(_badge.Badge, {
+                                                            variant: "outline",
+                                                            children: [
+                                                                workflow.throughput.toFixed(1),
+                                                                "/min"
+                                                            ]
+                                                        })
+                                                    ]
+                                                })
+                                            ]
+                                        }),
+                                        /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                            className: "grid grid-cols-2 md:grid-cols-4 gap-4 text-sm",
+                                            children: [
+                                                /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                                    children: [
+                                                        /*#__PURE__*/ (0, _jsxruntime.jsx)("span", {
+                                                            className: "text-muted-foreground",
+                                                            children: "Execution Time"
+                                                        }),
+                                                        /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                                            className: "font-medium",
+                                                            children: [
+                                                                Math.round(workflow.executionTime / 1000),
+                                                                "s"
+                                                            ]
+                                                        })
+                                                    ]
+                                                }),
+                                                /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                                    children: [
+                                                        /*#__PURE__*/ (0, _jsxruntime.jsx)("span", {
+                                                            className: "text-muted-foreground",
+                                                            children: "Error Rate"
+                                                        }),
+                                                        /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                                            className: "font-medium",
+                                                            children: [
+                                                                Math.round(workflow.errorRate * 100),
+                                                                "%"
+                                                            ]
+                                                        })
+                                                    ]
+                                                }),
+                                                /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                                    children: [
+                                                        /*#__PURE__*/ (0, _jsxruntime.jsx)("span", {
+                                                            className: "text-muted-foreground",
+                                                            children: "Avg Step Time"
+                                                        }),
+                                                        /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                                            className: "font-medium",
+                                                            children: [
+                                                                Math.round(workflow.avgStepTime / 1000),
+                                                                "s"
+                                                            ]
+                                                        })
+                                                    ]
+                                                }),
+                                                /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                                    children: [
+                                                        /*#__PURE__*/ (0, _jsxruntime.jsx)("span", {
+                                                            className: "text-muted-foreground",
+                                                            children: "Bottlenecks"
+                                                        }),
+                                                        /*#__PURE__*/ (0, _jsxruntime.jsx)("div", {
+                                                            className: "font-medium",
+                                                            children: workflow.nodeBottlenecks.length
+                                                        })
+                                                    ]
+                                                })
+                                            ]
+                                        }),
+                                        workflow.nodeBottlenecks.length > 0 && /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                            className: "mt-3 pt-3 border-t",
+                                            children: [
+                                                /*#__PURE__*/ (0, _jsxruntime.jsx)("h5", {
+                                                    className: "text-sm font-medium mb-2",
+                                                    children: "Node Bottlenecks"
+                                                }),
+                                                /*#__PURE__*/ (0, _jsxruntime.jsx)("div", {
+                                                    className: "space-y-1",
+                                                    children: workflow.nodeBottlenecks.slice(0, 3).map((bottleneck)=>/*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                                            className: "flex justify-between text-sm",
+                                                            children: [
+                                                                /*#__PURE__*/ (0, _jsxruntime.jsxs)("span", {
+                                                                    className: "text-muted-foreground",
+                                                                    children: [
+                                                                        bottleneck.nodeType,
+                                                                        " (",
+                                                                        bottleneck.nodeId.slice(0, 8),
+                                                                        "...)"
+                                                                    ]
+                                                                }),
+                                                                /*#__PURE__*/ (0, _jsxruntime.jsxs)("span", {
+                                                                    className: "font-medium",
+                                                                    children: [
+                                                                        Math.round(bottleneck.avgExecutionTime / 1000),
+                                                                        "s"
+                                                                    ]
+                                                                })
+                                                            ]
+                                                        }, bottleneck.nodeId))
+                                                })
+                                            ]
+                                        })
+                                    ]
+                                }, workflow.workflowId))
+                        })
+                    })
+                ]
+            }),
+            bottlenecks.length > 0 && /*#__PURE__*/ (0, _jsxruntime.jsxs)(_card.Card, {
+                children: [
+                    /*#__PURE__*/ (0, _jsxruntime.jsxs)(_card.CardHeader, {
+                        children: [
+                            /*#__PURE__*/ (0, _jsxruntime.jsxs)(_card.CardTitle, {
+                                className: "flex items-center",
+                                children: [
+                                    /*#__PURE__*/ (0, _jsxruntime.jsx)(_lucidereact.AlertCircle, {
+                                        className: "h-4 w-4 mr-2"
+                                    }),
+                                    "System Bottlenecks"
+                                ]
+                            }),
+                            /*#__PURE__*/ (0, _jsxruntime.jsx)(_card.CardDescription, {
+                                children: "Detected performance bottlenecks requiring attention"
+                            })
+                        ]
+                    }),
+                    /*#__PURE__*/ (0, _jsxruntime.jsx)(_card.CardContent, {
+                        children: /*#__PURE__*/ (0, _jsxruntime.jsx)("div", {
+                            className: "space-y-2",
+                            children: bottlenecks.map((bottleneck, index)=>/*#__PURE__*/ (0, _jsxruntime.jsxs)(_alert.Alert, {
+                                    children: [
+                                        /*#__PURE__*/ (0, _jsxruntime.jsx)(_lucidereact.AlertCircle, {
+                                            className: "h-4 w-4"
+                                        }),
+                                        /*#__PURE__*/ (0, _jsxruntime.jsx)(_alert.AlertDescription, {
+                                            children: bottleneck
+                                        })
+                                    ]
+                                }, index))
+                        })
+                    })
+                ]
+            })
+        ]
+    });
+}
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi9Vc2Vycy9zdXByZW1lL0Rlc2t0b3AvbWFya2V0c2FnZS9zcmMvY29tcG9uZW50cy9kYXNoYm9hcmQvV29ya2Zsb3dQZXJmb3JtYW5jZURhc2hib2FyZC50c3giXSwic291cmNlc0NvbnRlbnQiOlsiXCJ1c2UgY2xpZW50XCI7XG5cbmltcG9ydCB7IHVzZUVmZmVjdCwgdXNlU3RhdGUgfSBmcm9tIFwicmVhY3RcIjtcbmltcG9ydCB7IENhcmQsIENhcmRDb250ZW50LCBDYXJkRGVzY3JpcHRpb24sIENhcmRIZWFkZXIsIENhcmRUaXRsZSB9IGZyb20gXCJAL2NvbXBvbmVudHMvdWkvY2FyZFwiO1xuaW1wb3J0IHsgQmFkZ2UgfSBmcm9tIFwiQC9jb21wb25lbnRzL3VpL2JhZGdlXCI7XG5pbXBvcnQgeyBCdXR0b24gfSBmcm9tIFwiQC9jb21wb25lbnRzL3VpL2J1dHRvblwiO1xuaW1wb3J0IHsgUHJvZ3Jlc3MgfSBmcm9tIFwiQC9jb21wb25lbnRzL3VpL3Byb2dyZXNzXCI7XG5pbXBvcnQgeyBBbGVydCwgQWxlcnREZXNjcmlwdGlvbiwgQWxlcnRUaXRsZSB9IGZyb20gXCJAL2NvbXBvbmVudHMvdWkvYWxlcnRcIjtcbmltcG9ydCB7XG4gIEFsZXJ0Q2lyY2xlLFxuICBBY3Rpdml0eSxcbiAgQ2xvY2ssXG4gIFRyZW5kaW5nVXAsXG4gIFRyZW5kaW5nRG93bixcbiAgU2VydmVyLFxuICBEYXRhYmFzZSxcbiAgWmFwLFxuICBSZWZyZXNoQ3csXG4gIEdhdWdlLFxuICBVc2VycyxcbiAgQ2hlY2tDaXJjbGUsXG4gIFhDaXJjbGUsXG59IGZyb20gXCJsdWNpZGUtcmVhY3RcIjtcbmltcG9ydCB7IG1vdGlvbiB9IGZyb20gXCJmcmFtZXItbW90aW9uXCI7XG5cbmludGVyZmFjZSBTeXN0ZW1IZWFsdGhNZXRyaWNzIHtcbiAgdGltZXN0YW1wOiBEYXRlO1xuICBxdWV1ZURlcHRoOiBudW1iZXI7XG4gIGFjdGl2ZUV4ZWN1dGlvbnM6IG51bWJlcjtcbiAgY29tcGxldGVkTGFzdEhvdXI6IG51bWJlcjtcbiAgZmFpbGVkTGFzdEhvdXI6IG51bWJlcjtcbiAgYXZnUmVzcG9uc2VUaW1lOiBudW1iZXI7XG4gIG1lbW9yeVVzYWdlOiBudW1iZXI7XG4gIGNwdVVzYWdlOiBudW1iZXI7XG4gIGRpc2tVc2FnZTogbnVtYmVyO1xuICByZWRpc0Nvbm5lY3Rpb25zOiBudW1iZXI7XG4gIGRhdGFiYXNlQ29ubmVjdGlvbnM6IG51bWJlcjtcbn1cblxuaW50ZXJmYWNlIFdvcmtmbG93UGVyZm9ybWFuY2VNZXRyaWNzIHtcbiAgd29ya2Zsb3dJZDogc3RyaW5nO1xuICB0aW1lc3RhbXA6IERhdGU7XG4gIGV4ZWN1dGlvblRpbWU6IG51bWJlcjtcbiAgbWVtb3J5VXNhZ2U6IG51bWJlcjtcbiAgY3B1VXNhZ2U6IG51bWJlcjtcbiAgc3VjY2Vzc1JhdGU6IG51bWJlcjtcbiAgdGhyb3VnaHB1dDogbnVtYmVyO1xuICBlcnJvclJhdGU6IG51bWJlcjtcbiAgYXZnU3RlcFRpbWU6IG51bWJlcjtcbiAgbm9kZUJvdHRsZW5lY2tzOiBOb2RlQm90dGxlbmVja1tdO1xufVxuXG5pbnRlcmZhY2UgTm9kZUJvdHRsZW5lY2sge1xuICBub2RlSWQ6IHN0cmluZztcbiAgbm9kZVR5cGU6IHN0cmluZztcbiAgYXZnRXhlY3V0aW9uVGltZTogbnVtYmVyO1xuICBlcnJvckNvdW50OiBudW1iZXI7XG4gIGJvdHRsZW5lY2tTY29yZTogbnVtYmVyO1xufVxuXG5pbnRlcmZhY2UgUGVyZm9ybWFuY2VBbGVydCB7XG4gIGlkOiBzdHJpbmc7XG4gIHdvcmtmbG93SWQ/OiBzdHJpbmc7XG4gIGFsZXJ0VHlwZTogc3RyaW5nO1xuICBzZXZlcml0eTogXCJMT1dcIiB8IFwiTUVESVVNXCIgfCBcIkhJR0hcIiB8IFwiQ1JJVElDQUxcIjtcbiAgbWVzc2FnZTogc3RyaW5nO1xuICB0aHJlc2hvbGQ6IG51bWJlcjtcbiAgY3VycmVudFZhbHVlOiBudW1iZXI7XG4gIHRpbWVzdGFtcDogRGF0ZTtcbiAgcmVzb2x2ZWQ6IGJvb2xlYW47XG59XG5cbmludGVyZmFjZSBEYXNoYm9hcmREYXRhIHtcbiAgc3lzdGVtSGVhbHRoOiBTeXN0ZW1IZWFsdGhNZXRyaWNzO1xuICB3b3JrZmxvd01ldHJpY3M6IFdvcmtmbG93UGVyZm9ybWFuY2VNZXRyaWNzW107XG4gIGFjdGl2ZUFsZXJ0czogUGVyZm9ybWFuY2VBbGVydFtdO1xuICBib3R0bGVuZWNrczogc3RyaW5nW107XG59XG5cbmV4cG9ydCBkZWZhdWx0IGZ1bmN0aW9uIFdvcmtmbG93UGVyZm9ybWFuY2VEYXNoYm9hcmQoKSB7XG4gIGNvbnN0IFtkYXNoYm9hcmREYXRhLCBzZXREYXNoYm9hcmREYXRhXSA9IHVzZVN0YXRlPERhc2hib2FyZERhdGEgfCBudWxsPihudWxsKTtcbiAgY29uc3QgW2xvYWRpbmcsIHNldExvYWRpbmddID0gdXNlU3RhdGUodHJ1ZSk7XG4gIGNvbnN0IFtlcnJvciwgc2V0RXJyb3JdID0gdXNlU3RhdGU8c3RyaW5nIHwgbnVsbD4obnVsbCk7XG4gIGNvbnN0IFthdXRvUmVmcmVzaCwgc2V0QXV0b1JlZnJlc2hdID0gdXNlU3RhdGUodHJ1ZSk7XG5cbiAgLy8gRmV0Y2ggcGVyZm9ybWFuY2UgZGF0YVxuICBjb25zdCBmZXRjaFBlcmZvcm1hbmNlRGF0YSA9IGFzeW5jICgpID0+IHtcbiAgICB0cnkge1xuICAgICAgY29uc3QgcmVzcG9uc2UgPSBhd2FpdCBmZXRjaChcIi9hcGkvd29ya2Zsb3dzL3BlcmZvcm1hbmNlXCIpO1xuICAgICAgaWYgKCFyZXNwb25zZS5vaykge1xuICAgICAgICB0aHJvdyBuZXcgRXJyb3IoXCJGYWlsZWQgdG8gZmV0Y2ggcGVyZm9ybWFuY2UgZGF0YVwiKTtcbiAgICAgIH1cbiAgICAgIFxuICAgICAgY29uc3QgZGF0YSA9IGF3YWl0IHJlc3BvbnNlLmpzb24oKTtcbiAgICAgIHNldERhc2hib2FyZERhdGEoZGF0YSk7XG4gICAgICBzZXRFcnJvcihudWxsKTtcbiAgICB9IGNhdGNoIChlcnIpIHtcbiAgICAgIGNvbnNvbGUuZXJyb3IoXCJFcnJvciBmZXRjaGluZyBwZXJmb3JtYW5jZSBkYXRhOlwiLCBlcnIpO1xuICAgICAgc2V0RXJyb3IoZXJyIGluc3RhbmNlb2YgRXJyb3IgPyBlcnIubWVzc2FnZSA6IFwiVW5rbm93biBlcnJvclwiKTtcbiAgICB9IGZpbmFsbHkge1xuICAgICAgc2V0TG9hZGluZyhmYWxzZSk7XG4gICAgfVxuICB9O1xuXG4gIC8vIEF1dG8tcmVmcmVzaCBlZmZlY3RcbiAgdXNlRWZmZWN0KCgpID0+IHtcbiAgICBmZXRjaFBlcmZvcm1hbmNlRGF0YSgpO1xuICAgIFxuICAgIGlmIChhdXRvUmVmcmVzaCkge1xuICAgICAgY29uc3QgaW50ZXJ2YWwgPSBzZXRJbnRlcnZhbChmZXRjaFBlcmZvcm1hbmNlRGF0YSwgMzAwMDApOyAvLyBSZWZyZXNoIGV2ZXJ5IDMwIHNlY29uZHNcbiAgICAgIHJldHVybiAoKSA9PiBjbGVhckludGVydmFsKGludGVydmFsKTtcbiAgICB9XG4gIH0sIFthdXRvUmVmcmVzaF0pO1xuXG4gIGNvbnN0IGdldFNldmVyaXR5Q29sb3IgPSAoc2V2ZXJpdHk6IHN0cmluZykgPT4ge1xuICAgIHN3aXRjaCAoc2V2ZXJpdHkpIHtcbiAgICAgIGNhc2UgXCJDUklUSUNBTFwiOiByZXR1cm4gXCJkZXN0cnVjdGl2ZVwiO1xuICAgICAgY2FzZSBcIkhJR0hcIjogcmV0dXJuIFwiZGVzdHJ1Y3RpdmVcIjtcbiAgICAgIGNhc2UgXCJNRURJVU1cIjogcmV0dXJuIFwiZGVmYXVsdFwiO1xuICAgICAgY2FzZSBcIkxPV1wiOiByZXR1cm4gXCJzZWNvbmRhcnlcIjtcbiAgICAgIGRlZmF1bHQ6IHJldHVybiBcIm91dGxpbmVcIjtcbiAgICB9XG4gIH07XG5cbiAgY29uc3QgZ2V0SGVhbHRoU3RhdHVzID0gKHZhbHVlOiBudW1iZXIsIHRocmVzaG9sZHM6IHsgZ29vZDogbnVtYmVyOyB3YXJuaW5nOiBudW1iZXIgfSkgPT4ge1xuICAgIGlmICh2YWx1ZSA8PSB0aHJlc2hvbGRzLmdvb2QpIHJldHVybiB7IHN0YXR1czogXCJnb29kXCIsIGNvbG9yOiBcInRleHQtZ3JlZW4tNjAwXCIgfTtcbiAgICBpZiAodmFsdWUgPD0gdGhyZXNob2xkcy53YXJuaW5nKSByZXR1cm4geyBzdGF0dXM6IFwid2FybmluZ1wiLCBjb2xvcjogXCJ0ZXh0LXllbGxvdy02MDBcIiB9O1xuICAgIHJldHVybiB7IHN0YXR1czogXCJjcml0aWNhbFwiLCBjb2xvcjogXCJ0ZXh0LXJlZC02MDBcIiB9O1xuICB9O1xuXG4gIGlmIChsb2FkaW5nKSB7XG4gICAgcmV0dXJuIChcbiAgICAgIDxkaXYgY2xhc3NOYW1lPVwiZmxleCBpdGVtcy1jZW50ZXIganVzdGlmeS1jZW50ZXIgaC02NFwiPlxuICAgICAgICA8UmVmcmVzaEN3IGNsYXNzTmFtZT1cImgtOCB3LTggYW5pbWF0ZS1zcGluIHRleHQtcHJpbWFyeVwiIC8+XG4gICAgICAgIDxzcGFuIGNsYXNzTmFtZT1cIm1sLTJcIj5Mb2FkaW5nIHBlcmZvcm1hbmNlIG1ldHJpY3MuLi48L3NwYW4+XG4gICAgICA8L2Rpdj5cbiAgICApO1xuICB9XG5cbiAgaWYgKGVycm9yKSB7XG4gICAgcmV0dXJuIChcbiAgICAgIDxBbGVydCB2YXJpYW50PVwiZGVzdHJ1Y3RpdmVcIj5cbiAgICAgICAgPEFsZXJ0Q2lyY2xlIGNsYXNzTmFtZT1cImgtNCB3LTRcIiAvPlxuICAgICAgICA8QWxlcnRUaXRsZT5FcnJvciBMb2FkaW5nIFBlcmZvcm1hbmNlIERhdGE8L0FsZXJ0VGl0bGU+XG4gICAgICAgIDxBbGVydERlc2NyaXB0aW9uPlxuICAgICAgICAgIHtlcnJvcn1cbiAgICAgICAgICA8QnV0dG9uIHZhcmlhbnQ9XCJvdXRsaW5lXCIgc2l6ZT1cInNtXCIgY2xhc3NOYW1lPVwibWwtNFwiIG9uQ2xpY2s9e2ZldGNoUGVyZm9ybWFuY2VEYXRhfT5cbiAgICAgICAgICAgIDxSZWZyZXNoQ3cgY2xhc3NOYW1lPVwiaC00IHctNCBtci0yXCIgLz5cbiAgICAgICAgICAgIFJldHJ5XG4gICAgICAgICAgPC9CdXR0b24+XG4gICAgICAgIDwvQWxlcnREZXNjcmlwdGlvbj5cbiAgICAgIDwvQWxlcnQ+XG4gICAgKTtcbiAgfVxuXG4gIGlmICghZGFzaGJvYXJkRGF0YSkge1xuICAgIHJldHVybiAoXG4gICAgICA8QWxlcnQ+XG4gICAgICAgIDxBbGVydENpcmNsZSBjbGFzc05hbWU9XCJoLTQgdy00XCIgLz5cbiAgICAgICAgPEFsZXJ0VGl0bGU+Tm8gRGF0YSBBdmFpbGFibGU8L0FsZXJ0VGl0bGU+XG4gICAgICAgIDxBbGVydERlc2NyaXB0aW9uPlBlcmZvcm1hbmNlIG1vbml0b3JpbmcgZGF0YSBpcyBub3QgYXZhaWxhYmxlLjwvQWxlcnREZXNjcmlwdGlvbj5cbiAgICAgIDwvQWxlcnQ+XG4gICAgKTtcbiAgfVxuXG4gIGNvbnN0IHsgc3lzdGVtSGVhbHRoLCB3b3JrZmxvd01ldHJpY3MsIGFjdGl2ZUFsZXJ0cywgYm90dGxlbmVja3MgfSA9IGRhc2hib2FyZERhdGE7XG5cbiAgcmV0dXJuIChcbiAgICA8ZGl2IGNsYXNzTmFtZT1cInNwYWNlLXktNlwiPlxuICAgICAgey8qIEhlYWRlciAqL31cbiAgICAgIDxkaXYgY2xhc3NOYW1lPVwiZmxleCBpdGVtcy1jZW50ZXIganVzdGlmeS1iZXR3ZWVuXCI+XG4gICAgICAgIDxkaXY+XG4gICAgICAgICAgPGgyIGNsYXNzTmFtZT1cInRleHQtM3hsIGZvbnQtYm9sZCB0cmFja2luZy10aWdodFwiPlBlcmZvcm1hbmNlIERhc2hib2FyZDwvaDI+XG4gICAgICAgICAgPHAgY2xhc3NOYW1lPVwidGV4dC1tdXRlZC1mb3JlZ3JvdW5kXCI+UmVhbC10aW1lIHdvcmtmbG93IHN5c3RlbSBtb25pdG9yaW5nPC9wPlxuICAgICAgICA8L2Rpdj5cbiAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJmbGV4IGl0ZW1zLWNlbnRlciBzcGFjZS14LTJcIj5cbiAgICAgICAgICA8QnV0dG9uXG4gICAgICAgICAgICB2YXJpYW50PXthdXRvUmVmcmVzaCA/IFwiZGVmYXVsdFwiIDogXCJvdXRsaW5lXCJ9XG4gICAgICAgICAgICBzaXplPVwic21cIlxuICAgICAgICAgICAgb25DbGljaz17KCkgPT4gc2V0QXV0b1JlZnJlc2goIWF1dG9SZWZyZXNoKX1cbiAgICAgICAgICA+XG4gICAgICAgICAgICA8QWN0aXZpdHkgY2xhc3NOYW1lPVwiaC00IHctNCBtci0yXCIgLz5cbiAgICAgICAgICAgIEF1dG8tcmVmcmVzaCB7YXV0b1JlZnJlc2ggPyBcIk9uXCIgOiBcIk9mZlwifVxuICAgICAgICAgIDwvQnV0dG9uPlxuICAgICAgICAgIDxCdXR0b24gdmFyaWFudD1cIm91dGxpbmVcIiBzaXplPVwic21cIiBvbkNsaWNrPXtmZXRjaFBlcmZvcm1hbmNlRGF0YX0+XG4gICAgICAgICAgICA8UmVmcmVzaEN3IGNsYXNzTmFtZT1cImgtNCB3LTQgbXItMlwiIC8+XG4gICAgICAgICAgICBSZWZyZXNoXG4gICAgICAgICAgPC9CdXR0b24+XG4gICAgICAgIDwvZGl2PlxuICAgICAgPC9kaXY+XG5cbiAgICAgIHsvKiBBY3RpdmUgQWxlcnRzICovfVxuICAgICAge2FjdGl2ZUFsZXJ0cy5sZW5ndGggPiAwICYmIChcbiAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJzcGFjZS15LTNcIj5cbiAgICAgICAgICA8aDMgY2xhc3NOYW1lPVwidGV4dC1sZyBmb250LXNlbWlib2xkXCI+QWN0aXZlIEFsZXJ0czwvaDM+XG4gICAgICAgICAge2FjdGl2ZUFsZXJ0cy5tYXAoKGFsZXJ0KSA9PiAoXG4gICAgICAgICAgICA8bW90aW9uLmRpdlxuICAgICAgICAgICAgICBrZXk9e2FsZXJ0LmlkfVxuICAgICAgICAgICAgICBpbml0aWFsPXt7IG9wYWNpdHk6IDAsIHk6IDIwIH19XG4gICAgICAgICAgICAgIGFuaW1hdGU9e3sgb3BhY2l0eTogMSwgeTogMCB9fVxuICAgICAgICAgICAgICBjbGFzc05hbWU9XCJib3JkZXIgcm91bmRlZC1sZyBwLTRcIlxuICAgICAgICAgICAgPlxuICAgICAgICAgICAgICA8QWxlcnQgdmFyaWFudD17YWxlcnQuc2V2ZXJpdHkgPT09IFwiQ1JJVElDQUxcIiB8fCBhbGVydC5zZXZlcml0eSA9PT0gXCJISUdIXCIgPyBcImRlc3RydWN0aXZlXCIgOiBcImRlZmF1bHRcIn0+XG4gICAgICAgICAgICAgICAgPEFsZXJ0Q2lyY2xlIGNsYXNzTmFtZT1cImgtNCB3LTRcIiAvPlxuICAgICAgICAgICAgICAgIDxBbGVydFRpdGxlIGNsYXNzTmFtZT1cImZsZXggaXRlbXMtY2VudGVyIGp1c3RpZnktYmV0d2VlblwiPlxuICAgICAgICAgICAgICAgICAgPHNwYW4+e2FsZXJ0LmFsZXJ0VHlwZS5yZXBsYWNlKC9fL2csIFwiIFwiKX08L3NwYW4+XG4gICAgICAgICAgICAgICAgICA8QmFkZ2UgdmFyaWFudD17Z2V0U2V2ZXJpdHlDb2xvcihhbGVydC5zZXZlcml0eSl9PnthbGVydC5zZXZlcml0eX08L0JhZGdlPlxuICAgICAgICAgICAgICAgIDwvQWxlcnRUaXRsZT5cbiAgICAgICAgICAgICAgICA8QWxlcnREZXNjcmlwdGlvbj5cbiAgICAgICAgICAgICAgICAgIHthbGVydC5tZXNzYWdlfVxuICAgICAgICAgICAgICAgICAgPGJyIC8+XG4gICAgICAgICAgICAgICAgICA8c21hbGwgY2xhc3NOYW1lPVwidGV4dC1tdXRlZC1mb3JlZ3JvdW5kXCI+XG4gICAgICAgICAgICAgICAgICAgIHtuZXcgRGF0ZShhbGVydC50aW1lc3RhbXApLnRvTG9jYWxlU3RyaW5nKCl9XG4gICAgICAgICAgICAgICAgICA8L3NtYWxsPlxuICAgICAgICAgICAgICAgIDwvQWxlcnREZXNjcmlwdGlvbj5cbiAgICAgICAgICAgICAgPC9BbGVydD5cbiAgICAgICAgICAgIDwvbW90aW9uLmRpdj5cbiAgICAgICAgICApKX1cbiAgICAgICAgPC9kaXY+XG4gICAgICApfVxuXG4gICAgICB7LyogU3lzdGVtIEhlYWx0aCBPdmVydmlldyAqL31cbiAgICAgIDxkaXYgY2xhc3NOYW1lPVwiZ3JpZCBncmlkLWNvbHMtMSBtZDpncmlkLWNvbHMtMiBsZzpncmlkLWNvbHMtNCBnYXAtNFwiPlxuICAgICAgICA8Q2FyZD5cbiAgICAgICAgICA8Q2FyZEhlYWRlciBjbGFzc05hbWU9XCJmbGV4IGZsZXgtcm93IGl0ZW1zLWNlbnRlciBqdXN0aWZ5LWJldHdlZW4gc3BhY2UteS0wIHBiLTJcIj5cbiAgICAgICAgICAgIDxDYXJkVGl0bGUgY2xhc3NOYW1lPVwidGV4dC1zbSBmb250LW1lZGl1bVwiPlF1ZXVlIERlcHRoPC9DYXJkVGl0bGU+XG4gICAgICAgICAgICA8QWN0aXZpdHkgY2xhc3NOYW1lPVwiaC00IHctNCB0ZXh0LW11dGVkLWZvcmVncm91bmRcIiAvPlxuICAgICAgICAgIDwvQ2FyZEhlYWRlcj5cbiAgICAgICAgICA8Q2FyZENvbnRlbnQ+XG4gICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cInRleHQtMnhsIGZvbnQtYm9sZFwiPntzeXN0ZW1IZWFsdGgucXVldWVEZXB0aH08L2Rpdj5cbiAgICAgICAgICAgIDxwIGNsYXNzTmFtZT1cInRleHQteHMgdGV4dC1tdXRlZC1mb3JlZ3JvdW5kXCI+XG4gICAgICAgICAgICAgIHtzeXN0ZW1IZWFsdGgucXVldWVEZXB0aCA+IDUwID8gXCJIaWdoIHF1ZXVlIGxvYWRcIiA6IFwiTm9ybWFsIHF1ZXVlIGxvYWRcIn1cbiAgICAgICAgICAgIDwvcD5cbiAgICAgICAgICA8L0NhcmRDb250ZW50PlxuICAgICAgICA8L0NhcmQ+XG5cbiAgICAgICAgPENhcmQ+XG4gICAgICAgICAgPENhcmRIZWFkZXIgY2xhc3NOYW1lPVwiZmxleCBmbGV4LXJvdyBpdGVtcy1jZW50ZXIganVzdGlmeS1iZXR3ZWVuIHNwYWNlLXktMCBwYi0yXCI+XG4gICAgICAgICAgICA8Q2FyZFRpdGxlIGNsYXNzTmFtZT1cInRleHQtc20gZm9udC1tZWRpdW1cIj5BY3RpdmUgRXhlY3V0aW9uczwvQ2FyZFRpdGxlPlxuICAgICAgICAgICAgPFphcCBjbGFzc05hbWU9XCJoLTQgdy00IHRleHQtbXV0ZWQtZm9yZWdyb3VuZFwiIC8+XG4gICAgICAgICAgPC9DYXJkSGVhZGVyPlxuICAgICAgICAgIDxDYXJkQ29udGVudD5cbiAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPVwidGV4dC0yeGwgZm9udC1ib2xkXCI+e3N5c3RlbUhlYWx0aC5hY3RpdmVFeGVjdXRpb25zfTwvZGl2PlxuICAgICAgICAgICAgPHAgY2xhc3NOYW1lPVwidGV4dC14cyB0ZXh0LW11dGVkLWZvcmVncm91bmRcIj5cbiAgICAgICAgICAgICAgQ3VycmVudGx5IHJ1bm5pbmcgd29ya2Zsb3dzXG4gICAgICAgICAgICA8L3A+XG4gICAgICAgICAgPC9DYXJkQ29udGVudD5cbiAgICAgICAgPC9DYXJkPlxuXG4gICAgICAgIDxDYXJkPlxuICAgICAgICAgIDxDYXJkSGVhZGVyIGNsYXNzTmFtZT1cImZsZXggZmxleC1yb3cgaXRlbXMtY2VudGVyIGp1c3RpZnktYmV0d2VlbiBzcGFjZS15LTAgcGItMlwiPlxuICAgICAgICAgICAgPENhcmRUaXRsZSBjbGFzc05hbWU9XCJ0ZXh0LXNtIGZvbnQtbWVkaXVtXCI+U3VjY2VzcyBSYXRlPC9DYXJkVGl0bGU+XG4gICAgICAgICAgICA8Q2hlY2tDaXJjbGUgY2xhc3NOYW1lPVwiaC00IHctNCB0ZXh0LW11dGVkLWZvcmVncm91bmRcIiAvPlxuICAgICAgICAgIDwvQ2FyZEhlYWRlcj5cbiAgICAgICAgICA8Q2FyZENvbnRlbnQ+XG4gICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cInRleHQtMnhsIGZvbnQtYm9sZFwiPlxuICAgICAgICAgICAgICB7c3lzdGVtSGVhbHRoLmNvbXBsZXRlZExhc3RIb3VyICsgc3lzdGVtSGVhbHRoLmZhaWxlZExhc3RIb3VyID4gMFxuICAgICAgICAgICAgICAgID8gTWF0aC5yb3VuZCgoc3lzdGVtSGVhbHRoLmNvbXBsZXRlZExhc3RIb3VyIC8gKHN5c3RlbUhlYWx0aC5jb21wbGV0ZWRMYXN0SG91ciArIHN5c3RlbUhlYWx0aC5mYWlsZWRMYXN0SG91cikpICogMTAwKVxuICAgICAgICAgICAgICAgIDogMH0lXG4gICAgICAgICAgICA8L2Rpdj5cbiAgICAgICAgICAgIDxwIGNsYXNzTmFtZT1cInRleHQteHMgdGV4dC1tdXRlZC1mb3JlZ3JvdW5kXCI+XG4gICAgICAgICAgICAgIExhc3QgaG91ciBwZXJmb3JtYW5jZVxuICAgICAgICAgICAgPC9wPlxuICAgICAgICAgIDwvQ2FyZENvbnRlbnQ+XG4gICAgICAgIDwvQ2FyZD5cblxuICAgICAgICA8Q2FyZD5cbiAgICAgICAgICA8Q2FyZEhlYWRlciBjbGFzc05hbWU9XCJmbGV4IGZsZXgtcm93IGl0ZW1zLWNlbnRlciBqdXN0aWZ5LWJldHdlZW4gc3BhY2UteS0wIHBiLTJcIj5cbiAgICAgICAgICAgIDxDYXJkVGl0bGUgY2xhc3NOYW1lPVwidGV4dC1zbSBmb250LW1lZGl1bVwiPkF2ZyBSZXNwb25zZSBUaW1lPC9DYXJkVGl0bGU+XG4gICAgICAgICAgICA8Q2xvY2sgY2xhc3NOYW1lPVwiaC00IHctNCB0ZXh0LW11dGVkLWZvcmVncm91bmRcIiAvPlxuICAgICAgICAgIDwvQ2FyZEhlYWRlcj5cbiAgICAgICAgICA8Q2FyZENvbnRlbnQ+XG4gICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cInRleHQtMnhsIGZvbnQtYm9sZFwiPlxuICAgICAgICAgICAgICB7TWF0aC5yb3VuZChzeXN0ZW1IZWFsdGguYXZnUmVzcG9uc2VUaW1lIC8gMTAwMCl9c1xuICAgICAgICAgICAgPC9kaXY+XG4gICAgICAgICAgICA8cCBjbGFzc05hbWU9XCJ0ZXh0LXhzIHRleHQtbXV0ZWQtZm9yZWdyb3VuZFwiPlxuICAgICAgICAgICAgICBBdmVyYWdlIGV4ZWN1dGlvbiB0aW1lXG4gICAgICAgICAgICA8L3A+XG4gICAgICAgICAgPC9DYXJkQ29udGVudD5cbiAgICAgICAgPC9DYXJkPlxuICAgICAgPC9kaXY+XG5cbiAgICAgIHsvKiBTeXN0ZW0gUmVzb3VyY2VzICovfVxuICAgICAgPGRpdiBjbGFzc05hbWU9XCJncmlkIGdyaWQtY29scy0xIG1kOmdyaWQtY29scy0zIGdhcC00XCI+XG4gICAgICAgIDxDYXJkPlxuICAgICAgICAgIDxDYXJkSGVhZGVyPlxuICAgICAgICAgICAgPENhcmRUaXRsZSBjbGFzc05hbWU9XCJmbGV4IGl0ZW1zLWNlbnRlclwiPlxuICAgICAgICAgICAgICA8R2F1Z2UgY2xhc3NOYW1lPVwiaC00IHctNCBtci0yXCIgLz5cbiAgICAgICAgICAgICAgTWVtb3J5IFVzYWdlXG4gICAgICAgICAgICA8L0NhcmRUaXRsZT5cbiAgICAgICAgICA8L0NhcmRIZWFkZXI+XG4gICAgICAgICAgPENhcmRDb250ZW50PlxuICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJzcGFjZS15LTJcIj5cbiAgICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJmbGV4IGp1c3RpZnktYmV0d2VlblwiPlxuICAgICAgICAgICAgICAgIDxzcGFuPkN1cnJlbnQ8L3NwYW4+XG4gICAgICAgICAgICAgICAgPHNwYW4gY2xhc3NOYW1lPXtnZXRIZWFsdGhTdGF0dXMoc3lzdGVtSGVhbHRoLm1lbW9yeVVzYWdlLCB7IGdvb2Q6IDAuNywgd2FybmluZzogMC44NSB9KS5jb2xvcn0+XG4gICAgICAgICAgICAgICAgICB7TWF0aC5yb3VuZChzeXN0ZW1IZWFsdGgubWVtb3J5VXNhZ2UgKiAxMDApfSVcbiAgICAgICAgICAgICAgICA8L3NwYW4+XG4gICAgICAgICAgICAgIDwvZGl2PlxuICAgICAgICAgICAgICA8UHJvZ3Jlc3MgdmFsdWU9e3N5c3RlbUhlYWx0aC5tZW1vcnlVc2FnZSAqIDEwMH0gY2xhc3NOYW1lPVwiaC0yXCIgLz5cbiAgICAgICAgICAgIDwvZGl2PlxuICAgICAgICAgIDwvQ2FyZENvbnRlbnQ+XG4gICAgICAgIDwvQ2FyZD5cblxuICAgICAgICA8Q2FyZD5cbiAgICAgICAgICA8Q2FyZEhlYWRlcj5cbiAgICAgICAgICAgIDxDYXJkVGl0bGUgY2xhc3NOYW1lPVwiZmxleCBpdGVtcy1jZW50ZXJcIj5cbiAgICAgICAgICAgICAgPFNlcnZlciBjbGFzc05hbWU9XCJoLTQgdy00IG1yLTJcIiAvPlxuICAgICAgICAgICAgICBDUFUgVXNhZ2VcbiAgICAgICAgICAgIDwvQ2FyZFRpdGxlPlxuICAgICAgICAgIDwvQ2FyZEhlYWRlcj5cbiAgICAgICAgICA8Q2FyZENvbnRlbnQ+XG4gICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cInNwYWNlLXktMlwiPlxuICAgICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cImZsZXgganVzdGlmeS1iZXR3ZWVuXCI+XG4gICAgICAgICAgICAgICAgPHNwYW4+Q3VycmVudDwvc3Bhbj5cbiAgICAgICAgICAgICAgICA8c3BhbiBjbGFzc05hbWU9e2dldEhlYWx0aFN0YXR1cyhzeXN0ZW1IZWFsdGguY3B1VXNhZ2UsIHsgZ29vZDogMC43LCB3YXJuaW5nOiAwLjg1IH0pLmNvbG9yfT5cbiAgICAgICAgICAgICAgICAgIHtNYXRoLnJvdW5kKHN5c3RlbUhlYWx0aC5jcHVVc2FnZSAqIDEwMCl9JVxuICAgICAgICAgICAgICAgIDwvc3Bhbj5cbiAgICAgICAgICAgICAgPC9kaXY+XG4gICAgICAgICAgICAgIDxQcm9ncmVzcyB2YWx1ZT17c3lzdGVtSGVhbHRoLmNwdVVzYWdlICogMTAwfSBjbGFzc05hbWU9XCJoLTJcIiAvPlxuICAgICAgICAgICAgPC9kaXY+XG4gICAgICAgICAgPC9DYXJkQ29udGVudD5cbiAgICAgICAgPC9DYXJkPlxuXG4gICAgICAgIDxDYXJkPlxuICAgICAgICAgIDxDYXJkSGVhZGVyPlxuICAgICAgICAgICAgPENhcmRUaXRsZSBjbGFzc05hbWU9XCJmbGV4IGl0ZW1zLWNlbnRlclwiPlxuICAgICAgICAgICAgICA8RGF0YWJhc2UgY2xhc3NOYW1lPVwiaC00IHctNCBtci0yXCIgLz5cbiAgICAgICAgICAgICAgQ29ubmVjdGlvbnNcbiAgICAgICAgICAgIDwvQ2FyZFRpdGxlPlxuICAgICAgICAgIDwvQ2FyZEhlYWRlcj5cbiAgICAgICAgICA8Q2FyZENvbnRlbnQ+XG4gICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cInNwYWNlLXktMlwiPlxuICAgICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cImZsZXgganVzdGlmeS1iZXR3ZWVuXCI+XG4gICAgICAgICAgICAgICAgPHNwYW4+RGF0YWJhc2U8L3NwYW4+XG4gICAgICAgICAgICAgICAgPHNwYW4+e3N5c3RlbUhlYWx0aC5kYXRhYmFzZUNvbm5lY3Rpb25zfTwvc3Bhbj5cbiAgICAgICAgICAgICAgPC9kaXY+XG4gICAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPVwiZmxleCBqdXN0aWZ5LWJldHdlZW5cIj5cbiAgICAgICAgICAgICAgICA8c3Bhbj5SZWRpczwvc3Bhbj5cbiAgICAgICAgICAgICAgICA8c3Bhbj57c3lzdGVtSGVhbHRoLnJlZGlzQ29ubmVjdGlvbnN9PC9zcGFuPlxuICAgICAgICAgICAgICA8L2Rpdj5cbiAgICAgICAgICAgIDwvZGl2PlxuICAgICAgICAgIDwvQ2FyZENvbnRlbnQ+XG4gICAgICAgIDwvQ2FyZD5cbiAgICAgIDwvZGl2PlxuXG4gICAgICB7LyogV29ya2Zsb3cgUGVyZm9ybWFuY2UgTWV0cmljcyAqL31cbiAgICAgIDxDYXJkPlxuICAgICAgICA8Q2FyZEhlYWRlcj5cbiAgICAgICAgICA8Q2FyZFRpdGxlPldvcmtmbG93IFBlcmZvcm1hbmNlPC9DYXJkVGl0bGU+XG4gICAgICAgICAgPENhcmREZXNjcmlwdGlvbj5QZXJmb3JtYW5jZSBtZXRyaWNzIGZvciBhY3RpdmUgd29ya2Zsb3dzPC9DYXJkRGVzY3JpcHRpb24+XG4gICAgICAgIDwvQ2FyZEhlYWRlcj5cbiAgICAgICAgPENhcmRDb250ZW50PlxuICAgICAgICAgIHt3b3JrZmxvd01ldHJpY3MubGVuZ3RoID09PSAwID8gKFxuICAgICAgICAgICAgPHAgY2xhc3NOYW1lPVwidGV4dC1tdXRlZC1mb3JlZ3JvdW5kIHRleHQtY2VudGVyIHB5LThcIj5ObyBhY3RpdmUgd29ya2Zsb3cgbWV0cmljcyBhdmFpbGFibGU8L3A+XG4gICAgICAgICAgKSA6IChcbiAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPVwic3BhY2UteS00XCI+XG4gICAgICAgICAgICAgIHt3b3JrZmxvd01ldHJpY3Muc2xpY2UoMCwgNSkubWFwKCh3b3JrZmxvdykgPT4gKFxuICAgICAgICAgICAgICAgIDxkaXYga2V5PXt3b3JrZmxvdy53b3JrZmxvd0lkfSBjbGFzc05hbWU9XCJib3JkZXIgcm91bmRlZC1sZyBwLTRcIj5cbiAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPVwiZmxleCBpdGVtcy1jZW50ZXIganVzdGlmeS1iZXR3ZWVuIG1iLTJcIj5cbiAgICAgICAgICAgICAgICAgICAgPGg0IGNsYXNzTmFtZT1cImZvbnQtbWVkaXVtXCI+V29ya2Zsb3cge3dvcmtmbG93LndvcmtmbG93SWQuc2xpY2UoMCwgOCl9Li4uPC9oND5cbiAgICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJmbGV4IGl0ZW1zLWNlbnRlciBzcGFjZS14LTJcIj5cbiAgICAgICAgICAgICAgICAgICAgICA8QmFkZ2UgdmFyaWFudD17d29ya2Zsb3cuc3VjY2Vzc1JhdGUgPiAwLjkgPyBcImRlZmF1bHRcIiA6IHdvcmtmbG93LnN1Y2Nlc3NSYXRlID4gMC43ID8gXCJzZWNvbmRhcnlcIiA6IFwiZGVzdHJ1Y3RpdmVcIn0+XG4gICAgICAgICAgICAgICAgICAgICAgICB7TWF0aC5yb3VuZCh3b3JrZmxvdy5zdWNjZXNzUmF0ZSAqIDEwMCl9JSBTdWNjZXNzXG4gICAgICAgICAgICAgICAgICAgICAgPC9CYWRnZT5cbiAgICAgICAgICAgICAgICAgICAgICA8QmFkZ2UgdmFyaWFudD1cIm91dGxpbmVcIj5cbiAgICAgICAgICAgICAgICAgICAgICAgIHt3b3JrZmxvdy50aHJvdWdocHV0LnRvRml4ZWQoMSl9L21pblxuICAgICAgICAgICAgICAgICAgICAgIDwvQmFkZ2U+XG4gICAgICAgICAgICAgICAgICAgIDwvZGl2PlxuICAgICAgICAgICAgICAgICAgPC9kaXY+XG4gICAgICAgICAgICAgICAgICBcbiAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPVwiZ3JpZCBncmlkLWNvbHMtMiBtZDpncmlkLWNvbHMtNCBnYXAtNCB0ZXh0LXNtXCI+XG4gICAgICAgICAgICAgICAgICAgIDxkaXY+XG4gICAgICAgICAgICAgICAgICAgICAgPHNwYW4gY2xhc3NOYW1lPVwidGV4dC1tdXRlZC1mb3JlZ3JvdW5kXCI+RXhlY3V0aW9uIFRpbWU8L3NwYW4+XG4gICAgICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJmb250LW1lZGl1bVwiPntNYXRoLnJvdW5kKHdvcmtmbG93LmV4ZWN1dGlvblRpbWUgLyAxMDAwKX1zPC9kaXY+XG4gICAgICAgICAgICAgICAgICAgIDwvZGl2PlxuICAgICAgICAgICAgICAgICAgICA8ZGl2PlxuICAgICAgICAgICAgICAgICAgICAgIDxzcGFuIGNsYXNzTmFtZT1cInRleHQtbXV0ZWQtZm9yZWdyb3VuZFwiPkVycm9yIFJhdGU8L3NwYW4+XG4gICAgICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJmb250LW1lZGl1bVwiPntNYXRoLnJvdW5kKHdvcmtmbG93LmVycm9yUmF0ZSAqIDEwMCl9JTwvZGl2PlxuICAgICAgICAgICAgICAgICAgICA8L2Rpdj5cbiAgICAgICAgICAgICAgICAgICAgPGRpdj5cbiAgICAgICAgICAgICAgICAgICAgICA8c3BhbiBjbGFzc05hbWU9XCJ0ZXh0LW11dGVkLWZvcmVncm91bmRcIj5BdmcgU3RlcCBUaW1lPC9zcGFuPlxuICAgICAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPVwiZm9udC1tZWRpdW1cIj57TWF0aC5yb3VuZCh3b3JrZmxvdy5hdmdTdGVwVGltZSAvIDEwMDApfXM8L2Rpdj5cbiAgICAgICAgICAgICAgICAgICAgPC9kaXY+XG4gICAgICAgICAgICAgICAgICAgIDxkaXY+XG4gICAgICAgICAgICAgICAgICAgICAgPHNwYW4gY2xhc3NOYW1lPVwidGV4dC1tdXRlZC1mb3JlZ3JvdW5kXCI+Qm90dGxlbmVja3M8L3NwYW4+XG4gICAgICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJmb250LW1lZGl1bVwiPnt3b3JrZmxvdy5ub2RlQm90dGxlbmVja3MubGVuZ3RofTwvZGl2PlxuICAgICAgICAgICAgICAgICAgICA8L2Rpdj5cbiAgICAgICAgICAgICAgICAgIDwvZGl2PlxuXG4gICAgICAgICAgICAgICAgICB7d29ya2Zsb3cubm9kZUJvdHRsZW5lY2tzLmxlbmd0aCA+IDAgJiYgKFxuICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cIm10LTMgcHQtMyBib3JkZXItdFwiPlxuICAgICAgICAgICAgICAgICAgICAgIDxoNSBjbGFzc05hbWU9XCJ0ZXh0LXNtIGZvbnQtbWVkaXVtIG1iLTJcIj5Ob2RlIEJvdHRsZW5lY2tzPC9oNT5cbiAgICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cInNwYWNlLXktMVwiPlxuICAgICAgICAgICAgICAgICAgICAgICAge3dvcmtmbG93Lm5vZGVCb3R0bGVuZWNrcy5zbGljZSgwLCAzKS5tYXAoKGJvdHRsZW5lY2spID0+IChcbiAgICAgICAgICAgICAgICAgICAgICAgICAgPGRpdiBrZXk9e2JvdHRsZW5lY2subm9kZUlkfSBjbGFzc05hbWU9XCJmbGV4IGp1c3RpZnktYmV0d2VlbiB0ZXh0LXNtXCI+XG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgPHNwYW4gY2xhc3NOYW1lPVwidGV4dC1tdXRlZC1mb3JlZ3JvdW5kXCI+XG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICB7Ym90dGxlbmVjay5ub2RlVHlwZX0gKHtib3R0bGVuZWNrLm5vZGVJZC5zbGljZSgwLCA4KX0uLi4pXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgPC9zcGFuPlxuICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxzcGFuIGNsYXNzTmFtZT1cImZvbnQtbWVkaXVtXCI+XG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICB7TWF0aC5yb3VuZChib3R0bGVuZWNrLmF2Z0V4ZWN1dGlvblRpbWUgLyAxMDAwKX1zXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgPC9zcGFuPlxuICAgICAgICAgICAgICAgICAgICAgICAgICA8L2Rpdj5cbiAgICAgICAgICAgICAgICAgICAgICAgICkpfVxuICAgICAgICAgICAgICAgICAgICAgIDwvZGl2PlxuICAgICAgICAgICAgICAgICAgICA8L2Rpdj5cbiAgICAgICAgICAgICAgICAgICl9XG4gICAgICAgICAgICAgICAgPC9kaXY+XG4gICAgICAgICAgICAgICkpfVxuICAgICAgICAgICAgPC9kaXY+XG4gICAgICAgICAgKX1cbiAgICAgICAgPC9DYXJkQ29udGVudD5cbiAgICAgIDwvQ2FyZD5cblxuICAgICAgey8qIFN5c3RlbSBCb3R0bGVuZWNrcyAqL31cbiAgICAgIHtib3R0bGVuZWNrcy5sZW5ndGggPiAwICYmIChcbiAgICAgICAgPENhcmQ+XG4gICAgICAgICAgPENhcmRIZWFkZXI+XG4gICAgICAgICAgICA8Q2FyZFRpdGxlIGNsYXNzTmFtZT1cImZsZXggaXRlbXMtY2VudGVyXCI+XG4gICAgICAgICAgICAgIDxBbGVydENpcmNsZSBjbGFzc05hbWU9XCJoLTQgdy00IG1yLTJcIiAvPlxuICAgICAgICAgICAgICBTeXN0ZW0gQm90dGxlbmVja3NcbiAgICAgICAgICAgIDwvQ2FyZFRpdGxlPlxuICAgICAgICAgICAgPENhcmREZXNjcmlwdGlvbj5EZXRlY3RlZCBwZXJmb3JtYW5jZSBib3R0bGVuZWNrcyByZXF1aXJpbmcgYXR0ZW50aW9uPC9DYXJkRGVzY3JpcHRpb24+XG4gICAgICAgICAgPC9DYXJkSGVhZGVyPlxuICAgICAgICAgIDxDYXJkQ29udGVudD5cbiAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPVwic3BhY2UteS0yXCI+XG4gICAgICAgICAgICAgIHtib3R0bGVuZWNrcy5tYXAoKGJvdHRsZW5lY2ssIGluZGV4KSA9PiAoXG4gICAgICAgICAgICAgICAgPEFsZXJ0IGtleT17aW5kZXh9PlxuICAgICAgICAgICAgICAgICAgPEFsZXJ0Q2lyY2xlIGNsYXNzTmFtZT1cImgtNCB3LTRcIiAvPlxuICAgICAgICAgICAgICAgICAgPEFsZXJ0RGVzY3JpcHRpb24+e2JvdHRsZW5lY2t9PC9BbGVydERlc2NyaXB0aW9uPlxuICAgICAgICAgICAgICAgIDwvQWxlcnQ+XG4gICAgICAgICAgICAgICkpfVxuICAgICAgICAgICAgPC9kaXY+XG4gICAgICAgICAgPC9DYXJkQ29udGVudD5cbiAgICAgICAgPC9DYXJkPlxuICAgICAgKX1cbiAgICA8L2Rpdj5cbiAgKTtcbn0iXSwibmFtZXMiOlsiV29ya2Zsb3dQZXJmb3JtYW5jZURhc2hib2FyZCIsImRhc2hib2FyZERhdGEiLCJzZXREYXNoYm9hcmREYXRhIiwidXNlU3RhdGUiLCJsb2FkaW5nIiwic2V0TG9hZGluZyIsImVycm9yIiwic2V0RXJyb3IiLCJhdXRvUmVmcmVzaCIsInNldEF1dG9SZWZyZXNoIiwiZmV0Y2hQZXJmb3JtYW5jZURhdGEiLCJyZXNwb25zZSIsImZldGNoIiwib2siLCJFcnJvciIsImRhdGEiLCJqc29uIiwiZXJyIiwiY29uc29sZSIsIm1lc3NhZ2UiLCJ1c2VFZmZlY3QiLCJpbnRlcnZhbCIsInNldEludGVydmFsIiwiY2xlYXJJbnRlcnZhbCIsImdldFNldmVyaXR5Q29sb3IiLCJzZXZlcml0eSIsImdldEhlYWx0aFN0YXR1cyIsInZhbHVlIiwidGhyZXNob2xkcyIsImdvb2QiLCJzdGF0dXMiLCJjb2xvciIsIndhcm5pbmciLCJkaXYiLCJjbGFzc05hbWUiLCJSZWZyZXNoQ3ciLCJzcGFuIiwiQWxlcnQiLCJ2YXJpYW50IiwiQWxlcnRDaXJjbGUiLCJBbGVydFRpdGxlIiwiQWxlcnREZXNjcmlwdGlvbiIsIkJ1dHRvbiIsInNpemUiLCJvbkNsaWNrIiwic3lzdGVtSGVhbHRoIiwid29ya2Zsb3dNZXRyaWNzIiwiYWN0aXZlQWxlcnRzIiwiYm90dGxlbmVja3MiLCJoMiIsInAiLCJBY3Rpdml0eSIsImxlbmd0aCIsImgzIiwibWFwIiwiYWxlcnQiLCJtb3Rpb24iLCJpbml0aWFsIiwib3BhY2l0eSIsInkiLCJhbmltYXRlIiwiYWxlcnRUeXBlIiwicmVwbGFjZSIsIkJhZGdlIiwiYnIiLCJzbWFsbCIsIkRhdGUiLCJ0aW1lc3RhbXAiLCJ0b0xvY2FsZVN0cmluZyIsImlkIiwiQ2FyZCIsIkNhcmRIZWFkZXIiLCJDYXJkVGl0bGUiLCJDYXJkQ29udGVudCIsInF1ZXVlRGVwdGgiLCJaYXAiLCJhY3RpdmVFeGVjdXRpb25zIiwiQ2hlY2tDaXJjbGUiLCJjb21wbGV0ZWRMYXN0SG91ciIsImZhaWxlZExhc3RIb3VyIiwiTWF0aCIsInJvdW5kIiwiQ2xvY2siLCJhdmdSZXNwb25zZVRpbWUiLCJHYXVnZSIsIm1lbW9yeVVzYWdlIiwiUHJvZ3Jlc3MiLCJTZXJ2ZXIiLCJjcHVVc2FnZSIsIkRhdGFiYXNlIiwiZGF0YWJhc2VDb25uZWN0aW9ucyIsInJlZGlzQ29ubmVjdGlvbnMiLCJDYXJkRGVzY3JpcHRpb24iLCJzbGljZSIsIndvcmtmbG93IiwiaDQiLCJ3b3JrZmxvd0lkIiwic3VjY2Vzc1JhdGUiLCJ0aHJvdWdocHV0IiwidG9GaXhlZCIsImV4ZWN1dGlvblRpbWUiLCJlcnJvclJhdGUiLCJhdmdTdGVwVGltZSIsIm5vZGVCb3R0bGVuZWNrcyIsImg1IiwiYm90dGxlbmVjayIsIm5vZGVUeXBlIiwibm9kZUlkIiwiYXZnRXhlY3V0aW9uVGltZSIsImluZGV4Il0sIm1hcHBpbmdzIjoiQUFBQTs7Ozs7K0JBK0VBOzs7ZUFBd0JBOzs7O3VCQTdFWTtzQkFDc0M7dUJBQ3BEO3dCQUNDOzBCQUNFO3VCQUMyQjs2QkFlN0M7OEJBQ2dCO0FBd0RSLFNBQVNBO0lBQ3RCLE1BQU0sQ0FBQ0MsZUFBZUMsaUJBQWlCLEdBQUdDLElBQUFBLGVBQVEs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

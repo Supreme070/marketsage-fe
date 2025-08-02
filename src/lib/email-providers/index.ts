@@ -10,7 +10,7 @@ export { SMTPEmailProvider } from './smtp-provider';
 export { PostmarkEmailProvider } from './postmark-provider';
 export { EmailService, emailService } from './email-service';
 
-import { EmailProvider } from './base-provider';
+import type { EmailProvider } from './base-provider';
 import { MailgunEmailProvider } from './mailgun-provider';
 import { SendGridEmailProvider } from './sendgrid-provider';
 import { SMTPEmailProvider } from './smtp-provider';

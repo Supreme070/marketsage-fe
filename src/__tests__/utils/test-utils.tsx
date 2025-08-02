@@ -1,5 +1,6 @@
-import React, { ReactElement } from 'react';
-import { render, RenderOptions } from '@testing-library/react';
+import type React from 'react';
+import type { ReactElement } from 'react';
+import { render, type RenderOptions } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mock data generators for testing
@@ -141,7 +142,7 @@ export const checkAccessibility = async (container: HTMLElement) => {
   let previousLevel = 0;
   
   headings.forEach(heading => {
-    const level = parseInt(heading.tagName.charAt(1));
+    const level = Number.parseInt(heading.tagName.charAt(1));
     if (level > previousLevel + 1) {
       console.warn('Heading hierarchy skipped level:', heading);
     }

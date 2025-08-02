@@ -111,7 +111,7 @@ export default function WorkflowMonitoringDashboard() {
   // Fetch system health
   const fetchSystemHealth = async () => {
     try {
-      const response = await fetch('/api/workflows/monitoring/health?detailed=true');
+      const response = await fetch('/api/v2/workflows/monitoring/health?detailed=true');
       if (!response.ok) throw new Error('Failed to fetch system health');
       
       const result = await response.json();
@@ -171,7 +171,7 @@ export default function WorkflowMonitoringDashboard() {
   // Queue actions
   const handleQueueAction = async (action: string, queueName: string) => {
     try {
-      const response = await fetch('/api/workflows/monitoring/health', {
+      const response = await fetch('/api/v2/workflows/monitoring/health', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, queueName }),

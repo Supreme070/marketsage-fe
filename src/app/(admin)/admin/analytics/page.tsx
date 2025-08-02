@@ -106,7 +106,7 @@ export default function AdminAnalyticsPage() {
     const fetchAnalytics = async () => {
       setLoading(true);
       try {
-        const response = await fetch('/api/admin/analytics');
+        const response = await fetch('/api/v2/admin/analytics');
         if (!response.ok) {
           throw new Error('Failed to fetch analytics data');
         }

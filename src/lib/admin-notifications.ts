@@ -204,7 +204,7 @@ class NotificationStore {
     this.notifications.set(notification.id, notification);
   }
 
-  getForUser(userId: string, limit: number = 50): AdminNotification[] {
+  getForUser(userId: string, limit = 50): AdminNotification[] {
     return Array.from(this.notifications.values())
       .filter(n => n.recipients.includes(userId))
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
@@ -496,7 +496,7 @@ export class AdminNotificationService {
   /**
    * Get notifications for a specific user
    */
-  async getUserNotifications(userId: string, limit: number = 50): Promise<AdminNotification[]> {
+  async getUserNotifications(userId: string, limit = 50): Promise<AdminNotification[]> {
     return notificationStore.getForUser(userId, limit);
   }
 
@@ -550,7 +550,7 @@ export async function processAuditLogNotification(auditLogData: any): Promise<vo
  */
 export async function getNotificationsHandler(req: Request, userId: string) {
   const url = new URL(req.url);
-  const limit = parseInt(url.searchParams.get('limit') || '50');
+  const limit = Number.parseInt(url.searchParams.get('limit') || '50');
   
   const notifications = await adminNotificationService.getUserNotifications(userId, limit);
   const unreadCount = await adminNotificationService.getUnreadCount(userId);

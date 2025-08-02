@@ -51,7 +51,7 @@ export default function SmartSegmentDetail({ segmentId, onBack }: SmartSegmentDe
     try {
       setLoading(true);
       // First, get all segments and find the one we need
-      const response = await fetch('/api/segments/smart');
+      const response = await fetch('/api/v2/segments/smart');
       if (!response.ok) {
         throw new Error('Failed to fetch segment details');
       }
@@ -74,7 +74,7 @@ export default function SmartSegmentDetail({ segmentId, onBack }: SmartSegmentDe
   const fetchSegmentContacts = async (page = 0) => {
     try {
       setLoadingContacts(true);
-      const response = await fetch('/api/segments/smart', {
+      const response = await fetch('/api/v2/segments/smart', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

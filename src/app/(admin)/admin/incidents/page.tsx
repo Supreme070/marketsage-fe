@@ -153,11 +153,11 @@ export default function AdminIncidentsPage() {
           escalationResponse,
           alertsResponse
         ] = await Promise.allSettled([
-          fetch('/api/admin/incidents?type=incidents'),
-          fetch('/api/admin/incidents?type=components'),
-          fetch('/api/admin/incidents?type=postmortems'),
-          fetch('/api/admin/incidents?type=escalation'),
-          fetch('/api/admin/incidents?type=alerts')
+          fetch('/api/v2/admin/incidents?type=incidents'),
+          fetch('/api/v2/admin/incidents?type=components'),
+          fetch('/api/v2/admin/incidents?type=postmortems'),
+          fetch('/api/v2/admin/incidents?type=escalation'),
+          fetch('/api/v2/admin/incidents?type=alerts')
         ]);
 
         // Process incidents data

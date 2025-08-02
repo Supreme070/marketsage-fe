@@ -115,8 +115,8 @@ export default function FormAnalyticsAdvanced({ className }: FormAnalyticsAdvanc
   const fetchFormData = async () => {
     try {
       const [formsResponse, insightsResponse] = await Promise.all([
-        fetch(`/api/leadpulse/form-analytics?timeRange=${timeRange}`),
-        fetch('/api/leadpulse/form-insights')
+        fetch(`/api/v2/leadpulse/form-analytics?timeRange=${timeRange}`),
+        fetch('/api/v2/leadpulse/form-insights')
       ]);
 
       // Use mock data for demo

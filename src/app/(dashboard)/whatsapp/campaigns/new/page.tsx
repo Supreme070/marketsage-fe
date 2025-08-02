@@ -165,7 +165,7 @@ export default function CreateWhatsAppCampaign() {
         return;
       }
 
-      const response = await fetch("/api/whatsapp/campaigns", {
+      const response = await fetch("/api/v2/whatsapp/campaigns", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -3,7 +3,7 @@
  */
 
 import { prisma } from '@/lib/db/prisma';
-import { SecurityThreat, IPBlocklistEntry, SecurityStats } from './security-types';
+import { type SecurityThreat, IPBlocklistEntry, SecurityStats } from './security-types';
 
 /**
  * Get geolocation data for IP address
@@ -318,7 +318,7 @@ export async function isIPBlocked(ipAddress: string): Promise<boolean> {
 /**
  * Get security trend data for analytics
  */
-export async function getSecurityTrends(days: number = 7): Promise<Array<{date: string, events: number, threats: number, blocked: number}>> {
+export async function getSecurityTrends(days = 7): Promise<Array<{date: string, events: number, threats: number, blocked: number}>> {
   try {
     const trends = [];
     const now = new Date();

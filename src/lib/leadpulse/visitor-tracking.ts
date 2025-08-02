@@ -171,7 +171,7 @@ class VisitorTracker {
     // Method 3: Check if we've seen this fingerprint before (server lookup)
     if (this.fingerprint) {
       try {
-        const response = await fetch('/api/leadpulse/visitor-lookup', {
+        const response = await fetch('/api/v2/leadpulse/visitor-lookup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ fingerprint: this.fingerprint })
@@ -292,7 +292,7 @@ class VisitorTracker {
     const identity = this.getVisitorIdentity();
     
     try {
-      await fetch('/api/leadpulse', {
+      await fetch('/api/v2/leadpulse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -324,7 +324,7 @@ class VisitorTracker {
     const identity = this.getVisitorIdentity();
     
     try {
-      await fetch('/api/leadpulse', {
+      await fetch('/api/v2/leadpulse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

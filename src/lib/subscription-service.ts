@@ -238,7 +238,7 @@ export class SubscriptionService {
   static async checkUsageLimit(
     organizationId: string,
     feature: "emails" | "sms" | "whatsapp" | "leadPulseVisits",
-    incrementBy: number = 0
+    incrementBy = 0
   ): Promise<{ allowed: boolean; remaining: number; limit: number }> {
     const org = await prisma.organization.findUnique({
       where: { id: organizationId },

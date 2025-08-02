@@ -191,7 +191,7 @@ export function useMobileTaskSync(options: MobileTaskSyncOptions = {}) {
         }
       };
 
-      const response = await fetch('/api/mobile/sync', {
+      const response = await fetch('/api/v2/mobile/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -306,7 +306,7 @@ export function useMobileTaskSync(options: MobileTaskSyncOptions = {}) {
 
   const registerForNotifications = useCallback(async (deviceToken: string, platform: 'ios' | 'android' | 'web') => {
     try {
-      const response = await fetch('/api/mobile/notifications', {
+      const response = await fetch('/api/v2/mobile/notifications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

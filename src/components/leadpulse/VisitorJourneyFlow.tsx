@@ -94,8 +94,8 @@ export default function VisitorJourneyFlow({ className }: VisitorJourneyFlowProp
   const fetchJourneyData = async () => {
     try {
       const [journeysResponse, patternsResponse] = await Promise.all([
-        fetch('/api/leadpulse/journeys'),
-        fetch('/api/leadpulse/journey-patterns')
+        fetch('/api/v2/leadpulse/journeys'),
+        fetch('/api/v2/leadpulse/journey-patterns')
       ]);
 
       if (journeysResponse.ok) {

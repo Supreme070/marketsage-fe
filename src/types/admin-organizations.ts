@@ -1,4 +1,4 @@
-import { Organization, User, Subscription, SubscriptionPlan, PaymentMethod, CreditTransaction, MessagingUsage, SubscriptionStatus, UserRole } from '@prisma/client';
+import type { Organization, User, Subscription, SubscriptionPlan, PaymentMethod, CreditTransaction, MessagingUsage, SubscriptionStatus, UserRole } from '@prisma/client';
 
 // Organization with relations for admin views
 export interface AdminOrganization extends Organization {

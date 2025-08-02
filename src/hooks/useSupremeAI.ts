@@ -88,7 +88,7 @@ export const useSupremeAI = () => {
 
     setIsLoadingHistory(true);
     try {
-      const response = await fetch(`/api/ai/chat-history?sessionId=${sessionId}&limit=50`);
+      const response = await fetch(`/api/v2/ai/chat-history?sessionId=${sessionId}&limit=50`);
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.messages) {
@@ -113,7 +113,7 @@ export const useSupremeAI = () => {
     if (!session?.user?.id || !currentSessionId) return;
 
     try {
-      await fetch('/api/ai/chat-history', {
+      await fetch('/api/v2/ai/chat-history', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -265,7 +265,7 @@ export const useSupremeAI = () => {
     setMessages(prev => [...prev, initialAssistantMessage]);
 
     try {
-      const response = await fetch('/api/ai/chat-stream', {
+      const response = await fetch('/api/v2/ai/chat-stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -352,7 +352,7 @@ export const useSupremeAI = () => {
   }, [saveMessageToDatabase]);
 
   const handleRegularResponse = useCallback(async (requestBody: any, userMessage: ChatMessage) => {
-    const response = await fetch('/api/ai/supreme-v3', {
+    const response = await fetch('/api/v2/ai/supreme-v3', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

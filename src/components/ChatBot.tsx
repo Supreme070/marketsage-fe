@@ -83,7 +83,7 @@ export default function ChatBot({
     
     try {
       // Try to connect to local Supreme-AI engine (not OpenAI)
-      const response = await fetch('/api/ai/supreme-v3', {
+      const response = await fetch('/api/v2/ai/supreme-v3', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

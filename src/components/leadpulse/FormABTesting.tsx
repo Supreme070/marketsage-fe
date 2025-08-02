@@ -204,7 +204,7 @@ export default function FormABTesting({ formId, className }: ABTestingProps) {
   const fetchABTests = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/leadpulse/ab-tests${formId ? `?formId=${formId}` : ''}`);
+      const response = await fetch(`/api/v2/leadpulse/ab-tests${formId ? `?formId=${formId}` : ''}`);
       
       if (response.ok) {
         const data = await response.json();
@@ -455,7 +455,7 @@ export default function FormABTesting({ formId, className }: ABTestingProps) {
 
   const createTest = async () => {
     try {
-      const response = await fetch('/api/leadpulse/ab-tests', {
+      const response = await fetch('/api/v2/leadpulse/ab-tests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -485,7 +485,7 @@ export default function FormABTesting({ formId, className }: ABTestingProps) {
 
   const startTest = async (testId: string) => {
     try {
-      await fetch(`/api/leadpulse/ab-tests/${testId}/start`, {
+      await fetch(`/api/v2/leadpulse/ab-tests/${testId}/start`, {
         method: 'POST'
       });
       await fetchABTests();
@@ -496,7 +496,7 @@ export default function FormABTesting({ formId, className }: ABTestingProps) {
 
   const pauseTest = async (testId: string) => {
     try {
-      await fetch(`/api/leadpulse/ab-tests/${testId}/pause`, {
+      await fetch(`/api/v2/leadpulse/ab-tests/${testId}/pause`, {
         method: 'POST'
       });
       await fetchABTests();
@@ -507,7 +507,7 @@ export default function FormABTesting({ formId, className }: ABTestingProps) {
 
   const endTest = async (testId: string, winnerId?: string) => {
     try {
-      await fetch(`/api/leadpulse/ab-tests/${testId}/end`, {
+      await fetch(`/api/v2/leadpulse/ab-tests/${testId}/end`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ winner: winnerId })

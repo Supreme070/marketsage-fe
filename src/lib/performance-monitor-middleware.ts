@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { performance } from 'perf_hooks';
 
@@ -20,7 +20,7 @@ interface PerformanceMetric {
 class PerformanceMonitor {
   private metrics: PerformanceMetric[] = [];
   private flushInterval: NodeJS.Timeout | null = null;
-  private isEnabled: boolean = true;
+  private isEnabled = true;
 
   constructor() {
     // Start periodic flushing of metrics
@@ -240,7 +240,7 @@ export function recordPerformanceMetric(
 /**
  * Get performance statistics
  */
-export async function getPerformanceStats(timeRange: string = '1h'): Promise<any> {
+export async function getPerformanceStats(timeRange = '1h'): Promise<any> {
   const timeRanges: Record<string, number> = {
     '1h': 60 * 60 * 1000,
     '24h': 24 * 60 * 60 * 1000,
@@ -291,7 +291,7 @@ export async function getPerformanceStats(timeRange: string = '1h'): Promise<any
         endpointStats[endpoint] = {
           count: 0,
           totalTime: 0,
-          minTime: Infinity,
+          minTime: Number.POSITIVE_INFINITY,
           maxTime: 0,
           errors: 0,
         };
@@ -313,7 +313,7 @@ export async function getPerformanceStats(timeRange: string = '1h'): Promise<any
       const stats = endpointStats[endpoint];
       stats.avgTime = Math.round(stats.totalTime / stats.count);
       stats.errorRate = Math.round((stats.errors / stats.count) * 100 * 100) / 100;
-      stats.minTime = stats.minTime === Infinity ? 0 : stats.minTime;
+      stats.minTime = stats.minTime === Number.POSITIVE_INFINITY ? 0 : stats.minTime;
     });
 
     return {

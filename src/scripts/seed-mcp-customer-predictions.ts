@@ -21,7 +21,7 @@ import { randomUUID } from 'crypto';
 dotenv.config();
 
 // Allow connection to both Docker internal and local connections
-const databaseUrl = process.env.DATABASE_URL || "postgresql://marketsage:marketsage_password@marketsage-db:5432/marketsage?schema=public";
+const databaseUrl = process.env.DATABASE_URL || "postgresql://marketsage:marketsage_password@localhost:5432/marketsage?schema=public";
 
 // Create Prisma client with direct connection to database
 const prisma = new PrismaClient({

@@ -410,7 +410,7 @@ async function getCustomerInsights(userId: string, body: any) {
     if (result.success && result.data) {
       const customers = JSON.parse(result.data.content[0].text);
       if (customers.results && customers.results.length > 0) {
-        insights.segments = customers.results.slice(0, 5).map(c => c.segments || []).flat();
+        insights.segments = customers.results.slice(0, 5).flatMap(c => c.segments || []);
         insights.preferences = ['digital marketing', 'social media', 'automation', 'analytics'];
       }
     }

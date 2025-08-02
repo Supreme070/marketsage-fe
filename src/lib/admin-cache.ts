@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 
 // Cache implementation (in production, use Redis)
 class AdminCache {
@@ -301,8 +301,7 @@ export function getAdminCacheStats() {
  * Middleware decorator for caching admin responses
  */
 export function withCaching(config: CacheConfig) {
-  return function(handler: Function) {
-    return async function(req: NextRequest, ...args: any[]) {
+  return (handler: Function) => async (req: NextRequest, ...args: any[]) => {
       // Only cache GET requests
       if (req.method !== 'GET') {
         return handler(req, ...args);
@@ -310,7 +309,6 @@ export function withCaching(config: CacheConfig) {
       
       return withAdminCache(req, config, () => handler(req, ...args));
     };
-  };
 }
 
 export { adminCache };

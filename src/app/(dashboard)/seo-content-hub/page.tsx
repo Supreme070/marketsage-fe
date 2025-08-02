@@ -127,7 +127,7 @@ export default function SEOContentMarketingHub() {
     // Keyword Research with African Market Intelligence
     researchKeywords: async (query: string, market: string) => {
       try {
-        const response = await fetch('/api/ai/supreme-v3', {
+        const response = await fetch('/api/v2/ai/supreme-v3', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -154,7 +154,7 @@ export default function SEOContentMarketingHub() {
     // Content Ideas Generation with AI
     generateContentIdeas: async (topic: string, type: string, market: string) => {
       try {
-        const response = await fetch('/api/ai/supreme-v3', {
+        const response = await fetch('/api/v2/ai/supreme-v3', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -182,7 +182,7 @@ export default function SEOContentMarketingHub() {
     // SEO Audit with Intelligence
     auditSEO: async (url: string) => {
       try {
-        const response = await fetch('/api/ai/supreme-v3', {
+        const response = await fetch('/api/v2/ai/supreme-v3', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -208,7 +208,7 @@ export default function SEOContentMarketingHub() {
     // Viral Content Generation
     generateViralContent: async (topic: string, platform: string, market: string) => {
       try {
-        const response = await fetch('/api/ai/supreme-v3', {
+        const response = await fetch('/api/v2/ai/supreme-v3', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

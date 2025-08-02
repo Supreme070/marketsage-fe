@@ -87,7 +87,7 @@ export function CreditPurchaseModal({
     setIsProcessing(true);
     
     try {
-      const response = await fetch('/api/messaging/credits/purchase', {
+      const response = await fetch('/api/v2/messaging/credits/purchase', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

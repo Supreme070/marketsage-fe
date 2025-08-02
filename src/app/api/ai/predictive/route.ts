@@ -1,114 +1,24 @@
-import { type NextRequest, NextResponse } from 'next/server';
-import { logger } from '@/lib/logger';
-
 /**
- * POST /api/ai/predictive/market-forecast
- * Generate market forecasts
+ * AI Predictive Analytics API Proxy
+ * Forwards AI predictive analytics requests to the NestJS backend
  */
+
+import type { NextRequest } from "next/server";
+import { proxyToBackend } from "@/lib/api-proxy";
+
+// POST AI predictive analytics endpoint
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { market, timeframe, periods } = body;
-
-    if (!market || !timeframe) {
-      return NextResponse.json(
-        { error: 'Missing required fields: market, timeframe' },
-        { status: 400 }
-      );
-    }
-
-    // Dynamic import
-    const { predictiveAnalytics } = await import('@/lib/ai/predictive-analytics-engine');
-    const forecast = await predictiveAnalytics.generateMarketForecast(
-      market,
-      timeframe,
-      periods
-    );
-
-    return NextResponse.json({
-      success: true,
-      forecast,
-      timestamp: new Date().toISOString()
-    });
-
-  } catch (error) {
-    logger.error('Market forecast generation failed', { error: String(error) });
-    return NextResponse.json(
-      { error: 'Market forecast failed', details: String(error) },
-      { status: 500 }
-    );
-  }
+  return proxyToBackend(request, {
+    backendPath: 'ai/predictive',
+    enableLogging: process.env.NODE_ENV === 'development',
+    timeout: 90000, // 90 second timeout for predictive analytics
+  });
 }
 
-/**
- * GET /api/ai/predictive/customer-behavior
- * Predict customer behavior and CLV
- */
+// GET AI predictive analytics results
 export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const customerId = searchParams.get('customerId');
-
-    if (!customerId) {
-      return NextResponse.json(
-        { error: 'Missing required parameter: customerId' },
-        { status: 400 }
-      );
-    }
-
-    // Dynamic import
-    const { predictiveAnalytics } = await import('@/lib/ai/predictive-analytics-engine');
-    const prediction = await predictiveAnalytics.predictCustomerBehavior(customerId);
-
-    return NextResponse.json({
-      success: true,
-      prediction,
-      timestamp: new Date().toISOString()
-    });
-
-  } catch (error) {
-    logger.error('Customer behavior prediction failed', { error: String(error) });
-    return NextResponse.json(
-      { error: 'Customer prediction failed', details: String(error) },
-      { status: 500 }
-    );
-  }
+  return proxyToBackend(request, {
+    backendPath: 'ai/predictive',
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
 }
-
-/**
- * PUT /api/ai/predictive/revenue-forecast
- * Generate revenue forecasts
- */
-export async function PUT(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { period, periods } = body;
-
-    if (!period) {
-      return NextResponse.json(
-        { error: 'Missing required field: period' },
-        { status: 400 }
-      );
-    }
-
-    // Dynamic import
-    const { predictiveAnalytics } = await import('@/lib/ai/predictive-analytics-engine');
-    const forecast = await predictiveAnalytics.generateRevenueForecast(
-      period,
-      periods
-    );
-
-    return NextResponse.json({
-      success: true,
-      forecast,
-      timestamp: new Date().toISOString()
-    });
-
-  } catch (error) {
-    logger.error('Revenue forecast generation failed', { error: String(error) });
-    return NextResponse.json(
-      { error: 'Revenue forecast failed', details: String(error) },
-      { status: 500 }
-    );
-  }
-} 

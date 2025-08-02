@@ -63,7 +63,7 @@ export default function WhatsAppTemplatesPage() {
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
-        const response = await fetch("/api/whatsapp/templates");
+        const response = await fetch("/api/v2/whatsapp/templates");
         if (!response.ok) {
           throw new Error("Failed to fetch WhatsApp templates");
         }

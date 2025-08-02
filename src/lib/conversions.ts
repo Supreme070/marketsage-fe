@@ -18,7 +18,7 @@ export interface ConversionData {
  */
 export async function trackConversion(data: ConversionData): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    const response = await fetch('/api/conversions/track', {
+    const response = await fetch('/api/v2/conversions/track', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

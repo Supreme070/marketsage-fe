@@ -5,7 +5,7 @@ interface AuditStreamEvent {
   data?: any;
 }
 
-export function useAuditStream(enabled: boolean = true) {
+export function useAuditStream(enabled = true) {
   const [isConnected, setIsConnected] = useState(false);
   const [lastEvent, setLastEvent] = useState<AuditStreamEvent | null>(null);
 

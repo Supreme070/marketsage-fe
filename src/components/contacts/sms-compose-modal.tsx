@@ -70,7 +70,7 @@ export function SMSComposeModal({ isOpen, onClose, contact }: SMSComposeModalPro
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/sms/send', {
+      const response = await fetch('/api/v2/sms/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

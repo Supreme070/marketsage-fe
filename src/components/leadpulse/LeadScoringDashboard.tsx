@@ -190,9 +190,9 @@ export default function LeadScoringDashboard({ className }: LeadScoringDashboard
     try {
       setIsLoading(true);
       const [leadsRes, criteriaRes, rulesRes] = await Promise.all([
-        fetch(`/api/leadpulse/lead-scoring?grade=${filterGrade}&status=${filterStatus}&sort=${sortBy}&search=${searchQuery}`),
-        fetch('/api/leadpulse/scoring-criteria'),
-        fetch('/api/leadpulse/qualification-rules')
+        fetch(`/api/v2/leadpulse/lead-scoring?grade=${filterGrade}&status=${filterStatus}&sort=${sortBy}&search=${searchQuery}`),
+        fetch('/api/v2/leadpulse/scoring-criteria'),
+        fetch('/api/v2/leadpulse/qualification-rules')
       ]);
 
       if (leadsRes.ok && criteriaRes.ok && rulesRes.ok) {

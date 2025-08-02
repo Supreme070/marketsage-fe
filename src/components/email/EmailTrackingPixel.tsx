@@ -22,7 +22,7 @@ export default function EmailTrackingPixel({
   useEffect(() => {
     if (!loaded) {
       // Track the open event
-      fetch('/api/engagements/track', {
+      fetch('/api/v2/engagements/track', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

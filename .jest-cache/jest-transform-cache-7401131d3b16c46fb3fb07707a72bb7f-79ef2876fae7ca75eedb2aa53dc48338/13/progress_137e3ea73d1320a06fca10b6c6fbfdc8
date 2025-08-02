@@ -1,0 +1,71 @@
+703ec963bc271ec99f1b83b5883d2c7e
+"use client";
+"use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+Object.defineProperty(exports, "Progress", {
+    enumerable: true,
+    get: function() {
+        return Progress;
+    }
+});
+const _jsxruntime = require("react/jsx-runtime");
+const _react = /*#__PURE__*/ _interop_require_wildcard(require("react"));
+const _utils = require("../../lib/utils");
+function _getRequireWildcardCache(nodeInterop) {
+    if (typeof WeakMap !== "function") return null;
+    var cacheBabelInterop = new WeakMap();
+    var cacheNodeInterop = new WeakMap();
+    return (_getRequireWildcardCache = function(nodeInterop) {
+        return nodeInterop ? cacheNodeInterop : cacheBabelInterop;
+    })(nodeInterop);
+}
+function _interop_require_wildcard(obj, nodeInterop) {
+    if (!nodeInterop && obj && obj.__esModule) {
+        return obj;
+    }
+    if (obj === null || typeof obj !== "object" && typeof obj !== "function") {
+        return {
+            default: obj
+        };
+    }
+    var cache = _getRequireWildcardCache(nodeInterop);
+    if (cache && cache.has(obj)) {
+        return cache.get(obj);
+    }
+    var newObj = {
+        __proto__: null
+    };
+    var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor;
+    for(var key in obj){
+        if (key !== "default" && Object.prototype.hasOwnProperty.call(obj, key)) {
+            var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null;
+            if (desc && (desc.get || desc.set)) {
+                Object.defineProperty(newObj, key, desc);
+            } else {
+                newObj[key] = obj[key];
+            }
+        }
+    }
+    newObj.default = obj;
+    if (cache) {
+        cache.set(obj, newObj);
+    }
+    return newObj;
+}
+// Create a simple Progress component without Radix dependency
+const Progress = /*#__PURE__*/ _react.forwardRef(({ className, value = 0, ...props }, ref)=>/*#__PURE__*/ (0, _jsxruntime.jsx)("div", {
+        ref: ref,
+        className: (0, _utils.cn)("relative h-4 w-full overflow-hidden rounded-full bg-secondary", className),
+        ...props,
+        children: /*#__PURE__*/ (0, _jsxruntime.jsx)("div", {
+            className: "h-full w-full flex-1 bg-primary transition-all",
+            style: {
+                transform: `translateX(-${100 - (value || 0)}%)`
+            }
+        })
+    }));
+Progress.displayName = "Progress";
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi9Vc2Vycy9zdXByZW1lL0Rlc2t0b3AvbWFya2V0c2FnZS9zcmMvY29tcG9uZW50cy91aS9wcm9ncmVzcy50c3giXSwic291cmNlc0NvbnRlbnQiOlsiXCJ1c2UgY2xpZW50XCJcblxuaW1wb3J0ICogYXMgUmVhY3QgZnJvbSBcInJlYWN0XCJcbmltcG9ydCB7IGNuIH0gZnJvbSBcIkAvbGliL3V0aWxzXCJcblxuLy8gQ3JlYXRlIGEgc2ltcGxlIFByb2dyZXNzIGNvbXBvbmVudCB3aXRob3V0IFJhZGl4IGRlcGVuZGVuY3lcbmNvbnN0IFByb2dyZXNzID0gUmVhY3QuZm9yd2FyZFJlZjxcbiAgSFRNTERpdkVsZW1lbnQsXG4gIFJlYWN0LkhUTUxBdHRyaWJ1dGVzPEhUTUxEaXZFbGVtZW50PiAmIHsgdmFsdWU/OiBudW1iZXIgfVxuPigoeyBjbGFzc05hbWUsIHZhbHVlID0gMCwgLi4ucHJvcHMgfSwgcmVmKSA9PiAoXG4gIDxkaXZcbiAgICByZWY9e3JlZn1cbiAgICBjbGFzc05hbWU9e2NuKFxuICAgICAgXCJyZWxhdGl2ZSBoLTQgdy1mdWxsIG92ZXJmbG93LWhpZGRlbiByb3VuZGVkLWZ1bGwgYmctc2Vjb25kYXJ5XCIsXG4gICAgICBjbGFzc05hbWVcbiAgICApfVxuICAgIHsuLi5wcm9wc31cbiAgPlxuICAgIDxkaXZcbiAgICAgIGNsYXNzTmFtZT1cImgtZnVsbCB3LWZ1bGwgZmxleC0xIGJnLXByaW1hcnkgdHJhbnNpdGlvbi1hbGxcIlxuICAgICAgc3R5bGU9e3sgdHJhbnNmb3JtOiBgdHJhbnNsYXRlWCgtJHsxMDAgLSAodmFsdWUgfHwgMCl9JSlgIH19XG4gICAgLz5cbiAgPC9kaXY+XG4pKVxuUHJvZ3Jlc3MuZGlzcGxheU5hbWUgPSBcIlByb2dyZXNzXCJcblxuZXhwb3J0IHsgUHJvZ3Jlc3MgfSAiXSwibmFtZXMiOlsiUHJvZ3Jlc3MiLCJSZWFjdCIsImZvcndhcmRSZWYiLCJjbGFzc05hbWUiLCJ2YWx1ZSIsInByb3BzIiwicmVmIiwiZGl2IiwiY24iLCJzdHlsZSIsInRyYW5zZm9ybSIsImRpc3BsYXlOYW1lIl0sIm1hcHBpbmdzIjoiQUFBQTs7Ozs7K0JBMEJTQTs7O2VBQUFBOzs7OytEQXhCYzt1QkFDSjs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7O0FBRW5CLDhEQUE4RDtBQUM5RCxNQUFNQSx5QkFBV0MsT0FBTUMsVUFBVSxDQUcvQixDQUFDLEVBQUVDLFNBQVMsRUFBRUMsUUFBUSxDQUFDLEVBQUUsR0FBR0MsT0FBTyxFQUFFQyxvQkFDckMscUJBQUNDO1FBQ0NELEtBQUtBO1FBQ0xILFdBQVdLLElBQUFBLFNBQUUsRUFDWCxpRUFDQUw7UUFFRCxHQUFHRSxLQUFLO2tCQUVULGNBQUEscUJBQUNFO1lBQ0NKLFdBQVU7WUFDVk0sT0FBTztnQkFBRUMsV0FBVyxDQUFDLFlBQVksRUFBRSxNQUFPTixDQUFBQSxTQUFTLENBQUEsRUFBRyxFQUFFLENBQUM7WUFBQzs7O0FBSWhFSixTQUFTVyxXQUFXLEdBQUcifQ==

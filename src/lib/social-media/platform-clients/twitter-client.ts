@@ -7,7 +7,7 @@
  */
 
 import { logger } from '@/lib/logger';
-import { SocialMediaConnection } from '../social-media-connection-service';
+import type { SocialMediaConnection } from '../social-media-connection-service';
 
 export interface TwitterPostOptions {
   text: string;

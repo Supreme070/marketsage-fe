@@ -25,7 +25,7 @@ export default function SmartSegmentList({ onSelectSegment }: SmartSegmentListPr
   const fetchSegments = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/segments/smart');
+      const response = await fetch('/api/v2/segments/smart');
       if (!response.ok) {
         throw new Error('Failed to fetch smart segments');
       }

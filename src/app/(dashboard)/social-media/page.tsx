@@ -160,7 +160,7 @@ export default function SocialMediaDashboard() {
   const loadOverview = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/ai/social-media-management?action=get_overview');
+      const response = await fetch('/api/v2/ai/social-media-management?action=get_overview');
       const data = await response.json();
       
       if (data.success) {
@@ -188,7 +188,7 @@ export default function SocialMediaDashboard() {
       const insights = await getCustomerInsights();
       setCustomerInsights(insights);
       
-      const response = await fetch('/api/ai/social-media-management', {
+      const response = await fetch('/api/v2/ai/social-media-management', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -234,7 +234,7 @@ export default function SocialMediaDashboard() {
 
     setHashtagResearching(true);
     try {
-      const response = await fetch('/api/ai/social-media-management', {
+      const response = await fetch('/api/v2/ai/social-media-management', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -278,7 +278,7 @@ export default function SocialMediaDashboard() {
     try {
       // Load both social media analytics and campaign analytics via MCP
       const [socialResponse, campaignResponse] = await Promise.all([
-        fetch('/api/ai/social-media-management', {
+        fetch('/api/v2/ai/social-media-management', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -297,7 +297,7 @@ export default function SocialMediaDashboard() {
           })
         }),
         // Campaign Analytics via MCP
-        fetch('/api/ai/context', {
+        fetch('/api/v2/ai/context', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -336,7 +336,7 @@ export default function SocialMediaDashboard() {
 
   const postContent = async (content: GeneratedContent) => {
     try {
-      const response = await fetch('/api/ai/social-media-management', {
+      const response = await fetch('/api/v2/ai/social-media-management', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -419,7 +419,7 @@ export default function SocialMediaDashboard() {
   // MCP Integration for customer insights
   const getCustomerInsights = async () => {
     try {
-      const response = await fetch('/api/ai/context', {
+      const response = await fetch('/api/v2/ai/context', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -445,7 +445,7 @@ export default function SocialMediaDashboard() {
 
   const loadConnectionStatus = async () => {
     try {
-      const response = await fetch('/api/social-media/connections');
+      const response = await fetch('/api/v2/social-media/connections');
       const data = await response.json();
       
       if (data.success) {

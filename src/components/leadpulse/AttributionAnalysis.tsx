@@ -208,10 +208,10 @@ export default function AttributionAnalysis({ className }: AttributionAnalysisPr
     try {
       setIsLoading(true);
       const [channelsRes, journeysRes, modelsRes, insightsRes] = await Promise.all([
-        fetch(`/api/leadpulse/attribution/channels?model=${selectedModel}&timeRange=${timeRange}&channel=${filterChannel}`),
-        fetch(`/api/leadpulse/attribution/journeys?model=${selectedModel}&timeRange=${timeRange}`),
-        fetch('/api/leadpulse/attribution/models'),
-        fetch('/api/leadpulse/attribution/insights')
+        fetch(`/api/v2/leadpulse/attribution/channels?model=${selectedModel}&timeRange=${timeRange}&channel=${filterChannel}`),
+        fetch(`/api/v2/leadpulse/attribution/journeys?model=${selectedModel}&timeRange=${timeRange}`),
+        fetch('/api/v2/leadpulse/attribution/models'),
+        fetch('/api/v2/leadpulse/attribution/insights')
       ]);
 
       if (channelsRes.ok && journeysRes.ok && modelsRes.ok && insightsRes.ok) {

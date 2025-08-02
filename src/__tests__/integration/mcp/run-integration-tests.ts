@@ -22,7 +22,7 @@ interface TestResult {
 
 class IntegrationTestRunner {
   private testResults: TestResult[] = [];
-  private startTime: number = 0;
+  private startTime = 0;
 
   constructor() {
     this.startTime = Date.now();

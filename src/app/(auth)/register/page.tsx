@@ -82,7 +82,7 @@ export default function RegisterPage() {
     setError(null);
     
     try {
-      const response = await fetch("/api/auth/register/initial", {
+      const response = await fetch("/api/v2/auth/register/initial", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -116,7 +116,7 @@ export default function RegisterPage() {
     setError(null);
 
     try {
-      const response = await fetch("/api/auth/register/verify", {
+      const response = await fetch("/api/v2/auth/register/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -147,7 +147,7 @@ export default function RegisterPage() {
     setError(null);
 
     try {
-      const response = await fetch("/api/auth/register/complete", {
+      const response = await fetch("/api/v2/auth/register/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

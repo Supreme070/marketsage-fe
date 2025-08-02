@@ -86,7 +86,7 @@ export default function AdminSystemPage() {
     const fetchSystemHealth = async () => {
       setLoading(true);
       try {
-        const response = await fetch('/api/admin/system/stats');
+        const response = await fetch('/api/v2/admin/system/stats');
         if (!response.ok) {
           throw new Error('Failed to fetch system health data');
         }

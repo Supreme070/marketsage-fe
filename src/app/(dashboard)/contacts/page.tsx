@@ -65,7 +65,7 @@ const contactAnalyticsEngine = {
   analyzeContact: async (contact: any) => {
     try {
       // Use Supreme-AI v3 for comprehensive contact analysis
-      const response = await fetch('/api/ai/supreme-v3', {
+      const response = await fetch('/api/v2/ai/supreme-v3', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -101,7 +101,7 @@ const contactAnalyticsEngine = {
   
   generateSegmentRecommendations: async (contacts: any[]) => {
     try {
-      const response = await fetch('/api/ai/supreme-v3', {
+      const response = await fetch('/api/v2/ai/supreme-v3', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -133,7 +133,7 @@ const contactAnalyticsEngine = {
   
   generatePersonalizedRecommendations: async (contact: any) => {
     try {
-      const response = await fetch('/api/ai/supreme-v3', {
+      const response = await fetch('/api/v2/ai/supreme-v3', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -454,7 +454,7 @@ export default function ContactsPage() {
   const fetchContacts = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/contacts', {
+      const response = await fetch('/api/v2/contacts', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -686,7 +686,7 @@ export default function ContactsPage() {
     }
 
     try {
-      const response = await fetch(`/api/contacts/${contactId}`, {
+      const response = await fetch(`/api/v2/contacts/${contactId}`, {
         method: 'DELETE',
       });
 

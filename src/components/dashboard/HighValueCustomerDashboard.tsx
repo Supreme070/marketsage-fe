@@ -99,8 +99,8 @@ export default function HighValueCustomerDashboard() {
       setLoading(true);
       
       const [dashboardResponse, rulesResponse] = await Promise.all([
-        fetch('/api/rules/high-value-detection?action=dashboard'),
-        fetch('/api/rules/high-value-detection?action=list-rules')
+        fetch('/api/v2/rules/high-value-detection?action=dashboard'),
+        fetch('/api/v2/rules/high-value-detection?action=list-rules')
       ]);
 
       if (dashboardResponse.ok) {
@@ -126,7 +126,7 @@ export default function HighValueCustomerDashboard() {
     try {
       setLoading(true);
       
-      const response = await fetch('/api/rules/high-value-detection?action=run-detection', {
+      const response = await fetch('/api/v2/rules/high-value-detection?action=run-detection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -150,7 +150,7 @@ export default function HighValueCustomerDashboard() {
 
   const toggleRule = async (ruleId: string, isActive: boolean) => {
     try {
-      const response = await fetch('/api/rules/high-value-detection?action=toggle-rule', {
+      const response = await fetch('/api/v2/rules/high-value-detection?action=toggle-rule', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ruleId, isActive })

@@ -21,7 +21,7 @@ export class SystemMetricsCollector {
    * Start automatic metrics collection
    * @param intervalMs Collection interval in milliseconds (default: 60 seconds)
    */
-  startCollection(intervalMs: number = 60000): void {
+  startCollection(intervalMs = 60000): void {
     if (this.isCollecting) {
       console.log('System metrics collection is already running');
       return;
@@ -290,7 +290,7 @@ export class SystemMetricsCollector {
           const diskParts = stdout.trim().split(/\s+/);
           
           if (diskParts.length >= 5) {
-            const diskUsagePercent = parseInt(diskParts[4].replace('%', '')) || 0;
+            const diskUsagePercent = Number.parseInt(diskParts[4].replace('%', '')) || 0;
             
             metrics.push({
               metricType: 'disk_usage',
@@ -462,7 +462,7 @@ export class SystemMetricsCollector {
           memoryLines.forEach(line => {
             const [key, value] = line.split(':');
             if (key && value) {
-              const memoryBytes = parseInt(value.trim());
+              const memoryBytes = Number.parseInt(value.trim());
               if (!isNaN(memoryBytes)) {
                 metrics.push({
                   metricType: `redis_${key}`,

@@ -1,79 +1,42 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { PrismaClient, CampaignStatus } from "@prisma/client";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import prisma from "@/lib/db/prisma";
-import { 
-  handleApiError, 
-  unauthorized, 
-  forbidden,
-  notFound,
-  validationError 
-} from "@/lib/errors";
+import type { NextRequest } from "next/server";
+import { proxyToBackend } from "@/lib/api-proxy";
 
-// POST endpoint to duplicate a WhatsApp campaign
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const session = await getServerSession(authOptions);
+export async function GET(request: NextRequest, context: { params: Promise<Record<string, string>> }) {
+  const params = await context.params;
+  const backendPath = request.url.split('/api/')[1].split('?')[0];
+  return proxyToBackend(request, {
+    backendPath,
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-  // Check if user is authenticated
-  if (!session || !session.user) {
-    return unauthorized();
-  }
+export async function POST(request: NextRequest, context: { params: Promise<Record<string, string>> }) {
+  const params = await context.params;
+  const backendPath = request.url.split('/api/')[1].split('?')[0];
+  return proxyToBackend(request, {
+    backendPath,
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-  // Access params safely in Next.js 15
-  const { id: campaignId } = await params;
+export async function PATCH(request: NextRequest, context: { params: Promise<Record<string, string>> }) {
+  const params = await context.params;
+  const backendPath = request.url.split('/api/')[1].split('?')[0];
+  return proxyToBackend(request, {
+    backendPath,
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-  try {
-    // First check if campaign exists and user has access
-    const existingCampaign = await prisma.whatsAppCampaign.findUnique({
-      where: { id: campaignId },
-      include: {
-        lists: true,
-        segments: true,
-      }
-    });
-
-    if (!existingCampaign) {
-      return notFound("Campaign not found");
-    }
-
-    // Check if user has access to this campaign
-    const isAdmin = session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN" || session.user.role === "IT_ADMIN";
-    if (!isAdmin && existingCampaign.createdById !== session.user.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    // Create a new campaign with similar data but as a draft
-    const duplicatedCampaign = await prisma.whatsAppCampaign.create({
-      data: {
-        name: `${existingCampaign.name} (Copy)`,
-        description: existingCampaign.description,
-        from: existingCampaign.from,
-        content: existingCampaign.content,
-        templateId: existingCampaign.templateId,
-        createdById: session.user.id,
-        status: CampaignStatus.DRAFT,
-        // Link the same lists
-        lists: {
-          connect: existingCampaign.lists.map(list => ({ id: list.id }))
-        },
-        // Link the same segments
-        segments: {
-          connect: existingCampaign.segments.map(segment => ({ id: segment.id }))
-        }
-      },
-      include: {
-        template: true,
-        lists: true,
-        segments: true,
-      }
-    });
-
-    return NextResponse.json(duplicatedCampaign);
-  } catch (error) {
-    return handleApiError(error, "/api/whatsapp/campaigns/[id]/duplicate/route.ts");
-  }
-} 
+export async function DELETE(request: NextRequest, context: { params: Promise<Record<string, string>> }) {
+  const params = await context.params;
+  const backendPath = request.url.split('/api/')[1].split('?')[0];
+  return proxyToBackend(request, {
+    backendPath,
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}

@@ -1,0 +1,59 @@
+
+> marketsage@0.1.0 dev
+> next dev -H 0.0.0.0
+
+   ▲ Next.js 15.3.4
+   - Local:        http://localhost:3000
+   - Network:      http://0.0.0.0:3000
+   - Environments: .env
+   - Experiments (use with caution):
+     ✓ optimizeCss
+
+ ✓ Starting...
+ ✓ Ready in 1820ms
+ ✓ Compiled /middleware in 400ms (256 modules)
+[2025-07-30T13:16:09.781Z] INFO: API Request: GET /api/v2/health/simple {"method":"GET","path":"/api/v2/health/simple","query":{},"ip":"127.0.0.1","userAgent":"curl/8.7.1","tenantId":"anonymous"}
+ ○ Compiling /api/v2/[[...path]] ...
+ ✓ Compiled /api/v2/[[...path]] in 594ms (411 modules)
+ GET /api/v2/health/simple 200 in 943ms
+[2025-07-30T13:18:43.971Z] INFO: API Request: GET /api/v2/health/simple {"method":"GET","path":"/api/v2/health/simple","query":{},"ip":"127.0.0.1","userAgent":"curl/8.7.1","tenantId":"anonymous"}
+ GET /api/v2/health/simple 200 in 41ms
+ ○ Compiling / ...
+ ✓ Compiled / in 5.7s (1935 modules)
+ ⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET / 200 in 5935ms
+ ✓ Compiled in 452ms (899 modules)
+[2025-07-30T13:20:25.758Z] INFO: API Request: GET /api/v2/users {"method":"GET","path":"/api/v2/users","query":{},"ip":"127.0.0.1","userAgent":"curl/8.7.1","tenantId":"anonymous"}
+ ✓ Compiled /api/v2/[[...path]] in 134ms (1053 modules)
+ GET /api/v2/users 401 in 205ms
+ ⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET / 200 in 151ms
+ ✓ Compiled /_not-found in 288ms (1939 modules)
+ GET /icons/icon-144x144.png 404 in 391ms
+ GET /icons/icon-32x32.png 404 in 399ms
+ GET /icons/icon-16x16.png 404 in 24ms
+ ⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET / 200 in 91ms
+ GET /icons/icon-144x144.png 404 in 23ms
+ GET / 200 in 56ms
+ GET /icons/icon-144x144.png 404 in 21ms
+ ○ Compiling /admin-login ...
+ ✓ Compiled /admin-login in 1211ms (2215 modules)
+ ⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET / 200 in 1464ms
+ GET /admin-login 200 in 1542ms
+ GET /dashboard 200 in 1569ms
+[2025-07-30T13:20:54.349Z] INFO: API Request: GET /api/contacts {"method":"GET","path":"/api/contacts","query":{},"ip":"127.0.0.1","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36","tenantId":"anonymous"}
+[2025-07-30T13:20:54.349Z] INFO: API Request: GET /api/campaigns {"method":"GET","path":"/api/campaigns","query":{},"ip":"127.0.0.1","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36","tenantId":"anonymous"}
+[2025-07-30T13:20:54.369Z] INFO: API Request: GET /api/analytics {"method":"GET","path":"/api/analytics","query":{},"ip":"127.0.0.1","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36","tenantId":"anonymous"}
+ ○ Compiling /api/contacts ...
+ ✓ Compiled /api/contacts in 833ms (2447 modules)
+[API Proxy] Authentication failed for /api/contacts
+ GET /api/contacts 401 in 1008ms
+ GET /api/campaigns 404 in 1006ms
+ GET /api/analytics 404 in 988ms
+[2025-07-30T13:20:55.421Z] INFO: API Request: GET /api/health {"method":"GET","path":"/api/health","query":{},"ip":"127.0.0.1","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36","tenantId":"anonymous"}
+ ✓ Compiled /api/health in 141ms (2449 modules)
+[API Proxy] Authentication failed for /api/health
+ GET /api/health 401 in 187ms
+[?25h

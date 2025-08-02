@@ -7,21 +7,21 @@
 
 import { cache } from 'react';
 import { MarketSageMCPClient } from '../../mcp/clients/mcp-client';
-import { 
-  type MCPAuthContext, 
-  type LeadPulseQuery,
-  type MCPClientResponse 
+import type { 
+  MCPAuthContext, 
+  LeadPulseQuery,
+  MCPClientResponse 
 } from '../../mcp/types/mcp-types';
-import { 
-  type VisitorJourney,
-  type VisitorPath,
-  type InsightItem,
-  type VisitorSegment,
-  type VisitorLocation,
-  type PulseDataPoint,
-  type LeadPulseTouchpointType,
-  type LeadPulseInsightType,
-  type LeadPulseImportance
+import type { 
+  VisitorJourney,
+  VisitorPath,
+  InsightItem,
+  VisitorSegment,
+  VisitorLocation,
+  PulseDataPoint,
+  LeadPulseTouchpointType,
+  LeadPulseInsightType,
+  LeadPulseImportance
 } from './dataProvider';
 
 /**
@@ -231,7 +231,7 @@ export class MCPLeadPulseDataProvider {
   /**
    * Get high-intent visitors from MCP server
    */
-  async getHighIntentVisitors(threshold: number = 70, limit: number = 20): Promise<MCPVisitorData[]> {
+  async getHighIntentVisitors(threshold = 70, limit = 20): Promise<MCPVisitorData[]> {
     if (!this.mcpClient.isEnabled()) {
       return this.getFallbackHighIntentVisitors(threshold, limit);
     }

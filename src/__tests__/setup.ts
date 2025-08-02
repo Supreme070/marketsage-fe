@@ -59,7 +59,7 @@ global.fetch = jest.fn();
 
 // Setup test utilities
 global.testUtils = {
-  generateTestToken: (userId: string = 'test-user', organizationId: string = 'test-org') => {
+  generateTestToken: (userId = 'test-user', organizationId = 'test-org') => {
     const jwt = require('jsonwebtoken');
     return jwt.sign(
       { 

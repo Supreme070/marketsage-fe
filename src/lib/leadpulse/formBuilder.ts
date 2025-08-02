@@ -413,7 +413,7 @@ export async function generateFormHtml(formId: string, pixelId: string): Promise
         }
         
         // Submit the form data
-        fetch('/api/leadpulse/form-submit', {
+        fetch('/api/v2/leadpulse/form-submit', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

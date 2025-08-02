@@ -106,7 +106,7 @@ export function FormAnalyticsDashboard({
         
         // First, fetch available forms if no specific form is selected
         if (!selectedForm) {
-          const formsResponse = await fetch('/api/leadpulse/forms');
+          const formsResponse = await fetch('/api/v2/leadpulse/forms');
           const formsData = await formsResponse.json();
           setForms(formsData.forms || []);
           if (formsData.forms?.[0]) {

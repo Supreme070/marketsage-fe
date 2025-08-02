@@ -47,7 +47,7 @@ export function useAutonomousAttribution(
 
   const fetchInsights = useCallback(async () => {
     try {
-      const response = await fetch(`/api/attribution/autonomous?action=insights&hours=${hours}`);
+      const response = await fetch(`/api/v2/attribution/autonomous?action=insights&hours=${hours}`);
       const result = await response.json();
       
       if (result.success) {
@@ -63,7 +63,7 @@ export function useAutonomousAttribution(
 
   const fetchMetrics = useCallback(async () => {
     try {
-      const response = await fetch('/api/attribution/autonomous?action=metrics');
+      const response = await fetch('/api/v2/attribution/autonomous?action=metrics');
       const result = await response.json();
       
       if (result.success) {
@@ -78,7 +78,7 @@ export function useAutonomousAttribution(
 
   const fetchRecommendations = useCallback(async () => {
     try {
-      const response = await fetch('/api/attribution/autonomous?action=recommendations');
+      const response = await fetch('/api/v2/attribution/autonomous?action=recommendations');
       const result = await response.json();
       
       if (result.success) {
@@ -106,7 +106,7 @@ export function useAutonomousAttribution(
 
   const approveAction = useCallback(async (actionId: string) => {
     try {
-      const response = await fetch('/api/attribution/autonomous', {
+      const response = await fetch('/api/v2/attribution/autonomous', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -130,7 +130,7 @@ export function useAutonomousAttribution(
 
   const rejectAction = useCallback(async (actionId: string) => {
     try {
-      const response = await fetch('/api/attribution/autonomous', {
+      const response = await fetch('/api/v2/attribution/autonomous', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -154,7 +154,7 @@ export function useAutonomousAttribution(
 
   const triggerAnalysis = useCallback(async () => {
     try {
-      const response = await fetch('/api/attribution/autonomous', {
+      const response = await fetch('/api/v2/attribution/autonomous', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -180,7 +180,7 @@ export function useAutonomousAttribution(
 
   const configureAutomation = useCallback(async (config: any) => {
     try {
-      const response = await fetch('/api/attribution/autonomous', {
+      const response = await fetch('/api/v2/attribution/autonomous', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

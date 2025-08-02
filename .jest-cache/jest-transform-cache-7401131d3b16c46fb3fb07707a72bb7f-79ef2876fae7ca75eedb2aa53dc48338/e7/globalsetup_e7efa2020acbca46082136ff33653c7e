@@ -1,0 +1,53 @@
+29b1feeb020eb17dd441881eb34a6080
+"use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+Object.defineProperty(exports, "default", {
+    enumerable: true,
+    get: function() {
+        return _default;
+    }
+});
+const _test = require("@playwright/test");
+const _child_process = require("child_process");
+const _util = require("util");
+const execAsync = (0, _util.promisify)(_child_process.exec);
+/**
+ * Global setup for MarketSage E2E tests
+ * Prepares database, starts MCP servers, and sets up test data
+ */ async function globalSetup(config) {
+    console.log('🚀 Setting up MarketSage E2E test environment...');
+    try {
+        // 1. Reset and seed database with MCP test data
+        console.log('📊 Setting up test database...');
+        await execAsync('npm run db:reset');
+        await execAsync('npm run db:migrate');
+        await execAsync('npm run db:seed');
+        await execAsync('npm run seed-mcp-all');
+        // 2. Start MCP servers for testing
+        console.log('🔗 Starting MCP servers...');
+        await execAsync('npm run test:mcp');
+        // 3. Create test user and authenticate
+        console.log('👤 Creating test user...');
+        const browser = await _test.chromium.launch();
+        const context = await browser.newContext();
+        const page = await context.newPage();
+        // Navigate to login and create test account
+        await page.goto('/auth/login');
+        await page.fill('[data-testid="email"]', 'test@marketsage.com');
+        await page.fill('[data-testid="password"]', 'TestPassword123!');
+        // Save authentication state
+        await context.storageState({
+            path: 'src/__tests__/e2e/auth.json'
+        });
+        await browser.close();
+        console.log('✅ E2E test environment ready!');
+    } catch (error) {
+        console.error('❌ Failed to setup E2E environment:', error);
+        throw error;
+    }
+}
+const _default = globalSetup;
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi9Vc2Vycy9zdXByZW1lL0Rlc2t0b3AvbWFya2V0c2FnZS9zcmMvX190ZXN0c19fL2UyZS9nbG9iYWwtc2V0dXAudHMiXSwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0IHsgY2hyb21pdW0sIEZ1bGxDb25maWcgfSBmcm9tICdAcGxheXdyaWdodC90ZXN0JztcbmltcG9ydCB7IGV4ZWMgfSBmcm9tICdjaGlsZF9wcm9jZXNzJztcbmltcG9ydCB7IHByb21pc2lmeSB9IGZyb20gJ3V0aWwnO1xuXG5jb25zdCBleGVjQXN5bmMgPSBwcm9taXNpZnkoZXhlYyk7XG5cbi8qKlxuICogR2xvYmFsIHNldHVwIGZvciBNYXJrZXRTYWdlIEUyRSB0ZXN0c1xuICogUHJlcGFyZXMgZGF0YWJhc2UsIHN0YXJ0cyBNQ1Agc2VydmVycywgYW5kIHNldHMgdXAgdGVzdCBkYXRhXG4gKi9cbmFzeW5jIGZ1bmN0aW9uIGdsb2JhbFNldHVwKGNvbmZpZzogRnVsbENvbmZpZykge1xuICBjb25zb2xlLmxvZygn8J+agCBTZXR0aW5nIHVwIE1hcmtldFNhZ2UgRTJFIHRlc3QgZW52aXJvbm1lbnQuLi4nKTtcblxuICB0cnkge1xuICAgIC8vIDEuIFJlc2V0IGFuZCBzZWVkIGRhdGFiYXNlIHdpdGggTUNQIHRlc3QgZGF0YVxuICAgIGNvbnNvbGUubG9nKCfwn5OKIFNldHRpbmcgdXAgdGVzdCBkYXRhYmFzZS4uLicpO1xuICAgIGF3YWl0IGV4ZWNBc3luYygnbnBtIHJ1biBkYjpyZXNldCcpO1xuICAgIGF3YWl0IGV4ZWNBc3luYygnbnBtIHJ1biBkYjptaWdyYXRlJyk7XG4gICAgYXdhaXQgZXhlY0FzeW5jKCducG0gcnVuIGRiOnNlZWQnKTtcbiAgICBhd2FpdCBleGVjQXN5bmMoJ25wbSBydW4gc2VlZC1tY3AtYWxsJyk7XG5cbiAgICAvLyAyLiBTdGFydCBNQ1Agc2VydmVycyBmb3IgdGVzdGluZ1xuICAgIGNvbnNvbGUubG9nKCfwn5SXIFN0YXJ0aW5nIE1DUCBzZXJ2ZXJzLi4uJyk7XG4gICAgYXdhaXQgZXhlY0FzeW5jKCducG0gcnVuIHRlc3Q6bWNwJyk7XG5cbiAgICAvLyAzLiBDcmVhdGUgdGVzdCB1c2VyIGFuZCBhdXRoZW50aWNhdGVcbiAgICBjb25zb2xlLmxvZygn8J+RpCBDcmVhdGluZyB0ZXN0IHVzZXIuLi4nKTtcbiAgICBjb25zdCBicm93c2VyID0gYXdhaXQgY2hyb21pdW0ubGF1bmNoKCk7XG4gICAgY29uc3QgY29udGV4dCA9IGF3YWl0IGJyb3dzZXIubmV3Q29udGV4dCgpO1xuICAgIGNvbnN0IHBhZ2UgPSBhd2FpdCBjb250ZXh0Lm5ld1BhZ2UoKTtcblxuICAgIC8vIE5hdmlnYXRlIHRvIGxvZ2luIGFuZCBjcmVhdGUgdGVzdCBhY2NvdW50XG4gICAgYXdhaXQgcGFnZS5nb3RvKCcvYXV0aC9sb2dpbicpO1xuICAgIGF3YWl0IHBhZ2UuZmlsbCgnW2RhdGEtdGVzdGlkPVwiZW1haWxcIl0nLCAndGVzdEBtYXJrZXRzYWdlLmNvbScpO1xuICAgIGF3YWl0IHBhZ2UuZmlsbCgnW2RhdGEtdGVzdGlkPVwicGFzc3dvcmRcIl0nLCAnVGVzdFBhc3N3b3JkMTIzIScpO1xuICAgIFxuICAgIC8vIFNhdmUgYXV0aGVudGljYXRpb24gc3RhdGVcbiAgICBhd2FpdCBjb250ZXh0LnN0b3JhZ2VTdGF0ZSh7IHBhdGg6ICdzcmMvX190ZXN0c19fL2UyZS9hdXRoLmpzb24nIH0pO1xuICAgIFxuICAgIGF3YWl0IGJyb3dzZXIuY2xvc2UoKTtcblxuICAgIGNvbnNvbGUubG9nKCfinIUgRTJFIHRlc3QgZW52aXJvbm1lbnQgcmVhZHkhJyk7XG4gIH0gY2F0Y2ggKGVycm9yKSB7XG4gICAgY29uc29sZS5lcnJvcign4p2MIEZhaWxlZCB0byBzZXR1cCBFMkUgZW52aXJvbm1lbnQ6JywgZXJyb3IpO1xuICAgIHRocm93IGVycm9yO1xuICB9XG59XG5cbmV4cG9ydCBkZWZhdWx0IGdsb2JhbFNldHVwOyJdLCJuYW1lcyI6WyJleGVjQXN5bmMiLCJwcm9taXNpZnkiLCJleGVjIiwiZ2xvYmFsU2V0dXAiLCJjb25maWciLCJjb25zb2xlIiwibG9nIiwiYnJvd3NlciIsImNocm9taXVtIiwibGF1bmNoIiwiY29udGV4dCIsIm5ld0NvbnRleHQiLCJwYWdlIiwibmV3UGFnZSIsImdvdG8iLCJmaWxsIiwic3RvcmFnZVN0YXRlIiwicGF0aCIsImNsb3NlIiwiZXJyb3IiXSwibWFwcGluZ3MiOiI7Ozs7K0JBZ0RBOzs7ZUFBQTs7O3NCQWhEcUM7K0JBQ2hCO3NCQUNLO0FBRTFCLE1BQU1BLFlBQVlDLElBQUFBLGVBQVMsRUFBQ0MsbUJBQUk7QUFFaEM7OztDQUdDLEdBQ0QsZUFBZUMsWUFBWUMsTUFBa0I7SUFDM0NDLFFBQVFDLEdBQUcsQ0FBQztJQUVaLElBQUk7UUFDRixnREFBZ0Q7UUFDaERELFFBQVFDLEdBQUcsQ0FBQztRQUNaLE1BQU1OLFVBQVU7UUFDaEIsTUFBTUEsVUFBVTtRQUNoQixNQUFNQSxVQUFVO1FBQ2hCLE1BQU1BLFVBQVU7UUFFaEIsbUNBQW1DO1FBQ25DSyxRQUFRQyxHQUFHLENBQUM7UUFDWixNQUFNTixVQUFVO1FBRWhCLHVDQUF1QztRQUN2Q0ssUUFBUUMsR0FBRyxDQUFDO1FBQ1osTUFBTUMsVUFBVSxNQUFNQyxjQUFRLENBQUNDLE1BQU07UUFDckMsTUFBTUMsVUFBVSxNQUFNSCxRQUFRSSxVQUFVO1FBQ3hDLE1BQU1DLE9BQU8sTUFBTUYsUUFBUUcsT0FBTztRQUVsQyw0Q0FBNEM7UUFDNUMsTUFBTUQsS0FBS0UsSUFBSSxDQUFDO1FBQ2hCLE1BQU1GLEtBQUtHLElBQUksQ0FBQyx5QkFBeUI7UUFDekMsTUFBTUgsS0FBS0csSUFBSSxDQUFDLDRCQUE0QjtRQUU1Qyw0QkFBNEI7UUFDNUIsTUFBTUwsUUFBUU0sWUFBWSxDQUFDO1lBQUVDLE1BQU07UUFBOEI7UUFFakUsTUFBTVYsUUFBUVcsS0FBSztRQUVuQmIsUUFBUUMsR0FBRyxDQUFDO0lBQ2QsRUFBRSxPQUFPYSxPQUFPO1FBQ2RkLFFBQVFjLEtBQUssQ0FBQyxzQ0FBc0NBO1FBQ3BELE1BQU1BO0lBQ1I7QUFDRjtNQUVBLFdBQWVoQiJ9

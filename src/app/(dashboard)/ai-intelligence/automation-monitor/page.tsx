@@ -113,7 +113,7 @@ export default function AutomationMonitor() {
       let workflowsData: any[] = [];
 
       // 1. Fetch real workflow data
-      const workflowsResponse = await fetch('/api/workflows');
+      const workflowsResponse = await fetch('/api/v2/workflows');
       if (workflowsResponse.ok) {
         workflowsData = await workflowsResponse.json();
         

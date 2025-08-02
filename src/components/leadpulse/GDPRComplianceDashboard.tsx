@@ -85,7 +85,7 @@ export function GDPRComplianceDashboard({ className }: GDPRComplianceDashboardPr
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const response = await fetch('/api/leadpulse/gdpr?action=dashboard');
+        const response = await fetch('/api/v2/leadpulse/gdpr?action=dashboard');
         if (response.ok) {
           const data = await response.json();
           setDashboardData(data);
@@ -107,7 +107,7 @@ export function GDPRComplianceDashboard({ className }: GDPRComplianceDashboardPr
     setServiceStatus(serviceStatus === 'running' ? 'stopping' : 'starting');
 
     try {
-      const response = await fetch(`/api/leadpulse/gdpr?action=${action}`, {
+      const response = await fetch(`/api/v2/leadpulse/gdpr?action=${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -125,7 +125,7 @@ export function GDPRComplianceDashboard({ className }: GDPRComplianceDashboardPr
     if (!selectedEmail) return;
 
     try {
-      const response = await fetch(`/api/leadpulse/gdpr?action=consent-summary&email=${encodeURIComponent(selectedEmail)}`);
+      const response = await fetch(`/api/v2/leadpulse/gdpr?action=consent-summary&email=${encodeURIComponent(selectedEmail)}`);
       if (response.ok) {
         const data = await response.json();
         setConsentSummary(data);
@@ -137,7 +137,7 @@ export function GDPRComplianceDashboard({ className }: GDPRComplianceDashboardPr
 
   const handleProcessRetention = async () => {
     try {
-      const response = await fetch('/api/leadpulse/gdpr?action=process-retention', {
+      const response = await fetch('/api/v2/leadpulse/gdpr?action=process-retention', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -153,7 +153,7 @@ export function GDPRComplianceDashboard({ className }: GDPRComplianceDashboardPr
 
   const handleAddRetentionRule = async () => {
     try {
-      const response = await fetch('/api/leadpulse/gdpr?action=add-retention-rule', {
+      const response = await fetch('/api/v2/leadpulse/gdpr?action=add-retention-rule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newRetentionRule)
@@ -180,7 +180,7 @@ export function GDPRComplianceDashboard({ className }: GDPRComplianceDashboardPr
 
   const handleDataSubjectRequest = async (type: string, email: string) => {
     try {
-      const response = await fetch('/api/leadpulse/gdpr?action=data-subject-request', {
+      const response = await fetch('/api/v2/leadpulse/gdpr?action=data-subject-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type, email })

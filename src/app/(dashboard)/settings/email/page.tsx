@@ -91,7 +91,7 @@ export default function EmailSettingsPage() {
 
   const loadEmailProvider = async () => {
     try {
-      const response = await fetch('/api/email/providers');
+      const response = await fetch('/api/v2/email/providers');
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.providers && data.providers.length > 0) {
@@ -157,7 +157,7 @@ export default function EmailSettingsPage() {
     setIsLoading(true);
     try {
       const method = provider ? 'PUT' : 'POST';
-      const url = provider ? `/api/email/providers/${provider.id}` : '/api/email/providers';
+      const url = provider ? `/api/v2/email/providers/${provider.id}` : '/api/v2/email/providers';
       
       const response = await fetch(url, {
         method,
@@ -212,7 +212,7 @@ export default function EmailSettingsPage() {
 
     setIsTesting(true);
     try {
-      const response = await fetch(`/api/email/providers/${provider.id}/test`, {
+      const response = await fetch(`/api/v2/email/providers/${provider.id}/test`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(testData),
@@ -433,7 +433,7 @@ export default function EmailSettingsPage() {
                               id="smtpPort"
                               type="number"
                               value={formData.smtpPort || 587}
-                              onChange={(e) => setFormData(prev => ({ ...prev, smtpPort: parseInt(e.target.value) }))}
+                              onChange={(e) => setFormData(prev => ({ ...prev, smtpPort: Number.parseInt(e.target.value) }))}
                               placeholder="587"
                               className="mt-1"
                             />

@@ -81,14 +81,14 @@ export default function SMSSettingsPage() {
       setLoading(true);
       
       // Load providers
-      const providersResponse = await fetch('/api/sms/providers');
+      const providersResponse = await fetch('/api/v2/sms/providers');
       if (providersResponse.ok) {
         const providersData = await providersResponse.json();
         setProviders(providersData.providers || []);
       }
 
       // Load settings
-      const settingsResponse = await fetch('/api/sms/settings');
+      const settingsResponse = await fetch('/api/v2/sms/settings');
       if (settingsResponse.ok) {
         const settingsData = await settingsResponse.json();
         setSettings(prev => ({ ...prev, ...settingsData.settings }));
@@ -106,7 +106,7 @@ export default function SMSSettingsPage() {
     try {
       setSaving(true);
       
-      const response = await fetch('/api/sms/providers', {
+      const response = await fetch('/api/v2/sms/providers', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -174,7 +174,7 @@ export default function SMSSettingsPage() {
     try {
       setSaving(true);
       
-      const response = await fetch('/api/sms/settings', {
+      const response = await fetch('/api/v2/sms/settings', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

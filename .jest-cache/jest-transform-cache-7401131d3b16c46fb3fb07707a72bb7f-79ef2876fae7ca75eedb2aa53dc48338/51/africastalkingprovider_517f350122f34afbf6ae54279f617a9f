@@ -1,0 +1,109 @@
+ac7c90a6e119a46a7d35324854627706
+"use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+Object.defineProperty(exports, "AfricasTalkingSMSProvider", {
+    enumerable: true,
+    get: function() {
+        return AfricasTalkingSMSProvider;
+    }
+});
+const _baseprovider = require("./base-provider");
+class AfricasTalkingSMSProvider extends _baseprovider.BaseSMSProvider {
+    constructor(config){
+        super(), this.name = 'Africa\'s Talking';
+        // Use provided config or fall back to environment variables
+        this.apiKey = config?.apiKey || process.env.AFRICASTALKING_API_KEY || '';
+        this.username = config?.username || process.env.AFRICASTALKING_USERNAME || '';
+        this.senderId = config?.fromNumber || process.env.AFRICASTALKING_SENDER_ID || 'MarketSage';
+    }
+    async sendSMS(phoneNumber, message) {
+        try {
+            // Validate phone number format
+            if (!this.validatePhoneNumber(phoneNumber)) {
+                return {
+                    success: false,
+                    error: {
+                        message: `Invalid phone number format: ${phoneNumber}`,
+                        code: 'INVALID_PHONE_NUMBER'
+                    }
+                };
+            }
+            // If not configured, fall back to mock behavior for development
+            if (!this.isConfigured()) {
+                console.log(`[MOCK Africa's Talking] Would send to ${phoneNumber}: ${message}`);
+                return {
+                    success: true,
+                    messageId: `mock_at_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                };
+            }
+            // Format phone number for Africa's Talking (ensure country code)
+            const formattedPhone = this.formatPhoneNumber(phoneNumber);
+            const requestBody = {
+                username: this.username,
+                to: formattedPhone,
+                message: message,
+                from: this.senderId
+            };
+            const response = await fetch('https://api.africastalking.com/version1/messaging', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'apiKey': this.apiKey
+                },
+                body: new URLSearchParams(requestBody)
+            });
+            const responseData = await response.json();
+            if (!response.ok) {
+                throw new Error(responseData.message || 'Africa\'s Talking API request failed');
+            }
+            // Check if SMS was sent successfully
+            const recipient = responseData.SMSMessageData?.Recipients?.[0];
+            if (recipient && recipient.status === 'Success') {
+                return {
+                    success: true,
+                    messageId: recipient.messageId || `at_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                };
+            } else {
+                return {
+                    success: false,
+                    error: {
+                        message: recipient?.status || 'Unknown error from Africa\'s Talking',
+                        code: 'AFRICASTALKING_ERROR'
+                    }
+                };
+            }
+        } catch (error) {
+            console.error('Africa\'s Talking SMS error:', error);
+            return {
+                success: false,
+                error: {
+                    message: error instanceof Error ? error.message : 'Africa\'s Talking SMS sending failed',
+                    code: 'AFRICASTALKING_API_ERROR'
+                }
+            };
+        }
+    }
+    isConfigured() {
+        return !!(this.apiKey && this.username);
+    }
+    formatPhoneNumber(phoneNumber) {
+        const cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
+        // If already has country code, return as is
+        if (cleanPhoneNumber.startsWith('234') || cleanPhoneNumber.startsWith('254') || cleanPhoneNumber.startsWith('27') || cleanPhoneNumber.startsWith('233')) {
+            return '+' + cleanPhoneNumber;
+        }
+        // Default to Nigerian country code for local numbers
+        if (cleanPhoneNumber.startsWith('0')) {
+            return '+234' + cleanPhoneNumber.substring(1);
+        }
+        if (cleanPhoneNumber.length === 10) {
+            return '+234' + cleanPhoneNumber;
+        }
+        return '+' + cleanPhoneNumber;
+    }
+}
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi9Vc2Vycy9zdXByZW1lL0Rlc2t0b3AvbWFya2V0c2FnZS9zcmMvbGliL3Ntcy1wcm92aWRlcnMvYWZyaWNhc3RhbGtpbmctcHJvdmlkZXIudHMiXSwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0IHsgQmFzZVNNU1Byb3ZpZGVyLCB0eXBlIFNNU1Jlc3VsdCB9IGZyb20gJy4vYmFzZS1wcm92aWRlcic7XG5cbi8vIEFmcmljYSdzIFRhbGtpbmcgU01TIHByb3ZpZGVyIGZvciBBZnJpY2FuIG1hcmtldHNcbmV4cG9ydCBjbGFzcyBBZnJpY2FzVGFsa2luZ1NNU1Byb3ZpZGVyIGV4dGVuZHMgQmFzZVNNU1Byb3ZpZGVyIHtcbiAgbmFtZSA9ICdBZnJpY2FcXCdzIFRhbGtpbmcnO1xuICBcbiAgcHJpdmF0ZSBhcGlLZXk6IHN0cmluZztcbiAgcHJpdmF0ZSB1c2VybmFtZTogc3RyaW5nO1xuICBwcml2YXRlIHNlbmRlcklkOiBzdHJpbmc7XG5cbiAgY29uc3RydWN0b3IoY29uZmlnPzogeyBhcGlLZXk/OiBzdHJpbmc7IHVzZXJuYW1lPzogc3RyaW5nOyBmcm9tTnVtYmVyPzogc3RyaW5nIH0pIHtcbiAgICBzdXBlcigpO1xuICAgIC8vIFVzZSBwcm92aWRlZCBjb25maWcgb3IgZmFsbCBiYWNrIHRvIGVudmlyb25tZW50IHZhcmlhYmxlc1xuICAgIHRoaXMuYXBpS2V5ID0gY29uZmlnPy5hcGlLZXkgfHwgcHJvY2Vzcy5lbnYuQUZSSUNBU1RBTEtJTkdfQVBJX0tFWSB8fCAnJztcbiAgICB0aGlzLnVzZXJuYW1lID0gY29uZmlnPy51c2VybmFtZSB8fCBwcm9jZXNzLmVudi5BRlJJQ0FTVEFMS0lOR19VU0VSTkFNRSB8fCAnJztcbiAgICB0aGlzLnNlbmRlcklkID0gY29uZmlnPy5mcm9tTnVtYmVyIHx8IHByb2Nlc3MuZW52LkFGUklDQVNUQUxLSU5HX1NFTkRFUl9JRCB8fCAnTWFya2V0U2FnZSc7XG4gIH1cblxuICBhc3luYyBzZW5kU01TKHBob25lTnVtYmVyOiBzdHJpbmcsIG1lc3NhZ2U6IHN0cmluZyk6IFByb21pc2U8U01TUmVzdWx0PiB7XG4gICAgdHJ5IHtcbiAgICAgIC8vIFZhbGlkYXRlIHBob25lIG51bWJlciBmb3JtYXRcbiAgICAgIGlmICghdGhpcy52YWxpZGF0ZVBob25lTnVtYmVyKHBob25lTnVtYmVyKSkge1xuICAgICAgICByZXR1cm4ge1xuICAgICAgICAgIHN1Y2Nlc3M6IGZhbHNlLFxuICAgICAgICAgIGVycm9yOiB7XG4gICAgICAgICAgICBtZXNzYWdlOiBgSW52YWxpZCBwaG9uZSBudW1iZXIgZm9ybWF0OiAke3Bob25lTnVtYmVyfWAsXG4gICAgICAgICAgICBjb2RlOiAnSU5WQUxJRF9QSE9ORV9OVU1CRVInXG4gICAgICAgICAgfVxuICAgICAgICB9O1xuICAgICAgfVxuXG4gICAgICAvLyBJZiBub3QgY29uZmlndXJlZCwgZmFsbCBiYWNrIHRvIG1vY2sgYmVoYXZpb3IgZm9yIGRldmVsb3BtZW50XG4gICAgICBpZiAoIXRoaXMuaXNDb25maWd1cmVkKCkpIHtcbiAgICAgICAgY29uc29sZS5sb2coYFtNT0NLIEFmcmljYSdzIFRhbGtpbmddIFdvdWxkIHNlbmQgdG8gJHtwaG9uZU51bWJlcn06ICR7bWVzc2FnZX1gKTtcbiAgICAgICAgcmV0dXJuIHtcbiAgICAgICAgICBzdWNjZXNzOiB0cnVlLFxuICAgICAgICAgIG1lc3NhZ2VJZDogYG1vY2tfYXRfJHtEYXRlLm5vdygpfV8ke01hdGgucmFuZG9tKCkudG9TdHJpbmcoMzYpLnN1YnN0cigyLCA5KX1gLFxuICAgICAgICB9O1xuICAgICAgfVxuXG4gICAgICAvLyBGb3JtYXQgcGhvbmUgbnVtYmVyIGZvciBBZnJpY2EncyBUYWxraW5nIChlbnN1cmUgY291bnRyeSBjb2RlKVxuICAgICAgY29uc3QgZm9ybWF0dGVkUGhvbmUgPSB0aGlzLmZvcm1hdFBob25lTnVtYmVyKHBob25lTnVtYmVyKTtcblxuICAgICAgY29uc3QgcmVxdWVzdEJvZHkgPSB7XG4gICAgICAgIHVzZXJuYW1lOiB0aGlzLnVzZXJuYW1lLFxuICAgICAgICB0bzogZm9ybWF0dGVkUGhvbmUsXG4gICAgICAgIG1lc3NhZ2U6IG1lc3NhZ2UsXG4gICAgICAgIGZyb206IHRoaXMuc2VuZGVySWRcbiAgICAgIH07XG5cbiAgICAgIGNvbnN0IHJlc3BvbnNlID0gYXdhaXQgZmV0Y2goJ2h0dHBzOi8vYXBpLmFmcmljYXN0YWxraW5nLmNvbS92ZXJzaW9uMS9tZXNzYWdpbmcnLCB7XG4gICAgICAgIG1ldGhvZDogJ1BPU1QnLFxuICAgICAgICBoZWFkZXJzOiB7XG4gICAgICAgICAgJ0FjY2VwdCc6ICdhcHBsaWNhdGlvbi9qc29uJyxcbiAgICAgICAgICAnQ29udGVudC1UeXBlJzogJ2FwcGxpY2F0aW9uL3gtd3d3LWZvcm0tdXJsZW5jb2RlZCcsXG4gICAgICAgICAgJ2FwaUtleSc6IHRoaXMuYXBpS2V5XG4gICAgICAgIH0sXG4gICAgICAgIGJvZHk6IG5ldyBVUkxTZWFyY2hQYXJhbXMocmVxdWVzdEJvZHkpXG4gICAgICB9KTtcblxuICAgICAgY29uc3QgcmVzcG9uc2VEYXRhID0gYXdhaXQgcmVzcG9uc2UuanNvbigpO1xuXG4gICAgICBpZiAoIXJlc3BvbnNlLm9rKSB7XG4gICAgICAgIHRocm93IG5ldyBFcnJvcihyZXNwb25zZURhdGEubWVzc2FnZSB8fCAnQWZyaWNhXFwncyBUYWxraW5nIEFQSSByZXF1ZXN0IGZhaWxlZCcpO1xuICAgICAgfVxuXG4gICAgICAvLyBDaGVjayBpZiBTTVMgd2FzIHNlbnQgc3VjY2Vzc2Z1bGx5XG4gICAgICBjb25zdCByZWNpcGllbnQgPSByZXNwb25zZURhdGEuU01TTWVzc2FnZURhdGE/LlJlY2lwaWVudHM/LlswXTtcbiAgICAgIGlmIChyZWNpcGllbnQgJiYgcmVjaXBpZW50LnN0YXR1cyA9PT0gJ1N1Y2Nlc3MnKSB7XG4gICAgICAgIHJldHVybiB7XG4gICAgICAgICAgc3VjY2VzczogdHJ1ZSxcbiAgICAgICAgICBtZXNzYWdlSWQ6IHJlY2lwaWVudC5tZXNzYWdlSWQgfHwgYGF0XyR7RGF0ZS5ub3coKX1fJHtNYXRoLnJhbmRvbSgpLnRvU3RyaW5nKDM2KS5zdWJzdHIoMiwgOSl9YCxcbiAgICAgICAgfTtcbiAgICAgIH0gZWxzZSB7XG4gICAgICAgIHJldHVybiB7XG4gICAgICAgICAgc3VjY2VzczogZmFsc2UsXG4gICAgICAgICAgZXJyb3I6IHtcbiAgICAgICAgICAgIG1lc3NhZ2U6IHJlY2lwaWVudD8uc3RhdHVzIHx8ICdVbmtub3duIGVycm9yIGZyb20gQWZyaWNhXFwncyBUYWxraW5nJyxcbiAgICAgICAgICAgIGNvZGU6ICdBRlJJQ0FTVEFMS0lOR19FUlJPUidcbiAgICAgICAgICB9XG4gICAgICAgIH07XG4gICAgICB9XG5cbiAgICB9IGNhdGNoIChlcnJvcikge1xuICAgICAgY29uc29sZS5lcnJvcignQWZyaWNhXFwncyBUYWxraW5nIFNNUyBlcnJvcjonLCBlcnJvcik7XG4gICAgICBcbiAgICAgIHJldHVybiB7XG4gICAgICAgIHN1Y2Nlc3M6IGZhbHNlLFxuICAgICAgICBlcnJvcjoge1xuICAgICAgICAgIG1lc3NhZ2U6IGVycm9yIGluc3RhbmNlb2YgRXJyb3IgPyBlcnJvci5tZXNzYWdlIDogJ0FmcmljYVxcJ3MgVGFsa2luZyBTTVMgc2VuZGluZyBmYWlsZWQnLFxuICAgICAgICAgIGNvZGU6ICdBRlJJQ0FTVEFMS0lOR19BUElfRVJST1InXG4gICAgICAgIH0sXG4gICAgICB9O1xuICAgIH1cbiAgfVxuXG4gIGlzQ29uZmlndXJlZCgpOiBib29sZWFuIHtcbiAgICByZXR1cm4gISEodGhpcy5hcGlLZXkgJiYgdGhpcy51c2VybmFtZSk7XG4gIH1cblxuICBwcml2YXRlIGZvcm1hdFBob25lTnVtYmVyKHBob25lTnVtYmVyOiBzdHJpbmcpOiBzdHJpbmcge1xuICAgIGNvbnN0IGNsZWFuUGhvbmVOdW1iZXIgPSBwaG9uZU51bWJlci5yZXBsYWNlKC9cXEQvZywgJycpO1xuICAgIFxuICAgIC8vIElmIGFscmVhZHkgaGFzIGNvdW50cnkgY29kZSwgcmV0dXJuIGFzIGlzXG4gICAgaWYgKGNsZWFuUGhvbmVOdW1iZXIuc3RhcnRzV2l0aCgnMjM0JykgfHwgY2xlYW5QaG9uZU51bWJlci5zdGFydHNXaXRoKCcyNTQnKSB8fCBcbiAgICAgICAgY2xlYW5QaG9uZU51bWJlci5zdGFydHNXaXRoKCcyNycpIHx8IGNsZWFuUGhvbmVOdW1iZXIuc3RhcnRzV2l0aCgnMjMzJykpIHtcbiAgICAgIHJldHVybiAnKycgKyBjbGVhblBob25lTnVtYmVyO1xuICAgIH1cbiAgICBcbiAgICAvLyBEZWZhdWx0IHRvIE5pZ2VyaWFuIGNvdW50cnkgY29kZSBmb3IgbG9jYWwgbnVtYmVyc1xuICAgIGlmIChjbGVhblBob25lTnVtYmVyLnN0YXJ0c1dpdGgoJzAnKSkge1xuICAgICAgcmV0dXJuICcrMjM0JyArIGNsZWFuUGhvbmVOdW1iZXIuc3Vic3RyaW5nKDEpO1xuICAgIH1cbiAgICBcbiAgICBpZiAoY2xlYW5QaG9uZU51bWJlci5sZW5ndGggPT09IDEwKSB7XG4gICAgICByZXR1cm4gJysyMzQnICsgY2xlYW5QaG9uZU51bWJlcjtcbiAgICB9XG4gICAgXG4gICAgcmV0dXJuICcrJyArIGNsZWFuUGhvbmVOdW1iZXI7XG4gIH1cbn0iXSwibmFtZXMiOlsiQWZyaWNhc1RhbGtpbmdTTVNQcm92aWRlciIsIkJhc2VTTVNQcm92aWRlciIsImNvbnN0cnVjdG9yIiwiY29uZmlnIiwibmFtZSIsImFwaUtleSIsInByb2Nlc3MiLCJlbnYiLCJBRlJJQ0FTVEFMS0lOR19BUElfS0VZIiwidXNlcm5hbWUiLCJBRlJJQ0FTVEFMS0lOR19VU0VSTkFNRSIsInNlbmRlcklkIiwiZnJvbU51bWJlciIsIkFGUklDQVNUQUxLSU5HX1NFTkRFUl9JRCIsInNlbmRTTVMiLCJwaG9uZU51bWJlciIsIm1lc3NhZ2UiLCJ2YWxpZGF0ZVBob25lTnVtYmVyIiwic3VjY2VzcyIsImVycm9yIiwiY29kZSIsImlzQ29uZmlndXJlZCIsImNvbnNvbGUiLCJsb2ciLCJtZXNzYWdlSWQiLCJEYXRlIiwibm93IiwiTWF0aCIsInJhbmRvbSIsInRvU3RyaW5nIiwic3Vic3RyIiwiZm9ybWF0dGVkUGhvbmUiLCJmb3JtYXRQaG9uZU51bWJlciIsInJlcXVlc3RCb2R5IiwidG8iLCJmcm9tIiwicmVzcG9uc2UiLCJmZXRjaCIsIm1ldGhvZCIsImhlYWRlcnMiLCJib2R5IiwiVVJMU2VhcmNoUGFyYW1zIiwicmVzcG9uc2VEYXRhIiwianNvbiIsIm9rIiwiRXJyb3IiLCJyZWNpcGllbnQiLCJTTVNNZXNzYWdlRGF0YSIsIlJlY2lwaWVudHMiLCJzdGF0dXMiLCJjbGVhblBob25lTnVtYmVyIiwicmVwbGFjZSIsInN0YXJ0c1dpdGgiLCJzdWJzdHJpbmciLCJsZW5ndGgiXSwibWFwcGluZ3MiOiI7Ozs7K0JBR2FBOzs7ZUFBQUE7Ozs4QkFIbUM7QUFHekMsTUFBTUEsa0NBQWtDQyw2QkFBZTtJQU81REMsWUFBWUMsTUFBb0UsQ0FBRTtRQUNoRixLQUFLLFNBUFBDLE9BQU87UUFRTCw0REFBNEQ7UUFDNUQsSUFBSSxDQUFDQyxNQUFNLEdBQUdGLFFBQVFFLFVBQVVDLFFBQVFDLEdBQUcsQ0FBQ0Msc0JBQXNCLElBQUk7UUFDdEUsSUFBSSxDQUFDQyxRQUFRLEdBQUdOLFFBQVFNLFlBQVlILFFBQVFDLEdBQUcsQ0FBQ0csdUJBQXVCLElBQUk7UUFDM0UsSUFBSSxDQUFDQyxRQUFRLEdBQUdSLFFBQVFTLGNBQWNOLFFBQVFDLEdBQUcsQ0FBQ00sd0JBQXdCLElBQUk7SUFDaEY7SUFFQSxNQUFNQyxRQUFRQyxXQUFtQixFQUFFQyxPQUFlLEVBQXNCO1FBQ3RFLElBQUk7WUFDRiwrQkFBK0I7WUFDL0IsSUFBSSxDQUFDLElBQUksQ0FBQ0MsbUJBQW1CLENBQUNGLGNBQWM7Z0JBQzFDLE9BQU87b0JBQ0xHLFNBQVM7b0JBQ1RDLE9BQU87d0JBQ0xILFNBQVMsQ0FBQyw2QkFBNkIsRUFBRUQsYUFBYTt3QkFDdERLLE1BQU07b0JBQ1I7Z0JBQ0Y7WUFDRjtZQUVBLGdFQUFnRTtZQUNoRSxJ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

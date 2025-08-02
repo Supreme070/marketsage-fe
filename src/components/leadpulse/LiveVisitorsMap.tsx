@@ -78,8 +78,8 @@ export default function LiveVisitorsMap({ className }: LiveVisitorsMapProps) {
   const fetchData = async () => {
     try {
       const [locationsResponse, visitorsResponse] = await Promise.all([
-        fetch('/api/leadpulse/locations'),
-        fetch('/api/leadpulse/visitors')
+        fetch('/api/v2/leadpulse/locations'),
+        fetch('/api/v2/leadpulse/visitors')
       ]);
 
       if (locationsResponse.ok && visitorsResponse.ok) {

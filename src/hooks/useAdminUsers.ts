@@ -1,22 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import {
-  User,
-  UserListParams,
-  UserListResponse,
-  UserDetailResponse,
-  UserStatsResponse,
-  UpdateUserData,
-  UpdateUserResponse,
-  ImpersonationRequest,
-  ImpersonationResponse,
-  CreateNoteRequest,
+  type User,
+  type UserListParams,
+  type UserListResponse,
+  type UserDetailResponse,
+  type UserStatsResponse,
+  type UpdateUserData,
+  type UpdateUserResponse,
+  type ImpersonationRequest,
+  type ImpersonationResponse,
+  type CreateNoteRequest,
   UpdateNoteRequest,
-  BatchActionRequest,
-  BatchOperationResult,
-  BatchExportParams,
-  BatchExportResponse,
-  AdminNote,
+  type BatchActionRequest,
+  type BatchOperationResult,
+  type BatchExportParams,
+  type BatchExportResponse,
+  type AdminNote,
   ApiResponse,
 } from '@/types/admin-users';
 
@@ -437,7 +437,7 @@ export function useBatchUserOperations() {
     setError(null);
 
     try {
-      const response = await fetch('/api/admin/users/batch', {
+      const response = await fetch('/api/v2/admin/users/batch', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

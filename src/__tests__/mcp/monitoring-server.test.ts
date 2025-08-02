@@ -21,7 +21,7 @@
  */
 
 import { MonitoringMCPServer } from '../../mcp/servers/monitoring-server';
-import { MCPServerConfig } from '../../mcp/config/mcp-config';
+import type { MCPServerConfig } from '../../mcp/config/mcp-config';
 import { MCPAuthContext, MCPValidationError, MonitoringQuery } from '../../mcp/types/mcp-types';
 import { 
   mockPrismaClient, 

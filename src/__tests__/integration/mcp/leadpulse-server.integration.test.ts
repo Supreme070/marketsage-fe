@@ -13,7 +13,7 @@ import {
   PerformanceTracker,
   testConfig
 } from './setup';
-import { MCPAuthContext } from '../../../mcp/types/mcp-types';
+import type { MCPAuthContext } from '../../../mcp/types/mcp-types';
 
 describe('LeadPulse MCP Server Integration Tests', () => {
   let server: LeadPulseMCPServer;
@@ -134,7 +134,7 @@ describe('LeadPulse MCP Server Integration Tests', () => {
       });
 
       let mobileCount = 0;
-      let africanCountries = new Set();
+      const africanCountries = new Set();
       let whatsappTraffic = 0;
       
       for (const session of sessions) {

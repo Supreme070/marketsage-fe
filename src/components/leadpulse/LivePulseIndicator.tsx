@@ -63,7 +63,7 @@ export default function LivePulseIndicator({
 
     const fetchSimulatorStatus = async () => {
       try {
-        const response = await fetch('/api/leadpulse/simulator?action=status');
+        const response = await fetch('/api/v2/leadpulse/simulator?action=status');
         if (response.ok) {
           const status = await response.json();
           setSimulatorStatus(status);

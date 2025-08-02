@@ -22,7 +22,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { UserRole } from "@prisma/client";
+// UserRole enum moved to local definition
+enum UserRole {
+  USER = "USER",
+  ADMIN = "ADMIN",
+  IT_ADMIN = "IT_ADMIN",
+  SUPER_ADMIN = "SUPER_ADMIN",
+  AI_AGENT = "AI_AGENT"
+}
 import { useRole } from "@/hooks/use-role";
 import { AdminOrAbove } from "@/components/auth/role-based-component";
 
@@ -102,7 +109,7 @@ export default function CreateUserPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/users", {
+      const response = await fetch("/api/v2/users", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

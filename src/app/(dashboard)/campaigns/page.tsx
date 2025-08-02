@@ -185,7 +185,7 @@ export default function CampaignsPage() {
     predictPerformance: async (campaign: any) => {
       setLoadingAI(true);
       try {
-        const response = await fetch('/api/ai/supreme-v3', {
+        const response = await fetch('/api/v2/ai/supreme-v3', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -231,7 +231,7 @@ export default function CampaignsPage() {
     generateABTestRecommendations: async (campaign: any) => {
       setLoadingAI(true);
       try {
-        const response = await fetch('/api/ai/supreme-v3', {
+        const response = await fetch('/api/v2/ai/supreme-v3', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -293,7 +293,7 @@ export default function CampaignsPage() {
     analyzeContentIntelligence: async (campaign: any) => {
       setLoadingAI(true);
       try {
-        const response = await fetch('/api/ai/supreme-v3', {
+        const response = await fetch('/api/v2/ai/supreme-v3', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -343,7 +343,7 @@ export default function CampaignsPage() {
     generateAutoOptimizations: async (campaign: any) => {
       setLoadingAI(true);
       try {
-        const response = await fetch('/api/ai/supreme-v3', {
+        const response = await fetch('/api/v2/ai/supreme-v3', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

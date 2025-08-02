@@ -23,7 +23,7 @@ import {
   multiAgentCoordinator,
   type AIAgent,
   type AgentTask,
-  AgentType
+  type AgentType
 } from '@/lib/ai/multi-agent-coordinator';
 import { workflowQueue } from '@/lib/queue';
 import { redisCache } from '@/lib/cache/redis-client';

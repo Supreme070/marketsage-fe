@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { SubscriptionService, SubscriptionTier, type TierFeatures } from "./subscription-service";
+import { SubscriptionService, type SubscriptionTier, type TierFeatures } from "./subscription-service";
 import prisma from "@/lib/db/prisma";
 
 export interface SubscriptionCheckOptions {

@@ -1,7 +1,5 @@
 import type { NextAuthOptions, DefaultSession } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import bcrypt from 'bcrypt';
-import prisma from '@/lib/db/prisma';
 import { authRateLimiter } from '@/lib/security/auth-rate-limiter';
 
 // Extend NextAuth types for our custom fields
@@ -64,55 +62,46 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          // Find user with organization data
-          const user = await prisma.user.findUnique({
-            where: { 
-              email: credentials.email,
-              isActive: true // Only allow active users
+          // Use backend API for authentication
+          const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3006'}/api/v2/auth/login`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
             },
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              password: true,
-              role: true,
-              organizationId: true,
-              organization: {
-                select: {
-                  id: true,
-                  name: true,
-                  isActive: true
-                }
-              }
-            }
+            body: JSON.stringify({
+              email: credentials.email,
+              password: credentials.password,
+            }),
           });
 
-          // User not found or organization inactive
-          if (!user || !user.organization?.isActive) {
-            console.warn('Authentication failed: User not found or organization inactive', { email: credentials.email });
+          if (!response.ok) {
+            // Record failed attempt for rate limiting
+            authRateLimiter.recordFailedAttempt(identifier, '/api/auth/signin');
+            console.warn('Authentication failed: Invalid credentials', { email: credentials.email });
             return null;
           }
 
-          // Verify password
-          const passwordMatch = await bcrypt.compare(credentials.password, user.password);
-          if (!passwordMatch) {
-            // Record failed attempt for rate limiting
+          const result = await response.json();
+          
+          if (!result.success || !result.data?.user) {
             authRateLimiter.recordFailedAttempt(identifier, '/api/auth/signin');
-            console.warn('Authentication failed: Invalid password', { email: credentials.email });
+            console.warn('Authentication failed: Invalid response from backend', { email: credentials.email });
             return null;
           }
+
+          const user = result.data.user;
 
           // Record successful attempt (clears rate limit)
           authRateLimiter.recordSuccessfulAttempt(identifier, '/api/auth/signin');
 
-          // Return user with tenant context (handle migration case)
+          // Return user with tenant context
           return {
             id: user.id,
             name: user.name,
             email: user.email,
             role: user.role,
             organizationId: user.organizationId || 'default-org-migration',
-            organizationName: user.organization?.name || 'Default Organization',
+            organizationName: user.organizationName || 'Default Organization',
           };
 
         } catch (error) {

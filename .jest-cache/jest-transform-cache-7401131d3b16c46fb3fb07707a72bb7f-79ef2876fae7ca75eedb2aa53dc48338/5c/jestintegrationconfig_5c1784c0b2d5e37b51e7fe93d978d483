@@ -1,0 +1,139 @@
+184a1c0f96e774ff97385c7bce40417a
+/**
+ * Jest Configuration for MCP Integration Tests
+ * 
+ * Specialized configuration for running integration tests with real database
+ * and Docker environment support.
+ */ "use strict";
+const path = require('path');
+module.exports = {
+    // Use the same display name for consistency
+    displayName: 'MCP Integration Tests',
+    // Test environment
+    testEnvironment: 'node',
+    // Root directory for tests
+    rootDir: path.resolve(__dirname, '../../../..'),
+    // Test file patterns
+    testMatch: [
+        '<rootDir>/src/__tests__/integration/mcp/**/*.test.ts'
+    ],
+    // Setup files
+    setupFilesAfterEnv: [
+        '<rootDir>/src/__tests__/integration/mcp/setup.ts'
+    ],
+    // Transform TypeScript files
+    preset: 'ts-jest',
+    // Module file extensions
+    moduleFileExtensions: [
+        'ts',
+        'tsx',
+        'js',
+        'jsx',
+        'json'
+    ],
+    // Transform configuration
+    transform: {
+        '^.+\\.(ts|tsx)$': [
+            'ts-jest',
+            {
+                tsconfig: '<rootDir>/tsconfig.json'
+            }
+        ]
+    },
+    // Module name mapping
+    moduleNameMapping: {
+        '^@/(.*)$': '<rootDir>/src/$1',
+        '^@prisma/client$': '<rootDir>/node_modules/@prisma/client'
+    },
+    // Test timeout (increased for integration tests)
+    testTimeout: 300000,
+    // Run tests in band (sequentially) for database consistency
+    maxWorkers: 1,
+    // Verbose output for integration tests
+    verbose: true,
+    // Collect coverage from integration test files
+    collectCoverageFrom: [
+        'src/mcp/**/*.ts',
+        'src/lib/**/*.ts',
+        'src/scripts/seed-mcp-*.ts',
+        '!src/**/*.d.ts',
+        '!src/**/*.test.ts',
+        '!src/**/__tests__/**',
+        '!src/**/__mocks__/**'
+    ],
+    // Coverage thresholds (lower for integration tests focusing on functionality)
+    coverageThreshold: {
+        global: {
+            branches: 60,
+            functions: 70,
+            lines: 70,
+            statements: 70
+        }
+    },
+    // Coverage reporters
+    coverageReporters: [
+        'text',
+        'lcov',
+        'html'
+    ],
+    // Coverage directory
+    coverageDirectory: '<rootDir>/coverage/integration',
+    // Environment variables for tests
+    setupFiles: [
+        '<rootDir>/src/__tests__/integration/mcp/test-env.ts'
+    ],
+    // Global setup and teardown
+    globalSetup: '<rootDir>/src/__tests__/integration/mcp/global-setup.ts',
+    globalTeardown: '<rootDir>/src/__tests__/integration/mcp/global-teardown.ts',
+    // Reporter configuration
+    reporters: [
+        'default',
+        [
+            'jest-html-reporters',
+            {
+                publicPath: '<rootDir>/test-reports/integration',
+                filename: 'integration-test-report.html',
+                expand: true,
+                hideIcon: false,
+                pageTitle: 'MCP Integration Test Report'
+            }
+        ],
+        [
+            'jest-junit',
+            {
+                outputDirectory: '<rootDir>/test-reports/integration',
+                outputName: 'junit.xml',
+                classNameTemplate: '{classname}',
+                titleTemplate: '{title}',
+                ancestorSeparator: ' › ',
+                usePathForSuiteName: true
+            }
+        ]
+    ],
+    // Cache configuration
+    cache: false,
+    // Clear mocks between tests
+    clearMocks: true,
+    restoreMocks: true,
+    // Detect open handles (useful for database connections)
+    detectOpenHandles: true,
+    forceExit: true,
+    // Silence console output during tests (can be disabled for debugging)
+    silent: false,
+    // Error on deprecated features
+    errorOnDeprecated: true,
+    // Fail fast on first error (can be disabled for comprehensive testing)
+    bail: false,
+    // Additional options for Docker environment
+    ...process.env.DOCKER_ENV === 'true' && {
+        // Docker-specific timeouts
+        testTimeout: 600000,
+        // Additional setup for Docker
+        setupFilesAfterEnv: [
+            '<rootDir>/src/__tests__/integration/mcp/setup.ts',
+            '<rootDir>/src/__tests__/integration/mcp/docker-setup.ts'
+        ]
+    }
+};
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi9Vc2Vycy9zdXByZW1lL0Rlc2t0b3AvbWFya2V0c2FnZS9zcmMvX190ZXN0c19fL2ludGVncmF0aW9uL21jcC9qZXN0LmludGVncmF0aW9uLmNvbmZpZy5qcyJdLCJzb3VyY2VzQ29udGVudCI6WyIvKipcbiAqIEplc3QgQ29uZmlndXJhdGlvbiBmb3IgTUNQIEludGVncmF0aW9uIFRlc3RzXG4gKiBcbiAqIFNwZWNpYWxpemVkIGNvbmZpZ3VyYXRpb24gZm9yIHJ1bm5pbmcgaW50ZWdyYXRpb24gdGVzdHMgd2l0aCByZWFsIGRhdGFiYXNlXG4gKiBhbmQgRG9ja2VyIGVudmlyb25tZW50IHN1cHBvcnQuXG4gKi9cblxuY29uc3QgcGF0aCA9IHJlcXVpcmUoJ3BhdGgnKTtcblxubW9kdWxlLmV4cG9ydHMgPSB7XG4gIC8vIFVzZSB0aGUgc2FtZSBkaXNwbGF5IG5hbWUgZm9yIGNvbnNpc3RlbmN5XG4gIGRpc3BsYXlOYW1lOiAnTUNQIEludGVncmF0aW9uIFRlc3RzJyxcblxuICAvLyBUZXN0IGVudmlyb25tZW50XG4gIHRlc3RFbnZpcm9ubWVudDogJ25vZGUnLFxuXG4gIC8vIFJvb3QgZGlyZWN0b3J5IGZvciB0ZXN0c1xuICByb290RGlyOiBwYXRoLnJlc29sdmUoX19kaXJuYW1lLCAnLi4vLi4vLi4vLi4nKSxcblxuICAvLyBUZXN0IGZpbGUgcGF0dGVybnNcbiAgdGVzdE1hdGNoOiBbXG4gICAgJzxyb290RGlyPi9zcmMvX190ZXN0c19fL2ludGVncmF0aW9uL21jcC8qKi8qLnRlc3QudHMnXG4gIF0sXG5cbiAgLy8gU2V0dXAgZmlsZXNcbiAgc2V0dXBGaWxlc0FmdGVyRW52OiBbXG4gICAgJzxyb290RGlyPi9zcmMvX190ZXN0c19fL2ludGVncmF0aW9uL21jcC9zZXR1cC50cydcbiAgXSxcblxuICAvLyBUcmFuc2Zvcm0gVHlwZVNjcmlwdCBmaWxlc1xuICBwcmVzZXQ6ICd0cy1qZXN0JyxcbiAgXG4gIC8vIE1vZHVsZSBmaWxlIGV4dGVuc2lvbnNcbiAgbW9kdWxlRmlsZUV4dGVuc2lvbnM6IFsndHMnLCAndHN4JywgJ2pzJywgJ2pzeCcsICdqc29uJ10sXG5cbiAgLy8gVHJhbnNmb3JtIGNvbmZpZ3VyYXRpb25cbiAgdHJhbnNmb3JtOiB7XG4gICAgJ14uK1xcXFwuKHRzfHRzeCkkJzogWyd0cy1qZXN0Jywge1xuICAgICAgdHNjb25maWc6ICc8cm9vdERpcj4vdHNjb25maWcuanNvbidcbiAgICB9XVxuICB9LFxuXG4gIC8vIE1vZHVsZSBuYW1lIG1hcHBpbmdcbiAgbW9kdWxlTmFtZU1hcHBpbmc6IHtcbiAgICAnXkAvKC4qKSQnOiAnPHJvb3REaXI+L3NyYy8kMScsXG4gICAgJ15AcHJpc21hL2NsaWVudCQnOiAnPHJvb3REaXI+L25vZGVfbW9kdWxlcy9AcHJpc21hL2NsaWVudCdcbiAgfSxcblxuICAvLyBUZXN0IHRpbWVvdXQgKGluY3JlYXNlZCBmb3IgaW50ZWdyYXRpb24gdGVzdHMpXG4gIHRlc3RUaW1lb3V0OiAzMDAwMDAsIC8vIDUgbWludXRlc1xuXG4gIC8vIFJ1biB0ZXN0cyBpbiBiYW5kIChzZXF1ZW50aWFsbHkpIGZvciBkYXRhYmFzZSBjb25zaXN0ZW5jeVxuICBtYXhXb3JrZXJzOiAxLFxuXG4gIC8vIFZlcmJvc2Ugb3V0cHV0IGZvciBpbnRlZ3JhdGlvbiB0ZXN0c1xuICB2ZXJib3NlOiB0cnVlLFxuXG4gIC8vIENvbGxlY3QgY292ZXJhZ2UgZnJvbSBpbnRlZ3JhdGlvbiB0ZXN0IGZpbGVzXG4gIGNvbGxlY3RDb3ZlcmFnZUZyb206IFtcbiAgICAnc3JjL21jcC8qKi8qLnRzJyxcbiAgICAnc3JjL2xpYi8qKi8qLnRzJyxcbiAgICAnc3JjL3NjcmlwdHMvc2VlZC1tY3AtKi50cycsXG4gICAgJyFzcmMvKiovKi5kLnRzJyxcbiAgICAnIXNyYy8qKi8qLnRlc3QudHMnLFxuICAgICchc3JjLyoqL19fdGVzdHNfXy8qKicsXG4gICAgJyFzcmMvKiovX19tb2Nrc19fLyoqJ1xuICBdLFxuXG4gIC8vIENvdmVyYWdlIHRocmVzaG9sZHMgKGxvd2VyIGZvciBpbnRlZ3JhdGlvbiB0ZXN0cyBmb2N1c2luZyBvbiBmdW5jdGlvbmFsaXR5KVxuICBjb3ZlcmFnZVRocmVzaG9sZDoge1xuICAgIGdsb2JhbDoge1xuICAgICAgYnJhbmNoZXM6IDYwLFxuICAgICAgZnVuY3Rpb25zOiA3MCxcbiAgICAgIGxpbmVzOiA3MCxcbiAgICAgIHN0YXRlbWVudHM6IDcwXG4gICAgfVxuICB9LFxuXG4gIC8vIENvdmVyYWdlIHJlcG9ydGVyc1xuICBjb3ZlcmFnZVJlcG9ydGVyczogWyd0ZXh0JywgJ2xjb3YnLCAnaHRtbCddLFxuXG4gIC8vIENvdmVyYWdlIGRpcmVjdG9yeVxuICBjb3ZlcmFnZURpcmVjdG9yeTogJzxyb290RGlyPi9jb3ZlcmFnZS9pbnRlZ3JhdGlvbicsXG5cbiAgLy8gRW52aXJvbm1lbnQgdmFyaWFibGVzIGZvciB0ZXN0c1xuICBzZXR1cEZpbGVzOiBbJzxyb290RGlyPi9zcmMvX190ZXN0c19fL2ludGVncmF0aW9uL21jcC90ZXN0LWVudi50cyddLFxuXG4gIC8vIEdsb2JhbCBzZXR1cCBhbmQgdGVhcmRvd25cbiAgZ2xvYmFsU2V0dXA6ICc8cm9vdERpcj4vc3JjL19fdGVzdHNfXy9pbnRlZ3JhdGlvbi9tY3AvZ2xvYmFsLXNldHVwLnRzJyxcbiAgZ2xvYmFsVGVhcmRvd246ICc8cm9vdERpcj4vc3JjL19fdGVzdHNfXy9pbnRlZ3JhdGlvbi9tY3AvZ2xvYmFsLXRlYXJkb3duLnRzJyxcblxuICAvLyBSZXBvcnRlciBjb25maWd1cmF0aW9uXG4gIHJlcG9ydGVyczogW1xuICAgICdkZWZhdWx0JyxcbiAgICBbXG4gICAgICAnamVzdC1odG1sLXJlcG9ydGVycycsXG4gICAgICB7XG4gICAgICAgIHB1YmxpY1BhdGg6ICc8cm9vdERpcj4vdGVzdC1yZXBvcnRzL2ludGVncmF0aW9uJyxcbiAgICAgICAgZmlsZW5hbWU6ICdpbnRlZ3JhdGlvbi10ZXN0LXJlcG9ydC5odG1sJyxcbiAgICAgICAgZXhwYW5kOiB0cnVlLFxuICAgICAgICBoaWRlSWNvbjogZmFsc2UsXG4gICAgICAgIHBhZ2VUaXRsZTogJ01DUCBJbnRlZ3JhdGlvbiBUZXN0IFJlcG9ydCdcbiAgICAgIH1cbiAgICBdLFxuICAgIFtcbiAgICAgICdqZXN0LWp1bml0JyxcbiAgICAgIHtcbiAgICAgICAgb3V0cHV0RGlyZWN0b3J5OiAnPHJvb3REaXI+L3Rlc3QtcmVwb3J0cy9pbnRlZ3JhdGlvbicsXG4gICAgICAgIG91dHB1dE5hbWU6ICdqdW5pdC54bWwnLFxuICAgICAgICBjbGFzc05hbWVUZW1wbGF0ZTogJ3tjbGFzc25hbWV9JyxcbiAgICAgICAgdGl0bGVUZW1wbGF0ZTogJ3t0aXRsZX0nLFxuICAgICAgICBhbmNlc3RvclNlcGFyYXRvcjogJyDigLogJyxcbiAgICAgICAgdXNlUGF0aEZvclN1aXRlTmFtZTogdHJ1ZVxuICAgICAgfVxuICAgIF1cbiAgXSxcblxuICAvLyBDYWNoZSBjb25maWd1cmF0aW9uXG4gIGNhY2hlOiBmYWxzZSwgLy8gRGlzYWJsZSBjYWNoZSBmb3IgaW50ZWdyYXRpb24gdGVzdHMgdG8gZW5zdXJlIGZyZXNoIHJ1bnNcblxuICAvLyBDbGVhciBtb2NrcyBiZXR3ZWVuIHRlc3RzXG4gIGNsZWFyTW9ja3M6IHRydWUsXG4gIHJlc3RvcmVNb2NrczogdHJ1ZSxcblxuICAvLyBEZXRlY3Qgb3BlbiBoYW5kbGVzICh1c2VmdWwgZm9yIGRhdGFiYXNlIGNvbm5lY3Rpb25zKVxuICBkZXRlY3RPcGVuSGFuZGxlczogdHJ1ZSxcbiAgZm9yY2VFeGl0OiB0cnVlLFxuXG4gIC8vIFNpbGVuY2UgY29uc29sZSBvdXRwdXQgZHVyaW5nIHRlc3RzIChjYW4gYmUgZGlzYWJsZWQgZm9yIGRlYnVnZ2luZylcbiAgc2lsZW50OiBmYWxzZSxcblxuICAvLyBFcnJvciBvbiBkZXByZWNhdGVkIGZlYXR1cmVzXG4gIGVycm9yT25EZXByZWNhdGVkOiB0cnVlLFxuXG4gIC8vIEZhaWwgZmFzdCBvbiBmaXJzdCBlcnJvciAoY2FuIGJlIGRpc2FibGVkIGZvciBjb21wcmVoZW5zaXZlIHRlc3RpbmcpXG4gIGJhaWw6IGZhbHNlLFxuXG4gIC8vIEFkZGl0aW9uYWwgb3B0aW9ucyBmb3IgRG9ja2VyIGVudmlyb25tZW50XG4gIC4uLihwcm9jZXNzLmVudi5ET0NLRVJfRU5WID09PSAndHJ1ZScgJiYge1xuICAgIC8vIERvY2tlci1zcGVjaWZpYyB0aW1lb3V0c1xuICAgIHRlc3RUaW1lb3V0OiA2MDAwMDAsIC8vIDEwIG1pbnV0ZXMgZm9yIERvY2tlclxuICAgIFxuICAgIC8vIEFkZGl0aW9uYWwgc2V0dXAgZm9yIERvY2tlclxuICAgIHNldHVwRmlsZXNBZnRlckVudjogW1xuICAgICAgJzxyb290RGlyPi9zcmMvX190ZXN0c19fL2ludGVncmF0aW9uL21jcC9zZXR1cC50cycsXG4gICAgICAnPHJvb3REaXI+L3NyYy9fX3Rlc3RzX18vaW50ZWdyYXRpb24vbWNwL2RvY2tlci1zZXR1cC50cydcbiAgICBdXG4gIH0pXG59OyJdLCJuYW1lcyI6WyJwYXRoIiwicmVxdWlyZSIsIm1vZHVsZSIsImV4cG9ydHMiLCJkaXNwbGF5TmFtZSIsInRlc3RFbnZpcm9ubWVudCIsInJvb3REaXIiLCJyZXNvbHZlIiwiX19kaXJuYW1lIiwidGVzdE1hdGNoIiwic2V0dXBGaWxlc0FmdGVyRW52IiwicHJlc2V0IiwibW9kdWxlRmlsZUV4dGVuc2lvbnMiLCJ0cmFuc2Zvcm0iLCJ0c2NvbmZpZyIsIm1vZHVsZU5hbWVNYXBwaW5nIiwidGVzdFRpbWVvdXQiLCJtYXhXb3JrZXJzIiwidmVyYm9zZSIsImNvbGxlY3RDb3ZlcmFnZUZyb20iLCJjb3ZlcmFnZVRocmVzaG9sZCIsImdsb2JhbCIsImJyYW5jaGVzIiwiZnVuY3Rpb25zIiwibGluZXMiLCJzdGF0ZW1lbnRzIiwiY292ZXJhZ2VSZXBvcnRlcnMiLCJjb3ZlcmFnZURpcmVjdG9yeSIsInNldHVwRmlsZXMiLCJnbG9iYWxTZXR1cCIsImdsb2JhbFRlYXJkb3duIiwicmVwb3J0ZXJzIiwicHVibGljUGF0aCIsImZpbGVuYW1lIiwiZXhwYW5kIiwiaGlkZUljb24iLCJwYWdlVGl0bGUiLCJvdXRwdXREaXJlY3RvcnkiLCJvdXRwdXROYW1lIiwiY2xhc3NOYW1lVGVtcGxhdGUiLCJ0aXRsZVRlbXBsYXRlIiwiYW5jZXN0b3JTZXBhcmF0b3IiLCJ1c2VQYXRoRm9yU3VpdGVOYW1lIiwiY2FjaGUiLCJjbGVhck1vY2tzIiwicmVzdG9yZU1vY2tzIiwiZGV0ZWN0T3BlbkhhbmRsZXMiLCJmb3JjZUV4aXQiLCJzaWxlbnQiLCJlcnJvck9uRGVwcmVjYXRlZCIsImJhaWwiLCJwcm9jZXNzIiwiZW52IiwiRE9DS0VSX0VOViJdLCJtYXBwaW5ncyI6IkFBQUE7Ozs7O0NBS0M7QUFFRCxNQUFNQSxPQUFPQyxRQUFRO0FBRXJCQyxPQUFPQyxPQUFPLEdBQUc7SUFDZiw0Q0FBNEM7SUFDNUNDLGFBQWE7SUFFYixtQkFBbUI7SUFDbkJDLGlCQUFpQjtJQUVqQiwyQkFBMkI7SUFDM0JDLFNBQVNOLEtBQUtPLE9BQU8sQ0FBQ0MsV0FBVztJQUVqQyxxQkFBcUI7SUFDckJDLFdBQVc7UUFDVDtLQUNEO0lBRUQsY0FBYztJQUNkQyxvQkFBb0I7UUFDbEI7S0FDRDtJQUVELDZCQUE2QjtJQUM3QkMsUUFBUTtJQUVSLHlCQUF5QjtJQUN6QkMsc0JBQXNCO1FBQUM7UUFBTTtRQUFPO1FBQU07UUFBTztLQUFPO0lBRXhELDBCQUEwQjtJQUMxQkMsV0FBVztRQUNULG1CQUFtQjtZQUFDO1lBQVc7Z0JBQzdCQyxVQUFVO1lBQ1o7U0FBRTtJQUNKO0lBRUEsc0JBQXNCO0lBQ3RCQyxtQkFBbUI7UUFDakIsWUFBWTtRQUNaLG9CQUFvQjtJQUN0QjtJQUVBLGlEQUFpRDtJQUNqREMsYUFBYTtJQUViLDREQUE0RDtJQUM1REMsWUFBWTtJQUVaLHVDQUF1QztJQUN2Q0MsU0FBUztJQUVULCtDQUErQztJQUMvQ0MscUJBQXFCO1FBQ25CO1FBQ0E7UUFDQTtRQUNBO1FBQ0E7UUFDQTtRQUNBO0tBQ0Q7SUFFRCw4RUFBOEU7SUFDOUVDLG1CQUFtQjtRQUNqQkMsUUFBUTtZQUNOQyxVQUFVO1lBQ1ZDLFdBQVc7WUFDWEMsT0FBTztZQUNQQyxZQUFZO1FBQ2Q7SUFDRjtJQUVBLHFCQUFxQjtJQUNyQkMsbUJBQW1CO1FBQUM7UUFBUTtRQUFRO0tBQU87SUFFM0MscUJBQXFCO0lBQ3JCQyxtQkFBbUI7SUFFbkIsa0NBQWtDO0lBQ2xDQyxZQUFZO1FBQUM7S0FBc0Q7SUFFbkUsNEJBQTRCO0lBQzVCQyxhQUFhO0lBQ2JDLGdCQUFnQjtJQUVoQix5QkFBeUI7SUFDekJDLFdBQVc7UUFDVDtRQUNBO1lBQ0U7WUFDQTtnQkFDRUMsWUFBWTtnQkFDWkMsVUFBVTtnQkFDVkMsUUFBUTtnQkFDUkMsVUFBVTtnQkFDVkMsV0FBVztZQUNiO1NBQ0Q7UUFDRDtZQUNFO1lBQ0E7Z0JBQ0VDLGlCQUFpQjtnQkFDakJDLFlBQVk7Z0JBQ1pDLG1CQUFtQjtnQkFDbkJDLGVBQWU7Z0JBQ2ZDLG1CQUFtQjtnQkFDbkJDLHFCQUFxQjtZQUN2QjtTQUNEO0tBQ0Y7SUFFRCxzQkFBc0I7SUFDdEJDLE9BQU87SUFFUCw0QkFBNEI7SUFDNUJDLFlBQVk7SUFDWkMsY0FBYztJQUVkLHdEQUF3RDtJQUN4REMsbUJBQW1CO0lBQ25CQyxXQUFXO0lBRVgsc0VBQXNFO0lBQ3RFQyxRQUFRO0lBRVIsK0JBQStCO0lBQy9CQyxtQkFBbUI7SUFFbkIsdUVBQXVFO0lBQ3ZFQyxNQUFNO0lBRU4sNENBQTRDO0lBQzVDLEdBQUlDLFFBQVFDLEdBQUcsQ0FBQ0MsVUFBVSxLQUFLLFVBQVU7UUFDdkMsMkJBQTJCO1FBQzNCckMsYUFBYTtRQUViLDhCQUE4QjtRQUM5Qk4sb0JBQW9CO1lBQ2xCO1lBQ0E7U0FDRDtJQUNILENBQUM7QUFDSCJ9

@@ -71,7 +71,7 @@ export function useContentAnalytics(userId?: string, timeRange = '30d') {
       setError(null);
 
       // Use the dedicated content analytics endpoint that has mock data
-      const response = await fetch('/api/ai/content-analytics');
+      const response = await fetch('/api/v2/ai/content-analytics');
       
       if (!response.ok) {
         throw new Error('Failed to fetch content analytics');
@@ -229,7 +229,7 @@ export function useContentAnalytics(userId?: string, timeRange = '30d') {
 
   const analyzeContent = useCallback(async (content: string, title?: string) => {
     try {
-      const response = await fetch('/api/ai/content-analytics', {
+      const response = await fetch('/api/v2/ai/content-analytics', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

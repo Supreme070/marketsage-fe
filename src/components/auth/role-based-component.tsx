@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/hooks/use-role";
 import type { ReactNode } from "react";
 
 export function hasRequiredRole(userRole: string, allowedRoles: string[]) {

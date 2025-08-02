@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod';
-import { BaseMCPServer } from './base-mcp-server';
+import { HTTPBaseMCPServer } from './http-base-mcp-server';
 import { 
   type MCPAuthContext, 
   type MCPServerConfig,
@@ -26,7 +26,7 @@ import { sendSMS, smsService } from '../../lib/sms-service';
 import { sendWhatsAppMessage } from '../../lib/whatsapp-service';
 import { prisma } from '../../lib/db/prisma';
 
-export class ExternalServicesMCPServer extends BaseMCPServer {
+export class ExternalServicesMCPServer extends HTTPBaseMCPServer {
   constructor(config?: Partial<MCPServerConfig>) {
     super({
       ...defaultMCPConfig.servers.services,

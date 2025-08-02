@@ -64,5 +64,3 @@ console.log(`  DATABASE_URL: ${process.env.DATABASE_URL?.replace(/\/\/.*@/, '//*
 console.log(`  TEST_DATABASE_URL: ${process.env.TEST_DATABASE_URL?.replace(/\/\/.*@/, '//***:***@') || 'Not set'}`);
 console.log(`  DOCKER_ENV: ${process.env.IS_DOCKER_ENV}`);
 console.log('');
-
-export {};

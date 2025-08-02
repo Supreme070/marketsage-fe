@@ -189,10 +189,10 @@ export default function AdminSupportPage() {
           chatSessionsResponse,
           staffResponse
         ] = await Promise.allSettled([
-          fetch('/api/admin/support?type=metrics'),
-          fetch('/api/admin/support?type=tickets'),
-          fetch('/api/admin/support?type=chat_sessions'),
-          fetch('/api/admin/support?type=staff')
+          fetch('/api/v2/admin/support?type=metrics'),
+          fetch('/api/v2/admin/support?type=tickets'),
+          fetch('/api/v2/admin/support?type=chat_sessions'),
+          fetch('/api/v2/admin/support?type=staff')
         ]);
 
         // Process metrics data

@@ -105,8 +105,8 @@ export default function AdminSecurityPage() {
       try {
         // Fetch security statistics and events
         const [statsResponse, eventsResponse] = await Promise.all([
-          fetch('/api/admin/security/stats'),
-          fetch('/api/admin/security/events?limit=50')
+          fetch('/api/v2/admin/security/stats'),
+          fetch('/api/v2/admin/security/events?limit=50')
         ]);
 
         if (statsResponse.ok) {
@@ -188,7 +188,7 @@ export default function AdminSecurityPage() {
         ]);
 
         // Set threats from API data if available
-        const statsData = await (await fetch('/api/admin/security/stats')).json();
+        const statsData = await (await fetch('/api/v2/admin/security/stats')).json();
         if (statsData.success && statsData.data?.topThreats) {
           const apiThreats = statsData.data.topThreats.map((threat: any) => ({
             id: `threat_${threat.ipAddress}`,

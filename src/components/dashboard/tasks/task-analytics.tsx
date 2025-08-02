@@ -56,7 +56,7 @@ export function TaskAnalytics() {
       setTasksLoading(true);
       setTasksError(null);
       
-      const response = await fetch('/api/tasks');
+      const response = await fetch('/api/v2/tasks');
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: Failed to fetch tasks`);
       }

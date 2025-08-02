@@ -1,0 +1,907 @@
+506beb5c8b366eb7f795500739778f48
+/**
+ * MarketSage Knowledge Base
+ * ========================
+ * Comprehensive knowledge base for Supreme-AI to become a MarketSage expert
+ * This data will be indexed into the RAG system for contextual help
+ */ "use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+function _export(target, all) {
+    for(var name in all)Object.defineProperty(target, name, {
+        enumerable: true,
+        get: all[name]
+    });
+}
+_export(exports, {
+    MARKETSAGE_KNOWLEDGE_BASE: function() {
+        return MARKETSAGE_KNOWLEDGE_BASE;
+    },
+    getAllKnowledgeForRAG: function() {
+        return getAllKnowledgeForRAG;
+    },
+    getHighPriorityKnowledge: function() {
+        return getHighPriorityKnowledge;
+    },
+    getKnowledgeByCategory: function() {
+        return getKnowledgeByCategory;
+    },
+    searchKnowledge: function() {
+        return searchKnowledge;
+    }
+});
+const MARKETSAGE_KNOWLEDGE_BASE = [
+    // PLATFORM OVERVIEW
+    {
+        id: 'platform-overview',
+        category: 'overview',
+        title: 'MarketSage Platform Overview',
+        content: `MarketSage is a comprehensive marketing automation platform designed specifically for the Nigerian and African market. It combines AI-powered intelligence with multi-channel marketing capabilities to help fintech companies, especially those in cross-border payments and remittances, convert visitors into verified customers.
+
+Key Value Propositions:
+- Real-time visitor intelligence and intent tracking
+- AI-powered conversion prediction (78% accuracy)
+- Multi-channel automation (Email, SMS, WhatsApp)
+- African market-specific optimizations
+- Fintech compliance and security features
+- Revenue attribution and analytics
+
+Target Market: Fintech companies, cross-border payment providers, remittance services, and African enterprises looking to improve their marketing ROI.`,
+        tags: [
+            'overview',
+            'platform',
+            'introduction',
+            'value-proposition'
+        ],
+        priority: 10
+    },
+    // CORE MODULES
+    {
+        id: 'ai-intelligence-center',
+        category: 'modules',
+        title: 'AI Intelligence Center',
+        content: `The AI Intelligence Center is MarketSage's most advanced feature, powered by Supreme-AI v3. It provides:
+
+Features:
+- Real-time AI performance monitoring
+- Content intelligence analysis with Supreme scoring
+- Customer segmentation and behavior analysis
+- Predictive analytics with AutoML
+- Interactive chat with Supreme-AI
+- Memory-powered contextual responses
+
+How to Use:
+1. Navigate to Dashboard → AI Intelligence
+2. View Overview tab for real-time metrics
+3. Use Content Intelligence to analyze marketing materials
+4. Check Customer Intelligence for segmentation insights
+5. Chat with Supreme-AI for personalized help
+6. Access AI Tools for content generation
+
+Best Practices:
+- Review AI insights daily for optimization opportunities
+- Use the chat feature to ask specific questions about your data
+- Monitor Supreme scores to improve content performance`,
+        tags: [
+            'ai',
+            'intelligence',
+            'analytics',
+            'supreme-ai',
+            'features'
+        ],
+        priority: 9
+    },
+    {
+        id: 'leadpulse-intelligence',
+        category: 'modules',
+        title: 'LeadPulse Intelligence',
+        content: `LeadPulse is MarketSage's visitor intelligence system that tracks anonymous website visitors and predicts their conversion likelihood.
+
+Features:
+- Real-time visitor tracking
+- Intent scoring (0-100)
+- Geographic identification
+- Behavioral pattern analysis
+- High-intent visitor alerts
+- Conversion prediction
+
+How to Set Up:
+1. Install LeadPulse tracking code on your website
+2. Configure geographic targeting rules
+3. Set up intent scoring parameters
+4. Create automated workflows for high-intent visitors
+5. Monitor visitor dashboard for insights
+
+Use Cases:
+- Identify visitors from target markets (Nigerian diaspora)
+- Trigger personalized campaigns for high-intent visitors
+- Optimize website content based on visitor behavior
+- Improve conversion rates through behavioral insights`,
+        tags: [
+            'leadpulse',
+            'visitor-tracking',
+            'intelligence',
+            'conversion',
+            'setup'
+        ],
+        priority: 8
+    },
+    {
+        id: 'email-campaigns',
+        category: 'modules',
+        title: 'Email Campaign Management',
+        content: `MarketSage's email system provides advanced automation and personalization for email marketing campaigns.
+
+Features:
+- Visual email template editor
+- Automated drip campaigns
+- Segmentation and personalization
+- A/B testing capabilities
+- Performance analytics
+- Nigerian market optimizations
+
+How to Create Email Campaigns:
+1. Go to Email → Campaigns
+2. Choose template or create from scratch
+3. Set up audience segmentation
+4. Configure automation triggers
+5. Schedule or send immediately
+6. Monitor performance metrics
+
+Best Practices for African Markets:
+- Use local languages (English, Hausa, Yoruba, Igbo)
+- Optimize send times for African time zones
+- Include mobile-friendly designs
+- Use cultural context in messaging
+- Focus on trust and security messaging`,
+        tags: [
+            'email',
+            'campaigns',
+            'automation',
+            'personalization',
+            'african-market'
+        ],
+        priority: 7
+    },
+    {
+        id: 'whatsapp-integration',
+        category: 'modules',
+        title: 'WhatsApp Business Integration',
+        content: `WhatsApp is the highest-performing channel in African markets. MarketSage provides native WhatsApp Business API integration.
+
+Features:
+- WhatsApp Business API integration
+- Automated conversation flows
+- Template message management
+- Rich media support (images, documents)
+- Compliance with WhatsApp policies
+- Performance analytics
+
+Setup Process:
+1. Connect WhatsApp Business API account
+2. Verify business profile
+3. Create message templates
+4. Set up automated workflows
+5. Configure customer support escalation
+6. Test message delivery
+
+Best Practices:
+- Use approved message templates
+- Respect opt-in requirements
+- Provide value in every message
+- Use rich media for engagement
+- Set up quick reply options
+- Monitor delivery rates`,
+        tags: [
+            'whatsapp',
+            'messaging',
+            'automation',
+            'africa',
+            'api',
+            'setup'
+        ],
+        priority: 8
+    },
+    {
+        id: 'workflow-automation',
+        category: 'modules',
+        title: 'Workflow Automation',
+        content: `MarketSage's visual workflow editor allows you to create complex marketing automations without coding.
+
+Features:
+- Drag-and-drop workflow builder
+- Multi-channel orchestration
+- Behavioral triggers
+- Time-based automation
+- Conditional logic
+- Performance tracking
+
+Common Workflow Types:
+1. Welcome sequences for new signups
+2. Abandoned cart recovery
+3. Lead nurturing campaigns
+4. Customer onboarding flows
+5. Re-engagement campaigns
+6. Win-back sequences
+
+How to Build Workflows:
+1. Navigate to Workflows → Create New
+2. Choose trigger (sign-up, page visit, etc.)
+3. Add actions (send email, SMS, WhatsApp)
+4. Set conditions and delays
+5. Test workflow logic
+6. Activate and monitor performance
+
+Fintech-Specific Workflows:
+- KYC reminder sequences
+- Transfer completion follow-ups
+- Security verification flows
+- Compliance documentation requests`,
+        tags: [
+            'workflows',
+            'automation',
+            'visual-editor',
+            'triggers',
+            'fintech'
+        ],
+        priority: 7
+    },
+    // CUSTOMER MANAGEMENT
+    {
+        id: 'contact-management',
+        category: 'contacts',
+        title: 'Contact Management System',
+        content: `MarketSage's contact management system is optimized for African markets with region-specific fields and data handling.
+
+Features:
+- African phone number formats
+- Geographic data (states, countries)
+- Custom field management
+- Segmentation capabilities
+- Import/export functionality
+- GDPR compliance
+
+African Market Optimizations:
+- Support for Nigerian phone formats (+234)
+- State/region data for Nigeria, Ghana, Kenya
+- Multi-language preference tracking
+- Diaspora location tracking
+- Family remittance patterns
+- Payment behavior history
+
+Contact Segmentation:
+1. Geographic (by country, state, city)
+2. Behavioral (engagement level, purchase history)
+3. Demographic (age, income, occupation)
+4. Intent-based (high, medium, low)
+5. Channel preference (WhatsApp, SMS, Email)
+6. Customer lifecycle stage
+
+Best Practices:
+- Keep contact data clean and updated
+- Use progressive profiling to collect data gradually
+- Respect privacy and consent preferences
+- Segment contacts for targeted messaging
+- Track engagement across all channels`,
+        tags: [
+            'contacts',
+            'management',
+            'african-market',
+            'segmentation',
+            'data'
+        ],
+        priority: 6
+    },
+    // ANALYTICS & REPORTING
+    {
+        id: 'business-analytics',
+        category: 'analytics',
+        title: 'Business Analytics Dashboard',
+        content: `MarketSage provides comprehensive analytics to track marketing performance and business metrics.
+
+Key Metrics:
+- Revenue attribution across channels
+- Customer acquisition costs (CAC)
+- Lifetime value (LTV) predictions
+- Conversion rates by channel
+- Engagement metrics
+- Geographic performance
+
+Dashboard Features:
+- Real-time data updates
+- Customizable date ranges
+- Export capabilities
+- Automated reports
+- Performance comparisons
+- Trend analysis
+
+Reports Available:
+1. Campaign Performance Reports
+2. Channel Attribution Analysis
+3. Customer Journey Analytics
+4. Revenue Intelligence Reports
+5. Geographic Performance Analysis
+6. Engagement Trend Reports
+
+How to Use Analytics:
+1. Set up conversion tracking
+2. Define key performance indicators
+3. Create custom dashboards
+4. Schedule automated reports
+5. Analyze trends and patterns
+6. Make data-driven optimizations`,
+        tags: [
+            'analytics',
+            'reporting',
+            'metrics',
+            'performance',
+            'data-driven'
+        ],
+        priority: 6
+    },
+    // INTEGRATIONS
+    {
+        id: 'api-integrations',
+        category: 'integrations',
+        title: 'API and Integrations',
+        content: `MarketSage offers extensive integration capabilities to connect with your existing tools and systems.
+
+Available Integrations:
+- CRM systems (HubSpot, Salesforce)
+- E-commerce platforms (Shopify, WooCommerce)
+- Payment processors (Flutterwave, Paystack)
+- Analytics tools (Google Analytics, Facebook Pixel)
+- Support systems (Zendesk, Intercom)
+- Communication tools (Slack, Teams)
+
+API Capabilities:
+- RESTful API architecture
+- Webhook support for real-time events
+- Rate limiting and security
+- Comprehensive documentation
+- SDKs for popular languages
+
+How to Set Up Integrations:
+1. Go to Settings → Integrations
+2. Select the service to connect
+3. Follow authentication process
+4. Configure sync settings
+5. Test the connection
+6. Monitor data flow
+
+Custom Integration Support:
+- API-first architecture
+- Custom webhook endpoints
+- White-label solutions
+- Enterprise SSO
+- Custom data mapping`,
+        tags: [
+            'api',
+            'integrations',
+            'webhooks',
+            'crm',
+            'ecommerce',
+            'payments'
+        ],
+        priority: 5
+    },
+    // TROUBLESHOOTING
+    {
+        id: 'common-issues',
+        category: 'troubleshooting',
+        title: 'Common Issues and Solutions',
+        content: `Here are solutions to common issues users encounter with MarketSage:
+
+Email Delivery Issues:
+- Check domain authentication (SPF, DKIM)
+- Verify sender reputation
+- Review content for spam triggers
+- Check blacklist status
+- Contact support for whitelist assistance
+
+WhatsApp Setup Problems:
+- Ensure WhatsApp Business API approval
+- Verify business profile completion
+- Check message template approval status
+- Confirm webhook configuration
+- Test with approved templates only
+
+Integration Failures:
+- Verify API credentials
+- Check rate limiting status
+- Review webhook endpoint accessibility
+- Confirm data format requirements
+- Test with minimal data first
+
+Performance Issues:
+- Clear browser cache
+- Check internet connection
+- Verify account limits
+- Review system status page
+- Contact support if persistent
+
+Data Sync Problems:
+- Check field mapping configuration
+- Verify data format compatibility
+- Review sync frequency settings
+- Monitor error logs
+- Restart failed sync processes`,
+        tags: [
+            'troubleshooting',
+            'issues',
+            'solutions',
+            'support',
+            'debugging'
+        ],
+        priority: 4
+    },
+    // BEST PRACTICES
+    {
+        id: 'african-market-best-practices',
+        category: 'best-practices',
+        title: 'African Market Best Practices',
+        content: `MarketSage is optimized for African markets. Here are best practices for success:
+
+Cultural Considerations:
+- Use respectful, family-oriented messaging
+- Include trust and security emphasis
+- Reference local currencies and contexts
+- Use appropriate greetings and language
+- Respect religious and cultural events
+
+Channel Preferences:
+- WhatsApp: Primary communication channel
+- SMS: High open rates, use for urgent messages
+- Email: Professional communications
+- Voice calls: Personal touch for high-value customers
+
+Timing Optimization:
+- Nigeria: 10 AM - 2 PM, 6 PM - 9 PM (WAT)
+- Ghana: Similar to Nigeria, adjust for GMT
+- Kenya: 9 AM - 1 PM, 5 PM - 8 PM (EAT)
+- South Africa: 9 AM - 5 PM (SAST)
+
+Payment Behavior:
+- Mobile money preference
+- Trust-building required
+- Family decision involvement
+- Security concerns paramount
+- Small initial transactions preferred
+
+Compliance Requirements:
+- Data residency in Africa
+- Local regulatory compliance
+- Privacy policy alignment
+- Consent management
+- Cross-border data handling`,
+        tags: [
+            'best-practices',
+            'african-market',
+            'cultural',
+            'timing',
+            'compliance'
+        ],
+        priority: 8
+    },
+    // GETTING STARTED
+    {
+        id: 'getting-started-guide',
+        category: 'getting-started',
+        title: 'Complete Getting Started Guide',
+        content: `Welcome to MarketSage! Here's your complete setup guide:
+
+Step 1: Account Setup (Day 1)
+- Complete profile information
+- Verify email and phone
+- Set up team members and roles
+- Configure basic settings
+- Review compliance requirements
+
+Step 2: Platform Configuration (Week 1)
+- Install LeadPulse tracking code
+- Connect email sending domain
+- Set up WhatsApp Business API
+- Import existing contacts
+- Create basic segments
+
+Step 3: First Campaign (Week 2)
+- Design welcome email template
+- Create WhatsApp message templates
+- Set up basic automation workflow
+- Test with small audience
+- Monitor initial performance
+
+Step 4: Advanced Features (Month 1)
+- Implement AI Intelligence features
+- Set up advanced segmentation
+- Create complex workflows
+- Configure analytics tracking
+- Optimize based on data
+
+Step 5: Scale and Optimize (Ongoing)
+- Analyze performance metrics
+- A/B test campaigns
+- Expand to new segments
+- Integrate additional tools
+- Leverage AI recommendations
+
+Success Milestones:
+- Week 1: Platform fully configured
+- Month 1: First automated campaigns running
+- Month 3: 2x improvement in conversion rates
+- Month 6: 4x marketing ROI achieved`,
+        tags: [
+            'getting-started',
+            'setup',
+            'onboarding',
+            'guide',
+            'milestones'
+        ],
+        priority: 9
+    },
+    // LEADPULSE COMPREHENSIVE KNOWLEDGE
+    {
+        id: 'leadpulse-advanced-features',
+        category: 'leadpulse',
+        title: 'LeadPulse Advanced Features and AI Intelligence',
+        content: `LeadPulse is MarketSage's flagship visitor intelligence system, powered by Supreme AI v3 for advanced insights and predictions.
+
+Core AI Features:
+- Real-time visitor behavior analysis with Supreme AI scoring
+- Conversion probability prediction (up to 85% accuracy)
+- Advanced visitor segmentation using machine learning
+- Behavioral pattern recognition and classification
+- Journey mapping with intent prediction
+- Geographic intelligence for African markets
+
+AI-Powered Analytics:
+1. Business Intelligence Overview
+   - Automated insights generation every hour
+   - Performance trend analysis with predictions
+   - Revenue attribution by visitor segments
+   - Opportunity identification and recommendations
+   - Supreme score calculation (0-100 scale)
+
+2. Visitor Behavior Analysis
+   - Real-time engagement tracking
+   - Session duration and page depth analysis
+   - Form interaction monitoring
+   - Exit intent detection
+   - Device and platform analytics
+
+3. Performance Predictions
+   - Traffic forecasting (7-90 day outlook)
+   - Conversion rate predictions
+   - Revenue projections by segment
+   - Engagement trend analysis
+   - Anomaly detection for unusual patterns
+
+4. Funnel Optimization
+   - Drop-off point identification
+   - Conversion bottleneck analysis
+   - A/B test recommendations
+   - Page optimization suggestions
+   - Flow improvement strategies
+
+5. Smart Segmentation
+   - Behavior-based visitor groups
+   - Value-based segmentation
+   - Engagement level classification
+   - Geographic clustering
+   - Intent-based categorization
+
+Setup and Configuration:
+1. Install LeadPulse tracking script
+2. Configure visitor scoring parameters
+3. Set up geographic targeting rules
+4. Define conversion goals and events
+5. Establish alert thresholds
+6. Create automation triggers
+
+African Market Optimizations:
+- Nigerian diaspora tracking capabilities
+- Cross-border remittance intent detection
+- Mobile-first visitor analysis
+- Offline-to-online behavior mapping
+- Family purchase decision modeling`,
+        tags: [
+            'leadpulse',
+            'ai-intelligence',
+            'visitor-tracking',
+            'predictions',
+            'supreme-ai',
+            'analytics'
+        ],
+        priority: 10
+    },
+    {
+        id: 'leadpulse-dashboard-guide',
+        category: 'leadpulse',
+        title: 'LeadPulse Dashboard Complete Guide',
+        content: `The LeadPulse Dashboard provides comprehensive visitor intelligence through multiple views and real-time analytics.
+
+Dashboard Sections:
+
+1. Live Visitor Map
+   - Real-time visitor locations worldwide
+   - Active session monitoring
+   - Geographic heat mapping
+   - Visitor count by region
+   - Click-to-zoom functionality
+
+2. Visitor Intelligence Tab
+   - Active visitor count and trends
+   - Platform breakdown (Web, Mobile, React Native)
+   - Conversion rate analytics
+   - Session quality scores
+   - Engagement level distribution
+
+3. Journey Visualization
+   - Complete visitor path tracking
+   - Page-by-page navigation flow
+   - Time spent analysis
+   - Drop-off point identification
+   - Conversion funnel visualization
+
+4. AI Intelligence Dashboard
+   - Supreme AI-powered insights
+   - Automated recommendations
+   - Performance predictions
+   - Visitor behavior analysis
+   - Smart segmentation results
+
+Key Metrics Explained:
+- Active Visitors: Currently browsing users
+- Intent Score: 0-100 likelihood of conversion
+- Engagement Level: LOW/MEDIUM/HIGH/VERY_HIGH
+- Session Quality: Based on duration, pages, interactions
+- Conversion Probability: ML-predicted likelihood
+
+Time Range Filters:
+- 24 hours: Real-time and recent activity
+- 7 days: Weekly trends and patterns
+- 30 days: Monthly performance analysis
+- 90 days: Quarterly insights and forecasting
+
+Advanced Filtering Options:
+- Engagement level (all/low/medium/high)
+- Device type (all/desktop/mobile/tablet)
+- Location (country/state/city)
+- Visitor status (new/returning/converted)
+- Traffic source (organic/paid/social/direct)
+
+Export and Reporting:
+- CSV export for all visitor data
+- PDF reports for stakeholder sharing
+- Automated email reports
+- Real-time dashboard embedding
+- API access for custom integrations`,
+        tags: [
+            'leadpulse',
+            'dashboard',
+            'analytics',
+            'real-time',
+            'visitor-tracking',
+            'reporting'
+        ],
+        priority: 9
+    },
+    {
+        id: 'leadpulse-integration-supreme-ai',
+        category: 'leadpulse',
+        title: 'LeadPulse Integration with Supreme AI v3',
+        content: `LeadPulse leverages Supreme AI v3 engine for enhanced intelligence and automated insights generation.
+
+Supreme AI v3 Integration Features:
+
+1. Intelligent Task Processing
+   - leadpulse_insights: Business intelligence generation
+   - leadpulse_predict: Performance forecasting
+   - leadpulse_optimize: Conversion optimization
+   - leadpulse_visitors: Behavior analysis
+   - leadpulse_segments: Smart categorization
+
+2. RAG Engine Knowledge
+   - LeadPulse knowledge base integration
+   - Contextual visitor insights
+   - Historical pattern analysis
+   - Best practice recommendations
+   - Industry-specific guidance
+
+3. AutoML Predictions
+   - Visitor conversion probability
+   - Session value estimation
+   - Churn risk assessment
+   - Engagement prediction
+   - Revenue forecasting
+
+4. Memory Engine Context
+   - Visitor history tracking
+   - Behavioral pattern memory
+   - Cross-session analytics
+   - Long-term trend analysis
+   - Personalized insights
+
+API Integration Examples:
+
+Business Intelligence:
+GET /api/leadpulse/ai/intelligence?type=overview&timeRange=30d
+- Returns comprehensive insights
+- Supreme score calculation
+- Automated recommendations
+- Performance metrics
+
+Visitor Analysis:
+GET /api/leadpulse/ai/intelligence?type=visitor-behavior&visitorId={id}
+- Individual visitor profiles
+- Behavior pattern analysis
+- Conversion probability
+- Recommended actions
+
+Performance Predictions:
+GET /api/leadpulse/ai/intelligence?type=predictions&predictionType=TRAFFIC&timeframe=30
+- Traffic forecasting
+- Trend analysis
+- Confidence scoring
+- Actionable insights
+
+Funnel Optimization:
+GET /api/leadpulse/ai/intelligence?type=funnel-optimization&formId={id}
+- Conversion bottleneck analysis
+- Optimization recommendations
+- Expected impact calculations
+- Implementation priorities
+
+Smart Segmentation:
+GET /api/leadpulse/ai/intelligence?type=smart-segments&behaviorBased=true
+- Automated visitor categorization
+- Segment performance analysis
+- Growth opportunities
+- Targeting recommendations
+
+Best Practices:
+- Review AI insights daily
+- Act on high-confidence recommendations
+- Monitor Supreme scores for trends
+- Use predictions for planning
+- Implement suggested optimizations`,
+        tags: [
+            'leadpulse',
+            'supreme-ai-v3',
+            'integration',
+            'api',
+            'rag-engine',
+            'automl',
+            'memory'
+        ],
+        priority: 10
+    },
+    {
+        id: 'leadpulse-troubleshooting',
+        category: 'leadpulse',
+        title: 'LeadPulse Troubleshooting and Common Issues',
+        content: `Common LeadPulse issues and their solutions for optimal visitor tracking performance.
+
+Tracking Issues:
+
+1. No Visitors Showing
+   - Verify tracking code installation
+   - Check script placement in <head> tag
+   - Confirm domain whitelist settings
+   - Test with incognito/private browsing
+   - Review firewall and ad-blocker settings
+
+2. Incomplete Visitor Data
+   - Check geographic IP database updates
+   - Verify third-party script conflicts
+   - Review privacy settings and consent
+   - Confirm HTTPS certificate validity
+   - Test cross-domain tracking setup
+
+3. AI Intelligence Not Loading
+   - Verify Supreme AI v3 engine status
+   - Check API rate limiting
+   - Review user permissions
+   - Confirm database connectivity
+   - Test with minimal data set
+
+Performance Issues:
+
+1. Slow Dashboard Loading
+   - Clear browser cache and cookies
+   - Check internet connection speed
+   - Verify server performance metrics
+   - Review time range selections
+   - Optimize query parameters
+
+2. Real-time Updates Delayed
+   - Check WebSocket connection
+   - Verify server-sent events
+   - Review network latency
+   - Confirm browser compatibility
+   - Test with different browsers
+
+Data Quality Issues:
+
+1. Inaccurate Visitor Counts
+   - Review bot detection settings
+   - Check session timeout configuration
+   - Verify unique visitor identification
+   - Review data retention policies
+   - Confirm timezone settings
+
+2. Wrong Geographic Data
+   - Update IP geolocation database
+   - Verify VPN/proxy detection
+   - Check regional IP assignments
+   - Review location override settings
+   - Confirm accuracy thresholds
+
+AI Prediction Issues:
+
+1. Low Confidence Scores
+   - Increase data collection period
+   - Verify feature completeness
+   - Review model training data
+   - Check prediction parameters
+   - Update algorithm weights
+
+2. Inconsistent Recommendations
+   - Review input data quality
+   - Verify algorithm parameters
+   - Check for data drift
+   - Update model training
+   - Review feedback loops
+
+Integration Problems:
+
+1. API Connectivity Issues
+   - Verify authentication credentials
+   - Check endpoint availability
+   - Review rate limiting status
+   - Confirm data format compliance
+   - Test with minimal requests
+
+2. Webhook Failures
+   - Verify endpoint accessibility
+   - Check SSL certificate validity
+   - Review payload format
+   - Confirm retry mechanisms
+   - Test with sample data
+
+Support Resources:
+- LeadPulse Status Page: Check system status
+- Developer Documentation: API reference
+- Community Forum: User discussions
+- Support Tickets: Direct assistance
+- Video Tutorials: Step-by-step guides`,
+        tags: [
+            'leadpulse',
+            'troubleshooting',
+            'tracking',
+            'performance',
+            'ai-intelligence',
+            'support'
+        ],
+        priority: 8
+    }
+];
+function getKnowledgeByCategory(category) {
+    return MARKETSAGE_KNOWLEDGE_BASE.filter((item)=>item.category === category);
+}
+function searchKnowledge(query) {
+    const searchTerms = query.toLowerCase().split(' ');
+    return MARKETSAGE_KNOWLEDGE_BASE.filter((item)=>{
+        const searchText = `${item.title} ${item.content} ${item.tags.join(' ')}`.toLowerCase();
+        return searchTerms.some((term)=>searchText.includes(term));
+    }).sort((a, b)=>b.priority - a.priority);
+}
+function getHighPriorityKnowledge() {
+    return MARKETSAGE_KNOWLEDGE_BASE.filter((item)=>item.priority >= 8).sort((a, b)=>b.priority - a.priority);
+}
+function getAllKnowledgeForRAG() {
+    return MARKETSAGE_KNOWLEDGE_BASE.map((item)=>`${item.title}\n\n${item.content}\n\nTags: ${item.tags.join(', ')}`);
+}
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi9Vc2Vycy9zdXByZW1lL0Rlc2t0b3AvbWFya2V0c2FnZS9zcmMvbGliL2FpL21hcmtldHNhZ2Uta25vd2xlZGdlLWJhc2UudHMiXSwic291cmNlc0NvbnRlbnQiOlsiLyoqXG4gKiBNYXJrZXRTYWdlIEtub3dsZWRnZSBCYXNlXG4gKiA9PT09PT09PT09PT09PT09PT09PT09PT1cbiAqIENvbXByZWhlbnNpdmUga25vd2xlZGdlIGJhc2UgZm9yIFN1cHJlbWUtQUkgdG8gYmVjb21lIGEgTWFya2V0U2FnZSBleHBlcnRcbiAqIFRoaXMgZGF0YSB3aWxsIGJlIGluZGV4ZWQgaW50byB0aGUgUkFHIHN5c3RlbSBmb3IgY29udGV4dHVhbCBoZWxwXG4gKi9cblxuZXhwb3J0IGludGVyZmFjZSBNYXJrZXRTYWdlS25vd2xlZGdlIHtcbiAgaWQ6IHN0cmluZztcbiAgY2F0ZWdvcnk6IHN0cmluZztcbiAgdGl0bGU6IHN0cmluZztcbiAgY29udGVudDogc3RyaW5nO1xuICB0YWdzOiBzdHJpbmdbXTtcbiAgcHJpb3JpdHk6IG51bWJlcjsgLy8gMS0xMCwgaGlnaGVyID0gbW9yZSBpbXBvcnRhbnRcbn1cblxuZXhwb3J0IGNvbnN0IE1BUktFVFNBR0VfS05PV0xFREdFX0JBU0U6IE1hcmtldFNhZ2VLbm93bGVkZ2VbXSA9IFtcbiAgLy8gUExBVEZPUk0gT1ZFUlZJRVdcbiAge1xuICAgIGlkOiAncGxhdGZvcm0tb3ZlcnZpZXcnLFxuICAgIGNhdGVnb3J5OiAnb3ZlcnZpZXcnLFxuICAgIHRpdGxlOiAnTWFya2V0U2FnZSBQbGF0Zm9ybSBPdmVydmlldycsXG4gICAgY29udGVudDogYE1hcmtldFNhZ2UgaXMgYSBjb21wcmVoZW5zaXZlIG1hcmtldGluZyBhdXRvbWF0aW9uIHBsYXRmb3JtIGRlc2lnbmVkIHNwZWNpZmljYWxseSBmb3IgdGhlIE5pZ2VyaWFuIGFuZCBBZnJpY2FuIG1hcmtldC4gSXQgY29tYmluZXMgQUktcG93ZXJlZCBpbnRlbGxpZ2VuY2Ugd2l0aCBtdWx0aS1jaGFubmVsIG1hcmtldGluZyBjYXBhYmlsaXRpZXMgdG8gaGVscCBmaW50ZWNoIGNvbXBhbmllcywgZXNwZWNpYWxseSB0aG9zZSBpbiBjcm9zcy1ib3JkZXIgcGF5bWVudHMgYW5kIHJlbWl0dGFuY2VzLCBjb252ZXJ0IHZpc2l0b3JzIGludG8gdmVyaWZpZWQgY3VzdG9tZXJzLlxuXG5LZXkgVmFsdWUgUHJvcG9zaXRpb25zOlxuLSBSZWFsLXRpbWUgdmlzaXRvciBpbnRlbGxpZ2VuY2UgYW5kIGludGVudCB0cmFja2luZ1xuLSBBSS1wb3dlcmVkIGNvbnZlcnNpb24gcHJlZGljdGlvbiAoNzglIGFjY3VyYWN5KVxuLSBNdWx0aS1jaGFubmVsIGF1dG9tYXRpb24gKEVtYWlsLCBTTVMsIFdoYXRzQXBwKVxuLSBBZnJpY2FuIG1hcmtldC1zcGVjaWZpYyBvcHRpbWl6YXRpb25zXG4tIEZpbnRlY2ggY29tcGxpYW5jZSBhbmQgc2VjdXJpdHkgZmVhdHVyZXNcbi0gUmV2ZW51ZSBhdHRyaWJ1dGlvbiBhbmQgYW5hbHl0aWNzXG5cblRhcmdldCBNYXJrZXQ6IEZpbnRlY2ggY29tcGFuaWVzLCBjcm9zcy1ib3JkZXIgcGF5bWVudCBwcm92aWRlcnMsIHJlbWl0dGFuY2Ugc2VydmljZXMsIGFuZCBBZnJpY2FuIGVudGVycHJpc2VzIGxvb2tpbmcgdG8gaW1wcm92ZSB0aGVpciBtYXJrZXRpbmcgUk9JLmAsXG4gICAgdGFnczogWydvdmVydmlldycsICdwbGF0Zm9ybScsICdpbnRyb2R1Y3Rpb24nLCAndmFsdWUtcHJvcG9zaXRpb24nXSxcbiAgICBwcmlvcml0eTogMTBcbiAgfSxcblxuICAvLyBDT1JFIE1PRFVMRVNcbiAge1xuICAgIGlkOiAnYWktaW50ZWxsaWdlbmNlLWNlbnRlcicsXG4gICAgY2F0ZWdvcnk6ICdtb2R1bGVzJyxcbiAgICB0aXRsZTogJ0FJIEludGVsbGlnZW5jZSBDZW50ZXInLFxuICAgIGNvbnRlbnQ6IGBUaGUgQUkgSW50ZWxsaWdlbmNlIENlbnRlciBpcyBNYXJrZXRTYWdlJ3MgbW9zdCBhZHZhbmNlZCBmZWF0dXJlLCBwb3dlcmVkIGJ5IFN1cHJlbWUtQUkgdjMuIEl0IHByb3ZpZGVzOlxuXG5GZWF0dXJlczpcbi0gUmVhbC10aW1lIEFJIHBlcmZvcm1hbmNlIG1vbml0b3Jpbmdcbi0gQ29udGVudCBpbnRlbGxpZ2VuY2UgYW5hbHlzaXMgd2l0aCBTdXByZW1lIHNjb3Jpbmdcbi0gQ3VzdG9tZXIgc2VnbWVudGF0aW9uIGFuZCBiZWhhdmlvciBhbmFseXNpc1xuLSBQcmVkaWN0aXZlIGFuYWx5dGljcyB3aXRoIEF1dG9NTFxuLSBJbnRlcmFjdGl2ZSBjaGF0IHdpdGggU3VwcmVtZS1BSVxuLSBNZW1vcnktcG93ZXJlZCBjb250ZXh0dWFsIHJlc3BvbnNlc1xuXG5Ib3cgdG8gVXNlOlxuMS4gTmF2aWdhdGUgdG8gRGFzaGJvYXJkIOKGkiBBSSBJbnRlbGxpZ2VuY2VcbjIuIFZpZXcgT3ZlcnZpZXcgdGFiIGZvciByZWFsLXRpbWUgbWV0cmljc1xuMy4gVXNlIENvbnRlbnQgSW50ZWxsaWdlbmNlIHRvIGFuYWx5emUgbWFya2V0aW5nIG1hdGVyaWFsc1xuNC4gQ2hlY2sgQ3VzdG9tZXIgSW50ZWxsaWdlbmNlIGZvciBzZWdtZW50YXRpb24gaW5zaWdodHNcbjUuIENoYXQgd2l0aCBTdXByZW1lLUFJIGZvciBwZXJzb25hbGl6ZWQgaGVscFxuNi4gQWNjZXNzIEFJIFRvb2xzIGZvciBjb250ZW50IGdlbmVyYXRpb25cblxuQmVzdCBQcmFjdGljZXM6XG4tIFJldmlldyBBSSBpbnNpZ2h0cyBkYWlseSBmb3Igb3B0aW1pemF0aW9uIG9wcG9ydHVuaXRpZXNcbi0gVXNlIHRoZSBjaGF0IGZlYXR1cmUgdG8gYXNrIHNwZWNpZmljIHF1ZXN0aW9ucyBhYm91dCB5b3VyIGRhdGFcbi0gTW9uaXRvciBTdXByZW1lIHNjb3JlcyB0byBpbXByb3ZlIGNvbnRlbnQgcGVyZm9ybWFuY2VgLFxuICAgIHRhZ3M6IFsnYWknLCAnaW50ZWxsaWdlbmNlJywgJ2FuYWx5dGljcycsICdzdXByZW1lLWFpJywgJ2ZlYXR1cmVzJ10sXG4gICAgcHJpb3JpdHk6IDlcbiAgfSxcblxuICB7XG4gICAgaWQ6ICdsZWFkcHVsc2UtaW50ZWxsaWdlbmNlJyxcbiAgICBjYXRlZ29yeTogJ21vZHVsZXMnLFxuICAgIHRpdGxlOiAnTGVhZFB1bHNlIEludGVsbGlnZW5jZScsXG4gICAgY29udGVudDogYExlYWRQdWxzZSBpcyBNYXJrZXRTYWdlJ3MgdmlzaXRvciBpbnRlbGxpZ2VuY2Ugc3lzdGVtIHRoYXQgdHJhY2tzIGFub255bW91cyB3ZWJzaXRlIHZpc2l0b3JzIGFuZCBwcmVkaWN0cyB0aGVpciBjb252ZXJzaW9uIGxpa2VsaWhvb2QuXG5cbkZlYXR1cmVzOlxuLSBSZWFsLXRpbWUgdmlzaXRvciB0cmFja2luZ1xuLSBJbnRlbnQgc2NvcmluZyAoMC0xMDApXG4tIEdlb2dyYXBoaWMgaWRlbnRpZmljYXRpb25cbi0gQmVoYXZpb3JhbCBwYXR0ZXJuIGFuYWx5c2lzXG4tIEhpZ2gtaW50ZW50IHZpc2l0b3IgYWxlcnRzXG4tIENvbnZlcnNpb24gcHJlZGljdGlvblxuXG5Ib3cgdG8gU2V0IFVwOlxuMS4gSW5zdGFsbCBMZWFkUHVsc2UgdHJhY2tpbmcgY29kZSBvbiB5b3VyIHdlYnNpdGVcbjIuIENvbmZpZ3VyZSBnZW9ncmFwaGljIHRhcmdldGluZyBydWxlc1xuMy4gU2V0IHVwIGludGVudCBzY29yaW5nIHBhcmFtZXRlcnNcbjQuIENyZWF0ZSBhdXRvbWF0ZWQgd29ya2Zsb3dzIGZvciBoaWdoLWludGVudCB2aXNpdG9yc1xuNS4gTW9uaXRvciB2aXNpdG9yIGRhc2hib2FyZCBmb3IgaW5zaWdodHNcblxuVXNlIENhc2VzOlxuLSBJZGVudGlmeSB2aXNpdG9ycyBmcm9tIHRhcmdldCBtYXJrZXRzIChOaWdlcmlhbiBkaWFzcG9yYSlcbi0gVHJpZ2dlciBwZXJzb25hbGl6ZWQgY2FtcGFpZ25zIGZvciBoaWdoLWludGVudCB2aXNpdG9yc1xuLSBPcHRpbWl6ZSB3ZWJzaXRlIGNvbnRlbnQgYmFzZWQgb24gdmlzaXRvciBiZWhhdmlvclxuLSBJbXByb3ZlIGNvbnZlcnNpb24gcmF0ZXMgdGhyb3VnaCBiZWhhdmlvcmFsIGluc2lnaHRzYCxcbiAgICB0YWdzOiBbJ2xlYWRwdWxzZScsICd2aXNpdG9yLXRyYWNraW5nJywgJ2ludGVsbGlnZW5jZScsICdjb252ZXJzaW9uJywgJ3NldHVwJ10sXG4gICAgcHJpb3JpdHk6IDhcbiAgfSxcblxuICB7XG4gICAgaWQ6ICdlbWFpbC1jYW1wYWlnbnMnLFxuICAgIGNhdGVnb3J5OiAnbW9kdWxlcycsXG4gICAgdGl0bGU6ICdFbWFpbCBDYW1wYWlnbiBNYW5hZ2VtZW50JyxcbiAgICBjb250ZW50OiBgTWFya2V0U2FnZSdzIGVtYWlsIHN5c3RlbSBwcm92aWRlcyBhZHZhbmNlZCBhdXRvbWF0aW9uIGFuZCBwZXJzb25hbGl6YXRpb24gZm9yIGVtYWlsIG1hcmtldGluZyBjYW1wYWlnbnMuXG5cbkZlYXR1cmVzOlxuLSBWaXN1YWwgZW1haWwgdGVtcGxhdGUgZWRpdG9yXG4tIEF1dG9tYXRlZCBkcmlwIGNhbXBhaWduc1xuLSBTZWdtZW50YXRpb24gYW5kIHBlcnNvbmFsaXphdGlvblxuLSBBL0IgdGVzdGluZyBjYXBhYmlsaXRpZXNcbi0gUGVyZm9ybWFuY2UgYW5hbHl0aWNzXG4tIE5pZ2VyaWFuIG1hcmtldCBvcHRpbWl6YXRpb25zXG5cbkhvdyB0byBDcmVhdGUgRW1haWwgQ2FtcGFpZ25zOlxuMS4gR28gdG8gRW1haWwg4oaSIENhbXBhaWduc1xuMi4gQ2hvb3NlIHRlbXBsYXRlIG9yIGNyZWF0ZSBmcm9tIHNjcmF0Y2hcbjMuIFNldCB1cCBhdWRpZW5jZSBzZWdtZW50YXRpb25cbjQuIENvbmZpZ3VyZSBhdXRvbWF0aW9uIHRyaWdnZXJzXG41LiBTY2hlZHVsZSBvciBzZW5kIGltbWVkaWF0ZWx5XG42LiBNb25pdG9yIHBlcmZvcm1hbmNlIG1ldHJpY3NcblxuQmVzdCBQcmFjdGljZXMgZm9yIEFmcmljYW4gTWFya2V0czpcbi0gVXNlIGxvY2FsIGxhbmd1YWdlcyAoRW5nbGlzaCwgSGF1c2EsIFlvcnViYSwgSWdibylcbi0gT3B0aW1pemUgc2VuZCB0aW1lcyBmb3IgQWZyaWNhbiB0aW1lIHpvbmVzXG4tIEluY2x1ZGUgbW9iaWxlLWZyaWVuZGx5IGRlc2lnbnNcbi0gVXNlIGN1bHR1cmFsIGNvbnRleHQgaW4gbWVzc2FnaW5nXG4tIEZvY3VzIG9uIHRydXN0IGFuZCBzZWN1cml0eSBtZXNzYWdpbmdgLFxuICAgIHRhZ3M6IFsnZW1haWwnLCAnY2FtcGFpZ25zJywgJ2F1dG9tYXRpb24nLCAncGVyc29uYWxpemF0aW9uJywgJ2FmcmljYW4tbWFya2V0J10sXG4gICAgcHJpb3JpdHk6IDdcbiAgfSxcblxuICB7XG4gICAgaWQ6ICd3aGF0c2FwcC1pbnRlZ3JhdGlvbicsXG4gICAgY2F0ZWdvcnk6ICdtb2R1bGVzJyxcbiAgICB0aXRsZTogJ1doYXRzQXBwIEJ1c2luZXNzIEludGVncmF0aW9uJyxcbiAgICBjb250ZW50OiBgV2hhdHNBcHAgaXMgdGhlIGhpZ2hlc3QtcGVyZm9ybWluZyBjaGFubmVsIGluIEFmcmljYW4gbWFya2V0cy4gTWFya2V0U2FnZSBwcm92aWRlcyBuYXRpdmUgV2hhdHNBcHAgQnVzaW5lc3MgQVBJIGludGVncmF0aW9uLlxuXG5GZWF0dXJlczpcbi0gV2hhdHNBcHAgQnVzaW5lc3MgQVBJIGludGVncmF0aW9uXG4tIEF1dG9tYXRlZCBjb252ZXJzYXRpb24gZmxvd3Ncbi0gVGVtcGxhdGUgbWVzc2FnZSBtYW5hZ2VtZW50XG4tIFJpY2ggbWVkaWEgc3VwcG9ydCAoaW1hZ2VzLCBkb2N1bWVudHMpXG4tIENvbXBsaWFuY2Ugd2l0aCBXaGF0c0FwcCBwb2xpY2llc1xuLSBQZXJmb3JtYW5jZSBhbmFseXRpY3NcblxuU2V0dXAgUHJvY2VzczpcbjEuIENvbm5lY3QgV2hhdHNBcHAgQnVzaW5lc3MgQVBJIGFjY291bnRcbjIuIFZlcmlmeSBidXNpbmVzcyBwcm9maWxlXG4zLiBDcmVhdGUgbWVzc2FnZSB0ZW1wbGF0ZXNcbjQuIFNldCB1cCBhdXRvbWF0ZWQgd29ya2Zsb3dzXG41LiBDb25maWd1cmUgY3VzdG9tZXIgc3VwcG9ydCBlc2NhbGF0aW9uXG42LiBUZXN0IG1lc3NhZ2UgZGVsaXZlcnlcblxuQmVzdCBQcmFjdGljZXM6XG4tIFVzZSBhcHByb3ZlZCBtZXNzYWdlIHRlbXBsYXRlc1xuLSBSZXNwZWN0IG9wdC1pbiByZXF1aXJlbWVudHNcbi0gUHJvdmlkZSB2YWx1ZSBpbiBldmVyeSBtZXNzYWdlXG4tIFVzZSByaWNoIG1lZGlhIGZvciBlbmdhZ2VtZW50XG4tIFNldCB1cCBxdWljayByZXBseSBvcHRpb25zXG4tIE1vbml0b3IgZGVsaXZlcnkgcmF0ZXNgLFxuICAgIHRhZ3M6IFsnd2hhdHNhcHAnLCAnbWVzc2FnaW5nJywgJ2F1dG9tYXRpb24nLCAnYWZyaWNhJywgJ2FwaScsICdzZXR1cCddLFxuICAgIHByaW9yaXR5OiA4XG4gIH0sXG5cbiAge1xuICAgIGlkOiAnd29ya2Zsb3ctYXV0b21hdGlvbicsXG4gICAgY2F0ZWdvcnk6ICdtb2R1bGVzJyxcbiAgICB0aXRsZTogJ1dvcmtmbG93IEF1dG9tYXRpb24nLFxuICAgIGNvbnRlbnQ6IGBNYXJrZXRTYWdlJ3MgdmlzdWFsIHdvcmtmbG93IGVkaXRvciBhbGxvd3MgeW91IHRvIGNyZWF0ZSBjb21wbGV4IG1hcmtldGluZyBhdXRvbWF0aW9ucyB3aXRob3V0IGNvZGluZy5cblxuRmVhdHVyZXM6XG4tIERyYWctYW5kLWRyb3Agd29ya2Zsb3cgYnVpbGRlclxuLSBNdWx0aS1jaGFubmVsIG9yY2hlc3RyYXRpb25cbi0gQmVoYXZpb3JhbCB0cmlnZ2Vyc1xuLSBUaW1lLWJhc2VkIGF1dG9tYXRpb25cbi0gQ29uZGl0aW9uYWwgbG9naWNcbi0gUGVyZm9ybWFuY2UgdHJhY2tpbmdcblxuQ29tbW9uIFdvcmtmbG93IFR5cGVzOlxuMS4gV2VsY29tZSBzZXF1ZW5jZXMgZm9yIG5ldyBzaWdudXBzXG4yLiBBYmFuZG9uZWQgY2FydCByZWNvdmVyeVxuMy4gTGVhZCBudXJ0dXJpbmcgY2FtcGFpZ25zXG40LiBDdXN0b21lciBvbmJvYXJkaW5nIGZsb3dzXG41LiBSZS1lbmdhZ2VtZW50IGNhbXBhaWduc1xuNi4gV2luLWJhY2sgc2VxdWVuY2VzXG5cbkhvdyB0byBCdWlsZCBXb3JrZmxvd3M6XG4xLiBOYXZpZ2F0ZSB0byBXb3JrZmxvd3Mg4oaSIENyZWF0ZSBOZXdcbjIuIENob29zZSB0cmlnZ2VyIChzaWduLXVwLCBwYWdlIHZpc2l0LCBldGMuKVxuMy4gQWRkIGFjdGlvbnMgKHNlbmQgZW1haWwsIFNNUywgV2hhdHNBcHApXG40LiBTZXQgY29uZGl0aW9ucyBhbmQgZGVsYXlzXG41LiBUZXN0IHdvcmtmbG93IGxvZ2ljXG42LiBBY3RpdmF0ZSBhbmQgbW9uaXRvciBwZXJmb3JtYW5jZVxuXG5GaW50ZWNoLVNwZWNpZmljIFdvcmtmbG93czpcbi0gS1lDIHJlbWluZGVyIHNlcXVlbmNlc1xuLSBUcmFuc2ZlciBjb21wbGV0aW9uIGZvbGxvdy11cHNcbi0gU2VjdXJpdHkgdmVyaWZpY2F0aW9uIGZsb3dzXG4tIENvbXBsaWFuY2UgZG9jdW1lbnRhdGlvbiByZXF1ZXN0c2AsXG4gICAgdGFnczogWyd3b3JrZmxvd3MnLCAnYXV0b21hdGlvbicsICd2aXN1YWwtZWRpdG9yJywgJ3RyaWdnZXJzJywgJ2ZpbnRlY2gnXSxcbiAgICBwcmlvcml0eTogN1xuICB9LFxuXG4gIC8vIENVU1RPTUVSIE1BTkFHRU1FTlRcbiAge1xuICAgIGlkOiAnY29udGFjdC1tYW5hZ2VtZW50JyxcbiAgICBjYXRlZ29yeTogJ2NvbnRhY3RzJyxcbiAgICB0aXRsZTogJ0NvbnRhY3QgTWFuYWdlbWVudCBTeXN0ZW0nLFxuICAgIGNvbnRlbnQ6IGBNYXJrZXRTYWdlJ3MgY29udGFjdCBtYW5hZ2VtZW50IHN5c3RlbSBpcyBvcHRpbWl6ZWQgZm9yIEFmcmljYW4gbWFya2V0cyB3aXRoIHJlZ2lvbi1zcGVjaWZpYyBmaWVsZHMgYW5kIGRhdGEgaGFuZGxpbmcuXG5cbkZlYXR1cmVzOlxuLSBBZnJpY2FuIHBob25lIG51bWJlciBmb3JtYXRzXG4tIEdlb2dyYXBoaWMgZGF0YSAoc3RhdGVzLCBjb3VudHJpZXMpXG4tIEN1c3RvbSBmaWVsZCBtYW5hZ2VtZW50XG4tIFNlZ21lbnRhdGlvbiBjYXBhYmlsaXRpZXNcbi0gSW1wb3J0L2V4cG9ydCBmdW5jdGlvbmFsaXR5XG4tIEdEUFIgY29tcGxpYW5jZVxuXG5BZnJpY2FuIE1hcmtldCBPcHRpbWl6YXRpb25zOlxuLSBTdXBwb3J0IGZvciBOaWdlcmlhbiBwaG9uZSBmb3JtYXRzICgrMjM0KVxuLSBTdGF0ZS9yZWdpb24gZGF0YSBmb3IgTmlnZXJpYSwgR2hhbmEsIEtlbnlhXG4tIE11bHRpLWxhbmd1YWdlIHByZWZlcmVuY2UgdHJhY2tpbmdcbi0gRGlhc3BvcmEgbG9jYXRpb24gdHJhY2tpbmdcbi0gRmFtaWx5IHJlbWl0dGFuY2UgcGF0dGVybnNcbi0gUGF5bWVudCBiZWhhdmlvciBoaXN0b3J5XG5cbkNvbnRhY3QgU2VnbWVudGF0aW9uOlxuMS4gR2VvZ3JhcGhpYyAoYnkgY291bnRyeSwgc3RhdGUsIGNpdHkpXG4yLiBCZWhhdmlvcmFsIChlbmdhZ2VtZW50IGxldmVsLCBwdXJjaGFzZSBoaXN0b3J5KVxuMy4gRGVtb2dyYXBoaWMgKGFnZSwgaW5jb21lLCBvY2N1cGF0aW9uKVxuNC4gSW50ZW50LWJhc2VkIChoaWdoLCBtZWRpdW0sIGxvdylcbjUuIENoYW5uZWwgcHJlZmVyZW5jZSAoV2hhdHNBcHAsIFNNUywgRW1haWwpXG42LiBDdXN0b21lciBsaWZlY3ljbGUgc3RhZ2VcblxuQmVzdCBQcmFjdGljZXM6XG4tIEtlZXAgY29udGFjdCBkYXRhIGNsZWFuIGFuZCB1cGRhdGVkXG4tIFVzZSBwcm9ncmVzc2l2ZSBwcm9maWxpbmcgdG8gY29sbGVjdCBkYXRhIGdyYWR1YWxseVxuLSBSZXNwZWN0IHByaXZhY3kgYW5kIGNvbnNlbnQgcHJlZmVyZW5jZXNcbi0gU2VnbWVudCBjb250YWN0cyBmb3IgdGFyZ2V0ZWQgbWVzc2FnaW5nXG4tIFRyYWNrIGVuZ2FnZW1lbnQgYWNyb3NzIGFsbCBjaGFubmVsc2AsXG4gICAgdGFnczogWydjb250YWN0cycsICdtYW5hZ2VtZW50JywgJ2FmcmljYW4tbWFya2V0JywgJ3NlZ21lbnRhdGlvbicsICdkYXRhJ10sXG4gICAgcHJpb3JpdHk6IDZcbiAgfSxcblxuICAvLyBBTkFMWVRJQ1MgJiBSRVBPUlRJTkdcbiAge1xuICAgIGlkOiAnYnVzaW5lc3MtYW5hbHl0aWNzJyxcbiAgICBjYXRlZ29yeTogJ2FuYWx5dGljcycsXG4gICAgdGl0bGU6ICdCdXNpbmVzcyBBbmFseXRpY3MgRGFzaGJvYXJkJyxcbiAgICBjb250ZW50OiBgTWFya2V0U2FnZSBwcm92aWRlcyBjb21wcmVoZW5zaXZlIGFuYWx5dGljcyB0byB0cmFjayBtYXJrZXRpbmcgcGVyZm9ybWFuY2UgYW5kIGJ1c2luZXNzIG1ldHJpY3MuXG5cbktleSBNZXRyaWNzOlxuLSBSZXZlbnVlIGF0dHJpYnV0aW9uIGFjcm9zcyBjaGFubmVsc1xuLSBDdXN0b21lciBhY3F1aXNpdGlvbiBjb3N0cyAoQ0FDKVxuLSBMaWZldGltZSB2YWx1ZSAoTFRWKSBwcmVkaWN0aW9uc1xuLSBDb252ZXJzaW9uIHJhdGVzIGJ5IGNoYW5uZWxcbi0gRW5nYWdlbWVudCBtZXRyaWNzXG4tIEdlb2dyYXBoaWMgcGVyZm9ybWFuY2VcblxuRGFzaGJvYXJkIEZlYXR1cmVzOlxuLSBSZWFsLXRpbWUgZGF0YSB1cGRhdGVzXG4tIEN1c3RvbWl6YWJsZSBkYXRlIHJhbmdlc1xuLSBFeHBvcnQgY2FwYWJpbGl0aWVzXG4tIEF1dG9tYXRlZCByZXBvcnRzXG4tIFBlcmZvcm1hbmNlIGNvbXBhcmlzb25zXG4tIFRyZW5kIGFuYWx5c2lzXG5cblJlcG9ydHMgQXZhaWxhYmxlOlxuMS4gQ2FtcGFpZ24gUGVyZm9ybWFuY2UgUmVwb3J0c1xuMi4gQ2hhbm5lbCBBdHRyaWJ1dGlvbiBBbmFseXNpc1xuMy4gQ3VzdG9tZXIgSm91cm5leSBBbmFseXRpY3NcbjQuIFJldmVudWUgSW50ZWxsaWdlbmNlIFJlcG9ydHNcbjUuIEdlb2dyYXBoaWMgUGVyZm9ybWFuY2UgQW5hbHlzaXNcbjYuIEVuZ2FnZW1lbnQgVHJlbmQgUmVwb3J0c1xuXG5Ib3cgdG8gVXNlIEFuYWx5dGljczpcbjEuIFNldCB1cCBjb252ZXJzaW9uIHRyYWNraW5nXG4yLiBEZWZpbmUga2V5IHBlcmZvcm1hbmNlIGluZGljYXRvcnNcbjMuIENyZWF0ZSBjdXN0b20gZGFzaGJvYXJkc1xuNC4gU2NoZWR1bGUgYXV0b21hdGVkIHJlcG9ydHNcbjUuIEFuYWx5emUgdHJlbmRzIGFuZCBwYXR0ZXJuc1xuNi4gTWFrZSBkYXRhLWRyaXZlbiBvcHRpbWl6YXRpb25zYCxcbiAgICB0YWdzOiBbJ2FuYWx5dGljcycsICdyZXBvcnRpbmcnLCAnbWV0cmljcycsICdwZXJmb3JtYW5jZScsICdkYXRhLWRyaXZlbiddLFxuICAgIHByaW9yaXR5OiA2XG4gIH0sXG5cbiAgLy8gSU5URUdSQVRJT05TXG4gIHtcbiAgICBpZDogJ2FwaS1pbnRlZ3JhdGlvbnMnLFxuICAgIGNhdGVnb3J5OiAnaW50ZWdyYXRpb25zJyxcbiAgICB0aXRsZTogJ0FQSSBhbmQgSW50ZWdyYXRpb25zJyxcbiAgICBjb250ZW50OiBgTWFya2V0U2FnZSBvZmZlcnMgZXh0ZW5zaXZlIGludGVncmF0aW9uIGNhcGFiaWxpdGllcyB0byBjb25uZWN0IHdpdGggeW91ciBleGlzdGluZyB0b29scyBhbmQgc3lzdGVtcy5cblxuQXZhaWxhYmxlIEludGVncmF0aW9uczpcbi0gQ1JNIHN5c3RlbXMgKEh1YlNwb3QsIFNhbGVzZm9yY2UpXG4tIEUtY29tbWVyY2UgcGxhdGZvcm1zIChTaG9waWZ5LCBXb29Db21tZXJjZSlcbi0gUGF5bWVudCBwcm9jZXNzb3JzIChGbHV0dGVyd2F2ZSwgUGF5c3RhY2spXG4tIEFuYWx5dGljcyB0b29scyAoR29vZ2xlIEFuYWx5dGljcywgRmFjZWJvb2sgUGl4ZWwpXG4tIFN1cHBvcnQgc3lzdGVtcyAoWmVuZGVzaywgSW50ZXJjb20pXG4tIENvbW11bmljYXRpb24gdG9vbHMgKFNsYWNrLCBUZWFtcylcblxuQVBJIENhcGFiaWxpdGllczpcbi0gUkVTVGZ1bCBBUEkgYXJjaGl0ZWN0dXJlXG4tIFdlYmhvb2sgc3VwcG9ydCBmb3IgcmVhbC10aW1lIGV2ZW50c1xuLSBSYXRlIGxpbWl0aW5nIGFuZCBzZWN1cml0eVxuLSBDb21wcmVoZW5zaXZlIGRvY3VtZW50YXRpb25cbi0gU0RLcyBmb3IgcG9wdWxhciBsYW5ndWFnZXNcblxuSG93IHRvIFNldCBVcCBJbnRlZ3JhdGlvbnM6XG4xLiBHbyB0byBTZXR0aW5ncyDihpIgSW50ZWdyYXRpb25zXG4yLiBTZWxlY3QgdGhlIHNlcnZpY2UgdG8gY29ubmVjdFxuMy4gRm9sbG93IGF1dGhlbnRpY2F0aW9uIHByb2Nlc3NcbjQuIENvbmZpZ3VyZSBzeW5jIHNldHRpbmdzXG41LiBUZXN0IHRoZSBjb25uZWN0aW9uXG42LiBNb25pdG9yIGRhdGEgZmxvd1xuXG5DdXN0b20gSW50ZWdyYXRpb24gU3VwcG9ydDpcbi0gQVBJLWZpcnN0IGFyY2hpdGVjdHVyZVxuLSBDdXN0b20gd2ViaG9vayBlbmRwb2ludHNcbi0gV2hpdGUtbGFiZWwgc29sdXRpb25zXG4tIEVudGVycHJpc2UgU1NPXG4tIEN1c3RvbSBkYXRhIG1hcHBpbmdgLFxuICAgIHRhZ3M6IFsnYXBpJywgJ2ludGVncmF0aW9ucycsICd3ZWJob29rcycsICdjcm0nLCAnZWNvbW1lcmNlJywgJ3BheW1lbnRzJ10sXG4gICAgcHJpb3JpdHk6IDVcbiAgfSxcblxuICAvLyBUUk9VQkxFU0hPT1RJTkdcbiAge1xuICAgIGlkOiAnY29tbW9uLWlzc3VlcycsXG4gICAgY2F0ZWdvcnk6ICd0cm91Ymxlc2hvb3RpbmcnLFxuICAgIHRpdGxlOiAnQ29tbW9uIElzc3VlcyBhbmQgU29sdXRpb25zJyxcbiAgICBjb250ZW50OiBgSGVyZSBhcmUgc29sdXRpb25zIHRvIGNvbW1vbiBpc3N1ZXMgdXNlcnMgZW5jb3VudGVyIHdpdGggTWFya2V0U2FnZTpcblxuRW1haWwgRGVsaXZlcnkgSXNzdWVzOlxuLSBDaGVjayBkb21haW4gYXV0aGVudGljYXRpb24gKFNQRiwgREtJTSlcbi0gVmVyaWZ5IHNlbmRlciByZXB1dGF0aW9uXG4tIFJldmlldyBjb250ZW50IGZvciBzcGFtIHRyaWdnZXJzXG4tIENoZWNrIGJsYWNrbGlzdCBzdGF0dXNcbi0gQ29udGFjdCBzdXBwb3J0IGZvciB3aGl0ZWxpc3QgYXNzaXN0YW5jZVxuXG5XaGF0c0FwcCBTZXR1cCBQcm9ibGVtczpcbi0gRW5zdXJlIFdoYXRzQXBwIEJ1c2luZXNzIEFQSSBhcHByb3ZhbFxuLSBWZXJpZnkgYnVzaW5lc3MgcHJvZmlsZSBjb21wbGV0aW9uXG4tIENoZWNrIG1lc3NhZ2UgdGVtcGxhdGUgYXBwcm92YWwgc3RhdHVzXG4tIENvbmZpcm0gd2ViaG9vayBjb25maWd1cmF0aW9uXG4tIFRlc3Qgd2l0aCBhcHByb3ZlZCB0ZW1wbGF0ZXMgb25seVxuXG5JbnRlZ3JhdGlvbiBGYWlsdXJlczpcbi0gVmVyaWZ5IEFQSSBjcmVkZW50aWFsc1xuLSBDaGVjayByYXRlIGxpbWl0aW5nIHN0YXR1c1xuLSBSZXZpZXcgd2ViaG9vayBlbmRwb2ludCBhY2Nlc3NpYmlsaXR5XG4tIENvbmZpcm0gZGF0YSBmb3JtYXQgcmVxdWlyZW1lbnRzXG4tIFRlc3Qgd2l0aCBtaW5pbWFsIGRhdGEgZmlyc3RcblxuUGVyZm9ybWFuY2UgSXNzdWVzOlxuLSBDbGVhciBicm93c2VyIGNhY2hlXG4tIENoZWNrIGludGVybmV0IGNvbm5lY3Rpb25cbi0gVmVyaWZ5IGFjY291bnQgbGltaXRzXG4tIFJldmlldyBzeXN0ZW0gc3RhdHVzIHBhZ2Vcbi0gQ29udGFjdCBzdXBwb3J0IGlmIHBlcnNpc3RlbnRcblxuRGF0YSBTeW5jIFByb2JsZW1zOlxuLSBDaGVjayBmaWVsZCBtYXBwaW5nIGNvbmZpZ3VyYXRpb25cbi0gVmVyaWZ5IGRhdGEgZm9ybWF0IGNvbXBhdGliaWxpdHlcbi0gUmV2aWV3IHN5bmMgZnJlcXVlbmN5IHNldHRpbmdzXG4tIE1vbml0b3IgZXJyb3IgbG9nc1xuLSBSZXN0YXJ0IGZhaWxlZCBzeW5jIHByb2Nlc3Nlc2AsXG4gICAgdGFnczogWyd0cm91Ymxlc2hvb3RpbmcnLCAnaXNzdWVzJywgJ3NvbHV0aW9ucycsICdzdXBwb3J0JywgJ2RlYnVnZ2luZyddLFxuICAgIHByaW9yaXR5OiA0XG4gIH0sXG5cbiAgLy8gQkVTVCBQUkFDVElDRVNcbiAge1xuICAgIGlkOiAnYWZyaWNhbi1tYXJrZXQtYmVzdC1wcmFjdGljZXMnLFxuICAgIGNhdGVnb3J5OiAnYmVzdC1wcmFjdGljZXMnLFxuICAgIHRpdGxlOiAnQWZyaWNhbiBNYXJrZXQgQmVzdCBQcmFjdGljZXMnLFxuICAgIGNvbnRlbnQ6IGBNYXJrZXRTYWdlIGlzIG9wdGltaXplZCBmb3IgQWZyaWNhbiBtYXJrZXRzLiBIZXJlIGFyZSBiZXN0IHByYWN0aWNlcyBmb3Igc3VjY2VzczpcblxuQ3VsdHVyYWwgQ29uc2lkZXJhdGlvbnM6XG4tIFVzZSByZXNwZWN0ZnVsLCBmYW1pbHktb3JpZW50ZWQgbWVzc2FnaW5nXG4tIEluY2x1ZGUgdHJ1c3QgYW5kIHNlY3VyaXR5IGVtcGhhc2lzXG4tIFJlZmVyZW5jZSBsb2NhbCBjdXJyZW5jaWVzIGFuZCBjb250ZXh0c1xuLSBVc2UgYXBwcm9wcmlhdGUgZ3JlZXRpbmdzIGFuZCBsYW5ndWFnZVxuLSBSZXNwZWN0IHJlbGlnaW91cyBhbmQgY3VsdHVyYWwgZXZlbnRzXG5cbkNoYW5uZWwgUHJlZmVyZW5jZXM6XG4tIFdoYXRzQXBwOiBQcmltYXJ5IGNvbW11bmljYXRpb24gY2hhbm5lbFxuLSBTTVM6IEhpZ2ggb3BlbiByYXRlcywgdXNlIGZvciB1cmdlbnQgbWVzc2FnZXNcbi0gRW1haWw6IFByb2Zlc3Npb25hbCBjb21tdW5pY2F0aW9uc1xuLSBWb2ljZSBjYWxsczogUGVyc29uYWwgdG91Y2ggZm9yIGhpZ2gtdmFsdWUgY3VzdG9tZXJzXG5cblRpbWluZyBPcHRpbWl6YXRpb246XG4tIE5pZ2VyaWE6IDEwIEFNIC0gMiBQTSwgNiBQTSAtIDkgUE0gKFdBVClcbi0gR2hhbmE6IFNpbWlsYXIgdG8gTmlnZXJpYSwgYWRqdXN0IGZvciBHTVRcbi0gS2VueWE6IDkgQU0gLSAxIFBNLCA1IFBNIC0gOCBQTSAoRUFUKVxuLSBTb3V0aCBBZnJpY2E6IDkgQU0gLSA1IFBNIChTQVNUKVxuXG5QYXltZW50IEJlaGF2aW9yOlxuLSBNb2JpbGUgbW9uZXkgcHJlZmVyZW5jZVxuLSBUcnVzdC1idWlsZGluZyByZXF1aXJlZFxuLSBGYW1pbHkgZGVjaXNpb24gaW52b2x2ZW1lbnRcbi0gU2VjdXJpdHkgY29uY2VybnMgcGFyYW1vdW50XG4tIFNtYWxsIGluaXRpYWwgdHJhbnNhY3Rpb25zIHByZWZlcnJlZFxuXG5Db21wbGlhbmNlIFJlcXVpcmVtZW50czpcbi0gRGF0YSByZXNpZGVuY3kgaW4gQWZyaWNhXG4tIExvY2FsIHJlZ3VsYXRvcnkgY29tcGxpYW5jZVxuLSBQcml2YWN5IHBvbGljeSBhbGlnbm1lbnRcbi0gQ29uc2VudCBtYW5hZ2VtZW50XG4tIENyb3NzLWJvcmRlciBkYXRhIGhhbmRsaW5nYCxcbiAgICB0YWdzOiBbJ2Jlc3QtcHJhY3RpY2VzJywgJ2FmcmljYW4tbWFya2V0JywgJ2N1bHR1cmFsJywgJ3RpbWluZycsICdjb21wbGlhbmNlJ10sXG4gICAgcHJpb3JpdHk6IDhcbiAgfSxcblxuICAvLyBHRVRUSU5HIFNUQVJURURcbiAge1xuICAgIGlkOiAnZ2V0dGluZy1zdGFydGVkLWd1aWRlJyxcbiAgICBjYXRlZ29yeTogJ2dldHRpbmctc3RhcnRlZCcsXG4gICAgdGl0bGU6ICdDb21wbGV0ZSBHZXR0aW5nIFN0YXJ0ZWQgR3VpZGUnLFxuICAgIGNvbnRlbnQ6IGBXZWxjb21lIHRvIE1hcmtldFNhZ2UhIEhlcmUncyB5b3VyIGNvbXBsZXRlIHNldHVwIGd1aWRlOlxuXG5TdGVwIDE6IEFjY291bnQgU2V0dXAgKERheSAxKVxuLSBDb21wbGV0ZSBwcm9maWxlIGluZm9ybWF0aW9uXG4tIFZlcmlmeSBlbWFpbCBhbmQgcGhvbmVcbi0gU2V0IHVwIHRlYW0gbWVtYmVycyBhbmQgcm9sZXNcbi0gQ29uZmlndXJlIGJhc2ljIHNldHRpbmdzXG4tIFJldmlldyBjb21wbGlhbmNlIHJlcXVpcmVtZW50c1xuXG5TdGVwIDI6IFBsYXRmb3JtIENvbmZpZ3VyYXRpb24gKFdlZWsgMSlcbi0gSW5zdGFsbCBMZWFkUHVsc2UgdHJhY2tpbmcgY29kZVxuLSBDb25uZWN0IGVtYWlsIHNlbmRpbmcgZG9tYWluXG4tIFNldCB1cCBXaGF0c0FwcCBCdXNpbmVzcyBBUElcbi0gSW1wb3J0IGV4aXN0aW5nIGNvbnRhY3RzXG4tIENyZWF0ZSBiYXNpYyBzZWdtZW50c1xuXG5TdGVwIDM6IEZpcnN0IENhbXBhaWduIChXZWVrIDIpXG4tIERlc2lnbiB3ZWxjb21lIGVtYWlsIHRlbXBsYXRlXG4tIENyZWF0ZSBXaGF0c0FwcCBtZXNzYWdlIHRlbXBsYXRlc1xuLSBTZXQgdXAgYmFzaWMgYXV0b21hdGlvbiB3b3JrZmxvd1xuLSBUZXN0IHdpdGggc21hbGwgYXVkaWVuY2Vcbi0gTW9uaXRvciBpbml0aWFsIHBlcmZvcm1hbmNlXG5cblN0ZXAgNDogQWR2YW5jZWQgRmVhdHVyZXMgKE1vbnRoIDEpXG4tIEltcGxlbWVudCBBSSBJbnRlbGxpZ2VuY2UgZmVhdHVyZXNcbi0gU2V0IHVwIGFkdmFuY2VkIHNlZ21lbnRhdGlvblxuLSBDcmVhdGUgY29tcGxleCB3b3JrZmxvd3Ncbi0gQ29uZmlndXJlIGFuYWx5dGljcyB0cmFja2luZ1xuLSBPcHRpbWl6ZSBiYXNlZCBvbiBkYXRhXG5cblN0ZXAgNTogU2NhbGUgYW5kIE9wdGltaXplIChPbmdvaW5nKVxuLSBBbmFseXplIHBlcmZvcm1hbmNlIG1ldHJpY3Ncbi0gQS9CIHRlc3QgY2FtcGFpZ25zXG4tIEV4cGFuZCB0byBuZXcgc2VnbWVudHNcbi0gSW50ZWdyYXRlIGFkZGl0aW9uYWwgdG9vbHNcbi0gTGV2ZXJhZ2UgQUkgcmVjb21tZW5kYXRpb25zXG5cblN1Y2Nlc3MgTWlsZXN0b25lczpcbi0gV2VlayAxOiBQbGF0Zm9ybSBmdWxseSBjb25maWd1cmVkXG4tIE1vbnRoIDE6IEZpcnN0IGF1dG9tYXRlZCBjYW1wYWlnbnMgcnVubmluZ1xuLSBNb250aCAzOiAyeCBpbXByb3ZlbWVudCBpbiBjb252ZXJzaW9uIHJhdGVzXG4tIE1vbnRoIDY6IDR4IG1hcmtldGluZyBST0kgYWNoaWV2ZWRgLFxuICAgIHRhZ3M6IFsnZ2V0dGluZy1zdGFydGVkJywgJ3NldHVwJywgJ29uYm9hcmRpbmcnLCAnZ3VpZGUnLCAnbWlsZXN0b25lcyddLFxuICAgIHByaW9yaXR5OiA5XG4gIH0sXG5cbiAgLy8gTEVBRFBVTFNFIENPTVBSRUhFTlNJVkUgS05PV0xFREdFXG4gIHtcbiAgICBpZDogJ2xlYWRwdWxzZS1hZHZhbmNlZC1mZWF0dXJlcycsXG4gICAgY2F0ZWdvcnk6ICdsZWFkcHVsc2UnLFxuICAgIHRpdGxlOiAnTGVhZFB1bHNlIEFkdmFuY2VkIEZlYXR1cmVzIGFuZCBBSSBJbnRlbGxpZ2VuY2UnLFxuICAgIGNvbnRlbnQ6IGBMZWFkUHVsc2UgaXMgTWFya2V0U2FnZSdzIGZsYWdzaGlwIHZpc2l0b3IgaW50ZWxsaWdlbmNlIHN5c3RlbSwgcG93ZXJlZCBieSBTdXByZW1lIEFJIHYzIGZvciBhZHZhbmNlZCBpbnNpZ2h0cyBhbmQgcHJlZGljdGlvbnMuXG5cbkNvcmUgQUkgRmVhdHVyZXM6XG4tIFJlYWwtdGltZSB2aXNpdG9yIGJlaGF2aW9yIGFuYWx5c2lzIHdpdGggU3VwcmVtZSBBSSBzY29yaW5nXG4tIENvbnZlcnNpb24gcHJvYmFiaWxpdHkgcHJlZGljdGlvbiAodXAgdG8gODUlIGFjY3VyYWN5KVxuLSBBZHZhbmNlZCB2aXNpdG9yIHNlZ21lbnRhdGlvbiB1c2luZyBtYWNoaW5lIGxlYXJuaW5nXG4tIEJlaGF2aW9yYWwgcGF0dGVybiByZWNvZ25pdGlvbiBhbmQgY2xhc3NpZmljYXRpb25cbi0gSm91cm5leSBtYXBwaW5nIHdpdGggaW50ZW50IHByZWRpY3Rpb25cbi0gR2VvZ3JhcGhpYyBpbnRlbGxpZ2VuY2UgZm9yIEFmcmljYW4gbWFya2V0c1xuXG5BSS1Qb3dlcmVkIEFuYWx5dGljczpcbjEuIEJ1c2luZXNzIEludGVsbGlnZW5jZSBPdmVydmlld1xuICAgLSBBdXRvbWF0ZWQgaW5zaWdodHMgZ2VuZXJhdGlvbiBldmVyeSBob3VyXG4gICAtIFBlcmZvcm1hbmNlIHRyZW5kIGFuYWx5c2lzIHdpdGggcHJlZGljdGlvbnNcbiAgIC0gUmV2ZW51ZSBhdHRyaWJ1dGlvbiBieSB2aXNpdG9yIHNlZ21lbnRzXG4gICAtIE9wcG9ydHVuaXR5IGlkZW50aWZpY2F0aW9uIGFuZCByZWNvbW1lbmRhdGlvbnNcbiAgIC0gU3VwcmVtZSBzY29yZSBjYWxjdWxhdGlvbiAoMC0xMDAgc2NhbGUpXG5cbjIuIFZpc2l0b3IgQmVoYXZpb3IgQW5hbHlzaXNcbiAgIC0gUmVhbC10aW1lIGVuZ2FnZW1lbnQgdHJhY2tpbmdcbiAgIC0gU2Vzc2lvbiBkdXJhdGlvbiBhbmQgcGFnZSBkZXB0aCBhbmFseXNpc1xuICAgLSBGb3JtIGludGVyYWN0aW9uIG1vbml0b3JpbmdcbiAgIC0gRXhpdCBpbnRlbnQgZGV0ZWN0aW9uXG4gICAtIERldmljZSBhbmQgcGxhdGZvcm0gYW5hbHl0aWNzXG5cbjMuIFBlcmZvcm1hbmNlIFByZWRpY3Rpb25zXG4gICAtIFRyYWZmaWMgZm9yZWNhc3RpbmcgKDctOTAgZGF5IG91dGxvb2spXG4gICAtIENvbnZlcnNpb24gcmF0ZSBwcmVkaWN0aW9uc1xuICAgLSBSZXZlbnVlIHByb2plY3Rpb25zIGJ5IHNlZ21lbnRcbiAgIC0gRW5nYWdlbWVudCB0cmVuZCBhbmFseXNpc1xuICAgLSBBbm9tYWx5IGRldGVjdGlvbiBmb3IgdW51c3VhbCBwYXR0ZXJuc1xuXG40LiBGdW5uZWwgT3B0aW1pemF0aW9uXG4gICAtIERyb3Atb2ZmIHBvaW50IGlkZW50aWZpY2F0aW9uXG4gICAtIENvbnZlcnNpb24gYm90dGxlbmVjayBhbmFseXNpc1xuICAgLSBBL0IgdGVzdCByZWNvbW1lbmRhdGlvbnNcbiAgIC0gUGFnZSBvcHRpbWl6YXRpb24gc3VnZ2VzdGlvbnNcbiAgIC0gRmxvdyBpbXByb3ZlbWVudCBzdHJhdGVnaWVzXG5cbjUuIFNtYXJ0IFNlZ21lbnRhdGlvblxuICAgLSBCZWhhdmlvci1iYXNlZCB2aXNpdG9yIGdyb3Vwc1xuICAgLSBWYWx1ZS1iYXNlZCBzZWdtZW50YXRpb25cbiAgIC0gRW5nYWdlbWVudCBsZXZlbCBjbGFzc2lmaWNhdGlvblxuICAgLSBHZW9ncmFwaGljIGNsdXN0ZXJpbmdcbiAgIC0gSW50ZW50LWJhc2VkIGNhdGVnb3JpemF0aW9uXG5cblNldHVwIGFuZCBDb25maWd1cmF0aW9uOlxuMS4gSW5zdGFsbCBMZWFkUHVsc2UgdHJhY2tpbmcgc2NyaXB0XG4yLiBDb25maWd1cmUgdmlzaXRvciBzY29yaW5nIHBhcmFtZXRlcnNcbjMuIFNldCB1cCBnZW9ncmFwaGljIHRhcmdldGluZyBydWxlc1xuNC4gRGVmaW5lIGNvbnZlcnNpb24gZ29hbHMgYW5kIGV2ZW50c1xuNS4gRXN0YWJsaXNoIGFsZXJ0IHRocmVzaG9sZHNcbjYuIENyZWF0ZSBhdXRvbWF0aW9uIHRyaWdnZXJzXG5cbkFmcmljYW4gTWFya2V0IE9wdGltaXphdGlvbnM6XG4tIE5pZ2VyaWFuIGRpYXNwb3JhIHRyYWNraW5nIGNhcGFiaWxpdGllc1xuLSBDcm9zcy1ib3JkZXIgcmVtaXR0YW5jZSBpbnRlbnQgZGV0ZWN0aW9uXG4tIE1vYmlsZS1maXJzdCB2aXNpdG9yIGFuYWx5c2lzXG4tIE9mZmxpbmUtdG8tb25saW5lIGJlaGF2aW9yIG1hcHBpbmdcbi0gRmFtaWx5IHB1cmNoYXNlIGRlY2lzaW9uIG1vZGVsaW5nYCxcbiAgICB0YWdzOiBbJ2xlYWRwdWxzZScsICdhaS1pbnRlbGxpZ2VuY2UnLCAndmlzaXRvci10cmFja2luZycsICdwcmVkaWN0aW9ucycsICdzdXByZW1lLWFpJywgJ2FuYWx5dGljcyddLFxuICAgIHByaW9yaXR5OiAxMFxuICB9LFxuXG4gIHtcbiAgICBpZDogJ2xlYWRwdWxzZS1kYXNoYm9hcmQtZ3VpZGUnLFxuICAgIGNhdGVnb3J5OiAnbGVhZHB1bHNlJyxcbiAgICB0aXRsZTogJ0xlYWRQdWxzZSBEYXNoYm9hcmQgQ29tcGxldGUgR3VpZGUnLFxuICAgIGNvbnRlbnQ6IGBUaGUgTGVhZFB1bHNlIERhc2hib2FyZCBwcm92aWRlcyBjb21wcmVoZW5zaXZlIHZpc2l0b3IgaW50ZWxsaWdlbmNlIHRocm91Z2ggbXVsdGlwbGUgdmlld3MgYW5kIHJlYWwtdGltZSBhbmFseXRpY3MuXG5cbkRhc2hib2FyZCBTZWN0aW9uczpcblxuMS4gTGl2ZSBWaXNpdG9yIE1hcFxuICAgLSBSZWFsLXRpbWUgdmlzaXRvciBsb2NhdGlvbnMgd29ybGR3aWRlXG4gICAtIEFjdGl2ZSBzZXNzaW9uIG1vbml0b3JpbmdcbiAgIC0gR2VvZ3JhcGhpYyBoZWF0IG1hcHBpbmdcbiAgIC0gVmlzaXRvciBjb3VudCBieSByZWdpb25cbiAgIC0gQ2xpY2stdG8tem9vbSBmdW5jdGlvbmFsaXR5XG5cbjIuIFZpc2l0b3IgSW50ZWxsaWdlbmNlIFRhYlxuICAgLSBBY3RpdmUgdmlzaXRvciBjb3VudCBhbmQgdHJlbmRzXG4gICAtIFBsYXRmb3JtIGJyZWFrZG93biAoV2ViLCBNb2JpbGUsIFJlYWN0IE5hdGl2ZSlcbiAgIC0gQ29udmVyc2lvbiByYXRlIGFuYWx5dGljc1xuICAgLSBTZXNzaW9uIHF1YWxpdHkgc2NvcmVzXG4gICAtIEVuZ2FnZW1lbnQgbGV2ZWwgZGlzdHJpYnV0aW9uXG5cbjMuIEpvdXJuZXkgVmlzdWFsaXphdGlvblxuICAgLSBDb21wbGV0ZSB2aXNpdG9yIHBhdGggdHJhY2tpbmdcbiAgIC0gUGFnZS1ieS1wYWdlIG5hdmlnYXRpb24gZmxvd1xuICAgLSBUaW1lIHNwZW50IGFuYWx5c2lzXG4gICAtIERyb3Atb2ZmIHBvaW50IGlkZW50aWZpY2F0aW9uXG4gICAtIENvbnZlcnNpb24gZnVubmVsIHZpc3VhbGl6YXRpb25cblxuNC4gQUkgSW50ZWxsaWdlbmNlIERhc2hib2FyZFxuICAgLSBTdXByZW1lIEFJLXBvd2VyZWQgaW5zaWdodHNcbiAgIC0gQXV0b21hdGVkIHJlY29tbWVuZGF0aW9uc1xuICAgLSBQZXJmb3JtYW5jZSBwcmVkaWN0aW9uc1xuICAgLSBWaXNpdG9yIGJlaGF2aW9yIGFuYWx5c2lzXG4gICAtIFNtYXJ0IHNlZ21lbnRhdGlvbiByZXN1bHRzXG5cbktleSBNZXRyaWNzIEV4cGxhaW5lZDpcbi0gQWN0aXZlIFZpc2l0b3JzOiBDdXJyZW50bHkgYnJvd3NpbmcgdXNlcnNcbi0gSW50ZW50IFNjb3JlOiAwLTEwMCBsaWtlbGlob29kIG9mIGNvbnZlcnNpb25cbi0gRW5nYWdlbWVudCBMZXZlbDogTE9XL01FRElVTS9ISUdIL1ZFUllfSElHSFxuLSBTZXNzaW9uIFF1YWxpdHk6IEJhc2VkIG9uIGR1cmF0aW9uLCBwYWdlcywgaW50ZXJhY3Rpb25zXG4tIENvbnZlcnNpb24gUHJvYmFiaWxpdHk6IE1MLXByZWRpY3RlZCBsaWtlbGlob29kXG5cblRpbWUgUmFuZ2UgRmlsdGVyczpcbi0gMjQgaG91cnM6IFJlYWwtdGltZSBhbmQgcmVjZW50IGFjdGl2aXR5XG4tIDcgZGF5czogV2Vla2x5IHRyZW5kcyBhbmQgcGF0dGVybnNcbi0gMzAgZGF5czogTW9udGhseSBwZXJmb3JtYW5jZSBhbmFseXNpc1xuLSA5MCBkYXlzOiBRdWFydGVybHkgaW5zaWdodHMgYW5kIGZvcmVjYXN0aW5nXG5cbkFkdmFuY2VkIEZpbHRlcmluZyBPcHRpb25zOlxuLSBFbmdhZ2VtZW50IGxldmVsIChhbGwvbG93L21lZGl1bS9oaWdoKVxuLSBEZXZpY2UgdHlwZSAoYWxsL2Rlc2t0b3AvbW9iaWxlL3RhYmxldClcbi0gTG9jYXRpb24gKGNvdW50cnkvc3RhdGUvY2l0eSlcbi0gVmlzaXRvciBzdGF0dXMgKG5ldy9yZXR1cm5pbmcvY29udmVydGVkKVxuLSBUcmFmZmljIHNvdXJjZSAob3JnYW5pYy9wYWlkL3NvY2lhbC9kaXJlY3QpXG5cbkV4cG9ydCBhbmQgUmVwb3J0aW5nOlxuLSBDU1YgZXhwb3J0IGZvciBhbGwgdmlzaXRvciBkYXRhXG4tIFBERiByZXBvcnRzIGZvciBzdGFrZWhvbGRlciBzaGFyaW5nXG4tIEF1dG9tYXRlZCBlbWFpbCByZXBvcnRzXG4tIFJlYWwtdGltZSBkYXNoYm9hcmQgZW1iZWRkaW5nXG4tIEFQSSBhY2Nlc3MgZm9yIGN1c3RvbSBpbnRlZ3JhdGlvbnNgLFxuICAgIHRhZ3M6IFsnbGVhZHB1bHNlJywgJ2Rhc2hib2FyZCcsICdhbmFseXRpY3MnLCAncmVhbC10aW1lJywgJ3Zpc2l0b3ItdHJhY2tpbmcnLCAncmVwb3J0aW5nJ10sXG4gICAgcHJpb3JpdHk6IDlcbiAgfSxcblxuICB7XG4gICAgaWQ6ICdsZWFkcHVsc2UtaW50ZWdyYXRpb24tc3VwcmVtZS1haScsXG4gICAgY2F0ZWdvcnk6ICdsZWFkcHVsc2UnLFxuICAgIHRpdGxlOiAnTGVhZFB1bHNlIEludGVncmF0aW9uIHdpdGggU3VwcmVtZSBBSSB2MycsXG4gICAgY29udGVudDogYExlYWRQdWxzZSBsZXZlcmFnZXMgU3VwcmVtZSBBSSB2MyBlbmdpbmUgZm9yIGVuaGFuY2VkIGludGVsbGlnZW5jZSBhbmQgYXV0b21hdGVkIGluc2lnaHRzIGdlbmVyYXRpb24uXG5cblN1cHJlbWUgQUkgdjMgSW50ZWdyYXRpb24gRmVhdHVyZXM6XG5cbjEuIEludGVsbGlnZW50IFRhc2sgUHJvY2Vzc2luZ1xuICAgLSBsZWFkcHVsc2VfaW5zaWdodHM6IEJ1c2luZXNzIGludGVsbGlnZW5jZSBnZW5lcmF0aW9uXG4gICAtIGxlYWRwdWxzZV9wcmVkaWN0OiBQZXJmb3JtYW5jZSBmb3JlY2FzdGluZ1xuICAgLSBsZWFkcHVsc2Vfb3B0aW1pemU6IENvbnZlcnNpb24gb3B0aW1pemF0aW9uXG4gICAtIGxlYWRwdWxzZV92aXNpdG9yczogQmVoYXZpb3IgYW5hbHlzaXNcbiAgIC0gbGVhZHB1bHNlX3NlZ21lbnRzOiBTbWFydCBjYXRlZ29yaXphdGlvblxuXG4yLiBSQUcgRW5naW5lIEtub3dsZWRnZVxuICAgLSBMZWFkUHVsc2Uga25vd2xlZGdlIGJhc2UgaW50ZWdyYXRpb25cbiAgIC0gQ29udGV4dHVhbCB2aXNpdG9yIGluc2lnaHRzXG4gICAtIEhpc3RvcmljYWwgcGF0dGVybiBhbmFseXNpc1xuICAgLSBCZXN0IHByYWN0aWNlIHJlY29tbWVuZGF0aW9uc1xuICAgLSBJbmR1c3RyeS1zcGVjaWZpYyBndWlkYW5jZVxuXG4zLiBBdXRvTUwgUHJlZGljdGlvbnNcbiAgIC0gVmlzaXRvciBjb252ZXJzaW9uIHByb2JhYmlsaXR5XG4gICAtIFNlc3Npb24gdmFsdWUgZXN0aW1hdGlvblxuICAgLSBDaHVybiByaXNrIGFzc2Vzc21lbnRcbiAgIC0gRW5nYWdlbWVudCBwcmVkaWN0aW9uXG4gICAtIFJldmVudWUgZm9yZWNhc3RpbmdcblxuNC4gTWVtb3J5IEVuZ2luZSBDb250ZXh0XG4gICAtIFZpc2l0b3IgaGlzdG9yeSB0cmFja2luZ1xuICAgLSBCZWhhdmlvcmFsIHBhdHRlcm4gbWVtb3J5XG4gICAtIENyb3NzLXNlc3Npb24gYW5hbHl0aWNzXG4gICAtIExvbmctdGVybSB0cmVuZCBhbmFseXNpc1xuICAgLSBQZXJzb25hbGl6ZWQgaW5zaWdodHNcblxuQVBJIEludGVncmF0aW9uIEV4YW1wbGVzOlxuXG5CdXNpbmVzcyBJbnRlbGxpZ2VuY2U6XG5HRVQgL2FwaS9sZWFkcHVsc2UvYWkvaW50ZWxsaWdlbmNlP3R5cGU9b3ZlcnZpZXcmdGltZVJhbmdlPTMwZFxuLSBSZXR1cm5zIGNvbXByZWhlbnNpdmUgaW5zaWdodHNcbi0gU3VwcmVtZSBzY29yZSBjYWxjdWxhdGlvblxuLSBBdXRvbWF0ZWQgcmVjb21tZW5kYXRpb25zXG4tIFBlcmZvcm1hbmNlIG1ldHJpY3NcblxuVmlzaXRvciBBbmFseXNpczpcbkdFVCAvYXBpL2xlYWRwdWxzZS9haS9pbnRlbGxpZ2VuY2U/dHlwZT12aXNpdG9yLWJlaGF2aW9yJnZpc2l0b3JJZD17aWR9XG4tIEluZGl2aWR1YWwgdmlzaXRvciBwcm9maWxlc1xuLSBCZWhhdmlvciBwYXR0ZXJuIGFuYWx5c2lzXG4tIENvbnZlcnNpb24gcHJvYmFiaWxpdHlcbi0gUmVjb21tZW5kZWQgYWN0aW9uc1xuXG5QZXJmb3JtYW5jZSBQcmVkaWN0aW9uczpcbkdFVCAvYXBpL2xlYWRwdWxzZS9haS9pbnRlbGxpZ2VuY2U/dHlwZT1wcmVkaWN0aW9ucyZwcmVkaWN0aW9uVHlwZT1UUkFGRklDJnRpbWVmcmFtZT0zMFxuLSBUcmFmZmljIGZvcmVjYXN0aW5nXG4tIFRyZW5kIGFuYWx5c2lzXG4tIENvbmZpZGVuY2Ugc2NvcmluZ1xuLSBBY3Rpb25hYmxlIGluc2lnaHRzXG5cbkZ1bm5lbCBPcHRpbWl6YXRpb246XG5HRVQgL2FwaS9sZWFkcHVsc2UvYWkvaW50ZWxsaWdlbmNlP3R5cGU9ZnVubmVsLW9wdGltaXphdGlvbiZmb3JtSWQ9e2lkfVxuLSBDb252ZXJzaW9uIGJvdHRsZW5lY2sgYW5hbHlzaXNcbi0gT3B0aW1pemF0aW9uIHJlY29tbWVuZGF0aW9uc1xuLSBFeHBlY3RlZCBpbXBhY3QgY2FsY3VsYXRpb25zXG4tIEltcGxlbWVudGF0aW9uIHByaW9yaXRpZXNcblxuU21hcnQgU2VnbWVudGF0aW9uOlxuR0VUIC9hcGkvbGVhZHB1bHNlL2FpL2ludGVsbGlnZW5jZT90eXBlPXNtYXJ0LXNlZ21lbnRzJmJlaGF2aW9yQmFzZWQ9dHJ1ZVxuLSBBdXRvbWF0ZWQgdmlzaXRvciBjYXRlZ29yaXphdGlvblxuLSBTZWdtZW50IHBlcmZvcm1hbmNlIGFuYWx5c2lzXG4tIEdyb3d0aCBvcHBvcnR1bml0aWVzXG4tIFRhcmdldGluZyByZWNvbW1lbmRhdGlvbnNcblxuQmVzdCBQcmFjdGljZXM6XG4tIFJldmlldyBBSSBpbnNpZ2h0cyBkYWlseVxuLSBBY3Qgb24gaGlnaC1jb25maWRlbmNlIHJlY29tbWVuZGF0aW9uc1xuLSBNb25pdG9yIFN1cHJlbWUgc2NvcmVzIGZvciB0cmVuZHNcbi0gVXNlIHByZWRpY3Rpb25zIGZvciBwbGFubmluZ1xuLSBJbXBsZW1lbnQgc3VnZ2VzdGVkIG9wdGltaXphdGlvbnNgLFxuICAgIHRhZ3M6IFsnbGVhZHB1bHNlJywgJ3N1cHJlbWUtYWktdjMnLCAnaW50ZWdyYXRpb24nLCAnYXBpJywgJ3JhZy1lbmdpbmUnLCAnYXV0b21sJywgJ21lbW9yeSddLFxuICAgIHByaW9yaXR5OiAxMFxuICB9LFxuXG4gIHtcbiAgICBpZDogJ2xlYWRwdWxzZS10cm91Ymxlc2hvb3RpbmcnLFxuICAgIGNhdGVnb3J5OiAnbGVhZHB1bHNlJyxcbiAgICB0aXRsZTogJ0xlYWRQdWxzZSBUcm91Ymxlc2hvb3RpbmcgYW5kIENvbW1vbiBJc3N1ZXMnLFxuICAgIGNvbnRlbnQ6IGBDb21tb24gTGVhZFB1bHNlIGlzc3VlcyBhbmQgdGhlaXIgc29sdXRpb25zIGZvciBvcHRpbWFsIHZpc2l0b3IgdHJhY2tpbmcgcGVyZm9ybWFuY2UuXG5cblRyYWNraW5nIElzc3VlczpcblxuMS4gTm8gVmlzaXRvcnMgU2hvd2luZ1xuICAgLSBWZXJpZnkgdHJhY2tpbmcgY29kZSBpbnN0YWxsYXRpb25cbiAgIC0gQ2hlY2sgc2NyaXB0IHBsYWNlbWVudCBpbiA8aGVhZD4gdGFnXG4gICAtIENvbmZpcm0gZG9tYWluIHdoaXRlbGlzdCBzZXR0aW5nc1xuICAgLSBUZXN0IHdpdGggaW5jb2duaXRvL3ByaXZhdGUgYnJvd3NpbmdcbiAgIC0gUmV2aWV3IGZpcmV3YWxsIGFuZCBhZC1ibG9ja2VyIHNldHRpbmdzXG5cbjIuIEluY29tcGxldGUgVmlzaXRvciBEYXRhXG4gICAtIENoZWNrIGdlb2dyYXBoaWMgSVAgZGF0YWJhc2UgdXBkYXRlc1xuICAgLSBWZXJpZnkgdGhpcmQtcGFydHkgc2NyaXB0IGNvbmZsaWN0c1xuICAgLSBSZXZpZXcgcHJpdmFjeSBzZXR0aW5ncyBhbmQgY29uc2VudFxuICAgLSBDb25maXJtIEhUVFBTIGNlcnRpZmljYXRlIHZhbGlkaXR5XG4gICAtIFRlc3QgY3Jvc3MtZG9tYWluIHRyYWNraW5nIHNldHVwXG5cbjMuIEFJIEludGVsbGlnZW5jZSBOb3QgTG9hZGluZ1xuICAgLSBWZXJpZnkgU3VwcmVtZSBBSSB2MyBlbmdpbmUgc3RhdHVzXG4gICAtIENoZWNrIEFQSSByYXRlIGxpbWl0aW5nXG4gICAtIFJldmlldyB1c2VyIHBlcm1pc3Npb25zXG4gICAtIENvbmZpcm0gZGF0YWJhc2UgY29ubmVjdGl2aXR5XG4gICAtIFRlc3Qgd2l0aCBtaW5pbWFsIGRhdGEgc2V0XG5cblBlcmZvcm1hbmNlIElzc3VlczpcblxuMS4gU2xvdyBEYXNoYm9hcmQgTG9hZGluZ1xuICAgLSBDbGVhciBicm93c2VyIGNhY2hlIGFuZCBjb29raWVzXG4gICAtIENoZWNrIGludGVybmV0IGNvbm5lY3Rpb24gc3BlZWRcbiAgIC0gVmVyaWZ5IHNlcnZlciBwZXJmb3JtYW5jZSBtZXRyaWNzXG4gICAtIFJldmlldyB0aW1lIHJhbmdlIHNlbGVjdGlvbnNcbiAgIC0gT3B0aW1pemUgcXVlcnkgcGFyYW1ldGVyc1xuXG4yLiBSZWFsLXRpbWUgVXBkYXRlcyBEZWxheWVkXG4gICAtIENoZWNrIFdlYlNvY2tldCBjb25uZWN0aW9uXG4gICAtIFZlcmlmeSBzZXJ2ZXItc2VudCBldmVudHNcbiAgIC0gUmV2aWV3IG5ldHdvcmsgbGF0ZW5jeVxuICAgLSBDb25maXJtIGJyb3dzZXIgY29tcGF0aWJpbGl0eVxuICAgLSBUZXN0IHdpdGggZGlmZmVyZW50IGJyb3dzZXJzXG5cbkRhdGEgUXVhbGl0eSBJc3N1ZXM6XG5cbjEuIEluYWNjdXJhdGUgVmlzaXRvciBDb3VudHNcbiAgIC0gUmV2aWV3IGJvdCBkZXRlY3Rpb24gc2V0dGluZ3NcbiAgIC0gQ2hlY2sgc2Vzc2lvbiB0aW1lb3V0IGNvbmZpZ3VyYXRpb25cbiAgIC0gVmVyaWZ5IHVuaXF1ZSB2aXNpdG9yIGlkZW50aWZpY2F0aW9uXG4gICAtIFJldmlldyBkYXRhIHJldGVudGlvbiBwb2xpY2llc1xuICAgLSBDb25maXJtIHRpbWV6b25lIHNldHRpbmdzXG5cbjIuIFdyb25nIEdlb2dyYXBoaWMgRGF0YVxuICAgLSBVcGRhdGUgSVAgZ2VvbG9jYXRpb24gZGF0YWJhc2VcbiAgIC0gVmVyaWZ5IFZQTi9wcm94eSBkZXRlY3Rpb25cbiAgIC0gQ2hlY2sgcmVnaW9uYWwgSVAgYXNzaWdubWVudHNcbiAgIC0gUmV2aWV3IGxvY2F0aW9uIG92ZXJyaWRlIHNldHRpbmdzXG4gICAtIENvbmZpcm0gYWNjdXJhY3kgdGhyZXNob2xkc1xuXG5BSSBQcmVkaWN0aW9uIElzc3VlczpcblxuMS4gTG93IENvbmZpZGVuY2UgU2NvcmVzXG4gICAtIEluY3JlYXNlIGRhdGEgY29sbGVjdGlvbiBwZXJpb2RcbiAgIC0gVmVyaWZ5IGZlYXR1cmUgY29tcGxldGVuZXNzXG4gICAtIFJldmlldyBtb2RlbCB0cmFpbmluZyBkYXRhXG4gICAtIENoZWNrIHByZWRpY3Rpb24gcGFyYW1ldGVyc1xuICAgLSBVcGRhdGUgYWxnb3JpdGhtIHdlaWdodHNcblxuMi4gSW5jb25zaXN0ZW50IFJlY29tbWVuZGF0aW9uc1xuICAgLSBSZXZpZXcgaW5wdXQgZGF0YSBxdWFsaXR5XG4gICAtIFZlcmlmeSBhbGdvcml0aG0gcGFyYW1ldGVyc1xuICAgLSBDaGVjayBmb3IgZGF0YSBkcmlmdFxuICAgLSBVcGRhdGUgbW9kZWwgdHJhaW5pbmdcbiAgIC0gUmV2aWV3IGZlZWRiYWNrIGxvb3BzXG5cbkludGVncmF0aW9uIFByb2JsZW1zOlxuXG4xLiBBUEkgQ29ubmVjdGl2aXR5IElzc3Vlc1xuICAgLSBWZXJpZnkgYXV0aGVudGljYXRpb24gY3JlZGVudGlhbHNcbiAgIC0gQ2hlY2sgZW5kcG9pbnQgYXZhaWxhYmlsaXR5XG4gICAtIFJldmlldyByYXRlIGxpbWl0aW5nIHN0YXR1c1xuICAgLSBDb25maXJtIGRhdGEgZm9ybWF0IGNvbXBsaWFuY2VcbiAgIC0gVGVzdCB3aXRoIG1pbmltYWwgcmVxdWVzdHNcblxuMi4gV2ViaG9vayBGYWlsdXJlc1xuICAgLSBWZXJpZnkgZW5kcG9pbnQgYWNjZXNzaWJpbGl0eVxuICAgLSBDaGVjayBTU0wgY2VydGlmaWNhdGUgdmFsaWRpdHlcbiAgIC0gUmV2aWV3IHBheWxvYWQgZm9ybWF0XG4gICAtIENvbmZpcm0gcmV0cnkgbWVjaGFuaXNtc1xuICAgLSBUZXN0IHdpdGggc2FtcGxlIGRhdGFcblxuU3VwcG9ydCBSZXNvdXJjZXM6XG4tIExlYWRQdWxzZSBTdGF0dXMgUGFnZTogQ2hlY2sgc3lzdGVtIHN0YXR1c1xuLSBEZXZlbG9wZXIgRG9jdW1lbnRhdGlvbjogQVBJIHJlZmVyZW5jZVxuLSBDb21tdW5pdHkgRm9ydW06IFVzZXIgZGlzY3Vzc2lvbnNcbi0gU3VwcG9ydCBUaWNrZXRzOiBEaXJlY3QgYXNzaXN0YW5jZVxuLSBWaWRlbyBUdXRvcmlhbHM6IFN0ZXAtYnktc3RlcCBndWlkZXNgLFxuICAgIHRhZ3M6IFsnbGVhZHB1bHNlJywgJ3Ryb3VibGVzaG9vdGluZycsICd0cmFja2luZycsICdwZXJmb3JtYW5jZScsICdhaS1pbnRlbGxpZ2VuY2UnLCAnc3VwcG9ydCddLFxuICAgIHByaW9yaXR5OiA4XG4gIH1cbl07XG5cbi8vIEhlbHBlciBmdW5jdGlvbnMgZm9yIGtub3dsZWRnZSBiYXNlIG9wZXJhdGlvbnNcbmV4cG9ydCBmdW5jdGlvbiBnZXRLbm93bGVkZ2VCeUNhdGVnb3J5KGNhdGVnb3J5OiBzdHJpbmcpOiBNYXJrZXRTYWdlS25vd2xlZGdlW10ge1xuICByZXR1cm4gTUFSS0VUU0FHRV9LTk9XTEVER0VfQkFTRS5maWx0ZXIoaXRlbSA9PiBpdGVtLmNhdGVnb3J5ID09PSBjYXRlZ29yeSk7XG59XG5cbmV4cG9ydCBmdW5jdGlvbiBzZWFyY2hLbm93bGVkZ2UocXVlcnk6IHN0cmluZyk6IE1hcmtldFNhZ2VLbm93bGVkZ2VbXSB7XG4gIGNvbnN0IHNlYXJjaFRlcm1zID0gcXVlcnkudG9Mb3dlckNhc2UoKS5zcGxpdCgnICcpO1xuICBcbiAgcmV0dXJuIE1BUktFVFNBR0VfS05PV0xFREdFX0JBU0VcbiAgICAuZmlsdGVyKGl0ZW0gPT4ge1xuICAgICAgY29uc3Qgc2VhcmNoVGV4dCA9IGAke2l0ZW0udGl0bGV9ICR7aXRlbS5jb250ZW50fSAke2l0ZW0udGFncy5qb2luKCcgJyl9YC50b0xvd2VyQ2FzZSgpO1xuICAgICAgcmV0dXJuIHNlYXJjaFRlcm1zLnNvbWUodGVybSA9PiBzZWFyY2hUZXh0LmluY2x1ZGVzKHRlcm0pKTtcbiAgICB9KVxuICAgIC5zb3J0KChhLCBiKSA9PiBiLnByaW9yaXR5IC0gYS5wcmlvcml0eSk7XG59XG5cbmV4cG9ydCBmdW5jdGlvbiBnZXRIaWdoUHJpb3JpdHlLbm93bGVkZ2UoKTogTWFya2V0U2FnZUtub3dsZWRnZVtdIHtcbiAgcmV0dXJuIE1BUktFVFNBR0VfS05PV0xFREdFX0JBU0VcbiAgICAuZmlsdGVyKGl0ZW0gPT4gaXRlbS5wcmlvcml0eSA+PSA4KVxuICAgIC5zb3J0KChhLCBiKSA9PiBiLnByaW9yaXR5IC0gYS5wcmlvcml0eSk7XG59XG5cbmV4cG9ydCBmdW5jdGlvbiBnZXRBbGxLbm93bGVkZ2VGb3JSQUcoKTogc3RyaW5nW10ge1xuICByZXR1cm4gTUFSS0VUU0FHRV9LTk9XTEVER0VfQkFTRS5tYXAoaXRlbSA9PiBcbiAgICBgJHtpdGVtLnRpdGxlfVxcblxcbiR7aXRlbS5jb250ZW50fVxcblxcblRhZ3M6ICR7aXRlbS50YWdzLmpvaW4oJywgJyl9YFxuICApO1xufSAiXSwibmFtZXMiOlsiTUFSS0VUU0FHRV9LTk9XTEVER0VfQkFTRSIsImdldEFsbEtub3dsZWRnZUZvclJBRyIsImdldEhpZ2hQcmlvcml0eUtub3dsZWRnZSIsImdldEtub3dsZWRnZUJ5Q2F0ZWdvcnkiLCJzZWFyY2hLbm93bGVkZ2UiLCJpZCIsImNhdGVnb3J5IiwidGl0bGUiLCJjb250ZW50IiwidGFncyIsInByaW9yaXR5IiwiZmlsdGVyIiwiaXRlbSIsInF1ZXJ5Iiwic2VhcmNoVGVybXMiLCJ0b0xvd2VyQ2FzZSIsInNwbGl0Iiwic2VhcmNoVGV4dCIsImpvaW4iLCJzb21lIiwidGVybSIsImluY2x1ZGVzIiwic29ydCIsImEiLCJiIiwibWFwIl0sIm1hcHBpbmdzIjoiQUFBQTs7Ozs7Q0FLQzs7Ozs7Ozs7Ozs7SUFXWUEseUJBQXlCO2VBQXpCQTs7SUF3eEJHQyxxQkFBcUI7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

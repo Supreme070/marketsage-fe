@@ -1,59 +1,36 @@
-import { type NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/db/prisma';
+import type { NextRequest } from "next/server";
+import { proxyToBackend } from "@/lib/api-proxy";
+
+// Proxy messaging/usage to NestJS backend
 
 export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.organization?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  return proxyToBackend(request, {
+    backendPath: 'messaging/usage',
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-    const { searchParams } = new URL(request.url);
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
+export async function POST(request: NextRequest) {
+  return proxyToBackend(request, {
+    backendPath: 'messaging/usage',
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-    // Default to last 30 days if no dates provided
-    const defaultEndDate = new Date();
-    const defaultStartDate = new Date();
-    defaultStartDate.setDate(defaultStartDate.getDate() - 30);
+export async function PATCH(request: NextRequest) {
+  return proxyToBackend(request, {
+    backendPath: 'messaging/usage',
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
+}
 
-    const usage = await prisma.messagingUsage.findMany({
-      where: {
-        organizationId: session.user.organization.id,
-        timestamp: {
-          gte: startDate ? new Date(startDate) : defaultStartDate,
-          lte: endDate ? new Date(endDate) : defaultEndDate,
-        },
-      },
-      orderBy: { timestamp: 'desc' },
-    });
-
-    // Calculate summary statistics
-    const summary = usage.reduce((acc, item) => {
-      const key = item.channel;
-      if (!acc[key]) {
-        acc[key] = { messages: 0, credits: 0 };
-      }
-      acc[key].messages += item.messageCount;
-      acc[key].credits += item.credits;
-      return acc;
-    }, {} as Record<string, { messages: number; credits: number }>);
-
-    // Ensure all channels are represented
-    const fullSummary = {
-      sms: summary.sms || { messages: 0, credits: 0 },
-      email: summary.email || { messages: 0, credits: 0 },
-      whatsapp: summary.whatsapp || { messages: 0, credits: 0 },
-    };
-
-    return NextResponse.json({
-      usage,
-      summary: fullSummary,
-    });
-  } catch (error) {
-    console.error('Error fetching messaging usage:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
+export async function DELETE(request: NextRequest) {
+  return proxyToBackend(request, {
+    backendPath: 'messaging/usage',
+    requireAuth: true,
+    enableLogging: process.env.NODE_ENV === 'development',
+  });
 }

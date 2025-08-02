@@ -96,7 +96,7 @@ export function ProviderOptimizationDashboard() {
     setIsLoading(true);
     try {
       // Load provider status
-      const statusResponse = await fetch('/api/messaging/optimization');
+      const statusResponse = await fetch('/api/v2/messaging/optimization');
       if (statusResponse.ok) {
         const statusData = await statusResponse.json();
         setProviderStatus(statusData.providerStatus);
@@ -110,7 +110,7 @@ export function ProviderOptimizationDashboard() {
       }
 
       // Load recommendations
-      const recommendationsResponse = await fetch('/api/messaging/optimization?type=recommendations');
+      const recommendationsResponse = await fetch('/api/v2/messaging/optimization?type=recommendations');
       if (recommendationsResponse.ok) {
         const recommendationsData = await recommendationsResponse.json();
         setRecommendations(recommendationsData.recommendations);
@@ -125,7 +125,7 @@ export function ProviderOptimizationDashboard() {
 
   const handleOptimizeProvider = async (channel: string, messageCount = 1000) => {
     try {
-      const response = await fetch('/api/messaging/optimization', {
+      const response = await fetch('/api/v2/messaging/optimization', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -90,7 +90,7 @@ export default function CompetitorAnalysisPage() {
     analyzeCompetitorLandscape: async (industry: string, market: string) => {
       setIsAnalyzing(true);
       try {
-        const response = await fetch('/api/ai/supreme-v3', {
+        const response = await fetch('/api/v2/ai/supreme-v3', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -124,7 +124,7 @@ export default function CompetitorAnalysisPage() {
 
     performThreatAssessment: async (competitorId: string) => {
       try {
-        const response = await fetch('/api/ai/supreme-v3', {
+        const response = await fetch('/api/v2/ai/supreme-v3', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -150,7 +150,7 @@ export default function CompetitorAnalysisPage() {
 
     generateCompetitiveStrategy: async (competitorData: any) => {
       try {
-        const response = await fetch('/api/ai/supreme-v3', {
+        const response = await fetch('/api/v2/ai/supreme-v3', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -176,7 +176,7 @@ export default function CompetitorAnalysisPage() {
 
     monitorRealTimeChanges: async () => {
       try {
-        const response = await fetch('/api/ai/supreme-v3', {
+        const response = await fetch('/api/v2/ai/supreme-v3', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

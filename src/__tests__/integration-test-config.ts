@@ -10,7 +10,7 @@ import { beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
 // Test database configuration
 export const TEST_DATABASE_CONFIG = {
   host: process.env.TEST_DATABASE_HOST || 'localhost',
-  port: parseInt(process.env.TEST_DATABASE_PORT || '5432'),
+  port: Number.parseInt(process.env.TEST_DATABASE_PORT || '5432'),
   database: process.env.TEST_DATABASE_NAME || 'marketsage_test',
   username: process.env.TEST_DATABASE_USER || 'test_user',
   password: process.env.TEST_DATABASE_PASSWORD || 'test_password'

@@ -97,7 +97,7 @@ export default function MessagingModelSwitcher() {
 
   const fetchData = async () => {
     try {
-      const response = await fetch('/api/messaging/model');
+      const response = await fetch('/api/v2/messaging/model');
       if (response.ok) {
         const result = await response.json();
         setData(result);
@@ -118,7 +118,7 @@ export default function MessagingModelSwitcher() {
   const switchMessagingModel = async (newModel: 'customer_managed' | 'platform_managed') => {
     setSwitching(true);
     try {
-      const response = await fetch('/api/messaging/model', {
+      const response = await fetch('/api/v2/messaging/model', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -168,7 +168,7 @@ export default function MessagingModelSwitcher() {
       if (data?.capabilities.configuredChannels.email) channels.push('email');
       if (data?.capabilities.configuredChannels.whatsapp) channels.push('whatsapp');
 
-      const response = await fetch('/api/messaging/model', {
+      const response = await fetch('/api/v2/messaging/model', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -106,7 +106,7 @@ export function EmailDomainSetup() {
     
     try {
       // Call verification API
-      const response = await fetch('/api/onboarding/verify-domain', {
+      const response = await fetch('/api/v2/onboarding/verify-domain', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ domain })
