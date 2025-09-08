@@ -12,15 +12,16 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 
 # Install dependencies with robust networking and build tools
+# Using npm install instead of npm ci due to Git LFS issues with package-lock.json on Railway
 RUN npm config set fetch-timeout 600000 && \
     npm config set fetch-retry-mintimeout 20000 && \
     npm config set fetch-retry-maxtimeout 120000 && \
     npm config set fetch-retries 5 && \
     npm config set maxsockets 1 && \
-    (npm ci --progress=false || \
-     (echo "Retry 1 after 10s..." && sleep 10 && npm ci --progress=false) || \
-     (echo "Retry 2 after 20s..." && sleep 20 && npm ci --progress=false) || \
-     (echo "Final attempt with clean cache..." && npm cache clean --force && npm ci --progress=false)) && \
+    (npm install --progress=false || \
+     (echo "Retry 1 after 10s..." && sleep 10 && npm install --progress=false) || \
+     (echo "Retry 2 after 20s..." && sleep 20 && npm install --progress=false) || \
+     (echo "Final attempt with clean cache..." && npm cache clean --force && npm install --progress=false)) && \
     npm cache clean --force
 
 # Stage 2: Builder
@@ -125,7 +126,8 @@ WORKDIR /app
 
 # Install all dependencies including dev dependencies
 COPY package.json package-lock.json* ./
-RUN npm ci
+# Use npm install instead of npm ci due to Git LFS issues with package-lock.json
+RUN npm install
 
 # Copy source code
 COPY . .
