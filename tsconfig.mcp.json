@@ -1,3 +1,36 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:64f2c5968e8fd6226db7ecc2f914f125fcb16f6949d26bd702712f6d1c1cfb6a
-size 761
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["DOM", "DOM.Iterable", "ES6"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "noEmit": false,
+    "esModuleInterop": true,
+    "module": "ESNext",
+    "moduleResolution": "node", 
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "outDir": ".next/mcp-servers",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "downlevelIteration": true,
+    "noEmitOnError": false
+  },
+  "include": [
+    "src/mcp/servers/*.ts",
+    "src/mcp/types/*.ts",
+    "src/mcp/config/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    "src/mcp/**/*.test.ts",
+    "src/lib/**/*",
+    "src/app/**/*"
+  ]
+}
