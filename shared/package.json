@@ -1,3 +1,18 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:4a8c15aee3843b66f3700d1ce36b2cce9c7a8a1ad5e71240727979953e3ef361
-size 329
+{
+  "name": "@marketsage/shared",
+  "version": "1.0.0",
+  "description": "Shared types and utilities for MarketSage",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "files": [
+    "dist/**/*",
+    "types/**/*"
+  ]
+}

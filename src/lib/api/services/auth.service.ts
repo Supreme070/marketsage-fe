@@ -22,16 +22,16 @@ export class AuthService extends BaseApiClient {
    */
   async login(credentials: LoginDto): Promise<LoginResponse> {
     try {
-      const response = await this.post<ApiResponse<{ user: any; token: string }>>(
+      const response = await this.post<{ user: any; token: string }>(
         '/auth/login',
         credentials
       );
 
       return {
-        success: response.success,
-        message: response.message || 'Login successful',
-        user: response.data?.user,
-        token: response.data?.token,
+        success: true,
+        message: 'Login successful',
+        user: response.user,
+        token: response.token,
       };
     } catch (error) {
       this.handleError(error);
@@ -115,18 +115,25 @@ export class AuthService extends BaseApiClient {
    */
   async startRegistration(userData: InitialRegistrationDto): Promise<InitialRegistrationResponse> {
     try {
-      const response = await this.post<ApiResponse<{ registrationId: string }>>(
+      const response = await this.post<{ registrationId: string; verificationPin: string }>(
         '/auth/register/initial',
         userData
       );
 
       return {
-        success: response.success,
-        message: response.message || 'Registration started successfully',
-        registrationId: response.data?.registrationId,
+        success: true,
+        message: 'Registration started successfully',
+        registrationId: response.registrationId,
       };
     } catch (error) {
+      console.error('AuthService.startRegistration - Error:', error);
       this.handleError(error);
+      // Return a proper error response instead of undefined
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Registration failed',
+        registrationId: undefined,
+      };
     }
   }
 
@@ -135,11 +142,11 @@ export class AuthService extends BaseApiClient {
    */
   async verifyPin(verificationData: VerifyPinDto): Promise<VerifyPinResponse> {
     try {
-      const response = await this.post<ApiResponse<any>>('/auth/register/verify', verificationData);
+      await this.post<any>('/auth/register/verify', verificationData);
 
       return {
-        success: response.success,
-        message: response.message || 'PIN verified successfully',
+        success: true,
+        message: 'PIN verified successfully',
       };
     } catch (error) {
       this.handleError(error);
@@ -153,15 +160,15 @@ export class AuthService extends BaseApiClient {
     completionData: CompleteRegistrationDto
   ): Promise<CompleteRegistrationResponse> {
     try {
-      const response = await this.post<ApiResponse<{ user: any }>>(
+      const response = await this.post<{ user: any; accessToken: string }>(
         '/auth/register/complete',
         completionData
       );
 
       return {
-        success: response.success,
-        message: response.message || 'Registration completed successfully',
-        user: response.data?.user,
+        success: true,
+        message: 'Registration completed successfully',
+        user: response.user,
       };
     } catch (error) {
       this.handleError(error);

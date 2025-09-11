@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { apiClient } from '../api-client';
+import { apiClient } from '../api/client';
 
 // Mock fetch globally
 global.fetch = jest.fn() as jest.MockedFunction<typeof fetch>;
@@ -43,10 +43,14 @@ describe('Authentication Integration', () => {
         json: async () => mockResponse,
       } as Response);
 
-      const result = await apiClient.login('test@example.com', 'password123');
+      const result = await apiClient.auth.login({
+        email: 'test@example.com',
+        password: 'password123'
+      });
 
       expect(result.success).toBe(true);
-      expect(result.data).toEqual(mockResponse.data);
+      expect(result.user).toEqual(mockResponse.data.user);
+      expect(result.token).toEqual(mockResponse.data.token);
       expect(global.fetch).toHaveBeenCalledWith(
         expect.stringContaining('/auth/login'),
         expect.objectContaining({
@@ -62,44 +66,90 @@ describe('Authentication Integration', () => {
       );
     });
 
-    it('should register successfully', async () => {
-      const mockResponse = {
+    it('should register successfully using multi-step flow', async () => {
+      // Step 1: Initial registration
+      const initialResponse = {
         success: true,
         data: {
-          id: 'user-123',
-          email: 'test@example.com',
-          name: 'Test User',
-          role: 'USER'
+          registrationId: 'reg-123',
+          verificationPin: '123456'
         },
-        message: 'User registered successfully'
+        message: 'Verification email sent. Please check your inbox.'
       };
 
       (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce({
         ok: true,
-        json: async () => mockResponse,
+        json: async () => initialResponse,
       } as Response);
 
-      const result = await apiClient.register('test@example.com', 'password123', 'Test User');
+      const initialResult = await apiClient.auth.startRegistration({
+        name: 'Test User',
+        email: 'test@example.com'
+      });
 
-      expect(result.success).toBe(true);
-      expect(result.data).toEqual(mockResponse.data);
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/auth/register'),
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({
+      expect(initialResult.success).toBe(true);
+      expect(initialResult.registrationId).toBe('reg-123');
+
+      // Step 2: Verify PIN
+      const verifyResponse = {
+        success: true,
+        message: 'Email verified successfully. You can now complete your registration.'
+      };
+
+      (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce({
+        ok: true,
+        json: async () => verifyResponse,
+      } as Response);
+
+      const verifyResult = await apiClient.auth.verifyPin({
+        registrationId: 'reg-123',
+        pin: '123456'
+      });
+
+      expect(verifyResult.success).toBe(true);
+
+      // Step 3: Complete registration
+      const completeResponse = {
+        success: true,
+        data: {
+          user: {
+            id: 'user-123',
             email: 'test@example.com',
-            password: 'password123',
             name: 'Test User',
-            company: undefined
-          })
-        })
-      );
+            role: 'USER'
+          },
+          accessToken: 'mock-jwt-token'
+        },
+        message: 'Registration completed successfully'
+      };
+
+      (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce({
+        ok: true,
+        json: async () => completeResponse,
+      } as Response);
+
+      const completeResult = await apiClient.auth.completeRegistration({
+        registrationId: 'reg-123',
+        password: 'password123'
+      });
+
+      expect(completeResult.success).toBe(true);
+      expect(completeResult.user).toEqual(completeResponse.data.user);
     });
 
     it('should include auth token in headers when token is set', async () => {
       const mockToken = 'mock-jwt-token';
-      apiClient.setToken(mockToken);
+      
+      // Mock the session to return a token
+      const mockSession = {
+        accessToken: mockToken,
+        user: { id: 'user-123', email: 'test@example.com' }
+      };
+      
+      // Mock getSession to return our mock session
+      jest.doMock('next-auth/react', () => ({
+        getSession: jest.fn().mockResolvedValue(mockSession)
+      }));
 
       const mockResponse = {
         success: true,
@@ -112,7 +162,7 @@ describe('Authentication Integration', () => {
         json: async () => mockResponse,
       } as Response);
 
-      await apiClient.getProfile();
+      await apiClient.auth.getProfile();
 
       expect(global.fetch).toHaveBeenCalledWith(
         expect.stringContaining('/auth/profile'),
@@ -136,7 +186,10 @@ describe('Authentication Integration', () => {
         json: async () => mockError,
       } as Response);
 
-      const result = await apiClient.login('test@example.com', 'wrongpassword');
+      const result = await apiClient.auth.login({
+        email: 'test@example.com',
+        password: 'wrongpassword'
+      });
 
       expect(result.success).toBe(false);
       expect(result.error).toEqual(
@@ -152,7 +205,10 @@ describe('Authentication Integration', () => {
         new Error('Network error')
       );
 
-      const result = await apiClient.login('test@example.com', 'password123');
+      const result = await apiClient.auth.login({
+        email: 'test@example.com',
+        password: 'password123'
+      });
 
       expect(result.success).toBe(false);
       expect(result.error).toEqual(
@@ -161,31 +217,6 @@ describe('Authentication Integration', () => {
           message: 'Network error'
         })
       );
-    });
-  });
-
-  describe('Token Management', () => {
-    it('should set and clear tokens correctly', () => {
-      const mockToken = 'mock-jwt-token';
-      
-      // Mock localStorage
-      const mockLocalStorage = {
-        getItem: jest.fn(),
-        setItem: jest.fn(),
-        removeItem: jest.fn(),
-      };
-      Object.defineProperty(window, 'localStorage', {
-        value: mockLocalStorage,
-        writable: true
-      });
-
-      // Set token
-      apiClient.setToken(mockToken);
-      expect(mockLocalStorage.setItem).toHaveBeenCalledWith('access_token', mockToken);
-
-      // Clear token
-      apiClient.clearToken();
-      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('access_token');
     });
   });
 });

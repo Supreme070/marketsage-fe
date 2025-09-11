@@ -4,64 +4,43 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 
 const NESTJS_BASE_URL = process.env.NESTJS_BASE_URL?.replace('localhost', '127.0.0.1') || 'http://127.0.0.1:3006';
 
 export async function proxyToNestJS(request: NextRequest) {
   try {
+    console.log('[NestJS Proxy] Starting proxy request');
+    
     // Extract the path after /api/v2
     const url = new URL(request.url);
     const pathAfterV2 = url.pathname.replace('/api/v2', '');
     
     // Construct the NestJS URL (NestJS already has /api/v2 prefix in main.ts)
     const nestjsUrl = `${NESTJS_BASE_URL}/api/v2${pathAfterV2}${url.search}`;
+    
+    console.log('[NestJS Proxy] Target URL:', nestjsUrl);
+    console.log('[NestJS Proxy] Method:', request.method);
 
-    // Forward headers, excluding host
-    const headers = new Headers();
-    request.headers.forEach((value, key) => {
-      if (key.toLowerCase() !== 'host') {
-        headers.set(key, value);
-      }
-    });
-
-    // Add correlation ID for tracing
-    headers.set('x-correlation-id', crypto.randomUUID());
-    headers.set('x-forwarded-for', request.ip || 'unknown');
-    headers.set('x-forwarded-proto', url.protocol.slice(0, -1));
-
-    // Prepare request options
-    const requestOptions: RequestInit = {
+    // Simple fetch without complex headers for now
+    const response = await fetch(nestjsUrl, {
       method: request.method,
-      headers,
-    };
-
-    // Add body for non-GET requests
-    if (request.method !== 'GET' && request.method !== 'HEAD') {
-      requestOptions.body = await request.arrayBuffer();
-    }
-
-    // Forward request to NestJS
-    const response = await fetch(nestjsUrl, requestOptions);
-
-    // Create response with original status and headers
-    const responseHeaders = new Headers();
-    response.headers.forEach((value, key) => {
-      responseHeaders.set(key, value);
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: request.method !== 'GET' ? await request.text() : undefined,
     });
 
-    // Add proxy identification header
-    responseHeaders.set('x-proxied-by', 'nextjs-nestjs-proxy');
-
+    console.log('[NestJS Proxy] Response status:', response.status);
+    
     return new NextResponse(response.body, {
       status: response.status,
       statusText: response.statusText,
-      headers: responseHeaders,
     });
 
   } catch (error) {
     console.error('[NestJS Proxy Error]:', error);
     console.error('[NestJS Proxy] NESTJS_BASE_URL:', NESTJS_BASE_URL);
-    console.error('[NestJS Proxy] Target URL:', `${NESTJS_BASE_URL}/api/v2${new URL(request.url).pathname.replace('/api/v2', '')}`);
     
     return NextResponse.json(
       {

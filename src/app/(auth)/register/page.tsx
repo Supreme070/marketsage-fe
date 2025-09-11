@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -22,6 +22,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
 import { Toaster } from "@/components/ui/toast";
+
+// Import the centralized API client
+import { apiClient } from "@/lib/api/client";
+import type { 
+  InitialRegistrationDto, 
+  VerifyPinDto, 
+  CompleteRegistrationDto 
+} from "@/lib/api/types/auth";
 
 // Step 1: Initial Registration
 const initialFormSchema = z.object({
@@ -49,6 +57,7 @@ type PasswordFormValues = z.infer<typeof passwordFormSchema>;
 
 export default function RegisterPage() {
   const router = useRouter();
+  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<'initial' | 'verify' | 'password'>('initial');
@@ -57,6 +66,7 @@ export default function RegisterPage() {
     name?: string;
     registrationId?: string;
   }>({});
+
 
   // Initial registration form
   const initialForm = useForm<InitialFormValues>({
@@ -82,15 +92,14 @@ export default function RegisterPage() {
     setError(null);
     
     try {
-      const response = await fetch("/api/v2/auth/register/initial", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+      const initialData: InitialRegistrationDto = {
+        name: data.name,
+        email: data.email,
+      };
 
-      const result = await response.json();
+      const result = await apiClient.auth.startRegistration(initialData);
 
-      if (!response.ok) {
+      if (!result.success || !result.registrationId) {
         throw new Error(result.message || "Failed to start registration");
       }
 
@@ -102,9 +111,10 @@ export default function RegisterPage() {
       
       toast.success("Verification PIN sent to your email");
       setStep('verify');
-    } catch (err: any) {
-      toast.error(err.message || "Failed to start registration");
-      setError(err.message || "An error occurred");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -116,26 +126,29 @@ export default function RegisterPage() {
     setError(null);
 
     try {
-      const response = await fetch("/api/v2/auth/register/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          pin: data.pin,
-          registrationId: registrationData.registrationId,
-        }),
-      });
+      const registrationId = registrationData.registrationId;
+      
+      if (!registrationId) {
+        throw new Error("Registration ID missing. Please start the registration process again.");
+      }
 
-      const result = await response.json();
+      const verifyData: VerifyPinDto = {
+        pin: data.pin,
+        registrationId: registrationId,
+      };
+      
+      const result = await apiClient.auth.verifyPin(verifyData);
 
-      if (!response.ok) {
+      if (!result.success) {
         throw new Error(result.message || "Invalid PIN");
       }
 
       toast.success("Email verified successfully");
       setStep('password');
-    } catch (err: any) {
-      toast.error(err.message || "Failed to verify PIN");
-      setError(err.message || "An error occurred");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -147,26 +160,29 @@ export default function RegisterPage() {
     setError(null);
 
     try {
-      const response = await fetch("/api/v2/auth/register/complete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          password: data.password,
-          registrationId: registrationData.registrationId,
-        }),
-      });
+      const registrationId = registrationData.registrationId;
+      
+      if (!registrationId) {
+        throw new Error("Registration ID missing. Please start the registration process again.");
+      }
 
-      const result = await response.json();
+      const completeData: CompleteRegistrationDto = {
+        password: data.password,
+        registrationId: registrationId,
+      };
 
-      if (!response.ok) {
+      const result = await apiClient.auth.completeRegistration(completeData);
+
+      if (!result.success) {
         throw new Error(result.message || "Failed to complete registration");
       }
 
       toast.success("Registration completed successfully!");
       router.push("/login");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to complete registration");
-      setError(err.message || "An error occurred");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -185,6 +201,7 @@ export default function RegisterPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            
             {error && (
               <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive mb-4">
                 {error}
@@ -254,12 +271,18 @@ export default function RegisterPage() {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={isLoading || !registrationData.registrationId}
+                  >
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Verifying...
                       </>
+                    ) : !registrationData.registrationId ? (
+                      "Loading..."
                     ) : (
                       "Verify PIN"
                     )}
@@ -305,12 +328,18 @@ export default function RegisterPage() {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={isLoading || !registrationData.registrationId}
+                  >
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Creating account...
                       </>
+                    ) : !registrationData.registrationId ? (
+                      "Loading..."
                     ) : (
                       "Complete Registration"
                     )}
