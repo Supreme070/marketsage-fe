@@ -53,7 +53,7 @@ export class BaseApiClient {
   private isServer: boolean;
 
   constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v2';
+    this.baseUrl = baseUrl || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v2';
     this.defaultTimeout = 30000; // 30 seconds
     this.defaultRetries = 3;
     this.defaultRetryDelay = 1000; // 1 second

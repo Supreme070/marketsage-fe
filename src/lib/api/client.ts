@@ -346,7 +346,7 @@ export class MarketSageApiClient extends BaseApiClient {
 
 // Default client instance
 export const apiClient = new MarketSageApiClient({
-  baseUrl: process.env.NEXT_PUBLIC_API_URL,
+  baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v2',
   timeout: 30000,
   retries: 3,
   cache: {

@@ -7,18 +7,6 @@
  */
 
 import type { Session } from 'next-auth';
-import { apiClient } from './api-client';
-
-/**
- * Synchronize API client token with NextAuth session
- */
-export function syncApiClientToken(session: Session | null): void {
-  if (session?.accessToken) {
-    apiClient.setToken(session.accessToken);
-  } else {
-    apiClient.clearToken();
-  }
-}
 
 /**
  * Check if user has required role
