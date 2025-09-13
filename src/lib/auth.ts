@@ -45,6 +45,7 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
   },
+  debug: process.env.NODE_ENV === 'development',
   pages: {
     signIn: "/login",
     signOut: "/logout",
@@ -105,38 +106,68 @@ export const authOptions: NextAuthOptions = {
       },
     }),
     CredentialsProvider({
-      name: "Credentials",
+      name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        console.log('🔐 NextAuth: authorize function called with credentials:', { email: credentials?.email, hasPassword: !!credentials?.password });
+        
         if (!credentials?.email || !credentials?.password) {
+          console.log('🔐 NextAuth: Missing credentials, returning null');
           return null;
         }
 
         try {
-          // Use API client to authenticate with backend
-          const response = await apiClient.login(credentials.email, credentials.password);
+          // Use frontend proxy for authentication (standard pattern)
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v2';
+          console.log('🔐 NextAuth: Attempting authentication via proxy:', `${apiUrl}/auth/login`);
+          console.log('🔐 NextAuth: Credentials:', { email: credentials.email, passwordLength: credentials.password?.length });
           
-          if (response.success && response.data) {
-            const { user, token } = response.data;
-            
-            // Store token in user object for use in callbacks
-            return {
-              id: user.id,
-              email: user.email,
-              name: user.name,
-              role: user.role,
-              image: user.image || null,
-              accessToken: token,
-              organizationId: user.organizationId,
-            };
+          const response = await fetch(`${apiUrl}/auth/login`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: credentials.email,
+              password: credentials.password,
+            }),
+          });
+          
+          console.log('🔐 NextAuth: Backend response status:', response.status);
+          
+          if (!response.ok) {
+            console.warn('🔐 NextAuth: Authentication failed: Invalid credentials', { email: credentials.email });
+            return null;
           }
+
+          const result = await response.json();
+          console.log('🔐 NextAuth: Backend response data:', JSON.stringify(result, null, 2));
           
-          return null;
+          if (!result.success || !result.data?.user) {
+            console.warn('🔐 NextAuth: Authentication failed: Invalid response from backend', { email: credentials.email, result });
+            return null;
+          }
+
+          const user = result.data.user;
+          const accessToken = result.data.token || result.token;
+          
+          console.log('🔐 NextAuth: Authentication successful, returning user:', user);
+          
+          // Store token in user object for use in callbacks
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            image: user.image || null,
+            accessToken: accessToken,
+            organizationId: user.organizationId,
+          };
         } catch (error) {
-          console.error("Auth error:", error);
+          console.error("🔐 NextAuth: Auth error:", error);
           return null;
         }
       },
@@ -187,6 +218,9 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async jwt({ token, user }) {
+      console.log('🔐 JWT callback - user:', user);
+      console.log('🔐 JWT callback - token:', token);
+      
       if (user) {
         token.id = user.id;
         token.email = user.email;
@@ -194,10 +228,14 @@ export const authOptions: NextAuthOptions = {
         token.name = user.name;
         token.accessToken = user.accessToken;
         token.organizationId = user.organizationId;
+        console.log('🔐 JWT callback - updated token:', token);
       }
       return token;
     },
     async session({ session, token }) {
+      console.log('🔐 Session callback - token:', token);
+      console.log('🔐 Session callback - session:', session);
+      
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
@@ -205,6 +243,7 @@ export const authOptions: NextAuthOptions = {
         session.user.name = token.name as string;
         session.accessToken = token.accessToken as string;
         session.organizationId = token.organizationId as string;
+        console.log('🔐 Session callback - updated session:', session);
       }
       return session;
     },

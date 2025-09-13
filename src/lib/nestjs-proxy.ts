@@ -5,8 +5,9 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
+import { getAppRouterSession } from '@/lib/auth/session-utils';
 
-const NESTJS_BASE_URL = process.env.NESTJS_BASE_URL?.replace('localhost', '127.0.0.1') || 'http://127.0.0.1:3006';
+const NESTJS_BASE_URL = process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 
 export async function proxyToNestJS(request: NextRequest) {
   try {
@@ -22,11 +23,22 @@ export async function proxyToNestJS(request: NextRequest) {
     console.log('[NestJS Proxy] Target URL:', nestjsUrl);
     console.log('[NestJS Proxy] Method:', request.method);
 
+    // Get session for authentication
+    const session = await getAppRouterSession();
+
     // Forward all headers from the original request
     const headers: Record<string, string> = {};
     request.headers.forEach((value, key) => {
       headers[key] = value;
     });
+
+    // Add Authorization header if session exists
+    if (session?.accessToken) {
+      headers['Authorization'] = `Bearer ${session.accessToken}`;
+      console.log('[NestJS Proxy] Added Authorization header');
+    } else {
+      console.log('[NestJS Proxy] No session/access token found');
+    }
 
     // Ensure Content-Type is set for non-GET requests
     if (request.method !== 'GET' && !headers['content-type']) {

@@ -1,13 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getAppRouterSession } from "@/lib/auth/session-utils";
 
 export async function GET(request: NextRequest) {
   try {
     console.log("=== DEBUG AUTH ===");
     
-    // Check session
-    const session = await getServerSession(authOptions);
+    // Check session using App Router compatible method
+    const session = await getAppRouterSession();
     console.log("Session:", JSON.stringify(session, null, 2));
     
     // Check cookies
@@ -24,7 +23,7 @@ export async function GET(request: NextRequest) {
       session,
       cookies: cookies ? cookies.split(';').length : 0,
       nextAuthCookies: nextAuthCookies || [],
-      authConfigLoaded: !!authOptions,
+      authConfigLoaded: true,
     });
   } catch (error) {
     console.error("Debug auth error:", error);

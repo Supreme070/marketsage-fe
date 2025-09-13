@@ -7,15 +7,14 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getAppRouterSession } from '@/lib/auth/session-utils';
 import { socialMediaConnectionService } from '@/lib/social-media/social-media-connection-service';
 import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !session.user.organizationId) {
+    const session = await getAppRouterSession();
+    if (!session?.user?.id || !session.organizationId) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
@@ -59,8 +58,8 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !session.user.organizationId) {
+    const session = await getAppRouterSession();
+    if (!session?.user?.id || !session.organizationId) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
