@@ -1,5 +1,5 @@
 import NextAuth from "next-auth";
-import { authOptions } from "@/lib/auth/auth-options";
+import { authOptions } from "@/lib/auth";
 
 // NextAuth handler - now configured to work with backend API
 const handler = NextAuth(authOptions);

@@ -5,8 +5,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getAppRouterSession } from '@/lib/auth/session-utils';
 
 // Configuration
 const NESTJS_BASE_URL = process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
@@ -67,7 +66,16 @@ export async function proxyToBackend(
     // Authentication handling
     let authToken: string | undefined;
     if (requireAuth) {
-      const session = await getServerSession(authOptions);
+      const session = await getAppRouterSession();
+      
+      if (enableLogging) {
+        console.log(`[API Proxy] Session check for ${frontendPath}:`, { 
+          hasSession: !!session, 
+          hasUser: !!session?.user,
+          hasAccessToken: !!session?.accessToken 
+        });
+      }
+      
       if (!session || !session.user) {
         if (enableLogging) {
           console.log(`[API Proxy] Authentication failed for ${frontendPath}`);
@@ -84,8 +92,12 @@ export async function proxyToBackend(
         );
       }
 
-      // Extract JWT token from session (assumes it's stored in user object)
+      // Extract JWT token from session
       authToken = session.accessToken as string;
+      
+      if (enableLogging) {
+        console.log(`[API Proxy] Using access token for ${frontendPath}:`, authToken ? 'present' : 'missing');
+      }
     }
 
     // Prepare headers

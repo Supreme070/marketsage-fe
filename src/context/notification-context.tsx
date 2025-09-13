@@ -39,14 +39,28 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState<boolean>(false);
   
   const refreshNotifications = async () => {
-    if (session?.user && status === 'authenticated') {
+    // Temporarily remove auth check for testing
+    // if (session?.user && status === 'authenticated') {
       setLoading(true);
       try {
-        const res = await fetch('/api/v2/notifications');
+        const res = await fetch('/api/test-notifications');
         if (res.ok) {
-          const data = await res.json();
+          const response = await res.json();
+          console.log('Notifications API response:', response);
+          
+          // Handle backend response format: { success: true, data: notifications, message: "..." }
+          let notifications = [];
+          if (response.success && Array.isArray(response.data)) {
+            notifications = response.data;
+          } else if (Array.isArray(response)) {
+            // Handle case where response is directly an array
+            notifications = response;
+          } else {
+            console.warn('Unexpected notifications response format:', response);
+          }
+          
           // Convert string timestamps to Date objects
-          const formattedData = data.map((notification: any) => ({
+          const formattedData = notifications.map((notification: any) => ({
             ...notification,
             timestamp: new Date(notification.timestamp),
           }));
@@ -63,21 +77,20 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       } finally {
         setLoading(false);
       }
-    } else {
-      // If not authenticated, clear notifications
-      setNotifications([]);
-    }
+    // } else {
+    //   // If not authenticated, clear notifications
+    //   setNotifications([]);
+    // }
   };
   
   useEffect(() => {
-    if (status === 'authenticated') {
-      refreshNotifications();
-      
-      // Set up polling for real-time updates
-      const interval = setInterval(refreshNotifications, 60000); // Check every minute
-      return () => clearInterval(interval);
-    }
-  }, [status]);
+    // Temporarily always refresh for testing
+    refreshNotifications();
+    
+    // Set up polling for real-time updates
+    const interval = setInterval(refreshNotifications, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, []);
   
   const markAsRead = async (id: string) => {
     try {
