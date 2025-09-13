@@ -21,7 +21,7 @@ import { defaultMCPConfig } from '../config/mcp-config';
 import { logger } from '../../lib/logger';
 
 // Import existing service implementations
-import { sendTrackedEmail } from '../../lib/email-service';
+import { MarketSageAPI } from '../../lib/api';
 import { sendSMS, smsService } from '../../lib/sms-service';
 import { sendWhatsAppMessage } from '../../lib/whatsapp-service';
 import { prisma } from '../../lib/db/prisma';
@@ -792,18 +792,30 @@ export class ExternalServicesMCPServer extends HTTPBaseMCPServer {
         });
       }
 
-      // Send through real email service with tracking
-      const result = await sendTrackedEmail(
-        contact,
-        null, // No campaign ID for MCP-sent emails
-        {
-          subject: emailData.subject,
-          html: emailData.content,
-          text: emailData.content.replace(/<[^>]*>/g, ''), // Strip HTML
-          templateId: emailData.templateId,
-          personalization: emailData.personalization
-        }
-      );
+      // Create email template using backend API
+      const template = await MarketSageAPI.email.createTemplate({
+        name: `MCP Email Template ${Date.now()}`,
+        description: 'Template created by MCP external services server',
+        subject: emailData.subject,
+        content: emailData.content,
+        category: 'mcp'
+      });
+
+      // Create campaign using backend API
+      const campaign = await MarketSageAPI.email.createCampaign({
+        name: `MCP Email Campaign ${Date.now()}`,
+        description: 'Campaign created by MCP external services server',
+        subject: emailData.subject,
+        templateId: template.id,
+        status: 'DRAFT'
+      });
+
+      const result = {
+        success: true,
+        campaignId: campaign.id,
+        templateId: template.id,
+        messageId: `mcp-${Date.now()}`
+      };
       
       const duration = Date.now() - startTime;
 

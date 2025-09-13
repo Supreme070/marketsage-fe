@@ -273,3 +273,6 @@ export function useApiStatus() {
 
 // Export all API hooks
 export * from './useApi';
+
+// Export useEmail hook
+export { useEmail } from '../../../hooks/useEmail';

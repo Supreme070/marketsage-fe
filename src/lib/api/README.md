@@ -311,6 +311,103 @@ const apiKey = await apiClient.leadpulse.createApiKey({
 });
 ```
 
+### Email Service
+
+The Email service provides comprehensive email marketing functionality including campaigns, templates, and providers.
+
+#### Campaign Management
+```typescript
+// Create email campaign
+const campaign = await apiClient.email.createCampaign({
+  name: 'Welcome Campaign',
+  description: 'Welcome new users',
+  subject: 'Welcome to MarketSage!',
+  from: 'noreply@marketsage.com',
+  content: '<h1>Welcome!</h1><p>Thank you for joining us.</p>',
+  listIds: ['list-id-1', 'list-id-2'],
+  segmentIds: ['segment-id-1']
+});
+
+// Get campaigns
+const campaigns = await apiClient.email.getCampaigns({
+  page: 1,
+  limit: 10,
+  status: 'DRAFT'
+});
+
+// Send campaign
+const result = await apiClient.email.sendCampaign('campaign-id', {
+  scheduledFor: '2024-01-01T10:00:00Z',
+  testMode: false
+});
+
+// Get campaign analytics
+const analytics = await apiClient.email.getCampaignAnalytics('campaign-id', {
+  startDate: '2024-01-01',
+  endDate: '2024-01-31'
+});
+```
+
+#### Template Management
+```typescript
+// Create email template
+const template = await apiClient.email.createTemplate({
+  name: 'Welcome Template',
+  description: 'Template for welcome emails',
+  subject: 'Welcome to {{company}}!',
+  content: '<h1>Welcome {{firstName}}!</h1><p>Thank you for joining {{company}}.</p>',
+  category: 'welcome'
+});
+
+// Get templates
+const templates = await apiClient.email.getTemplates({
+  category: 'welcome',
+  search: 'welcome'
+});
+
+// Update template
+const updatedTemplate = await apiClient.email.updateTemplate('template-id', {
+  subject: 'Welcome to {{company}} - Updated!'
+});
+```
+
+#### Provider Management
+```typescript
+// Create email provider
+const provider = await apiClient.email.createProvider({
+  providerType: 'SENDGRID',
+  name: 'SendGrid Production',
+  apiKey: 'your-sendgrid-api-key',
+  fromEmail: 'noreply@marketsage.com',
+  fromName: 'MarketSage',
+  enableTracking: true
+});
+
+// Get providers
+const providers = await apiClient.email.getProviders();
+
+// Test provider
+const testResult = await apiClient.email.testProvider('provider-id', {
+  testEmail: 'test@example.com',
+  testSubject: 'Test Email',
+  testContent: 'This is a test email.'
+});
+```
+
+#### Email Tracking
+```typescript
+// Track email activity
+const activity = await apiClient.email.trackActivity(
+  'campaign-id',
+  'contact-id',
+  'OPENED',
+  { timestamp: new Date().toISOString() }
+);
+
+// Unsubscribe contact
+const result = await apiClient.email.unsubscribeContact('contact-id', 'campaign-id');
+```
+
 ## React Hooks
 
 ### Data Fetching Hooks

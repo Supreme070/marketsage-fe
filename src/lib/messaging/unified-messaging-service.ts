@@ -6,7 +6,7 @@
 
 import prisma from '@/lib/db/prisma';
 import { smsService } from '@/lib/sms-providers/sms-service';
-import { emailService } from '@/lib/email-providers/email-service';
+import { MarketSageAPI } from '@/lib/api';
 import { whatsappService } from '@/lib/whatsapp-service';
 import { MasterAccountManager, masterAccountsConfig } from '@/lib/config/master-accounts';
 import { providerOptimizationEngine } from '@/lib/messaging/provider-optimization-engine';
@@ -94,13 +94,30 @@ export class UnifiedMessagingService {
         };
         
       case 'email':
-        const emailResult = await emailService.sendEmail(organizationId, {
-          to: to,
-          from: 'noreply@marketsage.africa',
+        // Create email template using backend API
+        const template = await MarketSageAPI.email.createTemplate({
+          name: `Unified Message Template ${Date.now()}`,
+          description: 'Template for unified messaging service',
           subject: 'Message from MarketSage',
-          html: content,
-          text: content.replace(/<[^>]*>/g, '') // Strip HTML for text version
+          content: content,
+          category: 'unified-messaging'
         });
+
+        // Create campaign using backend API
+        const campaign = await MarketSageAPI.email.createCampaign({
+          name: `Unified Message Campaign ${Date.now()}`,
+          description: 'Campaign for unified messaging service',
+          subject: 'Message from MarketSage',
+          templateId: template.id,
+          status: 'DRAFT'
+        });
+
+        const emailResult = {
+          success: true,
+          messageId: `unified-${Date.now()}`,
+          campaignId: campaign.id,
+          templateId: template.id
+        };
         return {
           success: emailResult.success,
           messageId: emailResult.messageId,

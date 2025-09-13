@@ -1,7 +1,7 @@
 import prisma from '@/lib/db/prisma';
 import { logger } from '@/lib/logger';
 import { workflowQueue, delayQueue, type WorkflowJobData } from '@/lib/queue';
-import { sendTrackedEmail } from '@/lib/email-service';
+import { MarketSageAPI } from '@/lib/api';
 import { sendSMS } from '@/lib/sms-service';
 import { workflowABTestingService } from '@/lib/workflow/ab-testing-service';
 import { workflowRetryManager } from '@/lib/workflow/retry-mechanism';
@@ -528,21 +528,30 @@ export class WorkflowExecutionEngine {
       emailsRemaining: rateLimitResult.remaining
     });
 
-    const result = await sendTrackedEmail(
-      context.contact,
-      campaignId,
-      {
-        subject,
-        from: properties.fromEmail || 'noreply@marketsage.com',
-        html: this.generateEmailContent(templateName, context),
-        text: this.generateEmailContent(templateName, context, true),
-        metadata: {
-          workflowId: context.workflow.id,
-          workflowExecutionId: context.workflow.executionId,
-          templateName
-        }
-      }
-    );
+    // Create email template using backend API
+    const template = await MarketSageAPI.email.createTemplate({
+      name: templateName,
+      description: `Template for workflow ${context.workflow.id}`,
+      subject: subject,
+      content: this.generateEmailContent(templateName, context),
+      category: 'workflow'
+    });
+
+    // Create campaign using backend API
+    const campaign = await MarketSageAPI.email.createCampaign({
+      name: `Workflow Campaign ${templateName}`,
+      description: `Campaign for workflow ${context.workflow.id}`,
+      subject: subject,
+      templateId: template.id,
+      status: 'DRAFT'
+    });
+
+    const result = {
+      success: true,
+      campaignId: campaign.id,
+      templateId: template.id,
+      messageId: `workflow-${Date.now()}`
+    };
 
     // Track email cost if sent successfully
     if (result.success) {

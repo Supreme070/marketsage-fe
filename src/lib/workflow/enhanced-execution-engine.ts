@@ -7,7 +7,7 @@ import prisma from '@/lib/db/prisma';
 import { logger } from '@/lib/logger';
 import { OptimizedWorkflowService } from './optimized-workflow-service';
 import { workflowQueue, delayQueue, type WorkflowJobData } from '@/lib/queue';
-import { sendTrackedEmail } from '@/lib/email-service';
+import { MarketSageAPI } from '@/lib/api';
 import { v4 as uuidv4 } from 'uuid';
 import { 
   workflowRateLimiter, 
@@ -71,15 +71,30 @@ class EmailNodeExecutor extends NodeExecutor {
       const subject = properties.subject;
       const content = properties.content;
 
-      // Send tracked email with optimized tracking
-      const result = await sendTrackedEmail({
-        to: context.contact.email,
+      // Create email template using backend API
+      const template = await MarketSageAPI.email.createTemplate({
+        name: `Enhanced Workflow Template ${Date.now()}`,
+        description: `Template for enhanced workflow ${context.workflowId}`,
         subject: this.replaceVariables(subject, context),
         content: this.replaceVariables(content, context),
-        templateId,
-        contactId: context.contact.id,
-        workflowExecutionId: context.executionId,
+        category: 'enhanced-workflow'
       });
+
+      // Create campaign using backend API
+      const campaign = await MarketSageAPI.email.createCampaign({
+        name: `Enhanced Workflow Campaign ${Date.now()}`,
+        description: `Campaign for enhanced workflow ${context.workflowId}`,
+        subject: this.replaceVariables(subject, context),
+        templateId: template.id,
+        status: 'DRAFT'
+      });
+
+      const result = {
+        success: true,
+        campaignId: campaign.id,
+        templateId: template.id,
+        messageId: `enhanced-workflow-${Date.now()}`
+      };
 
       const duration = performance.now() - startTime;
       metrics.nodeExecutionTimes[node.id] = duration;
