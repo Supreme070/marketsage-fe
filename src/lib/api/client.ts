@@ -10,6 +10,7 @@ import { CommunicationsService } from './services/communications.service';
 import { NotificationsService } from './services/notifications.service';
 import { SubscriptionsService } from './services/subscriptions.service';
 import { WorkflowsService } from './services/workflows.service';
+import { LeadPulseService } from './services/leadpulse.service';
 import { RetryManager, CircuitBreaker, RateLimiter } from './utils/retry';
 import { CacheManager, globalCache } from './utils/cache';
 
@@ -45,6 +46,7 @@ export class MarketSageApiClient extends BaseApiClient {
   public readonly notifications: NotificationsService;
   public readonly subscriptions: SubscriptionsService;
   public readonly workflows: WorkflowsService;
+  public readonly leadpulse: LeadPulseService;
 
   // Utility instances
   private retryManager: RetryManager;
@@ -65,6 +67,7 @@ export class MarketSageApiClient extends BaseApiClient {
     this.notifications = new NotificationsService(config.baseUrl);
     this.subscriptions = new SubscriptionsService(config.baseUrl);
     this.workflows = new WorkflowsService(config.baseUrl);
+    this.leadpulse = new LeadPulseService(config.baseUrl);
 
     // Initialize utilities
     this.retryManager = new RetryManager({
@@ -262,6 +265,8 @@ export class MarketSageApiClient extends BaseApiClient {
           communications: true,
           notifications: true,
           subscriptions: true,
+          workflows: true,
+          leadpulse: true,
         },
         cache: {
           enabled: true,
@@ -289,6 +294,8 @@ export class MarketSageApiClient extends BaseApiClient {
           communications: false,
           notifications: false,
           subscriptions: false,
+          workflows: false,
+          leadpulse: false,
         },
         cache: {
           enabled: true,
@@ -339,6 +346,8 @@ export class MarketSageApiClient extends BaseApiClient {
       this.communications.setBaseUrl(config.baseUrl);
       this.notifications.setBaseUrl(config.baseUrl);
       this.subscriptions.setBaseUrl(config.baseUrl);
+      this.workflows.setBaseUrl(config.baseUrl);
+      this.leadpulse.setBaseUrl(config.baseUrl);
     }
 
     if (config.retries !== undefined) {
