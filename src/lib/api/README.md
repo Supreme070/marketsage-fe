@@ -402,7 +402,7 @@ const customClient = new MarketSageApiClient({
 
 ```bash
 # .env.local
-NEXT_PUBLIC_API_URL=http://localhost:3001/api/v2
+NEXT_PUBLIC_API_URL=http://localhost:3006/api/v2
 API_TOKEN=your-server-side-token
 ```
 

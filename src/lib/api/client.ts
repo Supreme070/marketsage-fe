@@ -9,6 +9,7 @@ import { AIService } from './services/ai.service';
 import { CommunicationsService } from './services/communications.service';
 import { NotificationsService } from './services/notifications.service';
 import { SubscriptionsService } from './services/subscriptions.service';
+import { WorkflowsService } from './services/workflows.service';
 import { RetryManager, CircuitBreaker, RateLimiter } from './utils/retry';
 import { CacheManager, globalCache } from './utils/cache';
 
@@ -43,6 +44,7 @@ export class MarketSageApiClient extends BaseApiClient {
   public readonly communications: CommunicationsService;
   public readonly notifications: NotificationsService;
   public readonly subscriptions: SubscriptionsService;
+  public readonly workflows: WorkflowsService;
 
   // Utility instances
   private retryManager: RetryManager;
@@ -62,6 +64,7 @@ export class MarketSageApiClient extends BaseApiClient {
     this.communications = new CommunicationsService(config.baseUrl);
     this.notifications = new NotificationsService(config.baseUrl);
     this.subscriptions = new SubscriptionsService(config.baseUrl);
+    this.workflows = new WorkflowsService(config.baseUrl);
 
     // Initialize utilities
     this.retryManager = new RetryManager({
@@ -346,7 +349,7 @@ export class MarketSageApiClient extends BaseApiClient {
 
 // Default client instance
 export const apiClient = new MarketSageApiClient({
-  baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v2',
+  baseUrl: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3006/api/v2',
   timeout: 30000,
   retries: 3,
   cache: {

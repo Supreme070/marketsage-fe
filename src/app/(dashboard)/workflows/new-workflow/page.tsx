@@ -35,6 +35,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { apiClient } from "@/lib/api";
 
 interface TemplateCard {
   id: string;
@@ -724,25 +725,14 @@ export default function NewWorkflowPage() {
         definition.nodes.push(triggerNode);
       }
 
-      // Create the workflow
-      const response = await fetch('/api/v2/workflows', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: workflowName,
-          description: workflowDescription,
-          status: 'INACTIVE',
-          definition: JSON.stringify(definition)
-        }),
+      // Create the workflow using the API client
+      const workflow = await apiClient.workflows.createWorkflow({
+        name: workflowName,
+        description: workflowDescription,
+        status: 'INACTIVE',
+        definition: definition
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to create workflow');
-      }
-
-      const workflow = await response.json();
       toast.success('Workflow created successfully');
       
       // Redirect to the workflow editor

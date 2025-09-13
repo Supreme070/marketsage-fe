@@ -18,6 +18,7 @@ declare module 'next-auth' {
       organizationId: string;
       organizationName: string;
     } & DefaultSession['user'];
+    accessToken?: string;
   }
 }
 
@@ -27,6 +28,7 @@ declare module 'next-auth/jwt' {
     role: string;
     organizationId: string;
     organizationName: string;
+    accessToken?: string;
   }
 }
 
@@ -90,11 +92,12 @@ export const authOptions: NextAuthOptions = {
           }
 
           const user = result.data.user;
+          const accessToken = result.data.token || result.token;
 
           // Record successful attempt (clears rate limit)
           authRateLimiter.recordSuccessfulAttempt(identifier, '/api/auth/signin');
 
-          // Return user with tenant context
+          // Return user with tenant context and access token
           return {
             id: user.id,
             name: user.name,
@@ -102,6 +105,7 @@ export const authOptions: NextAuthOptions = {
             role: user.role,
             organizationId: user.organizationId || 'default-org-migration',
             organizationName: user.organizationName || 'Default Organization',
+            accessToken: accessToken,
           };
 
         } catch (error) {
@@ -122,6 +126,7 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
         token.organizationId = user.organizationId;
         token.organizationName = user.organizationName;
+        token.accessToken = (user as any).accessToken;
       }
       return token;
     },
@@ -131,6 +136,7 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role as string;
         session.user.organizationId = token.organizationId as string;
         session.user.organizationName = token.organizationName as string;
+        session.accessToken = token.accessToken as string;
       }
       return session;
     },

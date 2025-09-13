@@ -34,6 +34,7 @@ export { AIService } from './services/ai.service';
 export { CommunicationsService } from './services/communications.service';
 export { NotificationsService } from './services/notifications.service';
 export { SubscriptionsService } from './services/subscriptions.service';
+export { WorkflowsService } from './services/workflows.service';
 
 // TypeScript types
 export * from './types';
@@ -93,6 +94,7 @@ export const MarketSageAPI = {
   communications: apiClient.communications,
   notifications: apiClient.notifications,
   subscriptions: apiClient.subscriptions,
+  workflows: apiClient.workflows,
   
   // Utility methods
   clearCache: () => apiClient.clearCache(),
