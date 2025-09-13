@@ -398,11 +398,30 @@ const customClient = new MarketSageApiClient({
 });
 ```
 
+## Architecture
+
+The API client uses a proxy pattern to communicate with the backend:
+
+```
+Frontend (localhost:3000) 
+    ↓ /api/v2/* requests
+Next.js Proxy Route (/api/v2/[[...path]]/route.ts)
+    ↓ forwards to
+NestJS Backend (localhost:3006)
+```
+
+This architecture provides:
+- **Consistent API patterns** across the application
+- **Proper authentication handling** through the proxy
+- **Middleware support** for logging, rate limiting, etc.
+- **Gradual migration** from frontend to backend APIs
+- **CORS handling** and request transformation
+
 ### Environment Variables
 
 ```bash
 # .env.local
-NEXT_PUBLIC_API_URL=http://localhost:3006/api/v2
+NEXT_PUBLIC_API_URL=http://localhost:3000/api/v2
 API_TOKEN=your-server-side-token
 ```
 
