@@ -247,6 +247,70 @@ await apiClient.ai.streamChat(
 );
 ```
 
+### LeadPulse Service
+
+```typescript
+// Form management
+const form = await apiClient.leadpulse.createForm({
+  name: 'Contact Form',
+  description: 'Main contact form',
+  status: 'PUBLISHED',
+  layout: 'SINGLE_COLUMN',
+  fields: [
+    {
+      type: 'TEXT',
+      label: 'Name',
+      required: true,
+      width: 'FULL',
+      order: 1
+    }
+  ]
+});
+
+// Form submission (public endpoint - requires API key)
+apiClient.leadpulse.configurePublicAccess('ms_your_api_key', 'https://yourdomain.com');
+const submission = await apiClient.leadpulse.submitForm({
+  formId: 'form-id',
+  data: { name: 'John Doe', email: 'john@example.com' },
+  context: { utmSource: 'google', utmMedium: 'cpc' }
+});
+apiClient.leadpulse.clearPublicAccess();
+
+// Visitor tracking (public endpoint - requires API key)
+apiClient.leadpulse.configurePublicAccess('ms_your_api_key', 'https://yourdomain.com');
+const visitor = await apiClient.leadpulse.createVisitor({
+  fingerprint: 'unique-visitor-fingerprint',
+  ipAddress: '192.168.1.1',
+  userAgent: 'Mozilla/5.0...',
+  country: 'US',
+  city: 'San Francisco'
+});
+
+const touchpoint = await apiClient.leadpulse.createTouchpoint({
+  visitorId: visitor.id,
+  type: 'PAGEVIEW',
+  url: 'https://example.com/page',
+  metadata: { title: 'Page Title' }
+});
+apiClient.leadpulse.clearPublicAccess();
+
+// Insights and analytics (requires JWT authentication)
+const insights = await apiClient.leadpulse.getInsights({
+  type: 'BEHAVIOR',
+  importance: 'HIGH',
+  limit: 10
+});
+
+const analytics = await apiClient.leadpulse.getAnalytics();
+
+// API key management
+const apiKey = await apiClient.leadpulse.createApiKey({
+  name: 'Production API Key',
+  description: 'For production website',
+  expiresAt: '2024-12-31T23:59:59Z'
+});
+```
+
 ## React Hooks
 
 ### Data Fetching Hooks
