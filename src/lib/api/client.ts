@@ -11,6 +11,7 @@ import { NotificationsService } from './services/notifications.service';
 import { SubscriptionsService } from './services/subscriptions.service';
 import { WorkflowsService } from './services/workflows.service';
 import { LeadPulseService } from './services/leadpulse.service';
+import { EmailService } from './services/email.service';
 import { RetryManager, CircuitBreaker, RateLimiter } from './utils/retry';
 import { CacheManager, globalCache } from './utils/cache';
 
@@ -47,6 +48,7 @@ export class MarketSageApiClient extends BaseApiClient {
   public readonly subscriptions: SubscriptionsService;
   public readonly workflows: WorkflowsService;
   public readonly leadpulse: LeadPulseService;
+  public readonly email: EmailService;
 
   // Utility instances
   private retryManager: RetryManager;
@@ -68,6 +70,7 @@ export class MarketSageApiClient extends BaseApiClient {
     this.subscriptions = new SubscriptionsService(config.baseUrl);
     this.workflows = new WorkflowsService(config.baseUrl);
     this.leadpulse = new LeadPulseService(config.baseUrl);
+    this.email = new EmailService(config.baseUrl);
 
     // Initialize utilities
     this.retryManager = new RetryManager({
@@ -267,6 +270,7 @@ export class MarketSageApiClient extends BaseApiClient {
           subscriptions: true,
           workflows: true,
           leadpulse: true,
+          email: true,
         },
         cache: {
           enabled: true,
@@ -348,6 +352,7 @@ export class MarketSageApiClient extends BaseApiClient {
       this.subscriptions.setBaseUrl(config.baseUrl);
       this.workflows.setBaseUrl(config.baseUrl);
       this.leadpulse.setBaseUrl(config.baseUrl);
+      this.email.setBaseUrl(config.baseUrl);
     }
 
     if (config.retries !== undefined) {

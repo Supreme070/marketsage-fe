@@ -64,8 +64,8 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          // Use backend API for authentication
-          const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3006'}/api/v2/auth/login`, {
+          // Use frontend proxy for authentication
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v2'}/auth/login`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -98,7 +98,7 @@ export const authOptions: NextAuthOptions = {
           authRateLimiter.recordSuccessfulAttempt(identifier, '/api/auth/signin');
 
           // Return user with tenant context and access token
-          return {
+          const userData = {
             id: user.id,
             name: user.name,
             email: user.email,
@@ -107,6 +107,9 @@ export const authOptions: NextAuthOptions = {
             organizationName: user.organizationName || 'Default Organization',
             accessToken: accessToken,
           };
+          
+          console.log('Authorize callback - returning user:', userData);
+          return userData;
 
         } catch (error) {
           console.error('Authentication error:', error);
@@ -121,22 +124,30 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user }) {
+      console.log('JWT callback - user:', user);
+      console.log('JWT callback - token:', token);
+      
       if (user) {
         token.id = user.id;
         token.role = user.role;
         token.organizationId = user.organizationId;
         token.organizationName = user.organizationName;
         token.accessToken = (user as any).accessToken;
+        console.log('JWT callback - updated token:', token);
       }
       return token;
     },
     async session({ session, token }) {
+      console.log('Session callback - token:', token);
+      console.log('Session callback - session:', session);
+      
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
         session.user.organizationId = token.organizationId as string;
         session.user.organizationName = token.organizationName as string;
         session.accessToken = token.accessToken as string;
+        console.log('Session callback - updated session:', session);
       }
       return session;
     },

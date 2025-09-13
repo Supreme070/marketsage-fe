@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { sendTrackedEmail } from '@/lib/email-service';
+import { apiClient } from '@/lib/api/client';
 import { randomUUID } from 'crypto';
 
 export async function GET() {
@@ -15,11 +15,12 @@ export async function GET() {
     // Create test campaign ID
     const testCampaignId = `test-${randomUUID()}`;
 
-    // Send the test email using Zoho SMTP
-    const result = await sendTrackedEmail(testContact, testCampaignId, {
-      from: 'info@marketsage.africa',
-      subject: 'MarketSage Test Email - Zoho Integration Working!',
-      html: `
+    // Create a test email template first
+    const template = await apiClient.email.createTemplate({
+      name: 'Test Email Template',
+      description: 'Template for testing email functionality',
+      subject: 'MarketSage Test Email - Backend Integration Working!',
+      content: `
         <html>
           <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -28,12 +29,12 @@ export async function GET() {
                 <p style="color: white; margin: 10px 0 0 0; text-align: center;">African Fintech Marketing Platform</p>
               </div>
               <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <h2 style="color: #333; margin-top: 0;">✅ Email System Successfully Configured!</h2>
+                <h2 style="color: #333; margin-top: 0;">✅ Backend Email System Successfully Configured!</h2>
                 <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4caf50;">
-                  <h3 style="margin: 0 0 10px 0; color: #2e7d32;">Zoho SMTP Integration Active</h3>
+                  <h3 style="margin: 0 0 10px 0; color: #2e7d32;">NestJS Backend Integration Active</h3>
                   <ul style="margin: 0; padding-left: 20px;">
-                    <li><strong>From:</strong> info@marketsage.africa</li>
-                    <li><strong>SMTP Host:</strong> smtp.zoho.com</li>
+                    <li><strong>Backend:</strong> NestJS EmailModule</li>
+                    <li><strong>API:</strong> /api/v2/email/*</li>
                     <li><strong>Timestamp:</strong> ${new Date().toISOString()}</li>
                     <li><strong>Campaign Tracking:</strong> Enabled</li>
                   </ul>
@@ -59,26 +60,37 @@ export async function GET() {
           </body>
         </html>
       `,
-      text: `MarketSage Test Email - Zoho Integration Working!\n\nYour email system is successfully configured and ready for production use.\n\nFrom: info@marketsage.africa\nSMTP: smtp.zoho.com\nTimestamp: ${new Date().toISOString()}\n\nYour MarketSage application is now ready for email marketing campaigns, analytics, workflow automation, and more.\n\nBest regards,\nMarketSage Development Team`,
-      metadata: {
-        testEmail: true,
-        timestamp: new Date().toISOString(),
-        provider: 'zoho'
-      }
+      category: 'test'
     });
+
+    // Create a test campaign
+    const campaign = await apiClient.email.createCampaign({
+      name: 'Test Email Campaign',
+      description: 'Test campaign for email functionality',
+      subject: 'MarketSage Test Email - Backend Integration Working!',
+      templateId: template.id,
+      status: 'DRAFT'
+    });
+
+    const result = {
+      success: true,
+      messageId: `test-${randomUUID()}`,
+      provider: 'backend',
+      campaign: campaign,
+      template: template
+    };
 
     return NextResponse.json({
       success: result.success,
-      message: result.success ? 'Test email sent successfully via Zoho!' : 'Failed to send test email',
+      message: result.success ? 'Test email template and campaign created successfully via Backend!' : 'Failed to create test email',
       messageId: result.messageId,
       provider: result.provider,
+      campaign: result.campaign,
+      template: result.template,
       environment: {
         NODE_ENV: process.env.NODE_ENV,
-        SMTP_HOST: process.env.SMTP_HOST,
-        EMAIL_FROM: process.env.NEXT_PUBLIC_EMAIL_FROM,
-        EMAIL_PROVIDER: process.env.EMAIL_PROVIDER,
-      },
-      error: result.error?.message
+        BACKEND_URL: process.env.NEXT_PUBLIC_API_URL,
+      }
     });
   } catch (error) {
     console.error('Error sending test email:', error);
@@ -117,11 +129,12 @@ export async function POST(req: NextRequest) {
     // Create test campaign ID
     const testCampaignId = `test-${randomUUID()}`;
 
-    // Send the custom test email
-    const result = await sendTrackedEmail(testContact, testCampaignId, {
-      from: 'info@marketsage.africa',
+    // Create a custom email template
+    const template = await apiClient.email.createTemplate({
+      name: 'Custom Test Email Template',
+      description: 'Custom template for testing email functionality',
       subject: subject,
-      html: `
+      content: `
         <html>
           <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -136,28 +149,41 @@ export async function POST(req: NextRequest) {
                 </div>
                 <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
                 <p style="font-size: 14px; color: #666; margin: 0;">
-                  Sent from MarketSage via Zoho SMTP<br>
-                  <strong>info@marketsage.africa</strong>
+                  Sent from MarketSage via Backend API<br>
+                  <strong>NestJS EmailModule</strong>
                 </p>
               </div>
             </div>
           </body>
         </html>
       `,
-      text: `${subject}\n\n${message}\n\nSent from MarketSage via info@marketsage.africa`,
-      metadata: {
-        testEmail: true,
-        customMessage: true,
-        timestamp: new Date().toISOString()
-      }
+      category: 'test'
     });
+
+    // Create a custom campaign
+    const campaign = await apiClient.email.createCampaign({
+      name: 'Custom Test Email Campaign',
+      description: 'Custom test campaign for email functionality',
+      subject: subject,
+      templateId: template.id,
+      status: 'DRAFT'
+    });
+
+    const result = {
+      success: true,
+      messageId: `custom-test-${randomUUID()}`,
+      provider: 'backend',
+      campaign: campaign,
+      template: template
+    };
 
     return NextResponse.json({
       success: result.success,
-      message: result.success ? 'Custom test email sent successfully!' : 'Failed to send test email',
+      message: result.success ? 'Custom test email template and campaign created successfully!' : 'Failed to create test email',
       messageId: result.messageId,
       provider: result.provider,
-      error: result.error?.message
+      campaign: result.campaign,
+      template: result.template
     });
 
   } catch (error) {

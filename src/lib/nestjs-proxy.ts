@@ -22,12 +22,20 @@ export async function proxyToNestJS(request: NextRequest) {
     console.log('[NestJS Proxy] Target URL:', nestjsUrl);
     console.log('[NestJS Proxy] Method:', request.method);
 
-    // Simple fetch without complex headers for now
+    // Forward all headers from the original request
+    const headers: Record<string, string> = {};
+    request.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
+
+    // Ensure Content-Type is set for non-GET requests
+    if (request.method !== 'GET' && !headers['content-type']) {
+      headers['content-type'] = 'application/json';
+    }
+
     const response = await fetch(nestjsUrl, {
       method: request.method,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: request.method !== 'GET' ? await request.text() : undefined,
     });
 
