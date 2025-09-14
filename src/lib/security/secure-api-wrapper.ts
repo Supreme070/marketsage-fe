@@ -7,7 +7,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
+import { authOptions } from '@/lib/auth';
 import { AuthorizationService, Permission } from './authorization';
 import { SecurityValidator, validateRequest } from './input-validation';
 import { rateLimiters } from './rate-limiter';

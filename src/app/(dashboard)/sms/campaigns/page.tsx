@@ -43,68 +43,51 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getSMSCampaigns } from "@/lib/api";
+import { useSMS } from "@/hooks/useSMS";
 import toast from "react-hot-toast";
 // Removed quantum functionality - using real analytics instead
 
-// Define interface for SMS Campaign
-interface SMSCampaign {
-  id: string;
-  name: string;
-  status: string;
-  recipients?: number;
-  deliveryRate?: number;
-  clickRate?: number | null;
-  scheduledDate?: string | null;
-  lastUpdated?: string;
-  createdBy?: string;
-  provider?: string;
-  tags?: string[];
-  message?: string;
-  analytics?: {
-    sent: number;
-    delivered: number;
-    failed: number;
-    deliveryRate: number;
-    responseRate?: number;
-    costPerMessage?: number;
-  };
-}
+// Import SMS types from our new API types
+import type { SMSCampaign, SMSCampaignAnalytics } from "@/lib/api/types/sms";
 
 export default function SMSCampaignsPage() {
   const router = useRouter();
-  const [campaigns, setCampaigns] = useState<SMSCampaign[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    campaigns,
+    campaignsLoading,
+    campaignsError,
+    getCampaigns,
+    getCampaignAnalytics,
+    deleteCampaign,
+    refresh
+  } = useSMS();
+
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [providerFilter, setProviderFilter] = useState<string | null>(null);
-  const [campaignAnalytics, setCampaignAnalytics] = useState<Record<string, any>>({});
+  const [campaignAnalytics, setCampaignAnalytics] = useState<Record<string, SMSCampaignAnalytics>>({});
   const [isLoadingAnalytics, setIsLoadingAnalytics] = useState<Record<string, boolean>>({});
   
   useEffect(() => {
     const fetchCampaigns = async () => {
       try {
-        setIsLoading(true);
-        const data = await getSMSCampaigns();
-        setCampaigns(data);
+        await getCampaigns();
         
         // Load real analytics for sent campaigns
-        await loadCampaignAnalytics(data);
+        await loadCampaignAnalytics(campaigns);
       } catch (error) {
         console.error("Failed to fetch SMS campaigns:", error);
         toast.error("Failed to load SMS campaigns");
-      } finally {
-        setIsLoading(false);
       }
     };
 
     fetchCampaigns();
-  }, []);
+  }, [getCampaigns, campaigns]);
 
   // Load real analytics for SMS campaigns
   const loadCampaignAnalytics = async (campaignList: SMSCampaign[]) => {
-    const analytics: Record<string, any> = {};
+    const analytics: Record<string, SMSCampaignAnalytics> = {};
     
     const campaigns = Array.isArray(campaignList) ? campaignList : [];
     for (const campaign of campaigns) {
@@ -112,9 +95,8 @@ export default function SMSCampaignsPage() {
         setIsLoadingAnalytics(prev => ({ ...prev, [campaign.id]: true }));
         
         try {
-          const response = await fetch(`/api/sms/campaigns/${campaign.id}/analytics`);
-          if (response.ok) {
-            const data = await response.json();
+          const data = await getCampaignAnalytics(campaign.id);
+          if (data) {
             analytics[campaign.id] = data;
           }
         } catch (error) {
@@ -133,9 +115,8 @@ export default function SMSCampaignsPage() {
     setIsLoadingAnalytics(prev => ({ ...prev, [campaign.id]: true }));
     
     try {
-      const response = await fetch(`/api/sms/campaigns/${campaign.id}/analytics`);
-      if (response.ok) {
-        const data = await response.json();
+      const data = await getCampaignAnalytics(campaign.id);
+      if (data) {
         setCampaignAnalytics(prev => ({ ...prev, [campaign.id]: data }));
         toast.success('Analytics refreshed successfully');
       } else {
@@ -250,17 +231,10 @@ export default function SMSCampaignsPage() {
   const handleDeleteCampaign = async (id: string) => {
     if (confirm("Are you sure you want to delete this campaign?")) {
       try {
-        const response = await fetch(`/api/sms/campaigns/${id}`, {
-          method: 'DELETE'
-        });
-        
-        if (response.ok) {
-          toast.success("Campaign deleted successfully");
-          // Refresh campaigns list
-          setCampaigns((campaigns || []).filter(campaign => campaign.id !== id));
-        } else {
-          toast.error("Failed to delete campaign");
-        }
+        await deleteCampaign(id);
+        toast.success("Campaign deleted successfully");
+        // Refresh campaigns list
+        await refresh();
       } catch (error) {
         console.error("Error deleting campaign:", error);
         toast.error("Failed to delete campaign");
@@ -271,16 +245,18 @@ export default function SMSCampaignsPage() {
   // Handle campaign duplication
   const handleDuplicateCampaign = async (id: string) => {
     try {
-      const response = await fetch(`/api/sms/campaigns/${id}/duplicate`, {
-        method: 'POST'
+      const response = await fetch(`/api/v2/sms/campaigns/${id}/duplicate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
       
       if (response.ok) {
-        const newCampaign = await response.json();
-        toast.success("Campaign duplicated successfully");
+        const result = await response.json();
+        toast.success(result.message);
         // Refresh campaigns list
-        const updatedCampaigns = await getSMSCampaigns();
-        setCampaigns(updatedCampaigns);
+        await refresh();
       } else {
         toast.error("Failed to duplicate campaign");
       }
@@ -589,7 +565,7 @@ export default function SMSCampaignsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
+                {campaignsLoading ? (
                   <TableRow>
                     <TableCell colSpan={7} className="h-24 text-center">
                       <div className="flex justify-center items-center">

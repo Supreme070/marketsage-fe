@@ -272,6 +272,36 @@ export default function EmailCampaignsPage() {
     }
   };
 
+  const handleDuplicateCampaign = async (id: string) => {
+    try {
+      const response = await fetch(`/api/v2/email/campaigns/${id}/duplicate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        toast({
+          title: "Success",
+          description: result.message,
+        });
+        // Refresh campaigns list
+        fetchCampaigns();
+      } else {
+        throw new Error(`Error: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("Error duplicating campaign:", error);
+      toast({
+        title: "Error",
+        description: "Failed to duplicate campaign",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getFormattedDate = (dateString: string | null) => {
     if (!dateString) return "-";
     return format(new Date(dateString), "MMM d, yyyy");
@@ -617,7 +647,7 @@ export default function EmailCampaignsPage() {
                                 <BarChart className="mr-2 h-4 w-4" /> Reports
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDuplicateCampaign(campaign.id)}>
                               <Copy className="mr-2 h-4 w-4" /> Duplicate
                             </DropdownMenuItem>
                             {campaignAnalytics[campaign.id] && (

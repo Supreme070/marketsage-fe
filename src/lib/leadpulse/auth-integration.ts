@@ -6,7 +6,7 @@
  */
 
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
+import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/db/prisma';
 import { logger } from '@/lib/logger';
 import { leadPulseRealtimeService } from '@/lib/websocket/leadpulse-realtime';

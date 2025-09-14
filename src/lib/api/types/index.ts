@@ -33,6 +33,9 @@ export * from './leadpulse';
 // Email types
 export * from './email';
 
+// SMS types
+export * from './sms';
+
 // Re-export commonly used types with aliases for convenience
 export type { ApiResponse as MarketSageApiResponse } from './common';
 export type { User as MarketSageUser } from './auth';

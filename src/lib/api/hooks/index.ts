@@ -276,3 +276,6 @@ export * from './useApi';
 
 // Export useEmail hook
 export { useEmail } from '../../../hooks/useEmail';
+
+// Export useSMS hook
+export { useSMS } from '../../../hooks/useSMS';

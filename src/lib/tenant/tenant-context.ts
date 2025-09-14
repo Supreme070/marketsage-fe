@@ -5,7 +5,7 @@
 
 import { headers } from 'next/headers';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
+import { authOptions } from '@/lib/auth';
 
 /**
  * Get the current tenant ID from various sources

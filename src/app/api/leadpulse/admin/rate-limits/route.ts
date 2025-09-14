@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
+import { authOptions } from '@/lib/auth';
 import { leadPulseRateLimiter, RATE_LIMIT_TYPES, type RateLimitType } from '@/lib/leadpulse/rate-limiter';
 import { unauthorized, handleApiError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
