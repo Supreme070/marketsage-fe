@@ -6,7 +6,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
+import { authOptions } from '@/lib/auth';
 // Dynamic import to prevent circular dependencies
 import { logger } from '@/lib/logger';
 import { trace } from '@opentelemetry/api';

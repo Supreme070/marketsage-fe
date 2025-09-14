@@ -34,9 +34,11 @@ declare module 'next-auth/jwt' {
 
 // Production-ready authentication configuration with tenant support
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET,
   session: {
     strategy: 'jwt',
   },
+  debug: process.env.NODE_ENV === 'development',
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -64,8 +66,12 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          // Use frontend proxy for authentication
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v2'}/auth/login`, {
+          // Call backend directly for authentication
+          const backendUrl = process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
+          console.log('🔐 NextAuth: Attempting authentication with backend:', `${backendUrl}/api/v2/auth/login`);
+          console.log('🔐 NextAuth: Credentials:', { email: credentials.email, passwordLength: credentials.password?.length });
+          
+          const response = await fetch(`${backendUrl}/api/v2/auth/login`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -75,6 +81,8 @@ export const authOptions: NextAuthOptions = {
               password: credentials.password,
             }),
           });
+          
+          console.log('🔐 NextAuth: Backend response status:', response.status);
 
           if (!response.ok) {
             // Record failed attempt for rate limiting
@@ -84,10 +92,11 @@ export const authOptions: NextAuthOptions = {
           }
 
           const result = await response.json();
+          console.log('🔐 NextAuth: Backend response data:', JSON.stringify(result, null, 2));
           
           if (!result.success || !result.data?.user) {
             authRateLimiter.recordFailedAttempt(identifier, '/api/auth/signin');
-            console.warn('Authentication failed: Invalid response from backend', { email: credentials.email });
+            console.warn('🔐 NextAuth: Authentication failed: Invalid response from backend', { email: credentials.email, result });
             return null;
           }
 
@@ -124,8 +133,8 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user }) {
-      console.log('JWT callback - user:', user);
-      console.log('JWT callback - token:', token);
+      console.log('🔐 JWT callback - user:', user);
+      console.log('🔐 JWT callback - token:', token);
       
       if (user) {
         token.id = user.id;
@@ -133,13 +142,13 @@ export const authOptions: NextAuthOptions = {
         token.organizationId = user.organizationId;
         token.organizationName = user.organizationName;
         token.accessToken = (user as any).accessToken;
-        console.log('JWT callback - updated token:', token);
+        console.log('🔐 JWT callback - updated token:', token);
       }
       return token;
     },
     async session({ session, token }) {
-      console.log('Session callback - token:', token);
-      console.log('Session callback - session:', session);
+      console.log('🔐 Session callback - token:', token);
+      console.log('🔐 Session callback - session:', session);
       
       if (token && session.user) {
         session.user.id = token.id as string;
@@ -147,7 +156,7 @@ export const authOptions: NextAuthOptions = {
         session.user.organizationId = token.organizationId as string;
         session.user.organizationName = token.organizationName as string;
         session.accessToken = token.accessToken as string;
-        console.log('Session callback - updated session:', session);
+        console.log('🔐 Session callback - updated session:', session);
       }
       return session;
     },

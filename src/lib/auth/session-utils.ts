@@ -85,3 +85,4 @@ export async function getUserRole(): Promise<string | null> {
   const session = await getAppRouterSession();
   return session?.user?.role || null;
 }
+

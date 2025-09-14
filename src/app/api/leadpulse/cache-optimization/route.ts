@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
+import { authOptions } from '@/lib/auth';
 import { leadPulseCacheOptimizer } from '@/lib/leadpulse/cache-optimization';
 import { z } from 'zod';
 
