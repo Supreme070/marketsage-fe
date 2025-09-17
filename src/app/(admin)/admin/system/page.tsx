@@ -1,6 +1,7 @@
 "use client";
 
 import { useAdmin } from "@/components/admin/AdminProvider";
+import { useAdminSystemDashboard } from "@/lib/api/hooks/useAdminSystem";
 import { 
   Server, 
   Database,
@@ -32,7 +33,7 @@ import {
   Eye,
   Target
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSystemHealthRealtime } from "@/hooks/useAdminRealtime";
 
 interface SystemMetric {
@@ -73,85 +74,19 @@ interface InfrastructureMetric {
 export default function AdminSystemPage() {
   const { permissions, staffRole } = useAdmin();
   const [activeTab, setActiveTab] = useState("overview");
-  const [loading, setLoading] = useState(true);
-  const [systemMetrics, setSystemMetrics] = useState<SystemMetric[]>([]);
-  const [services, setServices] = useState<ServiceHealth[]>([]);
-  const [infrastructure, setInfrastructure] = useState<InfrastructureMetric[]>([]);
   
   // Real-time system health updates
   const { isConnected: isRealtimeConnected, systemData } = useSystemHealthRealtime();
-
-  // Real API call to fetch system health data
-  useEffect(() => {
-    const fetchSystemHealth = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch('/api/v2/admin/system/stats');
-        if (!response.ok) {
-          throw new Error('Failed to fetch system health data');
-        }
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          // Transform API response to component format
-          const apiData = data.data;
-          
-          // Set system metrics from API
-          setSystemMetrics([
-            {
-              name: 'CPU Usage',
-              value: apiData.systemResources?.cpu || 0,
-              unit: '%',
-              status: apiData.systemResources?.cpu > 80 ? 'critical' : apiData.systemResources?.cpu > 60 ? 'warning' : 'healthy',
-              trend: 'stable',
-              threshold: { warning: 70, critical: 90 }
-            },
-            {
-              name: 'Memory Usage',
-              value: apiData.systemResources?.memory || 0,
-              unit: '%',
-              status: apiData.systemResources?.memory > 85 ? 'critical' : apiData.systemResources?.memory > 75 ? 'warning' : 'healthy',
-              trend: 'stable',
-              threshold: { warning: 75, critical: 90 }
-            },
-            {
-              name: 'Disk Usage',
-              value: apiData.systemResources?.disk || 0,
-              unit: '%',
-              status: apiData.systemResources?.disk > 90 ? 'critical' : apiData.systemResources?.disk > 80 ? 'warning' : 'healthy',
-              trend: 'stable',
-              threshold: { warning: 80, critical: 95 }
-            },
-            {
-              name: 'Network I/O',
-              value: apiData.systemResources?.network || 0,
-              unit: 'Mbps',
-              status: 'healthy',
-              trend: 'stable',
-              threshold: { warning: 80, critical: 100 }
-            }
-          ]);
-
-          // Set services from API
-          setServices(apiData.services || []);
-
-          // Set infrastructure metrics from API
-          setInfrastructure(apiData.infrastructure || []);
-        }
-      } catch (error) {
-        console.error('Error fetching system health:', error);
-        // Fallback to empty arrays on error
-        setSystemMetrics([]);
-        setServices([]);
-        setInfrastructure([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSystemHealth();
-  }, []);
+  
+  const { 
+    stats, 
+    systemMetrics, 
+    services, 
+    infrastructure, 
+    loading, 
+    error, 
+    refreshAll 
+  } = useAdminSystemDashboard();
 
   if (!permissions.canAccessSystem) {
     return (
@@ -235,6 +170,25 @@ export default function AdminSystemPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="admin-title text-xl mb-2">System_Core_Error</h2>
+          <p className="admin-subtitle mb-4">{error}</p>
+          <button 
+            className="admin-btn admin-btn-primary flex items-center gap-2"
+            onClick={refreshAll}
+          >
+            <RefreshCw className="h-4 w-4" />
+            RETRY_CONNECTION
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6">
       {/* Page Header */}
@@ -256,8 +210,12 @@ export default function AdminSystemPage() {
             }`}></div>
             {isRealtimeConnected ? "LIVE_STREAM_ACTIVE" : "OFFLINE_MODE"}
           </div>
-          <button className="admin-btn admin-btn-primary flex items-center gap-2">
-            <RefreshCw className="h-4 w-4" />
+          <button 
+            className="admin-btn admin-btn-primary flex items-center gap-2"
+            onClick={refreshAll}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             REFRESH_ALL
           </button>
         </div>
@@ -265,7 +223,7 @@ export default function AdminSystemPage() {
 
       {/* System Resource Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        {systemMetrics.map((metric) => (
+        {systemMetrics?.map((metric) => (
           <div key={metric.name} className="admin-stat-card admin-glow-hover">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -348,7 +306,7 @@ export default function AdminSystemPage() {
                   <Clock className="h-6 w-6 text-[hsl(var(--admin-accent))]" />
                   <Activity className="h-4 w-4 text-[hsl(var(--admin-accent))]" />
                 </div>
-                <div className="admin-stat-value">99.9%</div>
+                <div className="admin-stat-value">{stats?.uptime?.formatted || 'N/A'}</div>
                 <div className="admin-stat-label">SYSTEM_UPTIME</div>
                 <div className="admin-stat-change positive">7D_RUNNING</div>
               </div>
@@ -358,7 +316,7 @@ export default function AdminSystemPage() {
                   <Gauge className="h-6 w-6 text-[hsl(var(--admin-secondary))]" />
                   <TrendingDown className="h-4 w-4 text-[hsl(var(--admin-success))]" />
                 </div>
-                <div className="admin-stat-value">145ms</div>
+                <div className="admin-stat-value">{stats?.performance?.responseTime || 0}ms</div>
                 <div className="admin-stat-label">RESPONSE_TIME</div>
                 <div className="admin-stat-change positive">OPTIMAL_PERFORMANCE</div>
               </div>
@@ -371,31 +329,36 @@ export default function AdminSystemPage() {
                 <h2 className="admin-title text-xl">SYSTEM_ALERT_MATRIX</h2>
               </div>
               <div className="space-y-4">
-                <div className="flex items-start gap-4 p-4 border border-[hsl(var(--admin-warning))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                  <AlertTriangle className="h-5 w-5 text-[hsl(var(--admin-warning))] mt-1" />
-                  <div className="flex-1">
-                    <h4 className="admin-title text-sm mb-1">HIGH_MEMORY_USAGE</h4>
-                    <p className="admin-subtitle text-xs mb-2">REDIS_CACHE.MEMORY_89%_UTILIZED</p>
-                    <p className="text-xs text-[hsl(var(--admin-text-muted))]">ALERT_TIME: 2_MINUTES_AGO</p>
+                {stats?.alerts?.length === 0 ? (
+                  <div className="text-center py-8">
+                    <CheckCircle className="h-12 w-12 text-[hsl(var(--admin-success))] mx-auto mb-4" />
+                    <div className="admin-subtitle">NO_ACTIVE_ALERTS</div>
+                    <p className="text-xs text-[hsl(var(--admin-text-muted))] mt-2">ALL_SYSTEMS_OPERATIONAL</p>
                   </div>
-                  <button className="admin-btn text-xs px-3 py-1">
-                    <Eye className="h-3 w-3 mr-1" />
-                    INVESTIGATE
-                  </button>
-                </div>
-
-                <div className="flex items-start gap-4 p-4 border border-[hsl(var(--admin-accent))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                  <Settings className="h-5 w-5 text-[hsl(var(--admin-accent))] mt-1" />
-                  <div className="flex-1">
-                    <h4 className="admin-title text-sm mb-1">SCHEDULED_MAINTENANCE</h4>
-                    <p className="admin-subtitle text-xs mb-2">WHATSAPP_API.MAINTENANCE_WINDOW_ACTIVE</p>
-                    <p className="text-xs text-[hsl(var(--admin-text-muted))]">STARTED: 30_MINUTES_AGO</p>
-                  </div>
-                  <button className="admin-btn text-xs px-3 py-1">
-                    <Clock className="h-3 w-3 mr-1" />
-                    DETAILS
-                  </button>
-                </div>
+                ) : (
+                  stats?.alerts?.map((alert) => (
+                    <div key={alert.id} className={`flex items-start gap-4 p-4 border rounded-lg bg-[hsl(var(--admin-surface-elevated))] ${
+                      alert.type === 'warning' ? 'border-[hsl(var(--admin-warning))]' :
+                      alert.type === 'error' ? 'border-[hsl(var(--admin-danger))]' :
+                      'border-[hsl(var(--admin-accent))]'
+                    }`}>
+                      {alert.type === 'warning' && <AlertTriangle className="h-5 w-5 text-[hsl(var(--admin-warning))] mt-1" />}
+                      {alert.type === 'error' && <XCircle className="h-5 w-5 text-[hsl(var(--admin-danger))] mt-1" />}
+                      {alert.type === 'info' && <Settings className="h-5 w-5 text-[hsl(var(--admin-accent))] mt-1" />}
+                      <div className="flex-1">
+                        <h4 className="admin-title text-sm mb-1">{alert.title.toUpperCase().replace(' ', '_')}</h4>
+                        <p className="admin-subtitle text-xs mb-2">{alert.description}</p>
+                        <p className="text-xs text-[hsl(var(--admin-text-muted))]">
+                          ALERT_TIME: {new Date(alert.timestamp).toLocaleString()}
+                        </p>
+                      </div>
+                      <button className="admin-btn text-xs px-3 py-1">
+                        <Eye className="h-3 w-3 mr-1" />
+                        INVESTIGATE
+                      </button>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
@@ -432,14 +395,14 @@ export default function AdminSystemPage() {
               </div>
 
               <div className="space-y-4">
-                {services.length === 0 ? (
+                {services?.length === 0 ? (
                   <div className="text-center py-8">
                     <Server className="h-12 w-12 text-[hsl(var(--admin-text-muted))] mx-auto mb-4" />
                     <div className="admin-subtitle">NO_SERVICES_DETECTED</div>
                     <p className="text-xs text-[hsl(var(--admin-text-muted))] mt-2">SERVICE_DISCOVERY_IN_PROGRESS</p>
                   </div>
                 ) : (
-                  services.map((service) => (
+                  services?.map((service) => (
                     <div key={service.name} className="admin-card p-4 border border-[hsl(var(--admin-border))]">
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
@@ -518,7 +481,7 @@ export default function AdminSystemPage() {
         {/* Infrastructure Tab */}
         {activeTab === 'infrastructure' && (
           <div className="space-y-6 admin-fade-in">
-            {infrastructure.length === 0 ? (
+            {infrastructure?.length === 0 ? (
               <div className="admin-card p-6">
                 <div className="text-center py-8">
                   <Database className="h-12 w-12 text-[hsl(var(--admin-text-muted))] mx-auto mb-4" />
@@ -527,7 +490,7 @@ export default function AdminSystemPage() {
                 </div>
               </div>
             ) : (
-              infrastructure.map((category) => (
+              infrastructure?.map((category) => (
                 <div key={category.category} className="admin-card p-6">
                   <div className="flex items-center gap-3 mb-6">
                     {category.category === 'Compute' && <Cpu className="h-5 w-5 text-[hsl(var(--admin-primary))]" />}

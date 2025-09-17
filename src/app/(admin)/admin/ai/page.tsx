@@ -1,6 +1,7 @@
 "use client";
 
 import { useAdmin } from "@/components/admin/AdminProvider";
+import { useAdminAIDashboard } from "@/lib/api/hooks/useAdminAI";
 import { 
   Brain, 
   Bot,
@@ -121,68 +122,33 @@ interface AIOperation {
 export default function AdminAIPage() {
   const { permissions, staffRole } = useAdmin();
   const [activeTab, setActiveTab] = useState("overview");
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<AIUsageStats | null>(null);
-  const [models, setModels] = useState<AIModel[]>([]);
-  const [costs, setCosts] = useState<CostBreakdown[]>([]);
-  const [safetyIncidents, setSafetyIncidents] = useState<SafetyIncident[]>([]);
-  const [operations, setOperations] = useState<AIOperation[]>([]);
   const [filterDate, setFilterDate] = useState("today");
   const [filterModel, setFilterModel] = useState("all");
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch('/api/v2/admin/ai');
-        if (!response.ok) {
-          throw new Error('Failed to fetch AI data');
-        }
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          // Set real AI usage stats
-          setStats(data.data.stats);
-          
-          // Set real AI models
-          setModels(data.data.models);
-          
-          // Set real cost breakdown
-          setCosts(data.data.costs);
-          
-          // Set real AI operations
-          setOperations(data.data.operations);
-          
-          // Set real safety incidents
-          setSafetyIncidents(data.data.safetyIncidents || []);
-        }
-      } catch (error) {
-        console.error('Error fetching AI data:', error);
-        // Fallback to empty arrays on error
-        setStats({
-          totalRequests: 0,
-          requestsToday: 0,
-          requestsThisMonth: 0,
-          totalCost: 0,
-          costToday: 0,
-          costThisMonth: 0,
-          averageResponseTime: 0,
-          successRate: 0,
-          activeModels: 0,
-          safetyIncidents: 0
-        });
-        setModels([]);
-        setCosts([]);
-        setOperations([]);
-        setSafetyIncidents([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const { 
+    stats, 
+    statsLoading, 
+    statsError, 
+    models, 
+    modelsLoading, 
+    modelsError, 
+    costs, 
+    costsLoading, 
+    costsError, 
+    safetyIncidents, 
+    safetyIncidentsLoading, 
+    safetyIncidentsError, 
+    operations, 
+    operationsLoading, 
+    operationsError, 
+    analytics, 
+    analyticsLoading, 
+    analyticsError, 
+    refreshAll
+  } = useAdminAIDashboard();
 
-    fetchData();
-  }, []);
+  const loading = statsLoading || modelsLoading || costsLoading || safetyIncidentsLoading || operationsLoading || analyticsLoading;
+  const error = statsError || modelsError || costsError || safetyIncidentsError || operationsError || analyticsError;
 
   if (loading) {
     return (
@@ -191,6 +157,25 @@ export default function AdminAIPage() {
           <div className="admin-loading mx-auto mb-4"></div>
           <h2 className="admin-title text-xl mb-2">AI_NEXUS_LOADING</h2>
           <p className="admin-subtitle">INITIALIZING_ARTIFICIAL_INTELLIGENCE_SYSTEMS...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="admin-title text-xl mb-2">AI_Nexus_Error</h2>
+          <p className="admin-subtitle mb-4">{error}</p>
+          <button 
+            className="admin-btn admin-btn-primary flex items-center gap-2"
+            onClick={refreshAll}
+          >
+            <RefreshCw className="h-4 w-4" />
+            RETRY_CONNECTION
+          </button>
         </div>
       </div>
     );
@@ -307,7 +292,7 @@ export default function AdminAIPage() {
             <Brain className="h-3 w-3" />
             AI_OPERATIONS
           </div>
-          <button className="admin-btn admin-btn-primary flex items-center gap-2">
+          <button className="admin-btn admin-btn-primary flex items-center gap-2" onClick={refreshAll}>
             <RefreshCw className="h-4 w-4" />
             REFRESH_ALL
           </button>
@@ -535,17 +520,17 @@ export default function AdminAIPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-4">
                   <h4 className="admin-title text-sm">BY_MODEL</h4>
-                  {models.map((model) => (
-                    <div key={model.id} className="space-y-2">
+                  {analytics?.byModel.map((item) => (
+                    <div key={item.model} className="space-y-2">
                       <div className="flex justify-between text-xs">
-                        <span className="admin-subtitle">{model.name}</span>
-                        <span className="admin-title">{formatNumber(model.requests)}</span>
+                        <span className="admin-subtitle">{item.model}</span>
+                        <span className="admin-title">{formatNumber(item.requests)}</span>
                       </div>
                       <div className="admin-progress-container">
                         <div 
                           className="admin-progress-bar"
                           style={{
-                            width: `${Math.min((model.requests / 50000) * 100, 100)}%`,
+                            width: `${item.percentage}%`,
                             backgroundColor: 'hsl(var(--admin-primary))'
                           }}
                         ></div>
@@ -556,12 +541,7 @@ export default function AdminAIPage() {
 
                 <div className="space-y-4">
                   <h4 className="admin-title text-sm">BY_TYPE</h4>
-                  {[
-                    { type: 'CHAT', requests: 8430, percentage: 45 },
-                    { type: 'TASK_EXECUTION', requests: 6240, percentage: 33 },
-                    { type: 'CONTENT_GENERATION', requests: 2890, percentage: 15 },
-                    { type: 'ANALYSIS', requests: 1340, percentage: 7 }
-                  ].map((item) => (
+                  {analytics?.byType.map((item) => (
                     <div key={item.type} className="space-y-2">
                       <div className="flex justify-between text-xs">
                         <span className="admin-subtitle">{item.type}</span>
@@ -585,19 +565,19 @@ export default function AdminAIPage() {
                   <div className="admin-card p-4 space-y-3">
                     <div className="flex justify-between">
                       <span className="admin-subtitle text-xs">PEAK_HOUR:</span>
-                      <span className="admin-title text-xs">2:00_PM_-_3:00_PM</span>
+                      <span className="admin-title text-xs">{analytics?.peakUsage.peakHour || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="admin-subtitle text-xs">PEAK_DAY:</span>
-                      <span className="admin-title text-xs">WEDNESDAY</span>
+                      <span className="admin-title text-xs">{analytics?.peakUsage.peakDay || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="admin-subtitle text-xs">AVG_QUEUE_TIME:</span>
-                      <span className="admin-title text-xs">0.8S</span>
+                      <span className="admin-title text-xs">{analytics?.peakUsage.avgQueueTime || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="admin-subtitle text-xs">CAPACITY_USED:</span>
-                      <span className="admin-title text-xs text-[hsl(var(--admin-warning))]">78%</span>
+                      <span className="admin-title text-xs text-[hsl(var(--admin-warning))]">{analytics?.peakUsage.capacityUsed || 0}%</span>
                     </div>
                   </div>
                 </div>

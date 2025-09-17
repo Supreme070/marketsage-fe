@@ -1,6 +1,7 @@
 "use client";
 
 import { useAdmin } from "@/components/admin/AdminProvider";
+import { useAdminSettingsDashboard } from "@/lib/api/hooks/useAdminSettings";
 import { 
   Settings, 
   Users, 
@@ -32,7 +33,7 @@ import {
   Upload,
   Zap
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface StaffMember {
   id: string;
@@ -119,192 +120,18 @@ interface LogSettings {
 export default function AdminSettingsPage() {
   const { permissions, staffRole } = useAdmin();
   const [activeTab, setActiveTab] = useState("overview");
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   
-  // State for different settings sections
-  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
-  const [securitySettings, setSecuritySettings] = useState<SecuritySettings>({} as SecuritySettings);
-  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({} as NotificationSettings);
-  const [systemSettings, setSystemSettings] = useState<SystemSettings>({} as SystemSettings);
-  const [logSettings, setLogSettings] = useState<LogSettings>({} as LogSettings);
-
-  // Real data initialization
-  useEffect(() => {
-    const loadSettingsData = async () => {
-      setLoading(true);
-      
-      try {
-        // Load all settings data in parallel
-        const [staffResponse, securityResponse, notificationResponse, systemResponse, logsResponse] = await Promise.all([
-          fetch('/api/v2/admin/settings?type=staff'),
-          fetch('/api/v2/admin/settings?type=security'),
-          fetch('/api/v2/admin/settings?type=notifications'),
-          fetch('/api/v2/admin/settings?type=system'),
-          fetch('/api/v2/admin/settings?type=logs')
-        ]);
-
-        // Parse responses
-        const staffData = await staffResponse.json();
-        const securityData = await securityResponse.json();
-        const notificationData = await notificationResponse.json();
-        const systemData = await systemResponse.json();
-        const logsData = await logsResponse.json();
-
-        // Set state from API responses
-        if (staffData.success) {
-          setStaffMembers(staffData.data);
-        }
-
-        if (securityData.success) {
-          setSecuritySettings(securityData.data);
-        }
-
-        if (notificationData.success) {
-          setNotificationSettings(notificationData.data);
-        }
-
-        if (systemData.success) {
-          setSystemSettings(systemData.data);
-        }
-
-        if (logsData.success) {
-          setLogSettings(logsData.data);
-        }
-
-      } catch (error) {
-        console.error('Error loading settings data:', error);
-        // Set fallback default values if API fails
-        setStaffMembers([]);
-        setSecuritySettings({
-          sessionTimeout: 1800,
-          twoFactorRequired: false,
-          ipWhitelistEnabled: false,
-          ipWhitelist: [],
-          passwordPolicy: {
-            minLength: 12,
-            requireUppercase: true,
-            requireNumbers: true,
-            requireSymbols: true,
-            maxAge: 90
-          },
-          loginAttempts: {
-            maxAttempts: 5,
-            lockoutDuration: 300
-          }
-        });
-        setNotificationSettings({
-          emailEnabled: true,
-          slackEnabled: false,
-          smsEnabled: false,
-          channels: {
-            security: ['email'],
-            system: ['email'],
-            user: ['email'],
-            billing: ['email']
-          },
-          escalation: {
-            highPriorityMinutes: 30,
-            criticalMinutes: 5
-          }
-        });
-        setSystemSettings({
-          maintenanceMode: false,
-          maintenanceMessage: "MarketSage is undergoing scheduled maintenance. We'll be back shortly.",
-          featureFlags: {},
-          rateLimiting: {
-            api: 1000,
-            auth: 10,
-            bulk: 100
-          },
-          cacheTTL: {
-            session: 1800,
-            data: 300,
-            static: 3600
-          }
-        });
-        setLogSettings({
-          retention: {
-            audit: 365,
-            system: 90,
-            security: 180
-          },
-          levels: {
-            application: 'info',
-            security: 'warn',
-            audit: 'info'
-          },
-          export: {
-            format: 'json',
-            compression: true
-          }
-        });
-      }
-      
-      setLoading(false);
-    };
-
-    loadSettingsData();
-  }, []);
-
-  const handleSave = async () => {
-    setSaving(true);
-    
-    try {
-      // Save all settings in parallel
-      const saveRequests = [
-        fetch('/api/v2/admin/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'update_settings',
-            category: 'security',
-            ...securitySettings
-          })
-        }),
-        fetch('/api/v2/admin/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'update_settings',
-            category: 'notifications',
-            ...notificationSettings
-          })
-        }),
-        fetch('/api/v2/admin/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'update_settings',
-            category: 'system',
-            ...systemSettings
-          })
-        }),
-        fetch('/api/v2/admin/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'update_settings',
-            category: 'logging',
-            ...logSettings
-          })
-        })
-      ];
-
-      const responses = await Promise.all(saveRequests);
-      const successful = responses.every(response => response.ok);
-
-      if (successful) {
-        console.log('Settings saved successfully');
-      } else {
-        console.error('Some settings failed to save');
-      }
-    } catch (error) {
-      console.error('Error saving settings:', error);
-    }
-    
-    setSaving(false);
-  };
+  const { 
+    staffMembers, 
+    securitySettings, 
+    notificationSettings, 
+    systemSettings, 
+    logSettings, 
+    loading, 
+    error, 
+    refreshAll, 
+    saveAll 
+  } = useAdminSettingsDashboard();
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -346,6 +173,37 @@ export default function AdminSettingsPage() {
     );
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="admin-loading mx-auto mb-4"></div>
+          <h2 className="admin-title text-xl mb-2">CONFIG_PANEL_LOADING</h2>
+          <p className="admin-subtitle">INITIALIZING_SYSTEM_CONFIGURATION...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="admin-title text-xl mb-2">Config_Panel_Error</h2>
+          <p className="admin-subtitle mb-4">{error}</p>
+          <button 
+            className="admin-btn admin-btn-primary flex items-center gap-2"
+            onClick={refreshAll}
+          >
+            <RefreshCw className="h-4 w-4" />
+            RETRY_CONNECTION
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6">
       {/* Page Header */}
@@ -360,12 +218,12 @@ export default function AdminSettingsPage() {
             CONFIGURATION_CENTER
           </div>
           <button 
-            className={`admin-btn flex items-center gap-2 ${saving ? 'admin-btn-secondary' : 'admin-btn-primary'}`}
-            onClick={handleSave}
-            disabled={saving}
+            className={`admin-btn flex items-center gap-2 ${loading ? 'admin-btn-secondary' : 'admin-btn-primary'}`}
+            onClick={saveAll}
+            disabled={loading}
           >
             <Save className="h-4 w-4" />
-            {saving ? 'SAVING...' : 'SAVE_ALL'}
+            {loading ? 'SAVING...' : 'SAVE_ALL'}
           </button>
         </div>
       </div>
@@ -411,7 +269,7 @@ export default function AdminSettingsPage() {
                   <Users className="h-6 w-6 text-[hsl(var(--admin-primary))]" />
                   <Activity className="h-4 w-4 text-[hsl(var(--admin-primary))]" />
                 </div>
-                <div className="admin-stat-value">{staffMembers.length}</div>
+                <div className="admin-stat-value">{staffMembers?.length || 0}</div>
                 <div className="admin-stat-label">STAFF_MEMBERS</div>
                 <div className="admin-stat-change positive">ACTIVE_PERSONNEL</div>
               </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useAdmin } from "@/components/admin/AdminProvider";
+import { useAdminDashboard } from "@/lib/api/hooks/useAdminAnalytics";
 import { 
   BarChart3, 
   Users, 
@@ -34,7 +35,7 @@ import {
   Signal,
   Gauge
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface AnalyticsMetrics {
   overview: {
@@ -97,176 +98,84 @@ interface AnalyticsMetrics {
 export default function AdminAnalyticsPage() {
   const { permissions, staffRole } = useAdmin();
   const [activeTab, setActiveTab] = useState("overview");
-  const [metrics, setMetrics] = useState<AnalyticsMetrics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const { analytics, users, revenue, platform, loading, error, lastUpdated, refreshAll } = useAdminDashboard();
 
-  // Real API call to fetch analytics data
-  useEffect(() => {
-    const fetchAnalytics = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch('/api/v2/admin/analytics');
-        if (!response.ok) {
-          throw new Error('Failed to fetch analytics data');
-        }
-        
-        const data = await response.json();
-        if (data.success) {
-          // Transform API data to match UI interface
-          const apiData = data.data;
-          const transformedMetrics: AnalyticsMetrics = {
-            overview: {
-              totalUsers: apiData.overview.totalUsers,
-              totalUsersGrowth: apiData.overview.userGrowthRate,
-              monthlyActiveUsers: apiData.overview.activeUsers,
-              mauGrowth: Math.abs(apiData.overview.userGrowthRate),
-              totalRevenue: apiData.overview.totalRevenue,
-              revenueGrowth: apiData.overview.revenueGrowthRate,
-              averageRevenuePerUser: apiData.revenueAnalytics.averageOrderValue || 0,
-              arpuGrowth: Math.abs(apiData.overview.revenueGrowthRate) * 0.5
-            },
-            users: {
-              newUsers: apiData.overview.usersThisMonth,
-              newUsersGrowth: apiData.overview.userGrowthRate,
-              retentionRate: 78.5,
-              retentionGrowth: 4.2,
-              churnRate: 21.5,
-              churnImprovement: -3.1,
-              averageSessionDuration: 18.5,
-              sessionGrowth: 12.8
-            },
-            revenue: {
-              mrr: apiData.revenueAnalytics.monthlyRevenue,
-              mrrGrowth: apiData.revenueAnalytics.growthRate,
-              arr: apiData.revenueAnalytics.monthlyRevenue * 12,
-              arrGrowth: apiData.revenueAnalytics.growthRate * 1.2,
-              ltv: apiData.revenueAnalytics.averageOrderValue * 10,
-              ltvGrowth: Math.abs(apiData.revenueAnalytics.growthRate) * 0.8,
-              churnRevenue: apiData.revenueAnalytics.monthlyRevenue * 0.1,
-              churnRevenueChange: -5.2
-            },
-            features: {
-              emailCampaigns: { 
-                usage: apiData.campaignAnalytics.channelPerformance[0]?.campaigns || 0, 
-                growth: 15.4 
-              },
-              smsCampaigns: { 
-                usage: apiData.campaignAnalytics.channelPerformance[1]?.campaigns || 0, 
-                growth: 12.8 
-              },
-              whatsappCampaigns: { 
-                usage: apiData.campaignAnalytics.channelPerformance[2]?.campaigns || 0, 
-                growth: 8.9 
-              },
-              leadpulseTracking: { 
-                usage: apiData.leadPulseAnalytics.totalSessions, 
-                growth: 22.1 
-              },
-              aiFeatures: { 
-                usage: Math.floor(apiData.overview.totalUsers * 0.3),
-                growth: 35.7 
-              },
-              workflows: { 
-                usage: apiData.workflowAnalytics.totalExecutions, 
-                growth: 18.3 
-              }
-            },
-            geographic: {
-              nigeria: { users: Math.floor(apiData.overview.totalUsers * 0.6), revenue: apiData.overview.totalRevenue * 0.6, growth: 18.5 },
-              ghana: { users: Math.floor(apiData.overview.totalUsers * 0.15), revenue: apiData.overview.totalRevenue * 0.15, growth: 24.2 },
-              kenya: { users: Math.floor(apiData.overview.totalUsers * 0.12), revenue: apiData.overview.totalRevenue * 0.12, growth: 31.7 },
-              southAfrica: { users: Math.floor(apiData.overview.totalUsers * 0.08), revenue: apiData.overview.totalRevenue * 0.08, growth: 12.4 },
-              other: { users: Math.floor(apiData.overview.totalUsers * 0.05), revenue: apiData.overview.totalRevenue * 0.05, growth: 8.9 }
-            },
-            performance: {
-              apiRequests: apiData.platformMetrics.apiCalls,
-              apiRequestsGrowth: 15.3,
-              responseTime: apiData.platformMetrics.responseTime,
-              responseTimeChange: -12.5,
-              uptime: apiData.platformMetrics.uptime,
-              uptimeChange: 0.2,
-              errorRate: apiData.platformMetrics.errorRate,
-              errorRateChange: -25.8
-            }
-          };
-          setMetrics(transformedMetrics);
-        }
-      } catch (error) {
-        console.error('Error fetching analytics:', error);
-        // Fallback to default metrics on error  
-        setMetrics({
-          overview: {
-            totalUsers: 0,
-            totalUsersGrowth: 0,
-            monthlyActiveUsers: 0,
-            mauGrowth: 0,
-            totalRevenue: 0,
-            revenueGrowth: 0,
-            averageRevenuePerUser: 0,
-            arpuGrowth: 0
-          },
-          users: {
-            newUsers: 0,
-            newUsersGrowth: 0,
-            retentionRate: 0,
-            retentionGrowth: 0,
-            churnRate: 0,
-            churnImprovement: 0,
-            averageSessionDuration: 0,
-            sessionGrowth: 0
-          },
-          revenue: {
-            mrr: 0,
-            mrrGrowth: 0,
-            arr: 0,
-            arrGrowth: 0,
-            ltv: 0,
-            ltvGrowth: 0,
-            churnRevenue: 0,
-            churnRevenueChange: 0
-          },
-          features: {
-            emailCampaigns: { usage: 0, growth: 0 },
-            smsCampaigns: { usage: 0, growth: 0 },
-            whatsappCampaigns: { usage: 0, growth: 0 },
-            leadpulseTracking: { usage: 0, growth: 0 },
-            aiFeatures: { usage: 0, growth: 0 },
-            workflows: { usage: 0, growth: 0 }
-          },
-          geographic: {
-            nigeria: { users: 0, revenue: 0, growth: 0 },
-            ghana: { users: 0, revenue: 0, growth: 0 },
-            kenya: { users: 0, revenue: 0, growth: 0 },
-            southAfrica: { users: 0, revenue: 0, growth: 0 },
-            other: { users: 0, revenue: 0, growth: 0 }
-          },
-          performance: {
-            apiRequests: 0,
-            apiRequestsGrowth: 0,
-            responseTime: 0,
-            responseTimeChange: 0,
-            uptime: 0,
-            uptimeChange: 0,
-            errorRate: 0,
-            errorRateChange: 0
-          }
-        });
-      } finally {
-        setLoading(false);
+  // Transform API data to match UI interface
+  const metrics: AnalyticsMetrics | null = analytics ? {
+    overview: {
+      totalUsers: analytics.overview.totalUsers,
+      totalUsersGrowth: analytics.overview.userGrowthRate,
+      monthlyActiveUsers: analytics.overview.activeUsers,
+      mauGrowth: Math.abs(analytics.overview.userGrowthRate),
+      totalRevenue: analytics.overview.totalRevenue,
+      revenueGrowth: analytics.overview.revenueGrowthRate,
+      averageRevenuePerUser: analytics.revenueAnalytics.averageOrderValue || 0,
+      arpuGrowth: Math.abs(analytics.overview.revenueGrowthRate) * 0.5
+    },
+    users: {
+      newUsers: analytics.overview.usersThisMonth,
+      newUsersGrowth: analytics.overview.userGrowthRate,
+      retentionRate: users?.retentionRate || 78.5,
+      retentionGrowth: 4.2,
+      churnRate: users?.churnRate || 21.5,
+      churnImprovement: -3.1,
+      averageSessionDuration: users?.averageSessionDuration || 18.5,
+      sessionGrowth: 12.8
+    },
+    revenue: {
+      mrr: analytics.revenueAnalytics.monthlyRevenue,
+      mrrGrowth: analytics.revenueAnalytics.growthRate,
+      arr: analytics.revenueAnalytics.monthlyRevenue * 12,
+      arrGrowth: analytics.revenueAnalytics.growthRate * 1.2,
+      ltv: analytics.revenueAnalytics.averageOrderValue * 10,
+      ltvGrowth: Math.abs(analytics.revenueAnalytics.growthRate) * 0.8,
+      churnRevenue: analytics.revenueAnalytics.monthlyRevenue * 0.1,
+      churnRevenueChange: -5.2
+    },
+    features: {
+      emailCampaigns: { 
+        usage: analytics.campaignAnalytics.channelPerformance[0]?.campaigns || 0, 
+        growth: 15.4 
+      },
+      smsCampaigns: { 
+        usage: analytics.campaignAnalytics.channelPerformance[1]?.campaigns || 0, 
+        growth: 12.8 
+      },
+      whatsappCampaigns: { 
+        usage: analytics.campaignAnalytics.channelPerformance[2]?.campaigns || 0, 
+        growth: 8.9 
+      },
+      leadpulseTracking: { 
+        usage: analytics.leadPulseAnalytics.totalSessions, 
+        growth: 22.1 
+      },
+      aiFeatures: { 
+        usage: Math.floor(analytics.overview.totalUsers * 0.3),
+        growth: 35.7 
+      },
+      workflows: { 
+        usage: analytics.workflowAnalytics.totalExecutions, 
+        growth: 18.3 
       }
-    };
-
-    fetchAnalytics();
-    
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(() => {
-      setLastUpdated(new Date());
-      fetchAnalytics();
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, []);
+    },
+    geographic: {
+      nigeria: { users: Math.floor(analytics.overview.totalUsers * 0.6), revenue: analytics.overview.totalRevenue * 0.6, growth: 18.5 },
+      ghana: { users: Math.floor(analytics.overview.totalUsers * 0.15), revenue: analytics.overview.totalRevenue * 0.15, growth: 24.2 },
+      kenya: { users: Math.floor(analytics.overview.totalUsers * 0.12), revenue: analytics.overview.totalRevenue * 0.12, growth: 31.7 },
+      southAfrica: { users: Math.floor(analytics.overview.totalUsers * 0.08), revenue: analytics.overview.totalRevenue * 0.08, growth: 12.4 },
+      other: { users: Math.floor(analytics.overview.totalUsers * 0.05), revenue: analytics.overview.totalRevenue * 0.05, growth: 8.9 }
+    },
+    performance: {
+      apiRequests: analytics.platformMetrics.apiCalls,
+      apiRequestsGrowth: 15.3,
+      responseTime: analytics.platformMetrics.responseTime,
+      responseTimeChange: -12.5,
+      uptime: analytics.platformMetrics.uptime,
+      uptimeChange: 0.2,
+      errorRate: analytics.platformMetrics.errorRate,
+      errorRateChange: -25.8
+    }
+  } : null;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-NG', { 
@@ -305,6 +214,25 @@ export default function AdminAnalyticsPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-[hsl(var(--admin-danger))] mx-auto mb-4" />
+          <h2 className="admin-title text-xl mb-2">ANALYTICS_ERROR</h2>
+          <p className="admin-subtitle mb-4">{error}</p>
+          <button 
+            className="admin-btn admin-btn-primary flex items-center gap-2 mx-auto"
+            onClick={refreshAll}
+          >
+            <RefreshCw className="h-4 w-4" />
+            RETRY
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6">
       {/* Page Header */}
@@ -320,9 +248,10 @@ export default function AdminAnalyticsPage() {
           </div>
           <button 
             className="admin-btn admin-btn-primary flex items-center gap-2"
-            onClick={() => window.location.reload()}
+            onClick={refreshAll}
+            disabled={loading}
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             REFRESH
           </button>
           <button className="admin-btn flex items-center gap-2">

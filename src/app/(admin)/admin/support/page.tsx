@@ -1,6 +1,7 @@
 "use client";
 
 import { useAdmin } from "@/components/admin/AdminProvider";
+import { useAdminSupportDashboard } from "@/lib/api/hooks/useAdminSupport";
 import { 
   Headphones, 
   MessageSquare,
@@ -162,100 +163,42 @@ interface SupportMetrics {
 export default function AdminSupportPage() {
   const { permissions, staffRole } = useAdmin();
   const [activeTab, setActiveTab] = useState("overview");
-  const [loading, setLoading] = useState(true);
-  const [metrics, setMetrics] = useState<SupportMetrics | null>(null);
-  const [tickets, setTickets] = useState<SupportTicket[]>([]);
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
-  const [agents, setAgents] = useState<SupportAgent[]>([]);
-  const [knowledgeArticles, setKnowledgeArticles] = useState<KnowledgeArticle[]>([]);
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Set loading to false after mount
-  useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 1000);
-    return () => clearTimeout(timer);
-  }, []);
+  const { 
+    metrics, 
+    metricsLoading, 
+    metricsError, 
+    tickets, 
+    ticketsLoading, 
+    ticketsError, 
+    sessions, 
+    sessionsLoading, 
+    sessionsError, 
+    staff, 
+    staffLoading, 
+    staffError, 
+    articles, 
+    articlesLoading, 
+    articlesError, 
+    refreshAll 
+  } = useAdminSupportDashboard();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // Fetch all support data from real APIs in parallel
-        const [
-          metricsResponse,
-          ticketsResponse,
-          chatSessionsResponse,
-          staffResponse
-        ] = await Promise.allSettled([
-          fetch('/api/v2/admin/support?type=metrics'),
-          fetch('/api/v2/admin/support?type=tickets'),
-          fetch('/api/v2/admin/support?type=chat_sessions'),
-          fetch('/api/v2/admin/support?type=staff')
-        ]);
+  const formatTime = (minutes: number) => {
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  };
 
-        // Process metrics data
-        if (metricsResponse.status === 'fulfilled' && metricsResponse.value.ok) {
-          const metricsData = await metricsResponse.value.json();
-          if (metricsData.success) {
-            setMetrics(metricsData.data);
-          }
-        }
+  const formatNumber = (num: number) => {
+    return new Intl.NumberFormat().format(num);
+  };
 
-        // Process support tickets data
-        if (ticketsResponse.status === 'fulfilled' && ticketsResponse.value.ok) {
-          const ticketsData = await ticketsResponse.value.json();
-          if (ticketsData.success) {
-            setTickets(ticketsData.data || []);
-          }
-        }
-
-        // Process chat sessions data
-        if (chatSessionsResponse.status === 'fulfilled' && chatSessionsResponse.value.ok) {
-          const chatData = await chatSessionsResponse.value.json();
-          if (chatData.success) {
-            setChatSessions(chatData.data || []);
-          }
-        }
-
-        // Process staff members data
-        if (staffResponse.status === 'fulfilled' && staffResponse.value.ok) {
-          const staffData = await staffResponse.value.json();
-          if (staffData.success) {
-            setAgents(staffData.data || []);
-          }
-        }
-
-        // Set knowledge articles to empty for now (could be added later)
-        setKnowledgeArticles([]);
-
-      } catch (error) {
-        console.error('Error fetching support data:', error);
-        // Fallback to empty arrays on error
-        setMetrics({
-          activeTickets: 0,
-          averageResponseTime: 0,
-          customerSatisfactionScore: 0,
-          onlineStaff: 0,
-          todayTicketsResolved: 0,
-          ticketsOpenedToday: 0,
-          averageResolutionTime: 0,
-          firstResponseRate: 0,
-          resolutionRate: 0,
-          escalationRate: 0
-        });
-        setTickets([]);
-        setChatSessions([]);
-        setAgents([]);
-        setKnowledgeArticles([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
+  const loading = metricsLoading || ticketsLoading || sessionsLoading || staffLoading || articlesLoading;
+  const error = metricsError || ticketsError || sessionsError || staffError || articlesError;
 
   // Helper functions - must be defined before any return statements
   const getTicketStatusBadge = (status: string) => {
@@ -364,6 +307,25 @@ export default function AdminSupportPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="admin-title text-xl mb-2">Support_Link_Error</h2>
+          <p className="admin-subtitle mb-4">{error}</p>
+          <button 
+            className="admin-btn admin-btn-primary flex items-center gap-2"
+            onClick={refreshAll}
+          >
+            <RefreshCw className="h-4 w-4" />
+            RETRY_CONNECTION
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!permissions.canAccessSupport) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -402,7 +364,7 @@ export default function AdminSupportPage() {
             <Headphones className="h-3 w-3" />
             SUPPORT_CENTER
           </div>
-          <button className="admin-btn admin-btn-primary flex items-center gap-2">
+          <button className="admin-btn admin-btn-primary flex items-center gap-2" onClick={refreshAll}>
             <RefreshCw className="h-4 w-4" />
             REFRESH_ALL
           </button>
@@ -570,7 +532,7 @@ export default function AdminSupportPage() {
                   <h2 className="admin-title text-xl">TEAM_PERFORMANCE</h2>
                 </div>
                 <div className="space-y-4">
-                  {agents.filter(a => a.status === 'online').slice(0, 5).map((agent) => (
+                  {staff.filter(a => a.status === 'online').slice(0, 5).map((agent) => (
                     <div key={agent.id} className="admin-card p-3 border border-[hsl(var(--admin-border))]">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">

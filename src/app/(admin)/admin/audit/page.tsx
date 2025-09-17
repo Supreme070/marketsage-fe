@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAdmin } from "@/components/admin/AdminProvider";
+import { useAdminAuditDashboard } from "@/lib/api/hooks/useAdminAudit";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -99,9 +100,6 @@ const actionColors: Record<string, string> = {
 export default function AuditTrailPage() {
   const router = useRouter();
   const { permissions } = useAdmin();
-  const [stats, setStats] = useState<AuditStats | null>(null);
-  const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [filters, setFilters] = useState({
     action: "",
@@ -114,13 +112,25 @@ export default function AuditTrailPage() {
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 20,
-    total: 0,
   });
-  const [exportLoading, setExportLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [streamEnabled, setStreamEnabled] = useState(true);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  
+  const { 
+    stats, 
+    statsLoading, 
+    statsError, 
+    logs, 
+    logsLoading, 
+    logsError, 
+    pagination: logsPagination,
+    refreshAll, 
+    refreshLogs, 
+    exportLogs, 
+    exporting 
+  } = useAdminAuditDashboard();
   
   // Real-time audit stream
   const { isConnected, lastEvent } = useAuditStream(streamEnabled && activeTab === "overview");
@@ -132,119 +142,37 @@ export default function AuditTrailPage() {
     }
   }, [permissions, router]);
 
-  // Fetch audit stats
-  useEffect(() => {
-    fetchAuditStats();
-  }, []);
-
   // Fetch logs when filters or pagination change
   useEffect(() => {
     if (activeTab !== "overview") {
-      fetchAuditLogs();
+      refreshLogs(filters, { ...pagination, type: activeTab });
     }
   }, [activeTab, filters, pagination.page]);
 
   // Handle real-time updates
   useEffect(() => {
     if (lastEvent?.type === "audit_log" && lastEvent.data) {
-      // Update stats if on overview tab
-      if (activeTab === "overview" && stats) {
-        setStats(prev => {
-          if (!prev) return prev;
-          
-          // Add to recent activities
-          const newRecentActivities = [lastEvent.data, ...prev.recentActivities].slice(0, 10);
-          
-          return {
-            ...prev,
-            totalEvents: prev.totalEvents + 1,
-            todayEvents: prev.todayEvents + 1,
-            recentActivities: newRecentActivities,
-          };
-        });
-      }
-      
       // Update logs if viewing relevant tab
       if (activeTab !== "overview") {
-        setLogs(prev => [lastEvent.data, ...prev].slice(0, pagination.limit));
+        refreshLogs(filters, { ...pagination, type: activeTab });
       }
     }
-  }, [lastEvent, activeTab, stats, pagination.limit]);
-
-  const fetchAuditStats = async () => {
-    try {
-      const response = await fetch("/api/admin/audit/stats");
-      const data = await response.json();
-      if (data.success) {
-        setStats(data.data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch audit stats:", error);
-    }
-  };
-
-  const fetchAuditLogs = async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({
-        page: pagination.page.toString(),
-        limit: pagination.limit.toString(),
-        type: activeTab,
-        ...Object.entries(filters).reduce((acc, [key, value]) => {
-          if (value) acc[key] = value;
-          return acc;
-        }, {} as any),
-      });
-
-      const response = await fetch(`/api/admin/audit/logs?${params}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        setLogs(data.data.logs);
-        setPagination(prev => ({ ...prev, total: data.data.total }));
-      }
-    } catch (error) {
-      console.error("Failed to fetch audit logs:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [lastEvent, activeTab, filters, pagination]);
 
   const handleExport = async () => {
-    setExportLoading(true);
     try {
-      const params = new URLSearchParams({
-        type: activeTab,
-        ...Object.entries(filters).reduce((acc, [key, value]) => {
-          if (value) acc[key] = value;
-          return acc;
-        }, {} as any),
-      });
-
-      const response = await fetch(`/api/admin/audit/export?${params}`);
-      const blob = await response.blob();
-      
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `audit-logs-${format(new Date(), "yyyy-MM-dd")}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      await exportLogs(filters, activeTab);
     } catch (error) {
       console.error("Failed to export audit logs:", error);
-    } finally {
-      setExportLoading(false);
     }
   };
 
   const handleRefresh = async () => {
     setRefreshing(true);
     if (activeTab === "overview") {
-      await fetchAuditStats();
+      refreshAll();
     } else {
-      await fetchAuditLogs();
+      refreshLogs(filters, { ...pagination, type: activeTab });
     }
     setRefreshing(false);
   };
@@ -296,6 +224,34 @@ export default function AuditTrailPage() {
     return null;
   }
 
+  if (statsLoading) {
+    return (
+      <div className="container mx-auto py-8 max-w-7xl">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h2 className="text-xl font-semibold mb-2">Loading Audit Trail</h2>
+          <p className="text-gray-600">Fetching audit data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (statsError) {
+    return (
+      <div className="container mx-auto py-8 max-w-7xl">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Audit Trail Error</h2>
+          <p className="text-gray-600 mb-4">{statsError}</p>
+          <Button onClick={refreshAll}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-8 max-w-7xl">
       {/* Header */}
@@ -335,10 +291,10 @@ export default function AuditTrailPage() {
             <Button
               variant="outline"
               onClick={handleExport}
-              disabled={exportLoading}
+              disabled={exporting}
             >
               <Download className="h-4 w-4 mr-2" />
-              Export
+              {exporting ? 'Exporting...' : 'Export'}
             </Button>
           </div>
         </div>
@@ -579,7 +535,7 @@ export default function AuditTrailPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {loading ? (
+                      {logsLoading ? (
                         <tr>
                           <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
                             Loading audit logs...
@@ -639,12 +595,12 @@ export default function AuditTrailPage() {
                 </div>
 
                 {/* Pagination */}
-                {!loading && logs.length > 0 && (
+                {!logsLoading && logs.length > 0 && (
                   <div className="mt-4 flex items-center justify-between">
                     <p className="text-sm text-gray-500">
-                      Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
-                      {Math.min(pagination.page * pagination.limit, pagination.total)} of{" "}
-                      {pagination.total} results
+                      Showing {(logsPagination.page - 1) * logsPagination.limit + 1} to{" "}
+                      {Math.min(logsPagination.page * logsPagination.limit, logsPagination.total)} of{" "}
+                      {logsPagination.total} results
                     </p>
                     <div className="flex gap-2">
                       <Button
@@ -659,7 +615,7 @@ export default function AuditTrailPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}
-                        disabled={pagination.page * pagination.limit >= pagination.total}
+                        disabled={pagination.page * pagination.limit >= logsPagination.total}
                       >
                         Next
                       </Button>

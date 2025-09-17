@@ -1,6 +1,7 @@
 "use client";
 
 import { useAdmin } from "@/components/admin/AdminProvider";
+import { useAdminMessagesDashboard } from "@/lib/api/hooks/useAdminMessages";
 import { 
   MessageSquare, 
   Mail, 
@@ -67,42 +68,28 @@ interface ProviderHealth {
 export default function AdminMessagesPage() {
   const { permissions, staffRole } = useAdmin();
   const [activeTab, setActiveTab] = useState("overview");
-  const [loading, setLoading] = useState(true);
-  const [queueStats, setQueueStats] = useState<QueueStats[]>([]);
-  const [failedMessages, setFailedMessages] = useState<FailedMessage[]>([]);
-  const [providerHealth, setProviderHealth] = useState<ProviderHealth[]>([]);
 
-  // Real API call to fetch message queue data
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch('/api/v2/admin/messages');
-        if (!response.ok) {
-          throw new Error('Failed to fetch messages data');
-        }
-        
-        const data = await response.json();
-        if (data.success) {
-          setQueueStats(data.data.queueStats || []);
-          setFailedMessages(data.data.failedMessages || []);
-          setProviderHealth(data.data.providerHealth || []);
-        }
-      } catch (error) {
-        console.error('Error fetching messages data:', error);
-        // Fallback to empty arrays on error
-        setQueueStats([]);
-        setFailedMessages([]);
-        setProviderHealth([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const { 
+    queueStats, 
+    queueStatsLoading, 
+    queueStatsError, 
+    failedMessages, 
+    failedMessagesLoading, 
+    failedMessagesError, 
+    providerHealth, 
+    providerHealthLoading, 
+    providerHealthError, 
+    metrics, 
+    metricsLoading, 
+    metricsError, 
+    refreshAll,
+    retryMessage,
+    clearQueue,
+    pauseQueue,
+    resumeQueue
+  } = useAdminMessagesDashboard();
 
-    fetchData();
-  }, []);
-
-  if (!permissions.canViewUsers) {
+  if (!permissions.canAccessSystem) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -157,13 +144,40 @@ export default function AdminMessagesPage() {
     }
   };
 
-  const handleRetryMessage = (messageId: string) => {
-    console.log('Retrying message:', messageId);
+  const handleRetryMessage = async (messageId: string) => {
+    try {
+      await retryMessage(messageId);
+    } catch (error) {
+      console.error('Failed to retry message:', error);
+    }
   };
 
-  const handleClearQueue = (queueName: string) => {
-    console.log('Clearing queue:', queueName);
+  const handleClearQueue = async (queueName: string) => {
+    try {
+      await clearQueue(queueName);
+    } catch (error) {
+      console.error('Failed to clear queue:', error);
+    }
   };
+
+  const handlePauseQueue = async (queueName: string) => {
+    try {
+      await pauseQueue(queueName);
+    } catch (error) {
+      console.error('Failed to pause queue:', error);
+    }
+  };
+
+  const handleResumeQueue = async (queueName: string) => {
+    try {
+      await resumeQueue(queueName);
+    } catch (error) {
+      console.error('Failed to resume queue:', error);
+    }
+  };
+
+  const loading = queueStatsLoading || failedMessagesLoading || providerHealthLoading || metricsLoading;
+  const error = queueStatsError || failedMessagesError || providerHealthError || metricsError;
 
   if (loading) {
     return (
@@ -172,6 +186,25 @@ export default function AdminMessagesPage() {
           <div className="admin-loading mx-auto mb-4"></div>
           <h2 className="admin-title text-xl mb-2">COMM_CHANNEL_LOADING</h2>
           <p className="admin-subtitle">INITIALIZING_MESSAGE_ROUTING_PROTOCOLS...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="admin-title text-xl mb-2">Comm_Channel_Error</h2>
+          <p className="admin-subtitle mb-4">{error}</p>
+          <button 
+            className="admin-btn admin-btn-primary flex items-center gap-2"
+            onClick={refreshAll}
+          >
+            <RefreshCw className="h-4 w-4" />
+            RETRY_CONNECTION
+          </button>
         </div>
       </div>
     );
@@ -204,7 +237,7 @@ export default function AdminMessagesPage() {
             <Radio className="h-3 w-3" />
             SYSTEM_MONITORING
           </div>
-          <button className="admin-btn admin-btn-primary flex items-center gap-2">
+          <button className="admin-btn admin-btn-primary flex items-center gap-2" onClick={refreshAll}>
             <RefreshCw className="h-4 w-4" />
             REFRESH_ALL
           </button>
@@ -218,7 +251,7 @@ export default function AdminMessagesPage() {
             <Clock className="h-6 w-6 text-[hsl(var(--admin-warning))]" />
             <Database className="h-4 w-4 text-[hsl(var(--admin-warning))]" />
           </div>
-          <div className="admin-stat-value">2,124</div>
+          <div className="admin-stat-value">{metrics?.totalQueued.toLocaleString() || '0'}</div>
           <div className="admin-stat-label">TOTAL_QUEUED</div>
           <div className="admin-stat-change">MESSAGES_PENDING_PROCESSING</div>
         </div>
@@ -228,7 +261,7 @@ export default function AdminMessagesPage() {
             <Activity className="h-6 w-6 text-[hsl(var(--admin-accent))]" />
             <div className="admin-pulse"></div>
           </div>
-          <div className="admin-stat-value">68</div>
+          <div className="admin-stat-value">{metrics?.totalProcessing || '0'}</div>
           <div className="admin-stat-label">PROCESSING</div>
           <div className="admin-stat-change positive">CURRENTLY_TRANSMITTING</div>
         </div>
@@ -238,9 +271,9 @@ export default function AdminMessagesPage() {
             <XCircle className="h-6 w-6 text-[hsl(var(--admin-danger))]" />
             <TrendingUp className="h-4 w-4 text-[hsl(var(--admin-danger))]" />
           </div>
-          <div className="admin-stat-value">143</div>
+          <div className="admin-stat-value">{metrics?.failedToday || '0'}</div>
           <div className="admin-stat-label">FAILED_TODAY</div>
-          <div className="admin-stat-change negative">+12_SINCE_LAST_HOUR</div>
+          <div className="admin-stat-change negative">+{metrics?.failedSinceLastHour || '0'}_SINCE_LAST_HOUR</div>
         </div>
 
         <div className="admin-stat-card admin-glow-hover">
@@ -248,9 +281,9 @@ export default function AdminMessagesPage() {
             <CheckCircle className="h-6 w-6 text-[hsl(var(--admin-success))]" />
             <TrendingUp className="h-4 w-4 text-[hsl(var(--admin-success))]" />
           </div>
-          <div className="admin-stat-value">97.8%</div>
+          <div className="admin-stat-value">{metrics?.successRate || '0'}%</div>
           <div className="admin-stat-label">SUCCESS_RATE</div>
-          <div className="admin-stat-change positive">+0.3%_IMPROVEMENT</div>
+          <div className="admin-stat-change positive">+{metrics?.successRateImprovement || '0'}%_IMPROVEMENT</div>
         </div>
       </div>
 
@@ -338,11 +371,17 @@ export default function AdminMessagesPage() {
                         <div className="flex items-center gap-3">
                           {getQueueStatusBadge(queue.status)}
                           <div className="flex gap-2">
-                            <button className="admin-btn text-xs px-3 py-1">
+                            <button 
+                              className="admin-btn text-xs px-3 py-1"
+                              onClick={() => handlePauseQueue(queue.name)}
+                            >
                               <Pause className="h-3 w-3 mr-1" />
                               PAUSE
                             </button>
-                            <button className="admin-btn text-xs px-3 py-1" onClick={() => handleClearQueue(queue.name)}>
+                            <button 
+                              className="admin-btn text-xs px-3 py-1" 
+                              onClick={() => handleClearQueue(queue.name)}
+                            >
                               <Trash2 className="h-3 w-3 mr-1" />
                               CLEAR
                             </button>

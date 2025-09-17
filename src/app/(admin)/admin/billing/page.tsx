@@ -2,6 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useAdminBillingDashboard } from "@/lib/api/hooks/useAdminBilling";
 import { SubscriptionAuditDashboard } from "@/components/admin/SubscriptionAuditDashboard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,13 @@ export default function AdminBillingPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("subscriptions");
+
+  const { 
+    stats, 
+    statsLoading, 
+    statsError, 
+    refreshAll 
+  } = useAdminBillingDashboard();
 
   useEffect(() => {
     if (status === "loading") return;
@@ -97,6 +105,34 @@ export default function AdminBillingPage() {
     );
   }
 
+  if (statsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+          <h2 className="text-xl font-semibold mt-4">Loading Billing Center</h2>
+          <p className="text-gray-600">Fetching billing data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (statsError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Billing Center Error</h2>
+          <p className="text-gray-600 mb-4">{statsError}</p>
+          <Button onClick={refreshAll}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -113,7 +149,7 @@ export default function AdminBillingPage() {
               <DollarSign className="h-3 w-3" />
               Financial Management
             </Badge>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={refreshAll}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Sync Data
             </Button>
@@ -131,9 +167,9 @@ export default function AdminBillingPage() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">₦2.4M</div>
+              <div className="text-2xl font-bold">₦{stats?.monthlyRevenue?.toLocaleString() || '0'}</div>
               <p className="text-xs text-muted-foreground">
-                <span className="text-green-600">+12.3%</span> from last month
+                <span className="text-green-600">+{stats?.revenueGrowth || 0}%</span> from last month
               </p>
             </CardContent>
           </Card>
@@ -144,9 +180,9 @@ export default function AdminBillingPage() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">1,234</div>
+              <div className="text-2xl font-bold">{stats?.activeSubscriptions?.toLocaleString() || '0'}</div>
               <p className="text-xs text-muted-foreground">
-                <span className="text-green-600">+89</span> this month
+                <span className="text-green-600">+{stats?.subscriptionGrowth || 0}</span> this month
               </p>
             </CardContent>
           </Card>
@@ -157,9 +193,11 @@ export default function AdminBillingPage() {
               <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">98.7%</div>
+              <div className="text-2xl font-bold">{stats?.paymentSuccessRate?.toFixed(1) || '0'}%</div>
               <p className="text-xs text-muted-foreground">
-                <span className="text-red-600">-0.3%</span> from last month
+                <span className={stats?.paymentFailureRate && stats.paymentFailureRate < 0 ? "text-red-600" : "text-green-600"}>
+                  {stats?.paymentFailureRate || 0}%
+                </span> from last month
               </p>
             </CardContent>
           </Card>
@@ -170,9 +208,9 @@ export default function AdminBillingPage() {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">2.1%</div>
+              <div className="text-2xl font-bold">{stats?.churnRate?.toFixed(1) || '0'}%</div>
               <p className="text-xs text-muted-foreground">
-                <span className="text-green-600">-0.5%</span> improvement
+                <span className="text-green-600">{stats?.churnImprovement || 0}%</span> improvement
               </p>
             </CardContent>
           </Card>

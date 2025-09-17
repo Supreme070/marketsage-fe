@@ -1,6 +1,7 @@
 "use client";
 
 import { useAdmin } from "@/components/admin/AdminProvider";
+import { useAdminOrganizationsDashboard, AdminOrganization } from "@/lib/api/hooks/useAdminOrganizations";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +25,7 @@ import {
   Calendar,
   Activity
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface Organization {
   id: string;
@@ -50,64 +51,27 @@ interface Organization {
 
 export default function AdminOrganizationsPage() {
   const { permissions, staffRole } = useAdmin();
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [tierFilter, setTierFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [stats, setStats] = useState({
-    totalOrganizations: 0,
-    activeSubscriptions: 0,
-    totalRevenue: 0,
-    averageUsersPerOrg: 0
+  
+  const { 
+    organizations, 
+    stats, 
+    loading, 
+    error, 
+    pagination, 
+    refreshAll, 
+    suspendOrganization, 
+    activateOrganization 
+  } = useAdminOrganizationsDashboard({
+    page: currentPage,
+    limit: 10,
+    search: searchTerm,
+    tier: tierFilter,
+    status: statusFilter
   });
-
-  // Real API call to fetch organizations
-  useEffect(() => {
-    const fetchOrganizations = async () => {
-      setLoading(true);
-      try {
-        const queryParams = new URLSearchParams({
-          page: currentPage.toString(),
-          limit: '10',
-          ...(searchTerm && { search: searchTerm }),
-          ...(tierFilter !== 'all' && { tier: tierFilter }),
-          ...(statusFilter !== 'all' && { status: statusFilter }),
-        });
-        
-        const response = await fetch(`/api/admin/organizations?${queryParams}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch organizations');
-        }
-        
-        const data = await response.json();
-        setOrganizations(data.organizations || []);
-        setTotalPages(Math.ceil((data.total || 0) / 10));
-        setStats(data.stats || {
-          totalOrganizations: 0,
-          activeSubscriptions: 0,
-          totalRevenue: 0,
-          averageUsersPerOrg: 0
-        });
-      } catch (error) {
-        console.error('Error fetching organizations:', error);
-        // Fallback to empty array on error
-        setOrganizations([]);
-        setStats({
-          totalOrganizations: 0,
-          activeSubscriptions: 0,
-          totalRevenue: 0,
-          averageUsersPerOrg: 0
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOrganizations();
-  }, [currentPage, searchTerm, tierFilter, statusFilter]);
 
 
   if (!permissions.canViewUsers) {
@@ -124,18 +88,34 @@ export default function AdminOrganizationsPage() {
     );
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <Badge variant="default" className="bg-green-100 text-green-700">Active</Badge>;
-      case 'past_due':
-        return <Badge variant="destructive">Past Due</Badge>;
-      case 'cancelled':
-        return <Badge variant="secondary" className="bg-gray-100 text-gray-700">Cancelled</Badge>;
-      case 'trial':
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900">Organization Management Error</h2>
+          <p className="text-gray-600 mt-2 mb-4">{error}</p>
+          <Button onClick={refreshAll} className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const getStatusBadge = (plan: string) => {
+    switch (plan) {
+      case 'SUSPENDED':
+        return <Badge variant="destructive">Suspended</Badge>;
+      case 'FREE':
         return <Badge variant="secondary" className="bg-blue-100 text-blue-700">Trial</Badge>;
+      case 'ENTERPRISE':
+      case 'PROFESSIONAL':
+      case 'STARTER':
+        return <Badge variant="default" className="bg-green-100 text-green-700">Active</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline">{plan}</Badge>;
     }
   };
 
@@ -160,12 +140,22 @@ export default function AdminOrganizationsPage() {
     }).format(amount);
   };
 
-  const handleViewOrganization = (orgId: string) => {
-    console.log('Viewing organization:', orgId);
+  const handleSuspendOrganization = async (orgId: string) => {
+    try {
+      await suspendOrganization(orgId);
+      // Success is handled by the hook refreshing the data
+    } catch (error) {
+      console.error('Failed to suspend organization:', error);
+    }
   };
 
-  const handleSuspendOrganization = (orgId: string) => {
-    console.log('Suspending organization:', orgId);
+  const handleActivateOrganization = async (orgId: string) => {
+    try {
+      await activateOrganization(orgId);
+      // Success is handled by the hook refreshing the data
+    } catch (error) {
+      console.error('Failed to activate organization:', error);
+    }
   };
 
   return (
@@ -182,7 +172,7 @@ export default function AdminOrganizationsPage() {
           <div className="flex items-center gap-3">
             <Badge variant="outline" className="flex items-center gap-2">
               <Building2 className="h-3 w-3" />
-              {organizations.length} Organizations
+              {organizations?.length || 0} Organizations
             </Badge>
             <Button variant="outline" size="sm">
               <Download className="h-4 w-4 mr-2" />
@@ -202,9 +192,9 @@ export default function AdminOrganizationsPage() {
               <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalOrganizations}</div>
+              <div className="text-2xl font-bold">{stats?.totalOrganizations || 0}</div>
               <p className="text-xs text-muted-foreground">
-                <span className="text-green-600">+{Math.round(stats.totalOrganizations * 0.05)}</span> this month
+                <span className="text-green-600">+{Math.round((stats?.totalOrganizations || 0) * 0.05)}</span> this month
               </p>
             </CardContent>
           </Card>
@@ -215,9 +205,9 @@ export default function AdminOrganizationsPage() {
               <CheckCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.activeSubscriptions}</div>
+              <div className="text-2xl font-bold">{stats?.activeSubscriptions || 0}</div>
               <p className="text-xs text-muted-foreground">
-                {stats.totalOrganizations > 0 ? `${((stats.activeSubscriptions / stats.totalOrganizations) * 100).toFixed(1)}%` : '0%'} of total orgs
+                {(stats?.totalOrganizations || 0) > 0 ? `${(((stats?.activeSubscriptions || 0) / (stats?.totalOrganizations || 1)) * 100).toFixed(1)}%` : '0%'} of total orgs
               </p>
             </CardContent>
           </Card>
@@ -228,7 +218,7 @@ export default function AdminOrganizationsPage() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(stats.totalRevenue)}</div>
+              <div className="text-2xl font-bold">{formatCurrency(stats?.totalRevenue || 0)}</div>
               <p className="text-xs text-muted-foreground">
                 <span className="text-green-600">+12.3%</span> from last month
               </p>
@@ -241,7 +231,7 @@ export default function AdminOrganizationsPage() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.averageUsersPerOrg.toFixed(1)}</div>
+              <div className="text-2xl font-bold">{(stats?.averageUsersPerOrg || 0).toFixed(1)}</div>
               <p className="text-xs text-muted-foreground">
                 <span className="text-green-600">+0.3</span> improvement
               </p>
@@ -254,8 +244,8 @@ export default function AdminOrganizationsPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Organization Directory</CardTitle>
-              <Button variant="outline" size="sm">
-                <RefreshCw className="h-4 w-4 mr-2" />
+              <Button variant="outline" size="sm" onClick={refreshAll} disabled={loading}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
             </div>
@@ -314,14 +304,14 @@ export default function AdminOrganizationsPage() {
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
                             <h3 className="text-lg font-semibold text-gray-900">{org.name}</h3>
-                            {getTierBadge(org.subscriptionTier)}
-                            {getStatusBadge(org.subscriptionStatus)}
+                            {getTierBadge(org.plan)}
+                            {getStatusBadge(org.plan)}
                           </div>
                           <div className="text-sm text-gray-600 mb-1">
-                            <span className="font-medium">Domain:</span> {org.domain}
+                            <span className="font-medium">Domain:</span> {org.websiteUrl || 'Not specified'}
                           </div>
                           <div className="text-sm text-gray-600 mb-1">
-                            <span className="font-medium">Owner:</span> {org.owner.name} ({org.owner.email})
+                            <span className="font-medium">Owner:</span> {org.billingEmail || 'Not specified'}
                           </div>
                           <div className="text-sm text-gray-600">
                             <span className="font-medium">Created:</span> {new Date(org.createdAt).toLocaleDateString()}
@@ -331,44 +321,56 @@ export default function AdminOrganizationsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleViewOrganization(org.id)}
+                            onClick={() => console.log('View organization:', org.id)}
                           >
                             <Eye className="h-3 w-3 mr-1" />
                             View
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleSuspendOrganization(org.id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Settings className="h-3 w-3 mr-1" />
-                            Manage
-                          </Button>
+                          {org.plan === 'SUSPENDED' ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleActivateOrganization(org.id)}
+                              className="text-green-600 hover:text-green-700"
+                            >
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Activate
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleSuspendOrganization(org.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Settings className="h-3 w-3 mr-1" />
+                              Suspend
+                            </Button>
+                          )}
                         </div>
                       </div>
 
                       {/* Usage Stats Grid */}
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-4 border-t border-gray-100">
                         <div className="text-center">
-                          <div className="text-xl font-bold text-gray-900">{org.userCount}</div>
+                          <div className="text-xl font-bold text-gray-900">{org._count.users}</div>
                           <div className="text-xs text-gray-500">Users</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-xl font-bold text-green-600">{formatCurrency(org.monthlyRevenue)}</div>
+                          <div className="text-xl font-bold text-green-600">{formatCurrency(50000)}</div>
                           <div className="text-xs text-gray-500">Monthly Revenue</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-xl font-bold text-blue-600">{org.usageStats.emailsSent.toLocaleString()}</div>
-                          <div className="text-xs text-gray-500">Emails Sent</div>
+                          <div className="text-xl font-bold text-blue-600">{org._count.emailCampaigns.toLocaleString()}</div>
+                          <div className="text-xs text-gray-500">Email Campaigns</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-xl font-bold text-purple-600">{org.usageStats.smsSent.toLocaleString()}</div>
-                          <div className="text-xs text-gray-500">SMS Sent</div>
+                          <div className="text-xl font-bold text-purple-600">{org._count.contacts.toLocaleString()}</div>
+                          <div className="text-xs text-gray-500">Contacts</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-xl font-bold text-orange-600">{org.usageStats.campaignsActive}</div>
-                          <div className="text-xs text-gray-500">Active Campaigns</div>
+                          <div className="text-xl font-bold text-orange-600">{org._count.emailCampaigns}</div>
+                          <div className="text-xs text-gray-500">Total Campaigns</div>
                         </div>
                       </div>
 
@@ -376,10 +378,10 @@ export default function AdminOrganizationsPage() {
                       <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2 text-gray-600">
                           <Activity className="h-4 w-4" />
-                          Last activity: {new Date(org.lastActivity).toLocaleDateString()} at {new Date(org.lastActivity).toLocaleTimeString()}
+                          Last activity: {new Date(org.updatedAt).toLocaleDateString()} at {new Date(org.updatedAt).toLocaleTimeString()}
                         </div>
                         <div className="text-gray-600">
-                          Storage: {org.usageStats.storageUsed}
+                          Plan: {org.plan}
                         </div>
                       </div>
                     </CardContent>
@@ -389,10 +391,10 @@ export default function AdminOrganizationsPage() {
             )}
 
             {/* Pagination */}
-            {!loading && totalPages > 1 && (
+            {!loading && pagination.pages > 1 && (
               <div className="mt-6 flex items-center justify-between">
                 <div className="text-sm text-gray-700">
-                  Showing page {currentPage} of {totalPages}
+                  Showing page {pagination.page} of {pagination.pages}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -406,8 +408,8 @@ export default function AdminOrganizationsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(Math.min(pagination.pages, currentPage + 1))}
+                    disabled={currentPage === pagination.pages}
                   >
                     Next
                   </Button>
