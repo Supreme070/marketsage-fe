@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useApiClient } from './client';
+import { useApiClient } from '../client';
 
 // Types
 export interface UnifiedCampaign {

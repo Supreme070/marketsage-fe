@@ -749,21 +749,32 @@ export default function CampaignsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/campaigns/unified/${campaign.id}`}>
-                              <Edit className="mr-2 h-4 w-4" /> Edit
-                            </Link>
-                          </DropdownMenuItem>
-                          {(campaign.status === CampaignStatus.ACTIVE || campaign.status === CampaignStatus.COMPLETED) && (
-                            <DropdownMenuItem asChild>
-                              <Link href={`/campaigns/unified/${campaign.id}/analytics`}>
-                                <BarChart className="mr-2 h-4 w-4" /> View Analytics
-                              </Link>
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem>
-                            <Copy className="mr-2 h-4 w-4" /> Duplicate
-                          </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/campaigns/unified/${campaign.id}`}>
+                                    <Edit className="mr-2 h-4 w-4" /> Edit
+                                  </Link>
+                                </DropdownMenuItem>
+                                {(campaign.status === CampaignStatus.ACTIVE || campaign.status === CampaignStatus.COMPLETED) && (
+                                  <DropdownMenuItem asChild>
+                                    <Link href={`/campaigns/unified/${campaign.id}/analytics`}>
+                                      <BarChart className="mr-2 h-4 w-4" /> View Analytics
+                                    </Link>
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/campaigns/unified/${campaign.id}/ab-tests`}>
+                                    <Target className="mr-2 h-4 w-4" /> A/B Tests
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/campaigns/unified/${campaign.id}/workflows`}>
+                                    <Workflow className="mr-2 h-4 w-4" /> Workflows
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem>
+                                  <Copy className="mr-2 h-4 w-4" /> Duplicate
+                                </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-destructive">
                             <Trash2 className="mr-2 h-4 w-4" /> Delete
