@@ -7,6 +7,7 @@
 export { 
   MarketSageApiClient, 
   apiClient,
+  useApiClient,
   ApiClientError,
   ApiError,
   ApiResponse,
@@ -39,6 +40,19 @@ export {
   useUsers,
   useOrganizations
 } from './hooks';
+
+// Export unified campaigns hooks
+export {
+  useUnifiedCampaigns,
+  useABTests,
+  useWorkflows as useUnifiedWorkflows,
+  ChannelType,
+  CampaignStatus,
+  RecurrenceType,
+  ABTestStatus,
+  WorkflowStatus,
+  WorkflowExecutionStatus
+} from './hooks/useUnifiedCampaigns';
 
 // Export all types
 export * from './types/sms';

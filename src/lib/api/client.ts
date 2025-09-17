@@ -316,5 +316,10 @@ export class MarketSageApiClient {
 // Create singleton instance
 export const apiClient = new MarketSageApiClient();
 
+// React hook for using the API client
+export function useApiClient(): MarketSageApiClient {
+  return apiClient;
+}
+
 // Export types for external use
-export { ApiError, ApiResponse, RequestConfig, RetryConfig };
+export type { ApiError, ApiResponse, RequestConfig, RetryConfig };
