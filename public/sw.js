@@ -1,10 +1,10 @@
 // MarketSage Service Worker for PWA functionality
 // Provides offline caching, background sync, and push notifications
 
-const CACHE_NAME = 'marketsage-v1';
-const STATIC_CACHE = 'marketsage-static-v1';
-const API_CACHE = 'marketsage-api-v1';
-const IMAGE_CACHE = 'marketsage-images-v1';
+const CACHE_NAME = 'marketsage-v2';
+const STATIC_CACHE = 'marketsage-static-v2';
+const API_CACHE = 'marketsage-api-v2';
+const IMAGE_CACHE = 'marketsage-images-v2';
 
 // Files to cache for offline functionality
 const STATIC_FILES = [
@@ -18,10 +18,12 @@ const STATIC_FILES = [
 
 // API endpoints to cache
 const API_ENDPOINTS = [
-  '/api/contacts',
-  '/api/campaigns',
-  '/api/analytics',
-  '/api/health'
+  '/api/v2/contacts',
+  '/api/v2/email/campaigns',
+  '/api/v2/sms/campaigns',
+  '/api/v2/whatsapp/campaigns',
+  '/api/v2/notifications',
+  '/api/v2/health'
 ];
 
 // Install event - cache static files
@@ -98,10 +100,14 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Different strategies for different types of requests
+  // DISABLE API CACHING COMPLETELY - Skip all API requests to prevent stale cache issues
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(handleAPIRequest(request));
-  } else if (url.pathname.startsWith('/_next/static/') || 
+    console.log('[Service Worker] Skipping API request:', url.pathname);
+    return; // Let requests go through normally without caching
+  }
+
+  // Different strategies for different types of requests
+  if (url.pathname.startsWith('/_next/static/') || 
              url.pathname.startsWith('/icons/') ||
              url.pathname === '/manifest.json') {
     event.respondWith(handleStaticRequest(request));

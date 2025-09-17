@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -47,143 +47,120 @@ import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
+import { signIn, useSession } from "next-auth/react";
 
-// Define campaign type
-interface EmailCampaign {
-  id: string;
-  name: string;
-  description: string | null;
-  subject: string;
-  from: string;
-  replyTo: string | null;
-  status: string;
-  scheduledFor: string | null;
-  sentAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-  template: {
-    id: string;
-    name: string;
-  } | null;
-  lists: {
-    id: string;
-    name: string;
-  }[];
-  segments: {
-    id: string;
-    name: string;
-  }[];
-  statistics: {
-    totalRecipients: number;
-  };
-  aiOptimization?: {
-    subjectOptimization: number;
-    contentOptimization: number;
-    timingOptimization: number;
-    overallAIAdvantage: number;
-    predictedPerformance: {
-      openRate: number;
-      clickRate: number;
-      conversionRate: number;
-    };
-  };
-}
+// Import unified API client and types
+import { useEmail } from "@/lib/api/hooks";
+import type { EmailCampaign, EmailCampaignAnalytics } from "@/lib/api/types/email";
 
 export default function EmailCampaignsPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { data: session, status } = useSession();
+  const emailApi = useEmail();
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [campaigns, setCampaigns] = useState<EmailCampaign[]>([]);
+  
+  // Ensure campaigns is always an array - defensive programming
+  const safeCampaigns = Array.isArray(campaigns) ? campaigns : [];
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [campaignAnalytics, setCampaignAnalytics] = useState<Record<string, any>>({});
+  const [campaignAnalytics, setCampaignAnalytics] = useState<Record<string, EmailCampaignAnalytics>>({});
   const [isLoadingAnalytics, setIsLoadingAnalytics] = useState<Record<string, boolean>>({});
-
-  // Fetch campaigns from API
-  useEffect(() => {
-    const fetchCampaigns = async () => {
-      setIsLoading(true);
-      try {
-        // Include status and search query as parameters if they exist
-        let url = "/api/email/campaigns";
-        const params = new URLSearchParams();
-        
-        if (statusFilter) {
-          params.append("status", statusFilter);
-        }
-        
-        if (searchQuery) {
-          params.append("search", searchQuery);
-        }
-        
-        if (params.toString()) {
-          url += `?${params.toString()}`;
-        }
-        
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-          throw new Error(`Error: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        setCampaigns(data);
-        setError(null);
-        
-        // Load real analytics for email campaigns
-        await loadEmailCampaignAnalytics(data);
-        
-      } catch (err) {
-        console.error("Failed to fetch campaigns:", err);
-        setError("Failed to load campaigns. Please try again later.");
-        toast({
-          title: "Error",
-          description: "Failed to load campaigns. Please try again later.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchCampaigns();
-  }, [statusFilter, searchQuery, toast]);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
   // Load real analytics for email campaigns
-  const loadEmailCampaignAnalytics = async (campaignList: EmailCampaign[]) => {
-    const analytics: Record<string, any> = {};
+  const loadEmailCampaignAnalytics = useCallback(async (campaignList: EmailCampaign[]) => {
+    console.log('loadEmailCampaignAnalytics called with:', campaignList);
+    console.log('campaignList type:', typeof campaignList);
+    console.log('campaignList isArray:', Array.isArray(campaignList));
+    console.log('campaignList length:', campaignList?.length);
     
-    for (const campaign of campaignList) {
-      if (campaign.status === 'SENT' || campaign.status === 'SENDING') {
-        setIsLoadingAnalytics(prev => ({ ...prev, [campaign.id]: true }));
-        
+    // Ensure campaignList is iterable
+    if (!Array.isArray(campaignList)) {
+      console.error('campaignList is not an array:', campaignList);
+      return;
+    }
+    
+    const analytics: Record<string, EmailCampaignAnalytics> = {};
+    
+    try {
+      for (const campaign of campaignList) {
+        if (campaign && campaign.status === 'SENT' || campaign.status === 'SENDING') {
+          setIsLoadingAnalytics(prev => ({ ...prev, [campaign.id]: true }));
+          
         try {
-          const response = await fetch(`/api/email/campaigns/${campaign.id}/analytics`);
-          if (response.ok) {
-            const data = await response.json();
-            analytics[campaign.id] = data;
+          // Use unified API client for analytics
+          const analyticsData = await emailApi.getCampaignAnalytics(campaign.id);
+          if (analyticsData && typeof analyticsData === 'object' && 'analytics' in analyticsData) {
+            analytics[campaign.id] = analyticsData as EmailCampaignAnalytics;
           }
         } catch (error) {
           console.warn(`Failed to load analytics for email campaign ${campaign.id}:`, error);
         } finally {
           setIsLoadingAnalytics(prev => ({ ...prev, [campaign.id]: false }));
         }
+        }
       }
+      
+      setCampaignAnalytics(analytics);
+    } catch (error) {
+      console.error('Error in loadEmailCampaignAnalytics:', error);
+    }
+  }, [emailApi]);
+
+  // Fetch campaigns from API
+  const fetchCampaigns = useCallback(async () => {
+    // Only fetch if user is authenticated
+    if (!session?.user || status !== 'authenticated') {
+      setIsAuthenticated(false);
+      setIsLoading(false);
+      return;
     }
     
-    setCampaignAnalytics(analytics);
-  };
+    setIsAuthenticated(true);
+    setIsLoading(true);
+    try {
+      // Use unified API client for consistent authentication
+      const response = await emailApi.getCampaigns({
+        status: statusFilter || undefined,
+        search: searchQuery || undefined,
+      });
+      
+      if (response && typeof response === 'object' && 'campaigns' in response) {
+        const campaigns = Array.isArray(response.campaigns) ? response.campaigns : [];
+        setCampaigns(campaigns);
+        // Load analytics for sent campaigns
+        await loadEmailCampaignAnalytics(campaigns);
+      }
+    } catch (error) {
+      console.error('Failed to fetch email campaigns:', error);
+      setError('Failed to load email campaigns');
+      toast({
+        title: "Error",
+        description: "Failed to load email campaigns",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [session, status, statusFilter, searchQuery, emailApi, loadEmailCampaignAnalytics, toast]);
+
+  useEffect(() => {
+    fetchCampaigns();
+  }, [fetchCampaigns]);
 
   // Refresh analytics for individual email campaign
   const handleRefreshAnalytics = async (campaign: EmailCampaign) => {
     setIsLoadingAnalytics(prev => ({ ...prev, [campaign.id]: true }));
     
     try {
-      const response = await fetch(`/api/email/campaigns/${campaign.id}/analytics`);
-      if (response.ok) {
-        const data = await response.json();
-        setCampaignAnalytics(prev => ({ ...prev, [campaign.id]: data }));
+      // Use unified API client for analytics refresh
+      const analyticsData = await emailApi.getCampaignAnalytics(campaign.id);
+      if (analyticsData && typeof analyticsData === 'object' && 'analytics' in analyticsData) {
+        setCampaignAnalytics(prev => ({ ...prev, [campaign.id]: analyticsData as EmailCampaignAnalytics }));
         toast({
           title: "Analytics Refreshed",
           description: "Campaign analytics updated successfully",
@@ -203,17 +180,37 @@ export default function EmailCampaignsPage() {
     }
   };
 
-  // Calculate status counts for filter
+  // Calculate status counts for filter - with additional safety checks
+  console.log('=== STATUS COUNTS DEBUG ===');
+  console.log('campaigns state:', campaigns);
+  console.log('safeCampaigns:', safeCampaigns);
+  console.log('campaigns type:', typeof campaigns);
+  console.log('campaigns isArray:', Array.isArray(campaigns));
+  console.log('campaigns length:', campaigns?.length);
+  console.log('=== END STATUS COUNTS DEBUG ===');
+  
+  // Ensure safeCampaigns is always an array before filtering
   const statusCounts = {
-    DRAFT: campaigns.filter((c) => c.status === "DRAFT").length,
-    SCHEDULED: campaigns.filter((c) => c.status === "SCHEDULED").length,
-    SENDING: campaigns.filter((c) => c.status === "SENDING").length,
-    SENT: campaigns.filter((c) => c.status === "SENT").length,
-    PAUSED: campaigns.filter((c) => c.status === "PAUSED").length,
+    DRAFT: Array.isArray(safeCampaigns) ? safeCampaigns.filter((c) => c && c.status === "DRAFT").length : 0,
+    SCHEDULED: Array.isArray(safeCampaigns) ? safeCampaigns.filter((c) => c && c.status === "SCHEDULED").length : 0,
+    SENDING: Array.isArray(safeCampaigns) ? safeCampaigns.filter((c) => c && c.status === "SENDING").length : 0,
+    SENT: Array.isArray(safeCampaigns) ? safeCampaigns.filter((c) => c && c.status === "SENT").length : 0,
+    PAUSED: Array.isArray(safeCampaigns) ? safeCampaigns.filter((c) => c && c.status === "PAUSED").length : 0,
   };
 
-  // Filter campaigns based on search query and filters
-  const filteredCampaigns = campaigns.filter((campaign) => {
+  // Filter campaigns based on search query and filters - with additional safety checks
+  console.log('Filtering campaigns. Current campaigns state:', campaigns);
+  console.log('campaigns type:', typeof campaigns);
+  console.log('campaigns isArray:', Array.isArray(campaigns));
+  console.log('campaigns length:', campaigns?.length);
+  
+  const filteredCampaigns = Array.isArray(safeCampaigns) ? safeCampaigns.filter((campaign) => {
+    // Additional safety check for campaign object
+    if (!campaign || typeof campaign !== 'object') {
+      console.warn('Invalid campaign object:', campaign);
+      return false;
+    }
+    
     // Only filter by status locally if it wasn't already filtered on the server
     if (statusFilter && campaign.status !== statusFilter) {
       return false;
@@ -229,7 +226,9 @@ export default function EmailCampaignsPage() {
     }
 
     return true;
-  });
+  }) : [];
+  
+  console.log('Filtered campaigns result:', filteredCampaigns);
 
   const handleCreateCampaign = () => {
     router.push("/email/campaigns/create");
@@ -246,16 +245,17 @@ export default function EmailCampaignsPage() {
   const handleDeleteCampaign = async (id: string) => {
     if (confirm("Are you sure you want to delete this campaign?")) {
       try {
-        const response = await fetch(`/api/email/campaigns/${id}`, {
-          method: "DELETE",
+        // Use unified API client for deletion
+        await emailApi.deleteCampaign(id);
+        
+        // Remove campaign from state with safety checks
+        setCampaigns(prevCampaigns => {
+          if (!Array.isArray(prevCampaigns)) {
+            console.error('Previous campaigns is not an array:', prevCampaigns);
+            return [];
+          }
+          return prevCampaigns.filter(campaign => campaign.id !== id);
         });
-        
-        if (!response.ok) {
-          throw new Error(`Error: ${response.status}`);
-        }
-        
-        // Remove campaign from state
-        setCampaigns(campaigns.filter(campaign => campaign.id !== id));
         
         toast({
           title: "Success",
@@ -274,24 +274,12 @@ export default function EmailCampaignsPage() {
 
   const handleDuplicateCampaign = async (id: string) => {
     try {
-      const response = await fetch(`/api/v2/email/campaigns/${id}/duplicate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      // Note: Duplicate functionality would need to be implemented in the backend
+      // For now, we'll show a message that this feature is not yet available
+      toast({
+        title: "Feature Coming Soon",
+        description: "Campaign duplication will be available in a future update",
       });
-      
-      if (response.ok) {
-        const result = await response.json();
-        toast({
-          title: "Success",
-          description: result.message,
-        });
-        // Refresh campaigns list
-        fetchCampaigns();
-      } else {
-        throw new Error(`Error: ${response.status}`);
-      }
     } catch (error) {
       console.error("Error duplicating campaign:", error);
       toast({
@@ -311,12 +299,12 @@ export default function EmailCampaignsPage() {
   const getAnalyticsSummary = () => {
     const campaignsWithAnalytics = Object.keys(campaignAnalytics).length;
     const avgOpenRate = campaignsWithAnalytics > 0 
-      ? Object.values(campaignAnalytics).reduce((sum, analytics: any) => 
-          sum + (analytics.openRate || 0), 0) / campaignsWithAnalytics
+      ? Object.values(campaignAnalytics).reduce((sum, analytics: EmailCampaignAnalytics) => 
+          sum + (analytics?.analytics?.openRate || 0), 0) / campaignsWithAnalytics
       : 0;
     const avgClickRate = campaignsWithAnalytics > 0 
-      ? Object.values(campaignAnalytics).reduce((sum, analytics: any) => 
-          sum + (analytics.clickRate || 0), 0) / campaignsWithAnalytics
+      ? Object.values(campaignAnalytics).reduce((sum, analytics: EmailCampaignAnalytics) => 
+          sum + (analytics?.analytics?.clickRate || 0), 0) / campaignsWithAnalytics
       : 0;
     return { campaignsWithAnalytics, avgOpenRate, avgClickRate };
   };
@@ -325,30 +313,52 @@ export default function EmailCampaignsPage() {
 
   return (
     <div className="flex flex-col space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Email Campaigns</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage email marketing campaigns with real-time analytics and performance tracking.
-          </p>
-          {campaignsWithAnalytics > 0 && (
-            <div className="flex items-center gap-2 mt-2">
-              <Badge variant="outline" className="text-blue-400 border-blue-400 bg-blue-900/20">
-                <BarChart className="h-3 w-3 mr-1" />
-                {campaignsWithAnalytics} Campaigns with Analytics
-              </Badge>
-              <Badge variant="outline" className="text-green-400 border-green-400 bg-green-900/20">
-                <TrendingUp className="h-3 w-3 mr-1" />
-                {avgOpenRate.toFixed(1)}% Avg Open Rate
-              </Badge>
+      {!isAuthenticated ? (
+        <Card className="bg-red-950/50 border-red-500/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-400">
+              <Target className="h-5 w-5" />
+              Authentication Required
+            </CardTitle>
+            <CardDescription className="text-red-300">
+              You need to be logged in to access email campaigns.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={() => signIn()} 
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Sign In
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight">Email Campaigns</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Manage email marketing campaigns with real-time analytics and performance tracking.
+              </p>
+              {campaignsWithAnalytics > 0 && (
+                <div className="flex items-center gap-2 mt-2">
+                  <Badge variant="outline" className="text-blue-400 border-blue-400 bg-blue-900/20">
+                    <BarChart className="h-3 w-3 mr-1" />
+                    {campaignsWithAnalytics} Campaigns with Analytics
+                  </Badge>
+                  <Badge variant="outline" className="text-green-400 border-green-400 bg-green-900/20">
+                    <TrendingUp className="h-3 w-3 mr-1" />
+                    {avgOpenRate.toFixed(1)}% Avg Open Rate
+                  </Badge>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-        <Button onClick={handleCreateCampaign}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Campaign
-        </Button>
-      </div>
+            <Button onClick={handleCreateCampaign}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Campaign
+            </Button>
+          </div>
 
       {/* Email Analytics Overview */}
       {campaignsWithAnalytics > 0 && (
@@ -397,8 +407,8 @@ export default function EmailCampaignsPage() {
                   <span className="font-medium text-orange-300">Total Sent</span>
                 </div>
                 <div className="text-2xl font-bold text-orange-100">
-                  {Object.values(campaignAnalytics).reduce((sum, analytics: any) => 
-                    sum + (analytics.sent || 0), 0).toLocaleString()}
+                  {Object.values(campaignAnalytics).reduce((sum, analytics: EmailCampaignAnalytics) => 
+                    sum + (analytics.analytics.totalSent || 0), 0).toLocaleString()}
                 </div>
                 <p className="text-xs text-orange-200">Total emails delivered</p>
               </div>
@@ -530,10 +540,10 @@ export default function EmailCampaignsPage() {
                           {campaignAnalytics[campaign.id] && (
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-xs text-green-400">
-                                {campaignAnalytics[campaign.id].openRate}% open rate
+                                {campaignAnalytics[campaign.id]?.analytics?.openRate || 0}% open rate
                               </span>
                               <Badge variant="outline" className="text-xs text-blue-400 border-blue-400">
-                                {campaignAnalytics[campaign.id].sent || 0} sent
+                                {campaignAnalytics[campaign.id]?.analytics?.totalSent || 0} sent
                               </Badge>
                             </div>
                           )}
@@ -555,8 +565,8 @@ export default function EmailCampaignsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {campaign.statistics.totalRecipients > 0
-                          ? campaign.statistics.totalRecipients.toLocaleString()
+                        {(campaignAnalytics[campaign.id]?.analytics?.totalSent || 0) > 0
+                          ? (campaignAnalytics[campaign.id]?.analytics?.totalSent || 0).toLocaleString()
                           : "-"}
                       </TableCell>
                       <TableCell>
@@ -565,13 +575,13 @@ export default function EmailCampaignsPage() {
                             <div className="flex items-center gap-2 text-xs">
                               <span className="text-muted-foreground">Open Rate:</span>
                               <Badge variant="outline" className="text-green-400 border-green-400">
-                                {campaignAnalytics[campaign.id].openRate || 0}%
+                                {campaignAnalytics[campaign.id]?.analytics?.openRate || 0}%
                               </Badge>
                             </div>
                             <div className="flex items-center gap-2 text-xs">
                               <span className="text-muted-foreground">Click Rate:</span>
                               <Badge variant="outline" className="text-blue-400 border-blue-400">
-                                {campaignAnalytics[campaign.id].clickRate || 0}%
+                                {campaignAnalytics[campaign.id]?.analytics?.clickRate || 0}%
                               </Badge>
                             </div>
                           </div>
@@ -584,7 +594,7 @@ export default function EmailCampaignsPage() {
                           </div>
                         ) : (
                           <div className="text-sm text-muted-foreground">
-                            {campaign.lists.length > 0
+                            {campaign.lists && campaign.lists.length > 0
                               ? `${campaign.lists.length} list${campaign.lists.length > 1 ? 's' : ''}`
                               : "-"}
                           </div>
@@ -592,9 +602,9 @@ export default function EmailCampaignsPage() {
                       </TableCell>
                       <TableCell>
                         {campaign.status === "SENT" 
-                          ? getFormattedDate(campaign.sentAt)
+                          ? getFormattedDate(campaign.sentAt || null)
                           : campaign.status === "SCHEDULED"
-                          ? `Scheduled for ${getFormattedDate(campaign.scheduledFor)}`
+                          ? `Scheduled for ${getFormattedDate(campaign.scheduledFor || null)}`
                           : campaign.status === "SENDING"
                           ? "In progress"
                           : getFormattedDate(campaign.updatedAt)}
@@ -675,6 +685,8 @@ export default function EmailCampaignsPage() {
           </div>
         </CardContent>
       </Card>
+        </>
+      )}
     </div>
   );
 }

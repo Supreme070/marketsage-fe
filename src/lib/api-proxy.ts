@@ -5,7 +5,8 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { getAppRouterSession } from '@/lib/auth/session-utils';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/auth-options';
 
 // Configuration
 const NESTJS_BASE_URL = process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
@@ -66,7 +67,7 @@ export async function proxyToBackend(
     // Authentication handling
     let authToken: string | undefined;
     if (requireAuth) {
-      const session = await getAppRouterSession();
+      const session = await getServerSession(authOptions);
       
       if (enableLogging) {
         console.log(`[API Proxy] Session check for ${frontendPath}:`, { 

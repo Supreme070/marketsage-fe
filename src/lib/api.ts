@@ -10,7 +10,7 @@ export const getLists = async () => {
 };
 
 export const getListById = async (id: string) => {
-  const response = await fetch(`/api/lists/${id}`);
+  const response = await fetch(`/api/v2/lists/${id}`);
   if (!response.ok) {
     throw new Error('Failed to fetch list');
   }
@@ -35,7 +35,7 @@ export const getSegments = async () => {
 };
 
 export const getSegmentById = async (id: string) => {
-  const response = await fetch(`/api/segments/${id}`);
+  const response = await fetch(`/api/v2/segments/${id}`);
   if (!response.ok) {
     throw new Error('Failed to fetch segment');
   }
@@ -60,7 +60,7 @@ export const getEmailTemplates = async () => {
 };
 
 export const getEmailTemplateById = async (id: string) => {
-  const response = await fetch(`/api/email/templates/${id}`);
+  const response = await fetch(`/api/v2/email/templates/${id}`);
   if (!response.ok) {
     throw new Error('Failed to fetch email template');
   }
@@ -73,11 +73,18 @@ export const getEmailCampaigns = async () => {
   if (!response.ok) {
     throw new Error('Failed to fetch email campaigns');
   }
-  return response.json();
+  const data = await response.json();
+  
+  // Check if response indicates an error
+  if (data && typeof data === 'object' && data.success === false) {
+    throw new Error(data.error?.message || 'API returned an error');
+  }
+  
+  return data;
 };
 
 export const getEmailCampaignById = async (id: string) => {
-  const response = await fetch(`/api/email/campaigns/${id}`);
+  const response = await fetch(`/api/v2/email/campaigns/${id}`);
   if (!response.ok) {
     throw new Error('Failed to fetch email campaign');
   }
@@ -85,7 +92,7 @@ export const getEmailCampaignById = async (id: string) => {
 };
 
 export const getEmailCampaignStats = async (id: string) => {
-  const response = await fetch(`/api/email/campaigns/${id}/stats`);
+  const response = await fetch(`/api/v2/email/campaigns/${id}/stats`);
   if (!response.ok) {
     throw new Error('Failed to fetch email campaign statistics');
   }
@@ -102,7 +109,7 @@ export const getSMSTemplates = async () => {
 };
 
 export const getSMSTemplateById = async (id: string) => {
-  const response = await fetch(`/api/sms/templates/${id}`);
+  const response = await fetch(`/api/v2/sms/templates/${id}`);
   if (!response.ok) {
     throw new Error('Failed to fetch SMS template');
   }
@@ -122,7 +129,7 @@ export const getSMSCampaigns = async () => {
 
 export const getSMSCampaignById = async (id: string) => {
   try {
-    const response = await fetch(`/api/sms/campaigns/${id}`);
+    const response = await fetch(`/api/v2/sms/campaigns/${id}`);
     
     if (response.status === 404) {
       return null; // Return null for not found
@@ -140,7 +147,7 @@ export const getSMSCampaignById = async (id: string) => {
 };
 
 export const getSMSCampaignStats = async (id: string) => {
-  const response = await fetch(`/api/sms/campaigns/${id}/stats`);
+  const response = await fetch(`/api/v2/sms/campaigns/${id}/stats`);
   if (!response.ok) {
     throw new Error('Failed to fetch SMS campaign statistics');
   }
@@ -157,7 +164,7 @@ export const getContacts = async () => {
 };
 
 export const getContactById = async (id: string) => {
-  const response = await fetch(`/api/contacts/${id}`);
+  const response = await fetch(`/api/v2/contacts/${id}`);
   if (!response.ok) {
     throw new Error('Failed to fetch contact');
   }
@@ -187,7 +194,7 @@ export const getWhatsAppTemplates = async () => {
 };
 
 export const getWhatsAppTemplateById = async (id: string) => {
-  const response = await fetch(`/api/whatsapp/templates/${id}`);
+  const response = await fetch(`/api/v2/whatsapp/templates/${id}`);
   if (!response.ok) {
     throw new Error('Failed to fetch WhatsApp template');
   }
@@ -201,13 +208,19 @@ export const getWhatsAppCampaigns = async () => {
     throw new Error('Failed to fetch WhatsApp campaigns');
   }
   const data = await response.json();
+  
+  // Check if response indicates an error
+  if (data && typeof data === 'object' && data.success === false) {
+    throw new Error(data.error?.message || 'API returned an error');
+  }
+  
   // Return the campaigns array if the response is an object with campaigns property
   return Array.isArray(data) ? data : (data?.campaigns || []);
 };
 
 export const getWhatsAppCampaignById = async (id: string) => {
   try {
-    const response = await fetch(`/api/whatsapp/campaigns/${id}`);
+    const response = await fetch(`/api/v2/whatsapp/campaigns/${id}`);
     
     if (response.status === 404) {
       return null; // Return null for not found
@@ -225,7 +238,7 @@ export const getWhatsAppCampaignById = async (id: string) => {
 };
 
 export const getWhatsAppCampaignStats = async (id: string) => {
-  const response = await fetch(`/api/whatsapp/campaigns/${id}/statistics`);
+  const response = await fetch(`/api/v2/whatsapp/campaigns/${id}/analytics`);
   if (!response.ok) {
     throw new Error('Failed to fetch WhatsApp campaign statistics');
   }
@@ -233,7 +246,7 @@ export const getWhatsAppCampaignStats = async (id: string) => {
 };
 
 export const sendWhatsAppCampaign = async (id: string) => {
-  const response = await fetch(`/api/whatsapp/campaigns/${id}/send`, {
+  const response = await fetch(`/api/v2/whatsapp/campaigns/${id}/send`, {
     method: 'POST'
   });
   
@@ -245,7 +258,7 @@ export const sendWhatsAppCampaign = async (id: string) => {
 };
 
 export const scheduleWhatsAppCampaign = async (id: string, scheduledFor: string) => {
-  const response = await fetch(`/api/whatsapp/campaigns/${id}/schedule`, {
+  const response = await fetch(`/api/v2/whatsapp/campaigns/${id}/send`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -261,8 +274,12 @@ export const scheduleWhatsAppCampaign = async (id: string, scheduledFor: string)
 };
 
 export const cancelScheduledWhatsAppCampaign = async (id: string) => {
-  const response = await fetch(`/api/whatsapp/campaigns/${id}/schedule`, {
-    method: 'DELETE'
+  const response = await fetch(`/api/v2/whatsapp/campaigns/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ status: 'CANCELLED' })
   });
   
   if (!response.ok) {

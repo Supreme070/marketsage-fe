@@ -44,20 +44,23 @@ import Link from "next/link";
 import { getWhatsAppCampaigns, getWhatsAppTemplates } from "@/lib/api";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import type { WhatsAppCampaign, WhatsAppTemplate } from "@/hooks/useWhatsApp";
 // Removed quantum functionality - using real analytics instead
 
 export default function WhatsAppCampaignsPage() {
   const router = useRouter();
-  const [campaigns, setCampaigns] = useState<any[]>([]);
-  const [templates, setTemplates] = useState<any[]>([]);
+  const [campaigns, setCampaigns] = useState<WhatsAppCampaign[]>([]);
+  const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [templateFilter, setTemplateFilter] = useState<string | null>(null);
   const [isCreatingSampleData, setIsCreatingSampleData] = useState(false);
-  const [campaignAnalytics, setCampaignAnalytics] = useState<Record<string, any>>({});
+  const [campaignAnalytics, setCampaignAnalytics] = useState<Record<string, Record<string, unknown>>>({});
   const [isLoadingAnalytics, setIsLoadingAnalytics] = useState<Record<string, boolean>>({});
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
   
   // New function to create sample data
   const createSampleData = async () => {
@@ -96,14 +99,27 @@ export default function WhatsAppCampaignsPage() {
         ]);
         
         console.log("Fetched campaigns:", campaignsData);
-        setCampaigns(campaignsData || []);
-        setTemplates(templatesData || []);
+        // Handle different response formats with defensive programming
+        const campaignList = Array.isArray(campaignsData) ? campaignsData : (campaignsData?.campaigns || []);
+        const templateList = Array.isArray(templatesData) ? templatesData : (templatesData?.templates || []);
+        
+        // Ensure both lists are arrays before setting state
+        const safeCampaignList = Array.isArray(campaignList) ? campaignList : [];
+        const safeTemplateList = Array.isArray(templateList) ? templateList : [];
+        
+        setCampaigns(safeCampaignList);
+        setTemplates(safeTemplateList);
         
         // Load real analytics for WhatsApp campaigns
-        await loadWhatsAppCampaignAnalytics(campaignsData || []);
+        await loadWhatsAppCampaignAnalytics(safeCampaignList);
       } catch (error) {
         console.error("Error fetching data:", error);
-        toast.error("Failed to load campaigns");
+        if (error instanceof Error && error.message.includes('401')) {
+          setIsAuthenticated(false);
+          toast.error("Authentication required. Please log in to access campaigns.");
+        } else {
+          toast.error("Failed to load campaigns");
+        }
       } finally {
         setIsLoading(false);
       }
@@ -113,8 +129,8 @@ export default function WhatsAppCampaignsPage() {
   }, []);
 
   // Load real analytics for WhatsApp campaigns
-  const loadWhatsAppCampaignAnalytics = async (campaignList: any[]) => {
-    const analytics: Record<string, any> = {};
+  const loadWhatsAppCampaignAnalytics = async (campaignList: WhatsAppCampaign[]) => {
+    const analytics: Record<string, Record<string, unknown>> = {};
     
     const campaigns = Array.isArray(campaignList) ? campaignList : [];
     for (const campaign of campaigns) {
@@ -122,7 +138,7 @@ export default function WhatsAppCampaignsPage() {
         setIsLoadingAnalytics(prev => ({ ...prev, [campaign.id]: true }));
         
         try {
-          const response = await fetch(`/api/whatsapp/campaigns/${campaign.id}/analytics`);
+          const response = await fetch(`/api/v2/whatsapp/campaigns/${campaign.id}/analytics`);
           if (response.ok) {
             const data = await response.json();
             analytics[campaign.id] = data;
@@ -139,11 +155,11 @@ export default function WhatsAppCampaignsPage() {
   };
 
   // Refresh analytics for individual WhatsApp campaign
-  const handleRefreshAnalytics = async (campaign: any) => {
+  const handleRefreshAnalytics = async (campaign: WhatsAppCampaign) => {
     setIsLoadingAnalytics(prev => ({ ...prev, [campaign.id]: true }));
     
     try {
-      const response = await fetch(`/api/whatsapp/campaigns/${campaign.id}/analytics`);
+      const response = await fetch(`/api/v2/whatsapp/campaigns/${campaign.id}/analytics`);
       if (response.ok) {
         const data = await response.json();
         setCampaignAnalytics(prev => ({ ...prev, [campaign.id]: data }));
@@ -164,14 +180,20 @@ export default function WhatsAppCampaignsPage() {
     if (confirm("Are you sure you want to delete this campaign?")) {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/whatsapp/campaigns/${id}`, {
+        const response = await fetch(`/api/v2/whatsapp/campaigns/${id}`, {
           method: 'DELETE'
         });
         
         if (response.ok) {
           toast.success("Campaign deleted successfully");
-          // Remove the deleted campaign from state
-          setCampaigns((campaigns || []).filter(campaign => campaign.id !== id));
+          // Remove the deleted campaign from state with safety checks
+          setCampaigns(prevCampaigns => {
+            if (!Array.isArray(prevCampaigns)) {
+              console.error('Previous campaigns is not an array:', prevCampaigns);
+              return [];
+            }
+            return prevCampaigns.filter(campaign => campaign.id !== id);
+          });
         } else {
           const errorData = await response.json();
           toast.error(errorData.error || "Failed to delete campaign");
@@ -189,15 +211,21 @@ export default function WhatsAppCampaignsPage() {
   const handleDuplicate = async (id: string) => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/whatsapp/campaigns/${id}/duplicate`, {
+      const response = await fetch(`/api/v2/whatsapp/campaigns/${id}/duplicate`, {
         method: 'POST'
       });
       
       if (response.ok) {
         const duplicatedCampaign = await response.json();
         toast.success("Campaign duplicated successfully");
-        // Add the new campaign to state
-        setCampaigns([duplicatedCampaign, ...(campaigns || [])]);
+        // Add the new campaign to state with safety checks
+        setCampaigns(prevCampaigns => {
+          if (!Array.isArray(prevCampaigns)) {
+            console.error('Previous campaigns is not an array:', prevCampaigns);
+            return [duplicatedCampaign];
+          }
+          return [duplicatedCampaign, ...prevCampaigns];
+        });
       } else {
         const errorData = await response.json();
         toast.error(errorData.error || "Failed to duplicate campaign");
@@ -295,10 +323,10 @@ export default function WhatsAppCampaignsPage() {
 
   // Calculate average open rate
   const calculateAverageOpenRate = () => {
-    const sentCampaigns = (campaigns || []).filter(c => c.status === "SENT" && c.statistics?.openRate);
+    const sentCampaigns = (campaigns || []).filter(c => c.status === "SENT" && (c as WhatsAppCampaign & { statistics?: { openRate?: number } }).statistics?.openRate);
     if (sentCampaigns.length === 0) return 0;
     
-    const totalOpenRate = sentCampaigns.reduce((acc, curr) => acc + (curr.statistics?.openRate || 0), 0);
+    const totalOpenRate = sentCampaigns.reduce((acc, curr) => acc + ((curr as WhatsAppCampaign & { statistics?: { openRate?: number } }).statistics?.openRate || 0), 0);
     return Math.round(totalOpenRate / sentCampaigns.length);
   };
 
@@ -306,8 +334,8 @@ export default function WhatsAppCampaignsPage() {
   const getWhatsAppAnalyticsSummary = () => {
     const campaignsWithAnalytics = Object.keys(campaignAnalytics).length;
     const avgDeliveryRate = campaignsWithAnalytics > 0 
-      ? Object.values(campaignAnalytics).reduce((sum, analytics: any) => 
-          sum + (analytics.deliveryRate || 0), 0) / campaignsWithAnalytics
+      ? Object.values(campaignAnalytics).reduce((sum, analytics: Record<string, unknown>) => 
+          sum + (analytics.deliveryRate as number || 0), 0) / campaignsWithAnalytics
       : 0;
     return { campaignsWithAnalytics, avgDeliveryRate };
   };
@@ -316,7 +344,29 @@ export default function WhatsAppCampaignsPage() {
 
   return (
     <div className="flex flex-col space-y-6">
-      <div className="flex items-center justify-between">
+      {!isAuthenticated ? (
+        <Card className="bg-red-950/50 border-red-500/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-400">
+              <Phone className="h-5 w-5" />
+              Authentication Required
+            </CardTitle>
+            <CardDescription className="text-red-300">
+              You need to be logged in to access WhatsApp campaigns.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={() => signIn()} 
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Sign In
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">WhatsApp Campaigns</h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -393,8 +443,8 @@ export default function WhatsAppCampaignsPage() {
                   <span className="font-medium text-purple-300">Messages Sent</span>
                 </div>
                 <div className="text-2xl font-bold text-purple-100">
-                  {Object.values(campaignAnalytics).reduce((sum, analytics: any) => 
-                    sum + (analytics.sent || 0), 0).toLocaleString()}
+                  {Object.values(campaignAnalytics).reduce((sum, analytics: Record<string, unknown>) => 
+                    sum + (analytics.sent as number || 0), 0).toLocaleString()}
                 </div>
                 <p className="text-xs text-purple-200">Total messages dispatched</p>
               </div>
@@ -406,8 +456,8 @@ export default function WhatsAppCampaignsPage() {
                 </div>
                 <div className="text-2xl font-bold text-orange-100">
                   {campaignsWithAnalytics > 0 ? 
-                    (Object.values(campaignAnalytics).reduce((sum, analytics: any) => 
-                      sum + (analytics.responseRate || 0), 0) / campaignsWithAnalytics).toFixed(1)
+                    (Object.values(campaignAnalytics).reduce((sum, analytics: Record<string, unknown>) => 
+                      sum + (analytics.responseRate as number || 0), 0) / campaignsWithAnalytics).toFixed(1)
                     : '0.0'}%
                 </div>
                 <p className="text-xs text-orange-200">Average response rate</p>
@@ -654,10 +704,10 @@ export default function WhatsAppCampaignsPage() {
                           {campaignAnalytics[campaign.id] && (
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-xs text-green-400">
-                                {campaignAnalytics[campaign.id].deliveryRate}% delivery rate
+                                {(campaignAnalytics[campaign.id].deliveryRate as number) || 0}% delivery rate
                               </span>
                               <Badge variant="outline" className="text-xs text-blue-400 border-blue-400">
-                                {campaignAnalytics[campaign.id].sent || 0} sent
+                                {(campaignAnalytics[campaign.id].sent as number) || 0} sent
                               </Badge>
                             </div>
                           )}
@@ -680,20 +730,20 @@ export default function WhatsAppCampaignsPage() {
                             <div className="flex items-center gap-2 text-xs">
                               <span className="text-muted-foreground">Sent:</span>
                               <Badge variant="outline" className="text-blue-400 border-blue-400">
-                                {campaignAnalytics[campaign.id].sent || 0}
+                                {(campaignAnalytics[campaign.id].sent as number) || 0}
                               </Badge>
                             </div>
                             <div className="flex items-center gap-2 text-xs">
                               <span className="text-muted-foreground">Delivered:</span>
                               <Badge variant="outline" className="text-green-400 border-green-400">
-                                {campaignAnalytics[campaign.id].deliveryRate || 0}%
+                                {(campaignAnalytics[campaign.id].deliveryRate as number) || 0}%
                               </Badge>
                             </div>
-                            {campaignAnalytics[campaign.id].failed > 0 && (
+                            {((campaignAnalytics[campaign.id].failed as number) || 0) > 0 && (
                               <div className="flex items-center gap-2 text-xs">
                                 <span className="text-muted-foreground">Failed:</span>
                                 <Badge variant="outline" className="text-red-400 border-red-400">
-                                  {campaignAnalytics[campaign.id].failed}
+                                  {(campaignAnalytics[campaign.id].failed as number) || 0}
                                 </Badge>
                               </div>
                             )}
@@ -708,14 +758,14 @@ export default function WhatsAppCampaignsPage() {
                         ) : (
                           <div className="flex items-center">
                             <Users className="mr-2 h-4 w-4 text-muted-foreground" />
-                            {(campaign.statistics?.totalRecipients || 0).toLocaleString()}
+                            {((campaign as WhatsAppCampaign & { statistics?: { totalRecipients?: number } }).statistics?.totalRecipients || 0).toLocaleString()}
                           </div>
                         )}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center">
                           <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                          <span className="text-xs">{formatDate(campaign.scheduledFor)}</span>
+                          <span className="text-xs">{formatDate(campaign.scheduledFor || null)}</span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -795,6 +845,8 @@ export default function WhatsAppCampaignsPage() {
           )}
         </CardContent>
       </Card>
+        </>
+      )}
     </div>
   );
 } 

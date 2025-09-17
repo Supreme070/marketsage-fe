@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarketSage API Debugging</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #0a0a0a;
+            color: #e0e0e0;
+        }
+        .container {
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #4f46e5;
+            text-align: center;
+        }
+        h2 {
+            color: #10b981;
+            border-bottom: 2px solid #10b981;
+            padding-bottom: 10px;
+        }
+        .button {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+            transition: background-color 0.2s;
+        }
+        .button:hover {
+            background: #3730a3;
+        }
+        .button.secondary {
+            background: #6b7280;
+        }
+        .button.secondary:hover {
+            background: #4b5563;
+        }
+        .console-output {
+            background: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 20px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        .status.success {
+            background: #065f46;
+            color: #10b981;
+        }
+        .status.error {
+            background: #7f1d1d;
+            color: #f87171;
+        }
+        .status.warning {
+            background: #78350f;
+            color: #fbbf24;
+        }
+        .instructions {
+            background: #1e3a8a;
+            color: #93c5fd;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 MarketSage API Debugging Tool</h1>
+        
+        <div class="instructions">
+            <h3>📋 Instructions:</h3>
+            <ol>
+                <li>Open your browser's Developer Tools (F12)</li>
+                <li>Go to the Console tab</li>
+                <li>Click "Load Debug Script" below</li>
+                <li>Click "Run All Tests" to test all API endpoints</li>
+                <li>Check the console output for detailed results</li>
+            </ol>
+        </div>
+
+        <div class="status warning">
+            <strong>⚠️ Important:</strong> Make sure your development servers are running:
+            <ul>
+                <li>Frontend: <code>npm run dev</code> (port 3000)</li>
+                <li>Backend: <code>npm run dev</code> (port 3006)</li>
+            </ul>
+        </div>
+
+        <div>
+            <button class="button" onclick="loadDebugScript()">📥 Load Debug Script</button>
+            <button class="button secondary" onclick="runAllTests()">🚀 Run All Tests</button>
+            <button class="button secondary" onclick="testNextAuth()">🔐 Test NextAuth Session</button>
+            <button class="button secondary" onclick="testCampaigns()">📧 Test Campaign Endpoints</button>
+            <button class="button secondary" onclick="testNotifications()">🔔 Test Notifications</button>
+            <button class="button secondary" onclick="clearConsole()">🧹 Clear Console</button>
+        </div>
+
+        <div id="status" class="status" style="display: none;">
+            <strong>Status:</strong> <span id="status-text">Ready</span>
+        </div>
+
+        <div id="console-output" class="console-output" style="display: none;">
+            <div id="console-content"></div>
+        </div>
+    </div>
+
+    <script>
+        let debugScriptLoaded = false;
+        let originalConsoleLog = console.log;
+        let originalConsoleError = console.error;
+        let originalConsoleWarn = console.warn;
+
+        function loadDebugScript() {
+            const statusDiv = document.getElementById('status');
+            const statusText = document.getElementById('status-text');
+            const consoleOutput = document.getElementById('console-output');
+            const consoleContent = document.getElementById('console-content');
+
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'status warning';
+            statusText.textContent = 'Loading debug script...';
+
+            // Override console methods to capture output
+            console.log = function(...args) {
+                originalConsoleLog.apply(console, args);
+                appendToConsole('LOG', args.join(' '));
+            };
+
+            console.error = function(...args) {
+                originalConsoleError.apply(console, args);
+                appendToConsole('ERROR', args.join(' '));
+            };
+
+            console.warn = function(...args) {
+                originalConsoleWarn.apply(console, args);
+                appendToConsole('WARN', args.join(' '));
+            };
+
+            // Load the debug script
+            const script = document.createElement('script');
+            script.src = '/debug-api-endpoints.js';
+            script.onload = function() {
+                debugScriptLoaded = true;
+                statusDiv.className = 'status success';
+                statusText.textContent = 'Debug script loaded successfully!';
+                consoleOutput.style.display = 'block';
+                console.log('✅ Debug script loaded successfully!');
+                console.log('Available functions: debugAPI.runAllTests(), debugAPI.testNextAuthSession(), etc.');
+            };
+            script.onerror = function() {
+                statusDiv.className = 'status error';
+                statusText.textContent = 'Failed to load debug script';
+                console.error('❌ Failed to load debug script');
+            };
+            document.head.appendChild(script);
+        }
+
+        function appendToConsole(type, message) {
+            const consoleContent = document.getElementById('console-content');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            
+            let className = '';
+            switch(type) {
+                case 'ERROR': className = 'color: #f87171'; break;
+                case 'WARN': className = 'color: #fbbf24'; break;
+                default: className = 'color: #10b981'; break;
+            }
+            
+            logEntry.innerHTML = `<span style="color: #6b7280">[${timestamp}]</span> <span style="${className}">[${type}]</span> ${message}`;
+            consoleContent.appendChild(logEntry);
+            consoleContent.scrollTop = consoleContent.scrollHeight;
+        }
+
+        function runAllTests() {
+            if (!debugScriptLoaded) {
+                alert('Please load the debug script first!');
+                return;
+            }
+            console.log('🚀 Starting comprehensive API testing...');
+            debugAPI.runAllTests();
+        }
+
+        function testNextAuth() {
+            if (!debugScriptLoaded) {
+                alert('Please load the debug script first!');
+                return;
+            }
+            console.log('🔐 Testing NextAuth session endpoint...');
+            debugAPI.testNextAuthSession();
+        }
+
+        function testCampaigns() {
+            if (!debugScriptLoaded) {
+                alert('Please load the debug script first!');
+                return;
+            }
+            console.log('📧 Testing campaign endpoints...');
+            debugAPI.testCampaignEndpoints();
+        }
+
+        function testNotifications() {
+            if (!debugScriptLoaded) {
+                alert('Please load the debug script first!');
+                return;
+            }
+            console.log('🔔 Testing notifications endpoint...');
+            debugAPI.testNotificationsEndpoint();
+        }
+
+        function clearConsole() {
+            const consoleContent = document.getElementById('console-content');
+            consoleContent.innerHTML = '';
+            console.log('🧹 Console cleared');
+        }
+
+        // Auto-load script on page load
+        window.addEventListener('load', function() {
+            console.log('🔍 MarketSage API Debugging Tool loaded');
+            console.log('Click "Load Debug Script" to begin testing');
+        });
+    </script>
+</body>
+</html>
+
+
+

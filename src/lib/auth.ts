@@ -4,7 +4,6 @@ import GoogleProvider from "next-auth/providers/google";
 import FacebookProvider from "next-auth/providers/facebook";
 import TwitterProvider from "next-auth/providers/twitter";
 import LinkedInProvider from "next-auth/providers/linkedin";
-import { apiClient } from "@/lib/api-client";
 
 // Extend NextAuth types for our custom fields
 declare module 'next-auth' {
