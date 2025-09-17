@@ -89,28 +89,61 @@ export function AIIntelligenceDashboard() {
   
   const loading = overviewLoading;
 
-  // Fetch LeadPulse-specific data using Supreme AI
+  // Fetch LeadPulse-specific data using Phase 4 AI endpoints
   const fetchLeadPulseData = async () => {
     if (!session?.user?.id) return;
     
     try {
       setRefreshing(true);
       
+      // Use new Phase 4 AI endpoints
       const [intelligenceRes, visitorsRes] = await Promise.all([
-        fetch(`/api/leadpulse/ai/intelligence?type=overview&timeRange=${timeRange}`),
-        fetch(`/api/leadpulse/ai/intelligence?type=visitor-behavior`)
+        fetch('/api/ai/autonomous-segmentation', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            criteria: { timeRange, includeBehavioral: true },
+            minSegmentSize: 10,
+            features: ['engagement', 'conversion', 'demographics']
+          })
+        }),
+        fetch('/api/ai/customer-journey-optimization', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            customerId: 'all',
+            touchpoints: ['landing', 'form', 'email', 'conversion'],
+            goals: { optimize: 'conversion', target: 'engagement' }
+          })
+        })
       ]);
-
-      if (intelligenceRes.ok && visitorsRes.ok) {
-        const intelligenceData = await intelligenceRes.json();
-        const visitorsData = await visitorsRes.json();
+      
+      const [intelligenceData, visitorsData] = await Promise.all([
+        intelligenceRes.json(),
+        visitorsRes.json()
+      ]);
+      
+      if (intelligenceData.success && visitorsData.success) {
+        setIntelligenceData({
+          insights: intelligenceData.data.insights || [],
+          predictions: intelligenceData.data.predictions || [],
+          recommendations: intelligenceData.data.recommendations || [],
+          score: intelligenceData.data.score || 85,
+          generatedAt: new Date().toISOString()
+        });
         
-        setIntelligenceData(intelligenceData.intelligence);
-        setVisitorProfiles(visitorsData.visitorProfiles || []);
+        setVisitorProfiles(visitorsData.data.profiles || []);
+        toast.success('AI Intelligence data updated');
       }
     } catch (error) {
-      console.error('Error fetching LeadPulse AI intelligence:', error);
-      toast.error('Failed to load LeadPulse AI data');
+      console.error('Failed to fetch LeadPulse AI data:', error);
+      toast.error('Failed to load AI intelligence data');
     } finally {
       setRefreshing(false);
     }

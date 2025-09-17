@@ -1,7 +1,7 @@
 "use client";
 
 import { useAdmin } from "@/components/admin/AdminProvider";
-import { useAdminDashboard } from "@/lib/api/hooks/useAdminAnalytics";
+import { usePhase5Analytics, usePhase5Performance } from "@/hooks/usePhase4Phase5AI";
 import { 
   BarChart3, 
   Users, 
@@ -35,7 +35,8 @@ import {
   Signal,
   Gauge
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 interface AnalyticsMetrics {
   overview: {
@@ -98,90 +99,143 @@ interface AnalyticsMetrics {
 export default function AdminAnalyticsPage() {
   const { permissions, staffRole } = useAdmin();
   const [activeTab, setActiveTab] = useState("overview");
-  const { analytics, users, revenue, platform, loading, error, lastUpdated, refreshAll } = useAdminDashboard();
+  const [timeRange, setTimeRange] = useState("30d");
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsMetrics | null>(null);
+  const [performanceData, setPerformanceData] = useState<any>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Transform API data to match UI interface
-  const metrics: AnalyticsMetrics | null = analytics ? {
-    overview: {
-      totalUsers: analytics.overview.totalUsers,
-      totalUsersGrowth: analytics.overview.userGrowthRate,
-      monthlyActiveUsers: analytics.overview.activeUsers,
-      mauGrowth: Math.abs(analytics.overview.userGrowthRate),
-      totalRevenue: analytics.overview.totalRevenue,
-      revenueGrowth: analytics.overview.revenueGrowthRate,
-      averageRevenuePerUser: analytics.revenueAnalytics.averageOrderValue || 0,
-      arpuGrowth: Math.abs(analytics.overview.revenueGrowthRate) * 0.5
-    },
-    users: {
-      newUsers: analytics.overview.usersThisMonth,
-      newUsersGrowth: analytics.overview.userGrowthRate,
-      retentionRate: users?.retentionRate || 78.5,
-      retentionGrowth: 4.2,
-      churnRate: users?.churnRate || 21.5,
-      churnImprovement: -3.1,
-      averageSessionDuration: users?.averageSessionDuration || 18.5,
-      sessionGrowth: 12.8
-    },
-    revenue: {
-      mrr: analytics.revenueAnalytics.monthlyRevenue,
-      mrrGrowth: analytics.revenueAnalytics.growthRate,
-      arr: analytics.revenueAnalytics.monthlyRevenue * 12,
-      arrGrowth: analytics.revenueAnalytics.growthRate * 1.2,
-      ltv: analytics.revenueAnalytics.averageOrderValue * 10,
-      ltvGrowth: Math.abs(analytics.revenueAnalytics.growthRate) * 0.8,
-      churnRevenue: analytics.revenueAnalytics.monthlyRevenue * 0.1,
-      churnRevenueChange: -5.2
-    },
-    features: {
-      emailCampaigns: { 
-        usage: analytics.campaignAnalytics.channelPerformance[0]?.campaigns || 0, 
-        growth: 15.4 
-      },
-      smsCampaigns: { 
-        usage: analytics.campaignAnalytics.channelPerformance[1]?.campaigns || 0, 
-        growth: 12.8 
-      },
-      whatsappCampaigns: { 
-        usage: analytics.campaignAnalytics.channelPerformance[2]?.campaigns || 0, 
-        growth: 8.9 
-      },
-      leadpulseTracking: { 
-        usage: analytics.leadPulseAnalytics.totalSessions, 
-        growth: 22.1 
-      },
-      aiFeatures: { 
-        usage: Math.floor(analytics.overview.totalUsers * 0.3),
-        growth: 35.7 
-      },
-      workflows: { 
-        usage: analytics.workflowAnalytics.totalExecutions, 
-        growth: 18.3 
+  // Use Phase 5 hooks
+  const { executeAnalyticsQuery, isLoading: analyticsLoading } = usePhase5Analytics();
+  const { getPerformanceMetrics, isLoading: performanceLoading } = usePhase5Performance();
+
+  // Fetch analytics data using Phase 5 endpoints
+  const fetchAnalyticsData = async () => {
+    setIsRefreshing(true);
+    try {
+      // Get organization analytics
+      const orgAnalytics = await executeAnalyticsQuery({
+        startDate: new Date(Date.now() - getTimeRangeMs(timeRange)).toISOString(),
+        endDate: new Date().toISOString(),
+        granularity: getGranularity(timeRange),
+        metrics: ['users', 'revenue', 'campaigns', 'performance'],
+        filters: { includeAfrican: true, includePredictive: true }
+      });
+
+      // Get performance metrics
+      const perfMetrics = await getPerformanceMetrics(timeRange);
+
+      if (orgAnalytics && perfMetrics) {
+        setAnalyticsData(transformAnalyticsData(orgAnalytics));
+        setPerformanceData(perfMetrics);
+        toast.success('Analytics data updated');
       }
-    },
-    geographic: {
-      nigeria: { users: Math.floor(analytics.overview.totalUsers * 0.6), revenue: analytics.overview.totalRevenue * 0.6, growth: 18.5 },
-      ghana: { users: Math.floor(analytics.overview.totalUsers * 0.15), revenue: analytics.overview.totalRevenue * 0.15, growth: 24.2 },
-      kenya: { users: Math.floor(analytics.overview.totalUsers * 0.12), revenue: analytics.overview.totalRevenue * 0.12, growth: 31.7 },
-      southAfrica: { users: Math.floor(analytics.overview.totalUsers * 0.08), revenue: analytics.overview.totalRevenue * 0.08, growth: 12.4 },
-      other: { users: Math.floor(analytics.overview.totalUsers * 0.05), revenue: analytics.overview.totalRevenue * 0.05, growth: 8.9 }
-    },
-    performance: {
-      apiRequests: analytics.platformMetrics.apiCalls,
-      apiRequestsGrowth: 15.3,
-      responseTime: analytics.platformMetrics.responseTime,
-      responseTimeChange: -12.5,
-      uptime: analytics.platformMetrics.uptime,
-      uptimeChange: 0.2,
-      errorRate: analytics.platformMetrics.errorRate,
-      errorRateChange: -25.8
+    } catch (error) {
+      console.error('Failed to fetch analytics data:', error);
+      toast.error('Failed to load analytics data');
+    } finally {
+      setIsRefreshing(false);
     }
-  } : null;
+  };
 
+  // Helper functions
+  const getTimeRangeMs = (timeRange: string): number => {
+    const ranges = {
+      '7d': 7 * 24 * 60 * 60 * 1000,
+      '30d': 30 * 24 * 60 * 60 * 1000,
+      '90d': 90 * 24 * 60 * 60 * 1000,
+      '1y': 365 * 24 * 60 * 60 * 1000,
+    };
+    return ranges[timeRange] || ranges['30d'];
+  };
+
+  const getGranularity = (timeRange: string): string => {
+    const granularities = {
+      '7d': 'day',
+      '30d': 'day',
+      '90d': 'week',
+      '1y': 'month',
+    };
+    return granularities[timeRange] || 'day';
+  };
+
+  const transformAnalyticsData = (data: any): AnalyticsMetrics => {
+    // Transform Phase 5 analytics data to match the expected interface
+    return {
+      overview: {
+        totalUsers: data.metrics?.totalUsers || 0,
+        totalUsersGrowth: data.metrics?.userGrowthRate || 0,
+        monthlyActiveUsers: data.metrics?.activeUsers || 0,
+        mauGrowth: data.metrics?.activeUserGrowth || 0,
+        totalRevenue: data.metrics?.totalRevenue || 0,
+        revenueGrowth: data.metrics?.revenueGrowthRate || 0,
+        averageRevenuePerUser: data.metrics?.averageRevenuePerUser || 0,
+        arpuGrowth: data.metrics?.arpuGrowth || 0,
+      },
+      users: {
+        newUsers: data.metrics?.newUsers || 0,
+        newUsersGrowth: data.metrics?.newUserGrowth || 0,
+        retentionRate: data.metrics?.retentionRate || 0,
+        retentionGrowth: data.metrics?.retentionGrowth || 0,
+        churnRate: data.metrics?.churnRate || 0,
+        churnImprovement: data.metrics?.churnImprovement || 0,
+        averageSessionDuration: data.metrics?.averageSessionDuration || 0,
+        sessionGrowth: data.metrics?.sessionGrowth || 0,
+      },
+      revenue: {
+        mrr: data.metrics?.mrr || 0,
+        mrrGrowth: data.metrics?.mrrGrowth || 0,
+        arr: data.metrics?.arr || 0,
+        arrGrowth: data.metrics?.arrGrowth || 0,
+        ltv: data.metrics?.ltv || 0,
+        ltvGrowth: data.metrics?.ltvGrowth || 0,
+        churnRevenue: data.metrics?.churnRevenue || 0,
+        churnRevenueChange: data.metrics?.churnRevenueChange || 0,
+      },
+      features: {
+        emailCampaigns: { usage: data.metrics?.emailCampaigns || 0, growth: data.metrics?.emailGrowth || 0 },
+        smsCampaigns: { usage: data.metrics?.smsCampaigns || 0, growth: data.metrics?.smsGrowth || 0 },
+        whatsappCampaigns: { usage: data.metrics?.whatsappCampaigns || 0, growth: data.metrics?.whatsappGrowth || 0 },
+        leadpulseTracking: { usage: data.metrics?.leadpulseTracking || 0, growth: data.metrics?.leadpulseGrowth || 0 },
+        aiFeatures: { usage: data.metrics?.aiFeatures || 0, growth: data.metrics?.aiGrowth || 0 },
+        workflows: { usage: data.metrics?.workflows || 0, growth: data.metrics?.workflowGrowth || 0 },
+      },
+      geographic: {
+        nigeria: { users: data.metrics?.nigeriaUsers || 0, revenue: data.metrics?.nigeriaRevenue || 0, growth: data.metrics?.nigeriaGrowth || 0 },
+        ghana: { users: data.metrics?.ghanaUsers || 0, revenue: data.metrics?.ghanaRevenue || 0, growth: data.metrics?.ghanaGrowth || 0 },
+        kenya: { users: data.metrics?.kenyaUsers || 0, revenue: data.metrics?.kenyaRevenue || 0, growth: data.metrics?.kenyaGrowth || 0 },
+        southAfrica: { users: data.metrics?.southAfricaUsers || 0, revenue: data.metrics?.southAfricaRevenue || 0, growth: data.metrics?.southAfricaGrowth || 0 },
+        other: { users: data.metrics?.otherUsers || 0, revenue: data.metrics?.otherRevenue || 0, growth: data.metrics?.otherGrowth || 0 },
+      },
+      performance: {
+        apiRequests: data.metrics?.apiRequests || 0,
+        apiRequestsGrowth: data.metrics?.apiRequestsGrowth || 0,
+        responseTime: data.metrics?.responseTime || 0,
+        responseTimeChange: data.metrics?.responseTimeChange || 0,
+        uptime: data.metrics?.uptime || 0,
+        uptimeChange: data.metrics?.uptimeChange || 0,
+        errorRate: data.metrics?.errorRate || 0,
+        errorRateChange: data.metrics?.errorRateChange || 0,
+      },
+    };
+  };
+
+  // Load data on component mount
+  useEffect(() => {
+    fetchAnalyticsData();
+  }, [timeRange]);
+
+  const isLoading = analyticsLoading || performanceLoading;
+
+  // Use analyticsData from Phase 5 endpoints
+  const metrics = analyticsData;
+
+  // Helper functions for formatting
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-NG', { 
       style: 'currency', 
       currency: 'NGN',
-      minimumFractionDigits: 0
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(amount);
   };
 
@@ -189,45 +243,37 @@ export default function AdminAnalyticsPage() {
     return new Intl.NumberFormat().format(number);
   };
 
-  const getGrowthIndicator = (growth: number) => {
-    const isPositive = growth > 0;
-    const Icon = isPositive ? TrendingUp : TrendingDown;
-    const className = isPositive ? 'text-[hsl(var(--admin-success))]' : 'text-[hsl(var(--admin-danger))]';
-    
-    return (
-      <span className={`inline-flex items-center gap-1 text-xs font-medium ${className}`}>
-        <Icon className="h-3 w-3" />
-        {Math.abs(growth).toFixed(1)}%
-      </span>
-    );
+  const formatPercentage = (value: number) => {
+    return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
   };
 
-  if (loading || !metrics) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="admin-loading mx-auto mb-4"></div>
-          <h2 className="admin-title text-xl mb-2">LOADING_ANALYTICS</h2>
-          <p className="admin-subtitle">FETCHING_PLATFORM_INSIGHTS...</p>
+      <div className="p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4 animate-spin" />
+            <span>Loading analytics data...</span>
+          </div>
         </div>
       </div>
     );
   }
 
-  if (error) {
+  if (!metrics) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <AlertTriangle className="h-12 w-12 text-[hsl(var(--admin-danger))] mx-auto mb-4" />
-          <h2 className="admin-title text-xl mb-2">ANALYTICS_ERROR</h2>
-          <p className="admin-subtitle mb-4">{error}</p>
-          <button 
-            className="admin-btn admin-btn-primary flex items-center gap-2 mx-auto"
-            onClick={refreshAll}
-          >
-            <RefreshCw className="h-4 w-4" />
-            RETRY
-          </button>
+      <div className="p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <AlertTriangle className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
+            <p>No analytics data available</p>
+            <button 
+              onClick={fetchAnalyticsData}
+              className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Retry
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -244,860 +290,130 @@ export default function AdminAnalyticsPage() {
         <div className="flex items-center gap-4">
           <div className="admin-badge admin-badge-secondary flex items-center gap-2">
             <Clock className="h-3 w-3" />
-            UPDATED: {lastUpdated.toLocaleTimeString()}
+            UPDATED: {new Date().toLocaleTimeString()}
           </div>
           <button 
             className="admin-btn admin-btn-primary flex items-center gap-2"
-            onClick={refreshAll}
-            disabled={loading}
+            onClick={fetchAnalyticsData}
+            disabled={isRefreshing}
           >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
             REFRESH
           </button>
-          <button className="admin-btn flex items-center gap-2">
-            <Download className="h-4 w-4" />
-            EXPORT_DATA
-          </button>
         </div>
+      </div>
+
+      {/* Time Range Selector */}
+      <div className="flex items-center gap-4 mb-6">
+        <span className="text-sm font-medium">Time Range:</span>
+        <select 
+          value={timeRange} 
+          onChange={(e) => setTimeRange(e.target.value)}
+          className="px-3 py-1 border rounded text-sm"
+        >
+          <option value="7d">Last 7 days</option>
+          <option value="30d">Last 30 days</option>
+          <option value="90d">Last 90 days</option>
+          <option value="1y">Last year</option>
+        </select>
       </div>
 
       {/* Analytics Tabs */}
-      <div className="admin-card mb-6">
-        <div className="flex overflow-x-auto p-2 gap-2">
-          {[
-            { value: 'overview', label: 'OVERVIEW', icon: BarChart3 },
-            { value: 'users', label: 'USERS', icon: Users },
-            { value: 'revenue', label: 'REVENUE', icon: DollarSign },
-            { value: 'features', label: 'FEATURES', icon: Zap },
-            { value: 'geographic', label: 'GEOGRAPHIC', icon: MapPin },
-            { value: 'performance', label: 'PERFORMANCE', icon: Activity }
-          ].map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.value;
-            return (
-              <button
-                key={tab.value}
-                onClick={() => setActiveTab(tab.value)}
-                className={`admin-btn flex items-center gap-2 whitespace-nowrap ${
-                  isActive ? 'admin-btn-primary' : ''
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {tab.label}
-              </button>
-            );
-          })}
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Overview Cards */}
+          <div className="admin-card">
+            <div className="admin-card-header">
+              <Users className="h-4 w-4" />
+              <span>Total Users</span>
+            </div>
+            <div className="admin-card-content">
+              <div className="text-2xl font-bold">{formatNumber(metrics.overview.totalUsers)}</div>
+              <div className={`text-sm ${metrics.overview.totalUsersGrowth >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                {formatPercentage(metrics.overview.totalUsersGrowth)}
+              </div>
+            </div>
+          </div>
+
+          <div className="admin-card">
+            <div className="admin-card-header">
+              <Activity className="h-4 w-4" />
+              <span>Active Users</span>
+            </div>
+            <div className="admin-card-content">
+              <div className="text-2xl font-bold">{formatNumber(metrics.overview.monthlyActiveUsers)}</div>
+              <div className={`text-sm ${metrics.overview.mauGrowth >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                {formatPercentage(metrics.overview.mauGrowth)}
+              </div>
+            </div>
+          </div>
+
+          <div className="admin-card">
+            <div className="admin-card-header">
+              <DollarSign className="h-4 w-4" />
+              <span>Total Revenue</span>
+            </div>
+            <div className="admin-card-content">
+              <div className="text-2xl font-bold">{formatCurrency(metrics.overview.totalRevenue)}</div>
+              <div className={`text-sm ${metrics.overview.revenueGrowth >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                {formatPercentage(metrics.overview.revenueGrowth)}
+              </div>
+            </div>
+          </div>
+
+          <div className="admin-card">
+            <div className="admin-card-header">
+              <Target className="h-4 w-4" />
+              <span>ARPU</span>
+            </div>
+            <div className="admin-card-content">
+              <div className="text-2xl font-bold">{formatCurrency(metrics.overview.averageRevenuePerUser)}</div>
+              <div className={`text-sm ${metrics.overview.arpuGrowth >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                {formatPercentage(metrics.overview.arpuGrowth)}
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Tab Content */}
-      <div>
-        {/* Overview Tab */}
-        {activeTab === 'overview' && (
-          <div className="space-y-6 admin-fade-in">
-            {/* Key Metrics Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <Users className="h-6 w-6 text-[hsl(var(--admin-primary))]" />
-                  <div className="admin-pulse"></div>
-                </div>
-                <div className="admin-stat-value">{formatNumber(metrics.overview.totalUsers)}</div>
-                <div className="admin-stat-label">TOTAL_USERS</div>
-                <div className="admin-stat-change">
-                  {getGrowthIndicator(metrics.overview.totalUsersGrowth)} FROM_LAST_MONTH
-                </div>
-              </div>
-
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <Activity className="h-6 w-6 text-[hsl(var(--admin-accent))]" />
-                  <Signal className="h-4 w-4 text-[hsl(var(--admin-accent))]" />
-                </div>
-                <div className="admin-stat-value">{formatNumber(metrics.overview.monthlyActiveUsers)}</div>
-                <div className="admin-stat-label">MONTHLY_ACTIVE_USERS</div>
-                <div className="admin-stat-change">
-                  {getGrowthIndicator(metrics.overview.mauGrowth)} ENGAGEMENT_RATE
-                </div>
-              </div>
-
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <DollarSign className="h-6 w-6 text-[hsl(var(--admin-success))]" />
-                  <TrendingUp className="h-4 w-4 text-[hsl(var(--admin-success))]" />
-                </div>
-                <div className="admin-stat-value">{formatCurrency(metrics.overview.totalRevenue)}</div>
-                <div className="admin-stat-label">TOTAL_REVENUE</div>
-                <div className="admin-stat-change">
-                  {getGrowthIndicator(metrics.overview.revenueGrowth)} GROWTH_RATE
-                </div>
-              </div>
-
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <Target className="h-6 w-6 text-[hsl(var(--admin-warning))]" />
-                  <Gauge className="h-4 w-4 text-[hsl(var(--admin-warning))]" />
-                </div>
-                <div className="admin-stat-value">{formatCurrency(metrics.overview.averageRevenuePerUser)}</div>
-                <div className="admin-stat-label">AVG_REVENUE_PER_USER</div>
-                <div className="admin-stat-change">
-                  {getGrowthIndicator(metrics.overview.arpuGrowth)} OPTIMIZATION
-                </div>
-              </div>
+        {/* Performance Metrics */}
+        {performanceData && (
+          <div className="admin-card">
+            <div className="admin-card-header">
+              <Gauge className="h-4 w-4" />
+              <span>System Performance</span>
             </div>
-
-            {/* Growth Visualization */}
-            <div className="admin-card p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <BarChart3 className="h-5 w-5 text-[hsl(var(--admin-primary))]" />
-                <h2 className="admin-title text-xl">GROWTH_ANALYTICS</h2>
-              </div>
-              <div className="h-64 flex items-center justify-center border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                <div className="text-center">
-                  <Activity className="h-12 w-12 text-[hsl(var(--admin-text-muted))] mx-auto mb-4 admin-pulse" />
-                  <p className="admin-title text-lg mb-2">GROWTH_VISUALIZATION</p>
-                  <p className="admin-subtitle">USERS // REVENUE // ENGAGEMENT_METRICS</p>
+            <div className="admin-card-content">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <div className="text-sm text-gray-500">Response Time</div>
+                  <div className="text-lg font-semibold">{performanceData.system?.responseTime || 0}ms</div>
                 </div>
-              </div>
-            </div>
-
-            {/* Platform Health Matrix */}
-            <div className="admin-card p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <Terminal className="h-5 w-5 text-[hsl(var(--admin-primary))]" />
-                <h2 className="admin-title text-xl">PLATFORM_HEALTH_MATRIX</h2>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="p-4 border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="admin-subtitle">SYSTEM_STATUS</span>
-                    <CheckCircle className="h-4 w-4 text-[hsl(var(--admin-success))]" />
-                  </div>
-                  <div className="admin-badge admin-badge-success">OPERATIONAL</div>
-                  <p className="text-xs text-[hsl(var(--admin-text-muted))] mt-2">ALL_SYSTEMS_GO</p>
+                <div>
+                  <div className="text-sm text-gray-500">Uptime</div>
+                  <div className="text-lg font-semibold">{performanceData.system?.uptime || 0}%</div>
                 </div>
-
-                <div className="p-4 border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="admin-subtitle">API_PERFORMANCE</span>
-                    <Cpu className="h-4 w-4 text-[hsl(var(--admin-accent))]" />
-                  </div>
-                  <div className="text-xl font-bold text-[hsl(var(--admin-text-primary))]">{metrics.performance.responseTime}ms</div>
-                  <p className="text-xs text-[hsl(var(--admin-text-muted))] mt-2">AVG_RESPONSE</p>
-                </div>
-
-                <div className="p-4 border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="admin-subtitle">AI_USAGE</span>
-                    <Brain className="h-4 w-4 text-[hsl(var(--admin-secondary))]" />
-                  </div>
-                  <div className="text-xl font-bold text-[hsl(var(--admin-text-primary))]">{metrics.features.aiFeatures.usage}%</div>
-                  <p className="text-xs text-[hsl(var(--admin-text-muted))] mt-2">ADOPTION_RATE</p>
-                </div>
-
-                <div className="p-4 border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="admin-subtitle">DATA_STORAGE</span>
-                    <Database className="h-4 w-4 text-[hsl(var(--admin-warning))]" />
-                  </div>
-                  <div className="admin-badge admin-badge-warning">OPTIMIZED</div>
-                  <p className="text-xs text-[hsl(var(--admin-text-muted))] mt-2">STORAGE_STATUS</p>
+                <div>
+                  <div className="text-sm text-gray-500">Error Rate</div>
+                  <div className="text-lg font-semibold">{performanceData.system?.errorRate || 0}%</div>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Users Tab */}
-        {activeTab === 'users' && (
-          <div className="space-y-6 admin-fade-in">
-            {/* User Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <Users className="h-6 w-6 text-[hsl(var(--admin-primary))]" />
-                  <Zap className="h-4 w-4 text-[hsl(var(--admin-accent))]" />
-                </div>
-                <div className="admin-stat-value">{formatNumber(metrics.users.newUsers)}</div>
-                <div className="admin-stat-label">NEW_USERS</div>
-                <div className="admin-stat-change">
-                  {getGrowthIndicator(metrics.users.newUsersGrowth)} THIS_MONTH
-                </div>
-              </div>
-
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <Target className="h-6 w-6 text-[hsl(var(--admin-success))]" />
-                  <Activity className="h-4 w-4 text-[hsl(var(--admin-success))]" />
-                </div>
-                <div className="admin-stat-value">{metrics.users.retentionRate}%</div>
-                <div className="admin-stat-label">RETENTION_RATE</div>
-                <div className="admin-stat-change positive">
-                  {getGrowthIndicator(metrics.users.retentionGrowth)} IMPROVEMENT
-                </div>
-              </div>
-
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <TrendingDown className="h-6 w-6 text-[hsl(var(--admin-danger))]" />
-                  <AlertTriangle className="h-4 w-4 text-[hsl(var(--admin-danger))]" />
-                </div>
-                <div className="admin-stat-value">{metrics.users.churnRate}%</div>
-                <div className="admin-stat-label">CHURN_RATE</div>
-                <div className="admin-stat-change negative">
-                  {getGrowthIndicator(metrics.users.churnImprovement)} REDUCTION
-                </div>
-              </div>
-
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <Clock className="h-6 w-6 text-[hsl(var(--admin-accent))]" />
-                  <Network className="h-4 w-4 text-[hsl(var(--admin-accent))]" />
-                </div>
-                <div className="admin-stat-value">{metrics.users.averageSessionDuration}m</div>
-                <div className="admin-stat-label">AVG_SESSION_TIME</div>
-                <div className="admin-stat-change positive">
-                  {getGrowthIndicator(metrics.users.sessionGrowth)} ENGAGEMENT
-                </div>
-              </div>
-            </div>
-
-            {/* User Cohort Analysis */}
-            <div className="admin-card p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <Users className="h-5 w-5 text-[hsl(var(--admin-primary))]" />
-                <h2 className="admin-title text-xl">USER_COHORT_ANALYSIS</h2>
-              </div>
-              <div className="h-64 flex items-center justify-center border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                <div className="text-center">
-                  <Users className="h-12 w-12 text-[hsl(var(--admin-text-muted))] mx-auto mb-4 admin-pulse" />
-                  <p className="admin-title text-lg mb-2">COHORT_MATRIX</p>
-                  <p className="admin-subtitle">RETENTION_PATTERNS // BEHAVIOR_ANALYSIS</p>
-                </div>
-              </div>
-            </div>
-
-            {/* User Demographics & Activity */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="admin-card p-6">
-                <h3 className="admin-title text-lg mb-4">USER_DEMOGRAPHICS</h3>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="admin-subtitle">ENTERPRISE_USERS</span>
-                      <span className="text-[hsl(var(--admin-text-primary))]">34%</span>
-                    </div>
-                    <div className="h-2 bg-[hsl(var(--admin-surface-elevated))] rounded-full overflow-hidden">
-                      <div className="h-full bg-[hsl(var(--admin-primary))]" style={{ width: '34%' }}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="admin-subtitle">PROFESSIONAL_USERS</span>
-                      <span className="text-[hsl(var(--admin-text-primary))]">42%</span>
-                    </div>
-                    <div className="h-2 bg-[hsl(var(--admin-surface-elevated))] rounded-full overflow-hidden">
-                      <div className="h-full bg-[hsl(var(--admin-accent))]" style={{ width: '42%' }}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="admin-subtitle">STARTER_USERS</span>
-                      <span className="text-[hsl(var(--admin-text-primary))]">24%</span>
-                    </div>
-                    <div className="h-2 bg-[hsl(var(--admin-surface-elevated))] rounded-full overflow-hidden">
-                      <div className="h-full bg-[hsl(var(--admin-secondary))]" style={{ width: '24%' }}></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="admin-card p-6">
-                <h3 className="admin-title text-lg mb-4">ACTIVITY_PATTERNS</h3>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="admin-subtitle">MORNING_PEAK</span>
-                      <span className="text-[hsl(var(--admin-text-primary))]">45%</span>
-                    </div>
-                    <div className="h-2 bg-[hsl(var(--admin-surface-elevated))] rounded-full overflow-hidden">
-                      <div className="h-full bg-[hsl(var(--admin-success))]" style={{ width: '45%' }}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="admin-subtitle">AFTERNOON_USAGE</span>
-                      <span className="text-[hsl(var(--admin-text-primary))]">38%</span>
-                    </div>
-                    <div className="h-2 bg-[hsl(var(--admin-surface-elevated))] rounded-full overflow-hidden">
-                      <div className="h-full bg-[hsl(var(--admin-warning))]" style={{ width: '38%' }}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="admin-subtitle">EVENING_ACTIVITY</span>
-                      <span className="text-[hsl(var(--admin-text-primary))]">17%</span>
-                    </div>
-                    <div className="h-2 bg-[hsl(var(--admin-surface-elevated))] rounded-full overflow-hidden">
-                      <div className="h-full bg-[hsl(var(--admin-danger))]" style={{ width: '17%' }}></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+        {/* AI Features Usage */}
+        <div className="admin-card">
+          <div className="admin-card-header">
+            <Brain className="h-4 w-4" />
+            <span>AI Features Usage</span>
+          </div>
+          <div className="admin-card-content">
+            <div className="text-2xl font-bold">{formatNumber(metrics.features.aiFeatures.usage)}</div>
+            <div className={`text-sm ${metrics.features.aiFeatures.growth >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+              {formatPercentage(metrics.features.aiFeatures.growth)} growth
             </div>
           </div>
-        )}
-
-        {/* Revenue Tab */}
-        {activeTab === 'revenue' && (
-          <div className="space-y-6 admin-fade-in">
-            {/* Revenue Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <DollarSign className="h-6 w-6 text-[hsl(var(--admin-primary))]" />
-                  <TrendingUp className="h-4 w-4 text-[hsl(var(--admin-primary))]" />
-                </div>
-                <div className="admin-stat-value">{formatCurrency(metrics.revenue.mrr)}</div>
-                <div className="admin-stat-label">MONTHLY_RECURRING</div>
-                <div className="admin-stat-change">
-                  {getGrowthIndicator(metrics.revenue.mrrGrowth)} MRR_GROWTH
-                </div>
-              </div>
-
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <TrendingUp className="h-6 w-6 text-[hsl(var(--admin-success))]" />
-                  <Zap className="h-4 w-4 text-[hsl(var(--admin-success))]" />
-                </div>
-                <div className="admin-stat-value">{formatCurrency(metrics.revenue.arr)}</div>
-                <div className="admin-stat-label">ANNUAL_RECURRING</div>
-                <div className="admin-stat-change positive">
-                  {getGrowthIndicator(metrics.revenue.arrGrowth)} ANNUALLY
-                </div>
-              </div>
-
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <Target className="h-6 w-6 text-[hsl(var(--admin-accent))]" />
-                  <Activity className="h-4 w-4 text-[hsl(var(--admin-accent))]" />
-                </div>
-                <div className="admin-stat-value">{formatCurrency(metrics.revenue.ltv)}</div>
-                <div className="admin-stat-label">LIFETIME_VALUE</div>
-                <div className="admin-stat-change positive">
-                  {getGrowthIndicator(metrics.revenue.ltvGrowth)} LTV_INCREASE
-                </div>
-              </div>
-
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <TrendingDown className="h-6 w-6 text-[hsl(var(--admin-danger))]" />
-                  <AlertTriangle className="h-4 w-4 text-[hsl(var(--admin-danger))]" />
-                </div>
-                <div className="admin-stat-value">{formatCurrency(metrics.revenue.churnRevenue)}</div>
-                <div className="admin-stat-label">CHURN_IMPACT</div>
-                <div className="admin-stat-change negative">
-                  {getGrowthIndicator(metrics.revenue.churnRevenueChange)} REDUCTION
-                </div>
-              </div>
-            </div>
-
-            {/* Revenue Forecasting */}
-            <div className="admin-card p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <DollarSign className="h-5 w-5 text-[hsl(var(--admin-primary))]" />
-                <h2 className="admin-title text-xl">REVENUE_FORECASTING</h2>
-              </div>
-              <div className="h-64 flex items-center justify-center border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                <div className="text-center">
-                  <DollarSign className="h-12 w-12 text-[hsl(var(--admin-text-muted))] mx-auto mb-4 admin-pulse" />
-                  <p className="admin-title text-lg mb-2">REVENUE_PROJECTION</p>
-                  <p className="admin-subtitle">MRR // ARR // SUBSCRIPTION_ANALYTICS</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Subscription Tier Performance */}
-            <div className="admin-card p-6">
-              <h3 className="admin-title text-lg mb-6">SUBSCRIPTION_TIER_PERFORMANCE</h3>
-              <div className="space-y-4">
-                <div className="p-4 border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))] admin-glow-hover">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium text-[hsl(var(--admin-text-primary))]">ENTERPRISE_TIER</h4>
-                      <p className="admin-subtitle">142 SUBSCRIBERS • ₦12,500/MONTH</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="admin-stat-value text-lg">{formatCurrency(1775000)}</p>
-                      <div className="admin-badge admin-badge-success">72% OF_MRR</div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="p-4 border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))] admin-glow-hover">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium text-[hsl(var(--admin-text-primary))]">PROFESSIONAL_TIER</h4>
-                      <p className="admin-subtitle">486 SUBSCRIBERS • ₦3,500/MONTH</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="admin-stat-value text-lg">{formatCurrency(1701000)}</p>
-                      <div className="admin-badge admin-badge-secondary">28% OF_MRR</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Features Tab */}
-        {activeTab === 'features' && (
-          <div className="space-y-6 admin-fade-in">
-            {/* Feature Adoption Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <Mail className="h-6 w-6 text-[hsl(var(--admin-primary))]" />
-                  <Activity className="h-4 w-4 text-[hsl(var(--admin-primary))]" />
-                </div>
-                <div className="admin-stat-value">{metrics.features.emailCampaigns.usage}%</div>
-                <div className="admin-stat-label">EMAIL_CAMPAIGNS</div>
-                <div className="admin-stat-change positive">
-                  {getGrowthIndicator(metrics.features.emailCampaigns.growth)} ADOPTION
-                </div>
-                <div className="mt-4 h-2 bg-[hsl(var(--admin-surface-elevated))] rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-[hsl(var(--admin-primary))]" 
-                    style={{ width: `${metrics.features.emailCampaigns.usage}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <Phone className="h-6 w-6 text-[hsl(var(--admin-accent))]" />
-                  <Signal className="h-4 w-4 text-[hsl(var(--admin-accent))]" />
-                </div>
-                <div className="admin-stat-value">{metrics.features.smsCampaigns.usage}%</div>
-                <div className="admin-stat-label">SMS_CAMPAIGNS</div>
-                <div className="admin-stat-change positive">
-                  {getGrowthIndicator(metrics.features.smsCampaigns.growth)} ADOPTION
-                </div>
-                <div className="mt-4 h-2 bg-[hsl(var(--admin-surface-elevated))] rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-[hsl(var(--admin-accent))]" 
-                    style={{ width: `${metrics.features.smsCampaigns.usage}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <MessageSquare className="h-6 w-6 text-[hsl(var(--admin-success))]" />
-                  <Zap className="h-4 w-4 text-[hsl(var(--admin-success))]" />
-                </div>
-                <div className="admin-stat-value">{metrics.features.whatsappCampaigns.usage}%</div>
-                <div className="admin-stat-label">WHATSAPP_CAMPAIGNS</div>
-                <div className="admin-stat-change positive">
-                  {getGrowthIndicator(metrics.features.whatsappCampaigns.growth)} ADOPTION
-                </div>
-                <div className="mt-4 h-2 bg-[hsl(var(--admin-surface-elevated))] rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-[hsl(var(--admin-success))]" 
-                    style={{ width: `${metrics.features.whatsappCampaigns.usage}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <Eye className="h-6 w-6 text-[hsl(var(--admin-warning))]" />
-                  <MousePointer className="h-4 w-4 text-[hsl(var(--admin-warning))]" />
-                </div>
-                <div className="admin-stat-value">{metrics.features.leadpulseTracking.usage}%</div>
-                <div className="admin-stat-label">LEADPULSE_TRACKING</div>
-                <div className="admin-stat-change positive">
-                  {getGrowthIndicator(metrics.features.leadpulseTracking.growth)} ADOPTION
-                </div>
-                <div className="mt-4 h-2 bg-[hsl(var(--admin-surface-elevated))] rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-[hsl(var(--admin-warning))]" 
-                    style={{ width: `${metrics.features.leadpulseTracking.usage}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <Brain className="h-6 w-6 text-[hsl(var(--admin-secondary))]" />
-                  <Cpu className="h-4 w-4 text-[hsl(var(--admin-secondary))]" />
-                </div>
-                <div className="admin-stat-value">{metrics.features.aiFeatures.usage}%</div>
-                <div className="admin-stat-label">AI_FEATURES</div>
-                <div className="admin-stat-change positive">
-                  {getGrowthIndicator(metrics.features.aiFeatures.growth)} ADOPTION
-                </div>
-                <div className="mt-4 h-2 bg-[hsl(var(--admin-surface-elevated))] rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-[hsl(var(--admin-secondary))]" 
-                    style={{ width: `${metrics.features.aiFeatures.usage}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <Share2 className="h-6 w-6 text-[hsl(var(--admin-danger))]" />
-                  <Network className="h-4 w-4 text-[hsl(var(--admin-danger))]" />
-                </div>
-                <div className="admin-stat-value">{metrics.features.workflows.usage}%</div>
-                <div className="admin-stat-label">WORKFLOWS</div>
-                <div className="admin-stat-change positive">
-                  {getGrowthIndicator(metrics.features.workflows.growth)} ADOPTION
-                </div>
-                <div className="mt-4 h-2 bg-[hsl(var(--admin-surface-elevated))] rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-[hsl(var(--admin-danger))]" 
-                    style={{ width: `${metrics.features.workflows.usage}%` }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-
-            {/* Feature Usage Heatmap */}
-            <div className="admin-card p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <PieChart className="h-5 w-5 text-[hsl(var(--admin-primary))]" />
-                <h2 className="admin-title text-xl">FEATURE_USAGE_HEATMAP</h2>
-              </div>
-              <div className="h-64 flex items-center justify-center border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                <div className="text-center">
-                  <PieChart className="h-12 w-12 text-[hsl(var(--admin-text-muted))] mx-auto mb-4 admin-pulse" />
-                  <p className="admin-title text-lg mb-2">USAGE_ANALYSIS</p>
-                  <p className="admin-subtitle">FEATURE_ADOPTION // USAGE_PATTERNS</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Feature Adoption Funnel */}
-            <div className="admin-card p-6">
-              <h3 className="admin-title text-lg mb-6">FEATURE_ADOPTION_FUNNEL</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                  <span className="admin-subtitle">FEATURE_DISCOVERY</span>
-                  <div className="admin-badge admin-badge-secondary">8,234 USERS</div>
-                </div>
-                <div className="flex items-center justify-between p-3 border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                  <span className="admin-subtitle">TRIAL_USAGE</span>
-                  <div className="admin-badge admin-badge-success">6,789 USERS (82.5%)</div>
-                </div>
-                <div className="flex items-center justify-between p-3 border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                  <span className="admin-subtitle">REGULAR_USAGE</span>
-                  <div className="admin-badge admin-badge-warning">4,567 USERS (55.4%)</div>
-                </div>
-                <div className="flex items-center justify-between p-3 border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                  <span className="admin-subtitle">POWER_USER</span>
-                  <div className="admin-badge admin-badge-danger">2,134 USERS (25.9%)</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Geographic Tab */}
-        {activeTab === 'geographic' && (
-          <div className="space-y-6 admin-fade-in">
-            {/* African Market Distribution */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <MapPin className="h-6 w-6 text-[hsl(var(--admin-primary))]" />
-                  <div className="admin-pulse"></div>
-                </div>
-                <div className="admin-stat-value text-xl">{formatNumber(metrics.geographic.nigeria.users)}</div>
-                <div className="admin-stat-label">NIGERIA</div>
-                <p className="text-xs text-[hsl(var(--admin-text-secondary))] mt-1">{formatCurrency(metrics.geographic.nigeria.revenue)}</p>
-                <div className="admin-stat-change">
-                  {getGrowthIndicator(metrics.geographic.nigeria.growth)} GROWTH
-                </div>
-              </div>
-
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <MapPin className="h-6 w-6 text-[hsl(var(--admin-accent))]" />
-                  <Globe className="h-4 w-4 text-[hsl(var(--admin-accent))]" />
-                </div>
-                <div className="admin-stat-value text-xl">{formatNumber(metrics.geographic.ghana.users)}</div>
-                <div className="admin-stat-label">GHANA</div>
-                <p className="text-xs text-[hsl(var(--admin-text-secondary))] mt-1">{formatCurrency(metrics.geographic.ghana.revenue)}</p>
-                <div className="admin-stat-change">
-                  {getGrowthIndicator(metrics.geographic.ghana.growth)} GROWTH
-                </div>
-              </div>
-
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <MapPin className="h-6 w-6 text-[hsl(var(--admin-success))]" />
-                  <Activity className="h-4 w-4 text-[hsl(var(--admin-success))]" />
-                </div>
-                <div className="admin-stat-value text-xl">{formatNumber(metrics.geographic.kenya.users)}</div>
-                <div className="admin-stat-label">KENYA</div>
-                <p className="text-xs text-[hsl(var(--admin-text-secondary))] mt-1">{formatCurrency(metrics.geographic.kenya.revenue)}</p>
-                <div className="admin-stat-change">
-                  {getGrowthIndicator(metrics.geographic.kenya.growth)} GROWTH
-                </div>
-              </div>
-
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <MapPin className="h-6 w-6 text-[hsl(var(--admin-warning))]" />
-                  <Zap className="h-4 w-4 text-[hsl(var(--admin-warning))]" />
-                </div>
-                <div className="admin-stat-value text-xl">{formatNumber(metrics.geographic.southAfrica.users)}</div>
-                <div className="admin-stat-label">SOUTH_AFRICA</div>
-                <p className="text-xs text-[hsl(var(--admin-text-secondary))] mt-1">{formatCurrency(metrics.geographic.southAfrica.revenue)}</p>
-                <div className="admin-stat-change">
-                  {getGrowthIndicator(metrics.geographic.southAfrica.growth)} GROWTH
-                </div>
-              </div>
-
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <Globe className="h-6 w-6 text-[hsl(var(--admin-secondary))]" />
-                  <Network className="h-4 w-4 text-[hsl(var(--admin-secondary))]" />
-                </div>
-                <div className="admin-stat-value text-xl">{formatNumber(metrics.geographic.other.users)}</div>
-                <div className="admin-stat-label">OTHER_MARKETS</div>
-                <p className="text-xs text-[hsl(var(--admin-text-secondary))] mt-1">{formatCurrency(metrics.geographic.other.revenue)}</p>
-                <div className="admin-stat-change">
-                  {getGrowthIndicator(metrics.geographic.other.growth)} GROWTH
-                </div>
-              </div>
-            </div>
-
-            {/* African Market Map */}
-            <div className="admin-card p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <MapPin className="h-5 w-5 text-[hsl(var(--admin-primary))]" />
-                <h2 className="admin-title text-xl">AFRICAN_MARKET_INSIGHTS</h2>
-              </div>
-              <div className="h-64 flex items-center justify-center border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                <div className="text-center">
-                  <MapPin className="h-12 w-12 text-[hsl(var(--admin-text-muted))] mx-auto mb-4 admin-pulse" />
-                  <p className="admin-title text-lg mb-2">MARKET_VISUALIZATION</p>
-                  <p className="admin-subtitle">COUNTRY_DISTRIBUTION // REVENUE_MAPPING</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Market Analysis Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="admin-card p-6">
-                <h3 className="admin-title text-lg mb-4">MARKET_PENETRATION</h3>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="admin-subtitle">NIGERIA_PRIMARY</span>
-                      <span className="text-[hsl(var(--admin-text-primary))]">61.0%</span>
-                    </div>
-                    <div className="h-2 bg-[hsl(var(--admin-surface-elevated))] rounded-full overflow-hidden">
-                      <div className="h-full bg-[hsl(var(--admin-primary))]" style={{ width: '61%' }}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="admin-subtitle">GHANA_SECONDARY</span>
-                      <span className="text-[hsl(var(--admin-text-primary))]">16.8%</span>
-                    </div>
-                    <div className="h-2 bg-[hsl(var(--admin-surface-elevated))] rounded-full overflow-hidden">
-                      <div className="h-full bg-[hsl(var(--admin-accent))]" style={{ width: '16.8%' }}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="admin-subtitle">KENYA_EMERGING</span>
-                      <span className="text-[hsl(var(--admin-text-primary))]">13.1%</span>
-                    </div>
-                    <div className="h-2 bg-[hsl(var(--admin-surface-elevated))] rounded-full overflow-hidden">
-                      <div className="h-full bg-[hsl(var(--admin-success))]" style={{ width: '13.1%' }}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="admin-subtitle">SOUTH_AFRICA_GROWING</span>
-                      <span className="text-[hsl(var(--admin-text-primary))]">7.4%</span>
-                    </div>
-                    <div className="h-2 bg-[hsl(var(--admin-surface-elevated))] rounded-full overflow-hidden">
-                      <div className="h-full bg-[hsl(var(--admin-warning))]" style={{ width: '7.4%' }}></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="admin-card p-6">
-                <h3 className="admin-title text-lg mb-4">REGIONAL_PERFORMANCE</h3>
-                <div className="space-y-4">
-                  <div className="p-3 border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-[hsl(var(--admin-text-primary))]">HIGHEST_ARPU</p>
-                        <p className="admin-subtitle">NIGERIA - ₦285/USER</p>
-                      </div>
-                      <div className="admin-badge admin-badge-success">LEADER</div>
-                    </div>
-                  </div>
-                  <div className="p-3 border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-[hsl(var(--admin-text-primary))]">FASTEST_GROWTH</p>
-                        <p className="admin-subtitle">GHANA - 23.8% MONTHLY</p>
-                      </div>
-                      <div className="admin-badge admin-badge-secondary">RISING</div>
-                    </div>
-                  </div>
-                  <div className="p-3 border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-[hsl(var(--admin-text-primary))]">BEST_RETENTION</p>
-                        <p className="admin-subtitle">KENYA - 82% MONTHLY</p>
-                      </div>
-                      <div className="admin-badge admin-badge-warning">STABLE</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Performance Tab */}
-        {activeTab === 'performance' && (
-          <div className="space-y-6 admin-fade-in">
-            {/* System Performance Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <Database className="h-6 w-6 text-[hsl(var(--admin-primary))]" />
-                  <Network className="h-4 w-4 text-[hsl(var(--admin-primary))]" />
-                </div>
-                <div className="admin-stat-value">{formatNumber(metrics.performance.apiRequests)}</div>
-                <div className="admin-stat-label">API_REQUESTS</div>
-                <div className="admin-stat-change">
-                  {getGrowthIndicator(metrics.performance.apiRequestsGrowth)} THIS_MONTH
-                </div>
-              </div>
-
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <Clock className="h-6 w-6 text-[hsl(var(--admin-accent))]" />
-                  <Gauge className="h-4 w-4 text-[hsl(var(--admin-accent))]" />
-                </div>
-                <div className="admin-stat-value">{metrics.performance.responseTime}ms</div>
-                <div className="admin-stat-label">AVG_RESPONSE_TIME</div>
-                <div className="admin-stat-change positive">
-                  {getGrowthIndicator(metrics.performance.responseTimeChange)} IMPROVEMENT
-                </div>
-              </div>
-
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <CheckCircle className="h-6 w-6 text-[hsl(var(--admin-success))]" />
-                  <Activity className="h-4 w-4 text-[hsl(var(--admin-success))]" />
-                </div>
-                <div className="admin-stat-value">{metrics.performance.uptime}%</div>
-                <div className="admin-stat-label">SYSTEM_UPTIME</div>
-                <div className="admin-stat-change positive">
-                  {getGrowthIndicator(metrics.performance.uptimeChange)} THIS_MONTH
-                </div>
-              </div>
-
-              <div className="admin-stat-card admin-glow-hover">
-                <div className="flex items-center justify-between mb-4">
-                  <AlertTriangle className="h-6 w-6 text-[hsl(var(--admin-danger))]" />
-                  <Terminal className="h-4 w-4 text-[hsl(var(--admin-danger))]" />
-                </div>
-                <div className="admin-stat-value">{metrics.performance.errorRate}%</div>
-                <div className="admin-stat-label">ERROR_RATE</div>
-                <div className="admin-stat-change positive">
-                  {getGrowthIndicator(metrics.performance.errorRateChange)} REDUCTION
-                </div>
-              </div>
-            </div>
-
-            {/* API Performance Dashboard */}
-            <div className="admin-card p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <Activity className="h-5 w-5 text-[hsl(var(--admin-primary))]" />
-                <h2 className="admin-title text-xl">API_PERFORMANCE_DASHBOARD</h2>
-              </div>
-              <div className="h-64 flex items-center justify-center border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                <div className="text-center">
-                  <Activity className="h-12 w-12 text-[hsl(var(--admin-text-muted))] mx-auto mb-4 admin-pulse" />
-                  <p className="admin-title text-lg mb-2">PERFORMANCE_METRICS</p>
-                  <p className="admin-subtitle">REQUEST_VOLUMES // RESPONSE_TIMES // ERROR_RATES</p>
-                </div>
-              </div>
-            </div>
-
-            {/* System Optimization & Monitoring */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="admin-card p-6">
-                <h3 className="admin-title text-lg mb-4">SYSTEM_OPTIMIZATION</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                    <span className="admin-subtitle">DATABASE_QUERIES_OPTIMIZED</span>
-                    <CheckCircle className="h-4 w-4 text-[hsl(var(--admin-success))]" />
-                  </div>
-                  <div className="flex items-center justify-between p-3 border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                    <span className="admin-subtitle">CDN_CACHE_HIT_RATE: 94%</span>
-                    <CheckCircle className="h-4 w-4 text-[hsl(var(--admin-success))]" />
-                  </div>
-                  <div className="flex items-center justify-between p-3 border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                    <span className="admin-subtitle">MEMORY_USAGE: 78%</span>
-                    <AlertTriangle className="h-4 w-4 text-[hsl(var(--admin-warning))]" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="admin-card p-6">
-                <h3 className="admin-title text-lg mb-4">MONITORING_INSIGHTS</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                    <span className="admin-subtitle">ACTIVE_ALERTS</span>
-                    <div className="admin-badge admin-badge-warning">2 LOW_PRIORITY</div>
-                  </div>
-                  <div className="flex items-center justify-between p-3 border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                    <span className="admin-subtitle">SLA_COMPLIANCE</span>
-                    <div className="admin-badge admin-badge-success">99.8%</div>
-                  </div>
-                  <div className="flex items-center justify-between p-3 border border-[hsl(var(--admin-border))] rounded-lg bg-[hsl(var(--admin-surface-elevated))]">
-                    <span className="admin-subtitle">MONITORING_COVERAGE</span>
-                    <div className="admin-badge admin-badge-secondary">COMPLETE</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Development Notice */}
-        {staffRole === 'SUPER_ADMIN' && (
-          <div className="admin-card p-6 mt-8 border-l-4 border-l-[hsl(var(--admin-primary))]">
-            <div className="flex items-start gap-4">
-              <Terminal className="h-6 w-6 text-[hsl(var(--admin-primary))] mt-1" />
-              <div>
-                <h4 className="admin-title text-lg mb-2">ANALYTICS_DASHBOARD_STATUS</h4>
-                <p className="admin-subtitle mb-3">
-                  COMPREHENSIVE_ANALYTICS.DASHBOARD // REALTIME_METRICS // AFRICAN_MARKET_INSIGHTS
-                </p>
-                <p className="text-xs text-[hsl(var(--admin-text-muted))]">
-                  // Interactive charts and advanced filtering features are being integrated for enhanced data visualization.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );

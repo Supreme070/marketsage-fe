@@ -75,6 +75,31 @@ interface AnalyticsData {
   }[];
 }
 
+// Helper functions for Phase 5 analytics
+const getTimeRangeMs = (timeRange: string): number => {
+  const ranges = {
+    '1h': 60 * 60 * 1000,
+    '24h': 24 * 60 * 60 * 1000,
+    '7d': 7 * 24 * 60 * 60 * 1000,
+    '30d': 30 * 24 * 60 * 60 * 1000,
+    '90d': 90 * 24 * 60 * 60 * 1000,
+    '1y': 365 * 24 * 60 * 60 * 1000,
+  };
+  return ranges[timeRange] || ranges['7d'];
+};
+
+const getGranularity = (timeRange: string): string => {
+  const granularities = {
+    '1h': 'hour',
+    '24h': 'hour',
+    '7d': 'day',
+    '30d': 'day',
+    '90d': 'week',
+    '1y': 'month',
+  };
+  return granularities[timeRange] || 'day';
+};
+
 export default function AdvancedAnalyticsPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [timeRange, setTimeRange] = useState('7d');
@@ -86,20 +111,24 @@ export default function AdvancedAnalyticsPage() {
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>(['users', 'revenue', 'conversions']);
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
 
-  // Advanced Analytics Engine
+  // Advanced Analytics Engine - Updated for Phase 5
   const advancedAnalyticsEngine = {
     generateBusinessIntelligence: async (timeRange: string, metrics: string[]) => {
       setIsRefreshing(true);
       try {
-        const response = await fetch('/api/v2/ai/supreme-v3', {
+        // Use new Phase 5 analytics endpoint
+        const response = await fetch('/api/analytics/query', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
           body: JSON.stringify({
-            task: 'business_intelligence',
-            type: 'comprehensive_analysis',
-            data: {
-              timeRange,
-              metrics,
+            startDate: new Date(Date.now() - getTimeRangeMs(timeRange)).toISOString(),
+            endDate: new Date().toISOString(),
+            granularity: getGranularity(timeRange),
+            metrics,
+            filters: {
               includeAfrican: true,
               includePredictive: true,
               includeCompetitive: true,
@@ -124,42 +153,48 @@ export default function AdvancedAnalyticsPage() {
 
     generatePredictiveAnalytics: async (baseData: any) => {
       try {
-        const response = await fetch('/api/v2/ai/supreme-v3', {
+        // Use new Phase 5 predictive analytics endpoint
+        const response = await fetch('/api/analytics/predictive', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
           body: JSON.stringify({
-            task: 'predictive_analytics',
-            type: 'business_forecasting',
-            data: {
-              baseData,
-              predictionPeriod: '30_days',
-              includeSeasonality: true,
-              includeMarketFactors: true,
-              confidence: 0.85
-            }
+            predictionType: 'revenue',
+            timeHorizon: 'month'
           })
         });
         
         const result = await response.json();
         if (result.success) {
+          toast.success('Predictive analytics generated successfully');
           return result.data;
         }
       } catch (error) {
         console.error('Predictive analytics failed:', error);
+        toast.error('Failed to generate predictive analytics');
       }
     },
 
     generateCustomReport: async (reportConfig: any) => {
       setIsGeneratingReport(true);
       try {
-        const response = await fetch('/api/v2/ai/supreme-v3', {
+        // Use new Phase 5 reporting endpoint
+        const response = await fetch('/api/analytics/reports/generate/custom', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
           body: JSON.stringify({
-            task: 'custom_report',
-            type: 'business_report',
-            data: {
-              config: reportConfig,
+            format: reportConfig.format || 'pdf',
+            dateRange: {
+              startDate: new Date(Date.now() - getTimeRangeMs(timeRange)).toISOString(),
+              endDate: new Date().toISOString()
+            },
+            customFilters: {
+              metrics: selectedMetrics,
               includeVisualizations: true,
               includeRecommendations: true,
               format: 'comprehensive'
