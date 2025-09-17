@@ -1,6 +1,7 @@
 "use client";
 
 import { useAdmin } from "@/components/admin/AdminProvider";
+import { useAdminSecurityDashboard } from "@/lib/api/hooks/useAdminSecurity";
 import { 
   Shield, 
   AlertTriangle,
@@ -33,7 +34,7 @@ import {
   Radar,
   ShieldCheck
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface SecurityEvent {
   id: string;
@@ -91,154 +92,21 @@ interface ThreatDetection {
 export default function AdminSecurityPage() {
   const { permissions, staffRole } = useAdmin();
   const [activeTab, setActiveTab] = useState("overview");
-  const [loading, setLoading] = useState(true);
-  const [securityEvents, setSecurityEvents] = useState<SecurityEvent[]>([]);
-  const [accessLogs, setAccessLogs] = useState<AccessLog[]>([]);
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
-  const [threats, setThreats] = useState<ThreatDetection[]>([]);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
-
-  // Real API call to fetch security data
-  useEffect(() => {
-    const fetchSecurityData = async () => {
-      setLoading(true);
-      try {
-        // Fetch security statistics and events
-        const [statsResponse, eventsResponse] = await Promise.all([
-          fetch('/api/v2/admin/security/stats'),
-          fetch('/api/v2/admin/security/events?limit=50')
-        ]);
-
-        if (statsResponse.ok) {
-          const statsData = await statsResponse.json();
-          if (statsData.success && statsData.data) {
-            // Map recent critical events to security events format
-            const recentEvents = statsData.data.recentEvents?.map((event: any) => ({
-              id: event.id,
-              type: event.eventType?.toLowerCase().replace('_', '_') || 'data_access',
-              severity: event.severity?.toLowerCase() || 'medium',
-              description: event.title || 'Security event detected',
-              user: event.ipAddress ? {
-                email: 'Unknown',
-                name: 'Unknown',
-                ip: event.ipAddress
-              } : undefined,
-              timestamp: event.timestamp || new Date().toISOString(),
-              status: event.resolved ? 'resolved' : 'open',
-              details: event.metadata || {}
-            })) || [];
-
-            setSecurityEvents(recentEvents);
-          }
-        }
-
-        if (eventsResponse.ok) {
-          const eventsData = await eventsResponse.json();
-          if (eventsData.success && eventsData.data?.events) {
-            // If we have more detailed events data, use that instead
-            const detailedEvents = eventsData.data.events.map((event: any) => ({
-              id: event.id,
-              type: event.eventType?.toLowerCase().replace('_', '_') || 'data_access',
-              severity: event.severity?.toLowerCase() || 'medium',
-              description: event.title || event.description || 'Security event',
-              user: event.ipAddress ? {
-                email: event.userId ? `user-${event.userId}` : 'Unknown',
-                name: 'Unknown',
-                ip: event.ipAddress
-              } : undefined,
-              timestamp: event.timestamp || event.createdAt || new Date().toISOString(),
-              status: event.resolved ? 'resolved' : 'open',
-              details: event.metadata || {}
-            }));
-            setSecurityEvents(detailedEvents);
-          }
-        }
-
-        // Mock access logs (to be replaced when audit API is ready)
-        setAccessLogs([
-          {
-            id: 'log1',
-            user: {
-              email: 'admin@marketsage.africa',
-              name: 'Admin User',
-              role: 'SUPER_ADMIN'
-            },
-            action: 'VIEW_SECURITY_STATS',
-            resource: 'Security Center',
-            ip: '192.168.1.50',
-            userAgent: 'Mozilla/5.0 (compatible)',
-            timestamp: new Date().toISOString(),
-            success: true
-          }
-        ]);
-
-        // Mock API keys (to be replaced with real API key management)
-        setApiKeys([
-          {
-            id: 'key1',
-            name: 'System API Key',
-            organization: 'MarketSage Platform',
-            keyPreview: 'mk_prod_sys...***',
-            permissions: ['system:read'],
-            lastUsed: new Date().toISOString(),
-            createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-            status: 'active',
-            usageCount: Math.floor(Math.random() * 10000) + 1000
-          }
-        ]);
-
-        // Set threats from API data if available
-        const statsData = await (await fetch('/api/v2/admin/security/stats')).json();
-        if (statsData.success && statsData.data?.topThreats) {
-          const apiThreats = statsData.data.topThreats.map((threat: any) => ({
-            id: `threat_${threat.ipAddress}`,
-            type: threat.threatType || 'suspicious_activity',
-            source: threat.ipAddress,
-            target: 'Various endpoints',
-            severity: threat.riskScore > 80 ? 'critical' : threat.riskScore > 60 ? 'high' : threat.riskScore > 40 ? 'medium' : 'low',
-            blocked: threat.blocked || false,
-            timestamp: new Date().toISOString(),
-            details: `Risk Score: ${threat.riskScore}, Events: ${threat.eventCount}${threat.location ? `, Location: ${threat.location}` : ''}`
-          }));
-          setThreats(apiThreats);
-        } else {
-          // Fallback mock threats
-          setThreats([
-            {
-              id: 'threat1',
-              type: 'brute_force',
-              source: '192.168.1.100',
-              target: '/admin/login',
-              severity: 'high',
-              blocked: true,
-              timestamp: new Date().toISOString(),
-              details: 'Multiple failed login attempts detected'
-            }
-          ]);
-        }
-
-      } catch (error) {
-        console.error('Error fetching security data:', error);
-        // Fallback data
-        setSecurityEvents([]);
-        setAccessLogs([]);
-        setApiKeys([]);
-        setThreats([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSecurityData();
-    
-    // Auto-refresh security data every 30 seconds
-    const interval = setInterval(() => {
-      setLastUpdated(new Date());
-      fetchSecurityData();
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, []);
+  
+  const { 
+    stats, 
+    events, 
+    logs, 
+    apiKeys, 
+    threats, 
+    loading, 
+    error, 
+    refreshAll, 
+    resolveEvent, 
+    revokeApiKey, 
+    blockThreat 
+  } = useAdminSecurityDashboard();
 
   const getSeverityBadge = (severity: string) => {
     switch (severity) {
@@ -293,6 +161,25 @@ export default function AdminSecurityPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="admin-title text-xl mb-2">Security_Grid_Error</h2>
+          <p className="admin-subtitle mb-4">{error}</p>
+          <button 
+            className="admin-btn admin-btn-primary flex items-center gap-2"
+            onClick={refreshAll}
+          >
+            <RefreshCw className="h-4 w-4" />
+            RETRY_CONNECTION
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6">
       {/* Page Header */}
@@ -308,9 +195,10 @@ export default function AdminSecurityPage() {
           </div>
           <button 
             className="admin-btn admin-btn-primary flex items-center gap-2"
-            onClick={() => window.location.reload()}
+            onClick={refreshAll}
+            disabled={loading}
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             SCAN_NOW
           </button>
           <button className="admin-btn flex items-center gap-2">
@@ -370,9 +258,9 @@ export default function AdminSecurityPage() {
                   <AlertTriangle className="h-6 w-6 text-[hsl(var(--admin-warning))]" />
                   <Radar className="h-4 w-4 text-[hsl(var(--admin-warning))]" />
                 </div>
-                <div className="admin-stat-value">{threats.length}</div>
+                <div className="admin-stat-value">{threats?.length || 0}</div>
                 <div className="admin-stat-label">ACTIVE_THREATS</div>
-                <div className="admin-stat-change negative">{threats.filter(t => t.blocked).length} BLOCKED</div>
+                <div className="admin-stat-change negative">{threats?.filter(t => t.blocked).length || 0} BLOCKED</div>
               </div>
 
               <div className="admin-stat-card admin-glow-hover">
@@ -380,7 +268,7 @@ export default function AdminSecurityPage() {
                   <Eye className="h-6 w-6 text-[hsl(var(--admin-primary))]" />
                   <Activity className="h-4 w-4 text-[hsl(var(--admin-primary))]" />
                 </div>
-                <div className="admin-stat-value">{securityEvents.length}</div>
+                <div className="admin-stat-value">{events?.length || 0}</div>
                 <div className="admin-stat-label">SECURITY_EVENTS</div>
                 <div className="admin-stat-change">LAST_24H</div>
               </div>
@@ -390,9 +278,9 @@ export default function AdminSecurityPage() {
                   <Key className="h-6 w-6 text-[hsl(var(--admin-accent))]" />
                   <Database className="h-4 w-4 text-[hsl(var(--admin-accent))]" />
                 </div>
-                <div className="admin-stat-value">{apiKeys.length}</div>
+                <div className="admin-stat-value">{apiKeys?.length || 0}</div>
                 <div className="admin-stat-label">API_KEYS</div>
-                <div className="admin-stat-change positive">{apiKeys.filter(k => k.status === 'active').length} ACTIVE</div>
+                <div className="admin-stat-change positive">{apiKeys?.filter(k => k.status === 'active').length || 0} ACTIVE</div>
               </div>
             </div>
 
@@ -494,7 +382,7 @@ export default function AdminSecurityPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {securityEvents.length === 0 ? (
+                      {events?.length === 0 ? (
                         <tr>
                           <td colSpan={7} className="text-center py-8">
                             <div className="admin-subtitle">NO_SECURITY_EVENTS_DETECTED</div>
@@ -502,11 +390,11 @@ export default function AdminSecurityPage() {
                           </td>
                         </tr>
                       ) : (
-                        securityEvents.map((event) => (
+                        events?.map((event) => (
                           <tr key={event.id} className="admin-slide-in">
                             <td>
                               <span className="font-medium text-[hsl(var(--admin-text-primary))]">
-                                {event.type.toUpperCase().replace('_', '_')}
+                                {event.eventType.toUpperCase().replace('_', '_')}
                               </span>
                             </td>
                             <td>{getSeverityBadge(event.severity)}</td>
@@ -514,10 +402,10 @@ export default function AdminSecurityPage() {
                               <div className="text-[hsl(var(--admin-text-primary))]">{event.description}</div>
                             </td>
                             <td>
-                              {event.user ? (
+                              {event.ipAddress ? (
                                 <div>
-                                  <div className="text-[hsl(var(--admin-text-primary))]">{event.user.ip}</div>
-                                  <div className="text-xs text-[hsl(var(--admin-text-muted))]">{event.user.email}</div>
+                                  <div className="text-[hsl(var(--admin-text-primary))]">{event.ipAddress}</div>
+                                  <div className="text-xs text-[hsl(var(--admin-text-muted))]">{event.userId || 'Unknown'}</div>
                                 </div>
                               ) : (
                                 <span className="text-[hsl(var(--admin-text-muted))]">SYSTEM</span>
@@ -531,15 +419,18 @@ export default function AdminSecurityPage() {
                                 {new Date(event.timestamp).toLocaleTimeString()}
                               </div>
                             </td>
-                            <td>{getStatusBadge(event.status)}</td>
+                            <td>{getStatusBadge(event.resolved ? 'resolved' : 'open')}</td>
                             <td>
                               <div className="flex items-center gap-2">
                                 <button className="admin-btn text-xs px-3 py-1">
                                   <Eye className="h-3 w-3 mr-1" />
                                   VIEW
                                 </button>
-                                {event.status === 'open' && (
-                                  <button className="admin-btn admin-btn-primary text-xs px-3 py-1">
+                                {!event.resolved && (
+                                  <button 
+                                    className="admin-btn admin-btn-primary text-xs px-3 py-1"
+                                    onClick={() => resolveEvent(event.id)}
+                                  >
                                     <CheckCircle className="h-3 w-3 mr-1" />
                                     RESOLVE
                                   </button>
@@ -587,7 +478,7 @@ export default function AdminSecurityPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {threats.length === 0 ? (
+                      {threats?.length === 0 ? (
                         <tr>
                           <td colSpan={7} className="text-center py-8">
                             <div className="admin-subtitle">NO_ACTIVE_THREATS</div>
@@ -595,7 +486,7 @@ export default function AdminSecurityPage() {
                           </td>
                         </tr>
                       ) : (
-                        threats.map((threat) => (
+                        threats?.map((threat) => (
                           <tr key={threat.id} className="admin-slide-in">
                             <td>
                               <span className="font-medium text-[hsl(var(--admin-text-primary))]">
@@ -627,7 +518,10 @@ export default function AdminSecurityPage() {
                             <td>
                               <div className="flex items-center gap-2">
                                 {!threat.blocked && (
-                                  <button className="admin-btn admin-btn-danger text-xs px-3 py-1">
+                                  <button 
+                                    className="admin-btn admin-btn-danger text-xs px-3 py-1"
+                                    onClick={() => blockThreat(threat.id)}
+                                  >
                                     <Ban className="h-3 w-3 mr-1" />
                                     BLOCK
                                   </button>
@@ -684,18 +578,15 @@ export default function AdminSecurityPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {accessLogs.map((log) => (
+                      {logs?.map((log) => (
                         <tr key={log.id} className="admin-slide-in">
                           <td>
                             <div>
                               <div className="font-medium text-[hsl(var(--admin-text-primary))]">
-                                {log.user.name}
+                                {log.userId || 'System'}
                               </div>
                               <div className="text-xs text-[hsl(var(--admin-text-muted))]">
-                                {log.user.email}
-                              </div>
-                              <div className="text-xs">
-                                <span className="admin-badge admin-badge-secondary">{log.user.role}</span>
+                                {log.userId ? `user-${log.userId}` : 'System User'}
                               </div>
                             </div>
                           </td>
@@ -708,7 +599,7 @@ export default function AdminSecurityPage() {
                             <span className="text-[hsl(var(--admin-text-primary))]">{log.resource}</span>
                           </td>
                           <td>
-                            <span className="text-[hsl(var(--admin-text-primary))]">{log.ip}</span>
+                            <span className="text-[hsl(var(--admin-text-primary))]">{log.ipAddress}</span>
                           </td>
                           <td>
                             <div className="text-[hsl(var(--admin-text-secondary))]">
@@ -765,7 +656,7 @@ export default function AdminSecurityPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {apiKeys.map((key) => (
+                      {apiKeys?.map((key) => (
                         <tr key={key.id} className="admin-slide-in">
                           <td>
                             <div className="font-medium text-[hsl(var(--admin-text-primary))]">
@@ -808,7 +699,10 @@ export default function AdminSecurityPage() {
                                 VIEW
                               </button>
                               {key.status === 'active' && (
-                                <button className="admin-btn admin-btn-danger text-xs px-3 py-1">
+                                <button 
+                                  className="admin-btn admin-btn-danger text-xs px-3 py-1"
+                                  onClick={() => revokeApiKey(key.id)}
+                                >
                                   <Ban className="h-3 w-3 mr-1" />
                                   REVOKE
                                 </button>

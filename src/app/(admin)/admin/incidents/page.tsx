@@ -1,6 +1,7 @@
 "use client";
 
 import { useAdmin } from "@/components/admin/AdminProvider";
+import { useAdminIncidentsDashboard } from "@/lib/api/hooks/useAdminIncidents";
 import { 
   AlertTriangle,
   CheckCircle,
@@ -132,89 +133,39 @@ interface Alert {
 export default function AdminIncidentsPage() {
   const { permissions, staffRole } = useAdmin();
   const [activeTab, setActiveTab] = useState("overview");
-  const [loading, setLoading] = useState(true);
-  const [incidents, setIncidents] = useState<Incident[]>([]);
-  const [systemComponents, setSystemComponents] = useState<SystemComponent[]>([]);
-  const [postMortems, setPostMortems] = useState<PostMortem[]>([]);
-  const [escalationRules, setEscalationRules] = useState<EscalationRule[]>([]);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // Fetch all incident data from real APIs in parallel
-        const [
-          incidentsResponse,
-          componentsResponse,
-          postMortemsResponse,
-          escalationResponse,
-          alertsResponse
-        ] = await Promise.allSettled([
-          fetch('/api/v2/admin/incidents?type=incidents'),
-          fetch('/api/v2/admin/incidents?type=components'),
-          fetch('/api/v2/admin/incidents?type=postmortems'),
-          fetch('/api/v2/admin/incidents?type=escalation'),
-          fetch('/api/v2/admin/incidents?type=alerts')
-        ]);
+  const { 
+    incidents, 
+    incidentsLoading, 
+    incidentsError, 
+    components, 
+    componentsLoading, 
+    componentsError, 
+    postMortems, 
+    postMortemsLoading, 
+    postMortemsError, 
+    escalationRules, 
+    escalationRulesLoading, 
+    escalationRulesError, 
+    alerts, 
+    alertsLoading, 
+    alertsError, 
+    metrics, 
+    metricsLoading, 
+    metricsError, 
+    refreshAll,
+    updateIncidentStatus,
+    createIncident
+  } = useAdminIncidentsDashboard();
 
-        // Process incidents data
-        if (incidentsResponse.status === 'fulfilled' && incidentsResponse.value.ok) {
-          const incidentsData = await incidentsResponse.value.json();
-          if (incidentsData.success) {
-            setIncidents(incidentsData.data || []);
-          }
-        }
+  const activeIncidents = incidents.filter(i => i.status !== 'resolved');
+  const criticalIncidents = incidents.filter(i => i.severity === 'critical');
+  const systemHealth = Math.round((components.filter(c => c.status === 'operational').length / components.length) * 100);
 
-        // Process system components data
-        if (componentsResponse.status === 'fulfilled' && componentsResponse.value.ok) {
-          const componentsData = await componentsResponse.value.json();
-          if (componentsData.success) {
-            setSystemComponents(componentsData.data || []);
-          }
-        }
-
-        // Process post-mortems data
-        if (postMortemsResponse.status === 'fulfilled' && postMortemsResponse.value.ok) {
-          const postMortemsData = await postMortemsResponse.value.json();
-          if (postMortemsData.success) {
-            setPostMortems(postMortemsData.data || []);
-          }
-        }
-
-        // Process escalation rules data
-        if (escalationResponse.status === 'fulfilled' && escalationResponse.value.ok) {
-          const escalationData = await escalationResponse.value.json();
-          if (escalationData.success) {
-            setEscalationRules(escalationData.data || []);
-          }
-        }
-
-        // Process alerts data
-        if (alertsResponse.status === 'fulfilled' && alertsResponse.value.ok) {
-          const alertsData = await alertsResponse.value.json();
-          if (alertsData.success) {
-            setAlerts(alertsData.data || []);
-          }
-        }
-
-      } catch (error) {
-        console.error('Error fetching incidents data:', error);
-        // Fallback to empty arrays on error
-        setIncidents([]);
-        setSystemComponents([]);
-        setPostMortems([]);
-        setEscalationRules([]);
-        setAlerts([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
+  const loading = incidentsLoading || componentsLoading || postMortemsLoading || escalationRulesLoading || alertsLoading || metricsLoading;
+  const error = incidentsError || componentsError || postMortemsError || escalationRulesError || alertsError || metricsError;
 
   if (!permissions.canManageIncidents) {
     return (
@@ -331,6 +282,25 @@ export default function AdminIncidentsPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="admin-title text-xl mb-2">Threat_Monitor_Error</h2>
+          <p className="admin-subtitle mb-4">{error}</p>
+          <button 
+            className="admin-btn admin-btn-primary flex items-center gap-2"
+            onClick={refreshAll}
+          >
+            <RefreshCw className="h-4 w-4" />
+            RETRY_CONNECTION
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!permissions.canManageIncidents) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -365,7 +335,7 @@ export default function AdminIncidentsPage() {
             <Plus className="h-4 w-4" />
             NEW_INCIDENT
           </button>
-          <button className="admin-btn flex items-center gap-2">
+          <button className="admin-btn flex items-center gap-2" onClick={refreshAll}>
             <RefreshCw className="h-4 w-4" />
             REFRESH_ALL
           </button>
@@ -379,9 +349,9 @@ export default function AdminIncidentsPage() {
             <AlertTriangle className="h-6 w-6 text-[hsl(var(--admin-warning))]" />
             <Target className="h-4 w-4 text-[hsl(var(--admin-warning))]" />
           </div>
-          <div className="admin-stat-value">{activeIncidents.length}</div>
+          <div className="admin-stat-value">{metrics?.activeIncidents || activeIncidents.length}</div>
           <div className="admin-stat-label">ACTIVE_INCIDENTS</div>
-          <div className="admin-stat-change negative">{criticalIncidents.length}_CRITICAL</div>
+          <div className="admin-stat-change negative">{metrics?.criticalIncidents || criticalIncidents.length}_CRITICAL</div>
         </div>
 
         <div className="admin-stat-card admin-glow-hover">
@@ -389,7 +359,7 @@ export default function AdminIncidentsPage() {
             <Activity className="h-6 w-6 text-[hsl(var(--admin-success))]" />
             <div className="admin-pulse"></div>
           </div>
-          <div className="admin-stat-value">{systemHealth || 0}%</div>
+          <div className="admin-stat-value">{metrics?.systemHealth || systemHealth || 0}%</div>
           <div className="admin-stat-label">SYSTEM_HEALTH</div>
           <div className="admin-stat-change positive">OPERATIONAL_STATUS</div>
         </div>
@@ -399,7 +369,7 @@ export default function AdminIncidentsPage() {
             <Timer className="h-6 w-6 text-[hsl(var(--admin-accent))]" />
             <Clock className="h-4 w-4 text-[hsl(var(--admin-accent))]" />
           </div>
-          <div className="admin-stat-value">{avgResolutionTime}</div>
+          <div className="admin-stat-value">{metrics?.avgResolutionTime || 'N/A'}</div>
           <div className="admin-stat-label">MTTR</div>
           <div className="admin-stat-change">MEAN_TIME_TO_RESOLUTION</div>
         </div>
@@ -410,7 +380,7 @@ export default function AdminIncidentsPage() {
             <Radar className="h-4 w-4 text-[hsl(var(--admin-danger))]" />
           </div>
           <div className="admin-stat-value">
-            {alerts.filter(a => a.status !== 'normal').length}
+            {metrics?.activeAlerts || alerts.filter(a => a.status !== 'normal').length}
           </div>
           <div className="admin-stat-label">ACTIVE_ALERTS</div>
           <div className="admin-stat-change negative">MONITORING_TRIGGERED</div>
@@ -458,7 +428,7 @@ export default function AdminIncidentsPage() {
                 <h2 className="admin-title text-xl">SYSTEM_STATUS_MATRIX</h2>
               </div>
               <div className="space-y-4">
-                {systemComponents.map((component) => (
+                {components.map((component) => (
                   <div key={component.name} className="admin-card p-4 border border-[hsl(var(--admin-border))]">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">

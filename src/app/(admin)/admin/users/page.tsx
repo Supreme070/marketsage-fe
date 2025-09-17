@@ -1,6 +1,7 @@
 "use client";
 
 import { useAdmin } from "@/components/admin/AdminProvider";
+import { useAdminUsersDashboard, AdminUser } from "@/lib/api/hooks/useAdminUsers";
 import { 
   Users, 
   Search, 
@@ -21,7 +22,7 @@ import {
   Globe,
   Lock
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface User {
   id: string;
@@ -40,62 +41,27 @@ interface User {
 
 export default function AdminUsersPage() {
   const { permissions, staffRole } = useAdmin();
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [stats, setStats] = useState({
-    total: 0,
-    active: 0,
-    suspended: 0,
-    pending: 0
+  
+  const { 
+    users, 
+    stats, 
+    loading, 
+    error, 
+    pagination, 
+    refreshAll, 
+    suspendUser, 
+    activateUser 
+  } = useAdminUsersDashboard({
+    page: currentPage,
+    limit: 10,
+    search: searchTerm,
+    role: roleFilter,
+    status: statusFilter
   });
-
-  // Real API call to fetch users
-  useEffect(() => {
-    const fetchUsers = async () => {
-      setLoading(true);
-      try {
-        const queryParams = new URLSearchParams({
-          page: currentPage.toString(),
-          limit: '10',
-          ...(searchTerm && { search: searchTerm }),
-          ...(roleFilter !== 'all' && { role: roleFilter }),
-          ...(statusFilter !== 'all' && { status: statusFilter }),
-        });
-        
-        const response = await fetch(`/api/admin/users?${queryParams}`);
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-          console.error('Failed to fetch users:', response.status, errorData);
-          throw new Error(`Failed to fetch users: ${errorData.error || response.statusText}`);
-        }
-        
-        const data = await response.json();
-        setUsers(data.users || []);
-        setTotalPages(Math.ceil((data.total || 0) / 10));
-        if (data.stats) {
-          setStats({
-            total: data.stats.total || 0,
-            active: data.stats.active || 0,
-            suspended: data.stats.suspended || 0,
-            pending: data.stats.unverified || 0
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching users:', error);
-        // Fallback to empty array on error
-        setUsers([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUsers();
-  }, [currentPage, searchTerm, roleFilter, statusFilter]);
 
   if (!permissions.canViewUsers) {
     return (
@@ -114,17 +80,33 @@ export default function AdminUsersPage() {
     );
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <span className="admin-badge admin-badge-success">ONLINE</span>;
-      case 'pending_verification':
-        return <span className="admin-badge admin-badge-warning">PENDING</span>;
-      case 'suspended':
-        return <span className="admin-badge admin-badge-danger">SUSPENDED</span>;
-      default:
-        return <span className="admin-badge admin-badge-secondary">{status.toUpperCase()}</span>;
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="admin-card p-8 text-center max-w-md">
+          <AlertTriangle className="h-16 w-16 mx-auto mb-6 text-red-400" />
+          <h2 className="admin-title text-2xl mb-4">USER_MANAGEMENT_ERROR</h2>
+          <p className="admin-subtitle mb-4">{error}</p>
+          <button 
+            className="admin-btn admin-btn-primary flex items-center gap-2 mx-auto"
+            onClick={refreshAll}
+          >
+            <RefreshCw className="h-4 w-4" />
+            RETRY
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const getStatusBadge = (user: AdminUser) => {
+    if (user.isSuspended) {
+      return <span className="admin-badge admin-badge-danger">SUSPENDED</span>;
     }
+    if (user.emailVerified) {
+      return <span className="admin-badge admin-badge-success">ONLINE</span>;
+    }
+    return <span className="admin-badge admin-badge-warning">PENDING</span>;
   };
 
   const getRoleBadge = (role: string) => {
@@ -140,14 +122,22 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleImpersonate = async (userId: string) => {
-    // Implementation for user impersonation
-    console.log('Impersonating user:', userId);
+  const handleSuspendUser = async (userId: string) => {
+    try {
+      await suspendUser(userId);
+      // Success is handled by the hook refreshing the data
+    } catch (error) {
+      console.error('Failed to suspend user:', error);
+    }
   };
 
-  const handleSuspendUser = async (userId: string) => {
-    // Implementation for suspending user
-    console.log('Suspending user:', userId);
+  const handleActivateUser = async (userId: string) => {
+    try {
+      await activateUser(userId);
+      // Success is handled by the hook refreshing the data
+    } catch (error) {
+      console.error('Failed to activate user:', error);
+    }
   };
 
   return (
@@ -156,7 +146,7 @@ export default function AdminUsersPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="admin-title text-2xl mb-1">USER_MATRIX</h1>
-          <p className="admin-subtitle">MANAGING {stats.total.toLocaleString()} SYSTEM_ENTITIES</p>
+          <p className="admin-subtitle">MANAGING {stats?.total?.toLocaleString() || 0} SYSTEM_ENTITIES</p>
         </div>
         <div className="flex items-center gap-4">
           <button className="admin-btn admin-btn-primary flex items-center gap-2">
@@ -177,9 +167,9 @@ export default function AdminUsersPage() {
             <Users className="h-6 w-6 text-[hsl(var(--admin-primary))]" />
             <Zap className="h-4 w-4 text-[hsl(var(--admin-accent))]" />
           </div>
-          <div className="admin-stat-value">{stats.total.toLocaleString()}</div>
+          <div className="admin-stat-value">{stats?.total?.toLocaleString() || 0}</div>
           <div className="admin-stat-label">TOTAL_USERS</div>
-          <div className="admin-stat-change positive">+{Math.floor(stats.total * 0.07)} THIS_CYCLE</div>
+          <div className="admin-stat-change positive">+{Math.floor((stats?.total || 0) * 0.07)} THIS_CYCLE</div>
         </div>
 
         <div className="admin-stat-card admin-glow-hover">
@@ -187,9 +177,9 @@ export default function AdminUsersPage() {
             <CheckCircle className="h-6 w-6 text-[hsl(var(--admin-success))]" />
             <Activity className="h-4 w-4 text-[hsl(var(--admin-success))]" />
           </div>
-          <div className="admin-stat-value">{stats.active.toLocaleString()}</div>
+          <div className="admin-stat-value">{stats?.active?.toLocaleString() || 0}</div>
           <div className="admin-stat-label">ACTIVE_SESSIONS</div>
-          <div className="admin-stat-change positive">{((stats.active / Math.max(stats.total, 1)) * 100).toFixed(1)}% ONLINE</div>
+          <div className="admin-stat-change positive">{((stats?.active || 0) / Math.max(stats?.total || 1, 1) * 100).toFixed(1)}% ONLINE</div>
         </div>
 
         <div className="admin-stat-card admin-glow-hover">
@@ -197,9 +187,9 @@ export default function AdminUsersPage() {
             <AlertTriangle className="h-6 w-6 text-[hsl(var(--admin-warning))]" />
             <Globe className="h-4 w-4 text-[hsl(var(--admin-warning))]" />
           </div>
-          <div className="admin-stat-value">{stats.pending.toLocaleString()}</div>
+          <div className="admin-stat-value">{stats?.pending?.toLocaleString() || 0}</div>
           <div className="admin-stat-label">PENDING_AUTH</div>
-          <div className="admin-stat-change negative">{((stats.pending / Math.max(stats.total, 1)) * 100).toFixed(1)}% UNVERIFIED</div>
+          <div className="admin-stat-change negative">{((stats?.pending || 0) / Math.max(stats?.total || 1, 1) * 100).toFixed(1)}% UNVERIFIED</div>
         </div>
 
         <div className="admin-stat-card admin-glow-hover">
@@ -207,9 +197,9 @@ export default function AdminUsersPage() {
             <Shield className="h-6 w-6 text-[hsl(var(--admin-danger))]" />
             <Terminal className="h-4 w-4 text-[hsl(var(--admin-danger))]" />
           </div>
-          <div className="admin-stat-value">{stats.suspended.toLocaleString()}</div>
+          <div className="admin-stat-value">{stats?.suspended?.toLocaleString() || 0}</div>
           <div className="admin-stat-label">SUSPENDED</div>
-          <div className="admin-stat-change negative">{((stats.suspended / Math.max(stats.total, 1)) * 100).toFixed(1)}% BLOCKED</div>
+          <div className="admin-stat-change negative">{((stats?.suspended || 0) / Math.max(stats?.total || 1, 1) * 100).toFixed(1)}% BLOCKED</div>
         </div>
       </div>
 
@@ -220,8 +210,12 @@ export default function AdminUsersPage() {
               <Database className="h-5 w-5 text-[hsl(var(--admin-primary))]" />
               <h2 className="admin-title text-xl">USER_DIRECTORY</h2>
             </div>
-            <button className="admin-btn flex items-center gap-2 admin-glow-hover">
-              <RefreshCw className="h-4 w-4" />
+            <button 
+              className="admin-btn flex items-center gap-2 admin-glow-hover"
+              onClick={refreshAll}
+              disabled={loading}
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               SYNC_DB
             </button>
           </div>
@@ -298,7 +292,7 @@ export default function AdminUsersPage() {
                           {getRoleBadge(user.role)}
                         </td>
                         <td>
-                          {getStatusBadge(user.status)}
+                          {getStatusBadge(user)}
                         </td>
                         <td>
                           {user.organization ? (
@@ -307,7 +301,7 @@ export default function AdminUsersPage() {
                                 {user.organization.name}
                               </div>
                               <div className="text-[hsl(var(--admin-text-muted))] text-xs">
-                                {user.organization.subscriptionTier}
+                                {user.organization.plan}
                               </div>
                             </div>
                           ) : (
@@ -316,28 +310,38 @@ export default function AdminUsersPage() {
                         </td>
                         <td>
                           <div className="text-[hsl(var(--admin-text-secondary))]">
-                            {new Date(user.lastActive).toLocaleDateString()}
+                            {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : 'Never'}
                           </div>
                           <div className="text-[hsl(var(--admin-text-muted))] text-xs">
-                            {new Date(user.lastActive).toLocaleTimeString()}
+                            {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleTimeString() : 'No activity'}
                           </div>
                         </td>
                         <td>
                           <div className="flex items-center gap-2">
                             <button
                               className="admin-btn text-xs px-3 py-1"
-                              onClick={() => handleImpersonate(user.id)}
+                              onClick={() => console.log('View user:', user.id)}
                             >
                               <Eye className="h-3 w-3 mr-1" />
                               VIEW
                             </button>
-                            <button
-                              className="admin-btn admin-btn-danger text-xs px-3 py-1"
-                              onClick={() => handleSuspendUser(user.id)}
-                            >
-                              <Ban className="h-3 w-3 mr-1" />
-                              BLOCK
-                            </button>
+                            {user.isSuspended ? (
+                              <button
+                                className="admin-btn admin-btn-success text-xs px-3 py-1"
+                                onClick={() => handleActivateUser(user.id)}
+                              >
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                ACTIVATE
+                              </button>
+                            ) : (
+                              <button
+                                className="admin-btn admin-btn-danger text-xs px-3 py-1"
+                                onClick={() => handleSuspendUser(user.id)}
+                              >
+                                <Ban className="h-3 w-3 mr-1" />
+                                SUSPEND
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -350,10 +354,10 @@ export default function AdminUsersPage() {
         </div>
 
         {/* Cyberpunk Pagination */}
-        {!loading && totalPages > 1 && (
+        {!loading && pagination.pages > 1 && (
           <div className="admin-card p-4 mt-6 flex items-center justify-between">
             <div className="admin-subtitle">
-              PAGE {currentPage} OF {totalPages} // TOTAL_RECORDS: {stats.total}
+              PAGE {pagination.page} OF {pagination.pages} {/* TOTAL_RECORDS: */} {pagination.total}
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -365,8 +369,8 @@ export default function AdminUsersPage() {
               </button>
               <button
                 className="admin-btn"
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(Math.min(pagination.pages, currentPage + 1))}
+                disabled={currentPage === pagination.pages}
               >
                 NEXT
               </button>
@@ -382,7 +386,7 @@ export default function AdminUsersPage() {
               <div>
                 <h4 className="admin-title text-lg mb-2">SYSTEM_STATUS</h4>
                 <p className="admin-subtitle mb-3">
-                  USER_MANAGEMENT.MODULE.ONLINE // VERSION: 3.0.1
+                  USER_MANAGEMENT.MODULE.ONLINE {/* VERSION: 3.0.1 */}
                 </p>
                 <div className="flex gap-4">
                   <div className="admin-badge admin-badge-success">DATABASE_CONNECTED</div>
@@ -390,7 +394,7 @@ export default function AdminUsersPage() {
                   <div className="admin-badge admin-badge-warning">CACHE_SYNC_PENDING</div>
                 </div>
                 <p className="admin-subtitle mt-3 text-xs">
-                  // Advanced operations: BULK_EDIT, AUDIT_TRAILS, PERMISSION_MATRIX available in next iteration
+                  {/* Advanced operations: BULK_EDIT, AUDIT_TRAILS, PERMISSION_MATRIX available in next iteration */}
                 </p>
               </div>
             </div>
