@@ -44,124 +44,20 @@ import {
   CheckCircle,
   AlertCircle,
   Activity,
-  Sparkles
+  Sparkles,
+  Layers,
+  Workflow
 } from "lucide-react";
 import Link from "next/link";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
-
-// Sample campaign data
-const sampleCampaigns = [
-  {
-    id: "1",
-    name: "Nigeria Q2 Product Launch",
-    type: "EMAIL",
-    status: "SCHEDULED",
-    recipients: 1250,
-    openRate: null,
-    clickRate: null,
-    scheduledDate: "2024-05-15T09:00:00Z",
-    lastUpdated: "2024-05-05T16:40:00Z",
-    createdBy: "John Doe",
-    tags: ["product-launch", "nigeria"]
-  },
-  {
-    id: "2",
-    name: "Welcome Series - Kenya",
-    type: "EMAIL",
-    status: "ACTIVE",
-    recipients: 835,
-    openRate: 32.4,
-    clickRate: 12.8,
-    scheduledDate: "2024-04-20T08:00:00Z",
-    lastUpdated: "2024-05-04T12:30:00Z",
-    createdBy: "Jane Smith",
-    tags: ["automation", "kenya", "welcome"]
-  },
-  {
-    id: "3",
-    name: "Ramadan Sale Reminder",
-    type: "SMS",
-    status: "COMPLETED",
-    recipients: 2130,
-    openRate: null,
-    clickRate: 8.9,
-    scheduledDate: "2024-04-01T12:00:00Z",
-    lastUpdated: "2024-04-01T12:15:00Z",
-    createdBy: "John Doe",
-    tags: ["promotion", "seasonal"]
-  },
-  {
-    id: "4",
-    name: "Service Disruption Alert",
-    type: "WHATSAPP",
-    status: "COMPLETED",
-    recipients: 567,
-    openRate: 94.2,
-    clickRate: null,
-    scheduledDate: "2024-04-25T06:30:00Z",
-    lastUpdated: "2024-04-25T06:45:00Z",
-    createdBy: "System",
-    tags: ["alerts", "service"]
-  },
-  {
-    id: "5",
-    name: "South Africa Newsletter - May",
-    type: "EMAIL",
-    status: "DRAFT",
-    recipients: 0,
-    openRate: null,
-    clickRate: null,
-    scheduledDate: null,
-    lastUpdated: "2024-05-03T14:20:00Z",
-    createdBy: "Jane Smith",
-    tags: ["newsletter", "southafrica"]
-  },
-  {
-    id: "6",
-    name: "Ghana Webinar Invitation",
-    type: "EMAIL",
-    status: "ACTIVE",
-    recipients: 478,
-    openRate: 45.6,
-    clickRate: 18.2,
-    scheduledDate: "2024-04-28T09:00:00Z",
-    lastUpdated: "2024-04-28T09:05:00Z",
-    createdBy: "John Doe",
-    tags: ["webinar", "ghana", "invitation"]
-  },
-  {
-    id: "7",
-    name: "Flash Sale - 24 Hours Only",
-    type: "SMS",
-    status: "SCHEDULED",
-    recipients: 3750,
-    openRate: null,
-    clickRate: null,
-    scheduledDate: "2024-05-10T08:00:00Z",
-    lastUpdated: "2024-05-02T11:15:00Z",
-    createdBy: "Jane Smith",
-    tags: ["promotion", "flash-sale"]
-  },
-  {
-    id: "8",
-    name: "Order Confirmation Template",
-    type: "WHATSAPP",
-    status: "ACTIVE",
-    recipients: 1892,
-    openRate: 98.7,
-    clickRate: 24.3,
-    scheduledDate: "2024-04-15T00:00:00Z",
-    lastUpdated: "2024-05-01T10:40:00Z",
-    createdBy: "John Doe",
-    tags: ["transactional", "orders"]
-  }
-];
+import { useUnifiedCampaigns } from "@/lib/api/hooks/useUnifiedCampaigns";
+import { ChannelType, CampaignStatus } from "@/lib/api/hooks/useUnifiedCampaigns";
 
 export default function CampaignsPage() {
-  const [campaigns] = useState(sampleCampaigns);
+  const { campaigns, loading, error, pagination, fetchCampaigns } = useUnifiedCampaigns();
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
@@ -409,14 +305,18 @@ export default function CampaignsPage() {
       const searchLower = searchQuery.toLowerCase();
       return (
         campaign.name.toLowerCase().includes(searchLower) ||
-        campaign.createdBy.toLowerCase().includes(searchLower) ||
-        (campaign.tags && campaign.tags.some(tag => tag.toLowerCase().includes(searchLower)))
+        campaign.createdBy.name.toLowerCase().includes(searchLower) ||
+        (campaign.description && campaign.description.toLowerCase().includes(searchLower))
       );
     }
 
     // Type filter
-    if (typeFilter && campaign.type !== typeFilter) {
-      return false;
+    if (typeFilter) {
+      if (typeFilter === 'UNIFIED') {
+        return campaign.channels.length > 1;
+      } else {
+        return campaign.channels.includes(typeFilter as ChannelType);
+      }
     }
 
     // Status filter
@@ -448,37 +348,48 @@ export default function CampaignsPage() {
 
   // Stats by type
   const typeCounts = {
-    EMAIL: campaigns.filter(c => c.type === "EMAIL").length,
-    SMS: campaigns.filter(c => c.type === "SMS").length,
-    WHATSAPP: campaigns.filter(c => c.type === "WHATSAPP").length,
+    EMAIL: campaigns.filter(c => c.channels.includes(ChannelType.EMAIL)).length,
+    SMS: campaigns.filter(c => c.channels.includes(ChannelType.SMS)).length,
+    WHATSAPP: campaigns.filter(c => c.channels.includes(ChannelType.WHATSAPP)).length,
+    UNIFIED: campaigns.filter(c => c.channels.length > 1).length,
   };
 
   // Stats by status
   const statusCounts = {
-    DRAFT: campaigns.filter(c => c.status === "DRAFT").length,
-    SCHEDULED: campaigns.filter(c => c.status === "SCHEDULED").length,
-    ACTIVE: campaigns.filter(c => c.status === "ACTIVE").length,
-    COMPLETED: campaigns.filter(c => c.status === "COMPLETED").length,
+    DRAFT: campaigns.filter(c => c.status === CampaignStatus.DRAFT).length,
+    SCHEDULED: campaigns.filter(c => c.status === CampaignStatus.SCHEDULED).length,
+    ACTIVE: campaigns.filter(c => c.status === CampaignStatus.ACTIVE).length,
+    COMPLETED: campaigns.filter(c => c.status === CampaignStatus.COMPLETED).length,
   };
 
   // Get campaign type badge
-  const getCampaignTypeBadge = (type: string) => {
-    switch(type) {
-      case 'EMAIL':
+  const getCampaignTypeBadge = (channels: ChannelType[]) => {
+    if (channels.length > 1) {
+      return (
+        <Badge className="bg-purple-500 hover:bg-purple-600">
+          <Layers className="mr-1 h-3 w-3" />
+          Multi-Channel
+        </Badge>
+      );
+    }
+    
+    const channel = channels[0];
+    switch(channel) {
+      case ChannelType.EMAIL:
         return (
           <Badge className="bg-blue-500 hover:bg-blue-600">
             <Mail className="mr-1 h-3 w-3" />
             Email
           </Badge>
         );
-      case 'SMS':
+      case ChannelType.SMS:
         return (
           <Badge className="bg-green-500 hover:bg-green-600">
             <MessageSquare className="mr-1 h-3 w-3" />
             SMS
           </Badge>
         );
-      case 'WHATSAPP':
+      case ChannelType.WHATSAPP:
         return (
           <Badge className="bg-emerald-500 hover:bg-emerald-600">
             <MessageCircle className="mr-1 h-3 w-3" />
@@ -486,21 +397,25 @@ export default function CampaignsPage() {
           </Badge>
         );
       default:
-        return <Badge>{type}</Badge>;
+        return <Badge>{channel}</Badge>;
     }
   };
 
   // Get campaign status badge
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: CampaignStatus) => {
     switch(status) {
-      case 'DRAFT':
+      case CampaignStatus.DRAFT:
         return <Badge variant="outline">Draft</Badge>;
-      case 'SCHEDULED':
+      case CampaignStatus.SCHEDULED:
         return <Badge variant="secondary"><Clock className="mr-1 h-3 w-3" />Scheduled</Badge>;
-      case 'ACTIVE':
+      case CampaignStatus.ACTIVE:
         return <Badge variant="default" className="bg-green-500 hover:bg-green-600">Active</Badge>;
-      case 'COMPLETED':
+      case CampaignStatus.COMPLETED:
         return <Badge variant="default" className="bg-gray-500 hover:bg-gray-600">Completed</Badge>;
+      case CampaignStatus.PAUSED:
+        return <Badge variant="secondary"><Clock className="mr-1 h-3 w-3" />Paused</Badge>;
+      case CampaignStatus.CANCELLED:
+        return <Badge variant="destructive">Cancelled</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -518,6 +433,12 @@ export default function CampaignsPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem asChild>
+              <Link href="/campaigns/unified/new">
+                <Layers className="mr-2 h-4 w-4" /> Unified Campaign
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link href="/email/campaigns/new">
                 <Mail className="mr-2 h-4 w-4" /> Email Campaign
@@ -582,6 +503,18 @@ export default function CampaignsPage() {
             <p className="text-xs text-muted-foreground mt-1">
               <MessageCircle className="inline mr-1 h-3 w-3" />
               <Link href="/whatsapp/campaigns" className="hover:underline">View all <ArrowUpRight className="inline h-3 w-3" /></Link>
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Unified Campaigns</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{typeCounts.UNIFIED}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              <Layers className="inline mr-1 h-3 w-3" />
+              Multi-channel campaigns
             </p>
           </CardContent>
         </Card>
@@ -664,6 +597,19 @@ export default function CampaignsPage() {
                     </span>
                     <Badge variant="outline" className="ml-2">{typeCounts.WHATSAPP}</Badge>
                   </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="flex items-center justify-between"
+                    onClick={() => {
+                      setTypeFilter(typeFilter === "UNIFIED" ? null : "UNIFIED");
+                      setPage(1);
+                    }}
+                  >
+                    <span className="flex items-center space-x-1">
+                      <div className={`w-2 h-2 rounded-full ${typeFilter === "UNIFIED" ? "bg-primary" : "bg-transparent border border-muted"}`}></div>
+                      <span>Unified</span>
+                    </span>
+                    <Badge variant="outline" className="ml-2">{typeCounts.UNIFIED}</Badge>
+                  </DropdownMenuItem>
                   
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
@@ -672,12 +618,12 @@ export default function CampaignsPage() {
                   <DropdownMenuItem
                     className="flex items-center justify-between"
                     onClick={() => {
-                      setStatusFilter(statusFilter === "DRAFT" ? null : "DRAFT");
+                      setStatusFilter(statusFilter === CampaignStatus.DRAFT ? null : CampaignStatus.DRAFT);
                       setPage(1);
                     }}
                   >
                     <span className="flex items-center space-x-1">
-                      <div className={`w-2 h-2 rounded-full ${statusFilter === "DRAFT" ? "bg-primary" : "bg-transparent border border-muted"}`}></div>
+                      <div className={`w-2 h-2 rounded-full ${statusFilter === CampaignStatus.DRAFT ? "bg-primary" : "bg-transparent border border-muted"}`}></div>
                       <span>Draft</span>
                     </span>
                     <Badge variant="outline" className="ml-2">{statusCounts.DRAFT}</Badge>
@@ -685,12 +631,12 @@ export default function CampaignsPage() {
                   <DropdownMenuItem
                     className="flex items-center justify-between"
                     onClick={() => {
-                      setStatusFilter(statusFilter === "SCHEDULED" ? null : "SCHEDULED");
+                      setStatusFilter(statusFilter === CampaignStatus.SCHEDULED ? null : CampaignStatus.SCHEDULED);
                       setPage(1);
                     }}
                   >
                     <span className="flex items-center space-x-1">
-                      <div className={`w-2 h-2 rounded-full ${statusFilter === "SCHEDULED" ? "bg-primary" : "bg-transparent border border-muted"}`}></div>
+                      <div className={`w-2 h-2 rounded-full ${statusFilter === CampaignStatus.SCHEDULED ? "bg-primary" : "bg-transparent border border-muted"}`}></div>
                       <span>Scheduled</span>
                     </span>
                     <Badge variant="outline" className="ml-2">{statusCounts.SCHEDULED}</Badge>
@@ -698,12 +644,12 @@ export default function CampaignsPage() {
                   <DropdownMenuItem
                     className="flex items-center justify-between"
                     onClick={() => {
-                      setStatusFilter(statusFilter === "ACTIVE" ? null : "ACTIVE");
+                      setStatusFilter(statusFilter === CampaignStatus.ACTIVE ? null : CampaignStatus.ACTIVE);
                       setPage(1);
                     }}
                   >
                     <span className="flex items-center space-x-1">
-                      <div className={`w-2 h-2 rounded-full ${statusFilter === "ACTIVE" ? "bg-primary" : "bg-transparent border border-muted"}`}></div>
+                      <div className={`w-2 h-2 rounded-full ${statusFilter === CampaignStatus.ACTIVE ? "bg-primary" : "bg-transparent border border-muted"}`}></div>
                       <span>Active</span>
                     </span>
                     <Badge variant="outline" className="ml-2">{statusCounts.ACTIVE}</Badge>
@@ -711,12 +657,12 @@ export default function CampaignsPage() {
                   <DropdownMenuItem
                     className="flex items-center justify-between"
                     onClick={() => {
-                      setStatusFilter(statusFilter === "COMPLETED" ? null : "COMPLETED");
+                      setStatusFilter(statusFilter === CampaignStatus.COMPLETED ? null : CampaignStatus.COMPLETED);
                       setPage(1);
                     }}
                   >
                     <span className="flex items-center space-x-1">
-                      <div className={`w-2 h-2 rounded-full ${statusFilter === "COMPLETED" ? "bg-primary" : "bg-transparent border border-muted"}`}></div>
+                      <div className={`w-2 h-2 rounded-full ${statusFilter === CampaignStatus.COMPLETED ? "bg-primary" : "bg-transparent border border-muted"}`}></div>
                       <span>Completed</span>
                     </span>
                     <Badge variant="outline" className="ml-2">{statusCounts.COMPLETED}</Badge>
@@ -749,28 +695,24 @@ export default function CampaignsPage() {
                     <TableCell className="font-medium">
                       <div className="flex flex-col">
                         <span>{campaign.name}</span>
-                        <span className="text-xs text-muted-foreground">by {campaign.createdBy}</span>
+                        <span className="text-xs text-muted-foreground">by {campaign.createdBy.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell>{getCampaignTypeBadge(campaign.type)}</TableCell>
+                    <TableCell>{getCampaignTypeBadge(campaign.channels)}</TableCell>
                     <TableCell>{getStatusBadge(campaign.status)}</TableCell>
                     <TableCell>
                       <div className="flex items-center">
                         <Users className="mr-2 h-4 w-4 text-muted-foreground" />
-                        {campaign.recipients.toLocaleString()}
+                        {campaign.channelCampaigns.reduce((total, cc) => total + (cc.campaign?.recipients || 0), 0).toLocaleString()}
                       </div>
                     </TableCell>
                     <TableCell>
-                      {campaign.status === 'DRAFT' || campaign.status === 'SCHEDULED' ? (
+                      {campaign.status === CampaignStatus.DRAFT || campaign.status === CampaignStatus.SCHEDULED ? (
                         <span className="text-xs text-muted-foreground">Not sent yet</span>
                       ) : (
                         <div className="flex flex-col text-xs">
-                          {campaign.openRate !== null && (
-                            <span>Opens: {campaign.openRate}%</span>
-                          )}
-                          {campaign.clickRate !== null && (
-                            <span>Clicks: {campaign.clickRate}%</span>
-                          )}
+                          <span>Multi-channel analytics</span>
+                          <span className="text-muted-foreground">View details for metrics</span>
                         </div>
                       )}
                     </TableCell>
@@ -794,7 +736,7 @@ export default function CampaignsPage() {
                     <TableCell>
                       <div className="flex items-center">
                         <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                        <span className="text-xs">{formatDate(campaign.scheduledDate)}</span>
+                        <span className="text-xs">{formatDate(campaign.createdAt)}</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -808,14 +750,14 @@ export default function CampaignsPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuItem asChild>
-                            <Link href={`/${campaign.type.toLowerCase()}/campaigns/${campaign.id}`}>
+                            <Link href={`/campaigns/unified/${campaign.id}`}>
                               <Edit className="mr-2 h-4 w-4" /> Edit
                             </Link>
                           </DropdownMenuItem>
-                          {(campaign.status === 'ACTIVE' || campaign.status === 'COMPLETED') && (
+                          {(campaign.status === CampaignStatus.ACTIVE || campaign.status === CampaignStatus.COMPLETED) && (
                             <DropdownMenuItem asChild>
-                              <Link href={`/${campaign.type.toLowerCase()}/campaigns/${campaign.id}/stats`}>
-                                <BarChart className="mr-2 h-4 w-4" /> View Stats
+                              <Link href={`/campaigns/unified/${campaign.id}/analytics`}>
+                                <BarChart className="mr-2 h-4 w-4" /> View Analytics
                               </Link>
                             </DropdownMenuItem>
                           )}
