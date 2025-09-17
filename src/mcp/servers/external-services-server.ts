@@ -22,7 +22,7 @@ import { logger } from '../../lib/logger';
 
 // Import existing service implementations
 import { MarketSageAPI } from '../../lib/api';
-import { sendSMS, smsService } from '../../lib/sms-service';
+import { sendSMS, smsService } from '../../lib/sms-providers/sms-service';
 import { sendWhatsAppMessage } from '../../lib/whatsapp-service';
 import { prisma } from '../../lib/db/prisma';
 

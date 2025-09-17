@@ -5,7 +5,7 @@
  * It supports text messages, templates, media, interactive messages, and location sharing.
  */
 
-import { apiClient } from '@/lib/api-client';
+import { apiClient } from '@/lib/api/client';
 import type {
   WhatsAppResult,
   WhatsAppTemplate,

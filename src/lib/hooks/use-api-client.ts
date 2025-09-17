@@ -8,7 +8,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useEffect, useMemo } from 'react';
-import { apiClient } from '@/lib/api-client';
+import { apiClient } from '@/lib/api/client';
 
 export function useApiClient() {
   const { data: session, status } = useSession();

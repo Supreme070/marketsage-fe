@@ -25,6 +25,8 @@ export async function proxyToNestJS(request: NextRequest) {
 
     // Get session for authentication
     const session = await getAppRouterSession();
+    console.log('[NestJS Proxy] Session retrieved:', session ? 'Session found' : 'No session');
+    console.log('[NestJS Proxy] Access token:', session?.accessToken ? 'Token present' : 'No token');
 
     // Forward all headers from the original request
     const headers: Record<string, string> = {};

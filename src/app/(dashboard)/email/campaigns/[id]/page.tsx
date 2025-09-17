@@ -66,14 +66,14 @@ interface EmailCampaign {
     name: string;
   }[];
   statistics: {
-    totalRecipients: number;
+    totalSent: number;
     activitiesCount?: number;
   };
 }
 
 interface CampaignAnalytics {
   summary: {
-    totalRecipients: number;
+    totalSent: number;
     sent: number;
     delivered: number;
     opened: number;
@@ -457,7 +457,7 @@ export default function CampaignDetailPage() {
                 <div className="grid grid-cols-4 gap-4">
                   <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-lg">
                     <Users className="h-5 w-5 text-muted-foreground mb-2" />
-                    <p className="text-2xl font-bold">{campaign.statistics.totalRecipients}</p>
+                    <p className="text-2xl font-bold">{campaign.statistics.totalSent}</p>
                     <p className="text-sm text-muted-foreground">Recipients</p>
                   </div>
                   <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-lg">
@@ -556,7 +556,7 @@ export default function CampaignDetailPage() {
                 <h3 className="text-lg font-medium mb-2">Total Audience</h3>
                 <p className="flex items-center">
                   <Users className="h-5 w-5 mr-2 text-muted-foreground" />
-                  <span className="text-xl font-bold">{campaign.statistics.totalRecipients}</span>
+                  <span className="text-xl font-bold">{campaign.statistics.totalSent}</span>
                   <span className="text-muted-foreground ml-2">recipients</span>
                 </p>
               </div>

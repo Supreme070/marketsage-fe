@@ -112,8 +112,8 @@ export const authOptions: NextAuthOptions = {
             name: user.name,
             email: user.email,
             role: user.role,
-            organizationId: user.organizationId || 'default-org-migration',
-            organizationName: user.organizationName || 'Default Organization',
+            organizationId: user.organizationId || null,
+            organizationName: user.organizationName || null,
             accessToken: accessToken,
           };
           
@@ -139,8 +139,8 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
-        token.organizationId = user.organizationId;
-        token.organizationName = user.organizationName;
+        token.organizationId = user.organizationId || null;
+        token.organizationName = user.organizationName || null;
         token.accessToken = (user as any).accessToken;
         console.log('🔐 JWT callback - updated token:', token);
       }

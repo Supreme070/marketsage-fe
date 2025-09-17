@@ -23,7 +23,7 @@ export interface SessionData {
  */
 export async function getAppRouterSession(): Promise<SessionData | null> {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     
     // Get NextAuth session token from cookies
     const sessionToken = cookieStore.get('next-auth.session-token')?.value || 
@@ -51,7 +51,7 @@ export async function getAppRouterSession(): Promise<SessionData | null> {
         role: token.role || 'USER',
       },
       accessToken: token.accessToken as string,
-      organizationId: token.organizationId as string,
+      organizationId: token.organizationId as string || null,
     };
   } catch (error) {
     console.error('[Session Utils] Error retrieving session:', error);

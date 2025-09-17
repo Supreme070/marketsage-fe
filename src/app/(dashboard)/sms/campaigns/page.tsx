@@ -39,51 +39,74 @@ import {
   FileText,
   AlertCircle,
   TrendingUp,
-  Smartphone
+  Smartphone,
+  Settings
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSMS } from "@/hooks/useSMS";
 import toast from "react-hot-toast";
 // Removed quantum functionality - using real analytics instead
 
-// Import SMS types from our new API types
+// Import SMS types and unified API client
 import type { SMSCampaign, SMSCampaignAnalytics } from "@/lib/api/types/sms";
+import { useSMS } from "@/lib/api";
+import { useSession } from "next-auth/react";
 
 export default function SMSCampaignsPage() {
   const router = useRouter();
-  const {
-    campaigns,
-    campaignsLoading,
-    campaignsError,
-    getCampaigns,
-    getCampaignAnalytics,
-    deleteCampaign,
-    refresh
-  } = useSMS();
-
+  const smsApi = useSMS();
+  const { data: session } = useSession();
+  
+  const [campaigns, setCampaigns] = useState<SMSCampaign[]>([]);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [providerFilter, setProviderFilter] = useState<string | null>(null);
   const [campaignAnalytics, setCampaignAnalytics] = useState<Record<string, SMSCampaignAnalytics>>({});
   const [isLoadingAnalytics, setIsLoadingAnalytics] = useState<Record<string, boolean>>({});
+  const [campaignsLoading, setCampaignsLoading] = useState(false);
   
   useEffect(() => {
     const fetchCampaigns = async () => {
+      // Check if user has an organization
+      if (!session?.user?.organizationId) {
+        console.warn("User does not have an organization - SMS campaigns may not be available");
+        setCampaigns([]);
+        setCampaignsLoading(false);
+        return;
+      }
+
+      setCampaignsLoading(true);
       try {
-        await getCampaigns();
+        // Use unified API client for consistent authentication
+        const response = await smsApi.getCampaigns({
+          page,
+          limit: 10,
+          search: searchQuery || undefined,
+          status: statusFilter || undefined,
+          provider: providerFilter || undefined,
+        });
         
-        // Load real analytics for sent campaigns
-        await loadCampaignAnalytics(campaigns);
+        if (response) {
+          setCampaigns(response.campaigns || []);
+          // Load real analytics for sent campaigns
+          await loadCampaignAnalytics(response.campaigns || []);
+        }
       } catch (error) {
         console.error("Failed to fetch SMS campaigns:", error);
-        toast.error("Failed to load SMS campaigns");
+        // Check if it's an authentication error
+        if (error instanceof Error && error.message.includes('Unauthorized')) {
+          toast.error("Authentication required. Please sign in again.");
+        } else {
+          toast.error("Failed to load SMS campaigns");
+        }
+      } finally {
+        setCampaignsLoading(false);
       }
     };
 
     fetchCampaigns();
-  }, [getCampaigns, campaigns]);
+  }, [page, searchQuery, statusFilter, providerFilter, smsApi, session]);
 
   // Load real analytics for SMS campaigns
   const loadCampaignAnalytics = async (campaignList: SMSCampaign[]) => {
@@ -95,9 +118,10 @@ export default function SMSCampaignsPage() {
         setIsLoadingAnalytics(prev => ({ ...prev, [campaign.id]: true }));
         
         try {
-          const data = await getCampaignAnalytics(campaign.id);
-          if (data) {
-            analytics[campaign.id] = data;
+          // Use unified API client for analytics
+          const analyticsData = await smsApi.getCampaignAnalytics(campaign.id);
+          if (analyticsData) {
+            analytics[campaign.id] = analyticsData;
           }
         } catch (error) {
           console.warn(`Failed to load analytics for SMS campaign ${campaign.id}:`, error);
@@ -115,9 +139,10 @@ export default function SMSCampaignsPage() {
     setIsLoadingAnalytics(prev => ({ ...prev, [campaign.id]: true }));
     
     try {
-      const data = await getCampaignAnalytics(campaign.id);
-      if (data) {
-        setCampaignAnalytics(prev => ({ ...prev, [campaign.id]: data }));
+      // Use unified API client for analytics refresh
+      const analyticsData = await smsApi.getCampaignAnalytics(campaign.id);
+      if (analyticsData) {
+        setCampaignAnalytics(prev => ({ ...prev, [campaign.id]: analyticsData }));
         toast.success('Analytics refreshed successfully');
       } else {
         throw new Error('Failed to fetch analytics');
@@ -231,10 +256,15 @@ export default function SMSCampaignsPage() {
   const handleDeleteCampaign = async (id: string) => {
     if (confirm("Are you sure you want to delete this campaign?")) {
       try {
-        await deleteCampaign(id);
+        // Use unified API client for deletion
+        await smsApi.deleteCampaign(id);
+        
         toast.success("Campaign deleted successfully");
         // Refresh campaigns list
-        await refresh();
+        const refreshResponse = await smsApi.getCampaigns();
+        if (refreshResponse) {
+          setCampaigns(refreshResponse.campaigns || []);
+        }
       } catch (error) {
         console.error("Error deleting campaign:", error);
         toast.error("Failed to delete campaign");
@@ -245,21 +275,9 @@ export default function SMSCampaignsPage() {
   // Handle campaign duplication
   const handleDuplicateCampaign = async (id: string) => {
     try {
-      const response = await fetch(`/api/v2/sms/campaigns/${id}/duplicate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        toast.success(result.message);
-        // Refresh campaigns list
-        await refresh();
-      } else {
-        toast.error("Failed to duplicate campaign");
-      }
+      // Note: Duplicate functionality would need to be implemented in the backend
+      // For now, we'll show a message that this feature is not yet available
+      toast.success("Campaign duplication feature coming soon");
     } catch (error) {
       console.error("Error duplicating campaign:", error);
       toast.error("Failed to duplicate campaign");
@@ -277,6 +295,42 @@ export default function SMSCampaignsPage() {
   };
   
   const { campaignsWithAnalytics, avgDeliveryRate } = getAnalyticsSummary();
+
+  // Show message for users without organizations
+  if (!session?.user?.organizationId) {
+    return (
+      <div className="flex flex-col space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">SMS Campaigns</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage SMS campaigns across various African telecom providers with real-time analytics.
+            </p>
+          </div>
+        </div>
+        
+        <Card className="bg-yellow-950/50 border-yellow-500/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-yellow-400">
+              <AlertCircle className="h-5 w-5" />
+              Organization Required
+            </CardTitle>
+            <CardDescription className="text-yellow-300">
+              SMS campaigns require an organization to be set up. Please contact your administrator to set up your organization.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild>
+              <Link href="/settings/organization">
+                <Settings className="mr-2 h-4 w-4" />
+                Set Up Organization
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col space-y-6">
