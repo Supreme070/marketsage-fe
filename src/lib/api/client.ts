@@ -60,6 +60,7 @@ export class MarketSageApiClient {
   private isServer: boolean;
 
   constructor(baseUrl?: string) {
+    // Use frontend proxy to NestJS backend
     this.baseUrl = baseUrl || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v2';
     this.defaultTimeout = 30000; // 30 seconds
     this.defaultRetries = 3;

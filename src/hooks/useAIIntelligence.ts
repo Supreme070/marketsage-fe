@@ -8,6 +8,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
+import { apiClient } from '@/lib/api/client';
 
 // Types for AI Intelligence records
 export interface ContentAnalysis {
@@ -77,13 +78,9 @@ function useAICRUD<T>(
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(
-        `/api/ai/intelligence?type=${type}&userId=${userId}&limit=${limit}`
+      const result = await apiClient.get(
+        `/ai/intelligence?type=${type}&userId=${userId}&limit=${limit}`
       );
-      
-      if (!response.ok) throw new Error('Failed to fetch data');
-      
-      const result = await response.json();
       setData(result.data || []);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
@@ -98,15 +95,12 @@ function useAICRUD<T>(
   const create = useCallback(async (newRecord: Omit<T, 'id' | 'createdAt' | 'updatedAt'>) => {
     setLoading(true);
     try {
-      const response = await fetch('/api/v2/ai/intelligence', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, data: newRecord, userId })
+      const result = await apiClient.post('/ai/intelligence', {
+        type, 
+        data: newRecord, 
+        userId 
       });
 
-      if (!response.ok) throw new Error('Failed to create record');
-
-      const result = await response.json();
       setData(prev => [result.data, ...prev]);
       toast.success(result.message);
       return result.data;
@@ -124,15 +118,13 @@ function useAICRUD<T>(
   const update = useCallback(async (id: string, updates: Partial<T>) => {
     setLoading(true);
     try {
-      const response = await fetch('/api/v2/ai/intelligence', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, type, data: updates, userId })
+      const result = await apiClient.put('/ai/intelligence', {
+        id, 
+        type, 
+        data: updates, 
+        userId 
       });
 
-      if (!response.ok) throw new Error('Failed to update record');
-
-      const result = await response.json();
       setData(prev => prev.map(item => 
         (item as any).id === id ? result.data : item
       ));
@@ -152,14 +144,10 @@ function useAICRUD<T>(
   const remove = useCallback(async (id: string) => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `/api/ai/intelligence?id=${id}&type=${type}&userId=${userId}`,
-        { method: 'DELETE' }
+      const result = await apiClient.delete(
+        `/ai/intelligence?id=${id}&type=${type}&userId=${userId}`
       );
 
-      if (!response.ok) throw new Error('Failed to delete record');
-
-      const result = await response.json();
       setData(prev => prev.filter(item => (item as any).id !== id));
       toast.success(result.message);
     } catch (err) {
@@ -198,19 +186,11 @@ export function useContentAnalysis(userId?: string) {
   // Content-specific methods
   const analyzeAndSave = useCallback(async (title: string, content: string) => {
     // First analyze the content using Supreme-AI
-    const analysisResponse = await fetch('/api/v2/ai/supreme-v3', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'content',
-        userId,
-        content
-      })
+    const analysis = await apiClient.post('/ai/supreme-v3', {
+      type: 'content',
+      userId,
+      content
     });
-
-    if (!analysisResponse.ok) throw new Error('Analysis failed');
-    
-    const analysis = await analysisResponse.json();
     
     // Then save the analysis
     return crud.create({
@@ -247,19 +227,11 @@ export function useCustomerSegments(userId?: string) {
     customers: any[]
   ) => {
     // First analyze customers using Supreme-AI
-    const analysisResponse = await fetch('/api/v2/ai/supreme-v3', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'customer',
-        userId,
-        customers
-      })
+    const analysis = await apiClient.post('/ai/supreme-v3', {
+      type: 'customer',
+      userId,
+      customers
     });
-
-    if (!analysisResponse.ok) throw new Error('Customer analysis failed');
-    
-    const analysis = await analysisResponse.json();
     
     // Create segment from analysis
     return crud.create({
@@ -406,13 +378,7 @@ export function useAIIntelligenceOverview(
       if (userId) params.append('userId', userId);
       params.append('timeRange', timeRange);
 
-      const response = await fetch(`/api/ai/intelligence?${params}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch AI Intelligence overview');
-      }
-      
-      const result = await response.json();
+      const result = await apiClient.get(`/ai/intelligence?${params}`);
       
       if (result.success) {
         setOverview({
