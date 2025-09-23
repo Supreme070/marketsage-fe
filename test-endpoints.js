@@ -9,10 +9,10 @@ const https = require('https');
 const http = require('http');
 
 // Configuration
-const BACKEND_URL = process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
+let BACKEND_URL = process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 const API_PREFIX = '/api/v2';
-const TEST_TIMEOUT = 10000; // 10 seconds
-const CONCURRENT_REQUESTS = 5; // Limit concurrent requests
+let TEST_TIMEOUT = 10000; // 10 seconds
+let CONCURRENT_REQUESTS = 5; // Limit concurrent requests
 
 // Test results tracking
 const results = {
@@ -28,7 +28,7 @@ const results = {
 const endpoints = [
   // Core Health & Auth
   { method: 'GET', path: '/health', category: 'Core', auth: false },
-  { method: 'GET', path: '/auth/me', category: 'Auth', auth: true },
+  { method: 'GET', path: '/auth/profile', category: 'Auth', auth: true },
   { method: 'POST', path: '/auth/login', category: 'Auth', auth: false },
   { method: 'POST', path: '/auth/register', category: 'Auth', auth: false },
   { method: 'POST', path: '/auth/refresh', category: 'Auth', auth: false },
@@ -37,41 +37,41 @@ const endpoints = [
   // Users Management
   { method: 'GET', path: '/users', category: 'Users', auth: true },
   { method: 'POST', path: '/users', category: 'Users', auth: true },
-  { method: 'GET', path: '/users/1', category: 'Users', auth: true },
-  { method: 'PUT', path: '/users/1', category: 'Users', auth: true },
-  { method: 'DELETE', path: '/users/1', category: 'Users', auth: true },
+  { method: 'GET', path: '/users/cmfwux6jm0000r2lua1jmj47n', category: 'Users', auth: true },
+  { method: 'PATCH', path: '/users/cmfwux6jm0000r2lua1jmj47n', category: 'Users', auth: true },
+  { method: 'DELETE', path: '/users/cmfwux6jm0000r2lua1jmj47n', category: 'Users', auth: true },
 
   // Organizations
   { method: 'GET', path: '/organizations', category: 'Organizations', auth: true },
   { method: 'POST', path: '/organizations', category: 'Organizations', auth: true },
-  { method: 'GET', path: '/organizations/1', category: 'Organizations', auth: true },
-  { method: 'PUT', path: '/organizations/1', category: 'Organizations', auth: true },
-  { method: 'DELETE', path: '/organizations/1', category: 'Organizations', auth: true },
+  { method: 'GET', path: '/organizations/cmfwww2wq0001r2mf198nyple', category: 'Organizations', auth: true },
+  { method: 'PATCH', path: '/organizations/cmfwww2wq0001r2mf198nyple', category: 'Organizations', auth: true },
+  { method: 'DELETE', path: '/organizations/cmfwww2wq0001r2mf198nyple', category: 'Organizations', auth: true },
 
   // Campaigns
   { method: 'GET', path: '/campaigns', category: 'Campaigns', auth: true },
   { method: 'POST', path: '/campaigns', category: 'Campaigns', auth: true },
-  { method: 'GET', path: '/campaigns/1', category: 'Campaigns', auth: true },
-  { method: 'PUT', path: '/campaigns/1', category: 'Campaigns', auth: true },
-  { method: 'DELETE', path: '/campaigns/1', category: 'Campaigns', auth: true },
-  { method: 'POST', path: '/campaigns/1/send', category: 'Campaigns', auth: true },
-  { method: 'GET', path: '/campaigns/1/analytics', category: 'Campaigns', auth: true },
+  { method: 'GET', path: '/campaigns/cmfwwwdb60005r2mf8wbbqffh', category: 'Campaigns', auth: true },
+  { method: 'PATCH', path: '/campaigns/cmfwwwdb60005r2mf8wbbqffh', category: 'Campaigns', auth: true },
+  { method: 'DELETE', path: '/campaigns/cmfwwwdb60005r2mf8wbbqffh', category: 'Campaigns', auth: true },
+  { method: 'POST', path: '/campaigns/cmfwwwdb60005r2mf8wbbqffh/send', category: 'Campaigns', auth: true },
+  { method: 'GET', path: '/campaigns/cmfwwwdb60005r2mf8wbbqffh/analytics', category: 'Campaigns', auth: true },
 
   // Contacts
   { method: 'GET', path: '/contacts', category: 'Contacts', auth: true },
   { method: 'POST', path: '/contacts', category: 'Contacts', auth: true },
-  { method: 'GET', path: '/contacts/1', category: 'Contacts', auth: true },
-  { method: 'PUT', path: '/contacts/1', category: 'Contacts', auth: true },
-  { method: 'DELETE', path: '/contacts/1', category: 'Contacts', auth: true },
+  { method: 'GET', path: '/contacts/cmfwyrk100037r2kt2oi6i3el', category: 'Contacts', auth: true },
+  { method: 'PUT', path: '/contacts/cmfwyrk100037r2kt2oi6i3el', category: 'Contacts', auth: true },
+  { method: 'DELETE', path: '/contacts/cmfwyrk100037r2kt2oi6i3el', category: 'Contacts', auth: true },
   { method: 'POST', path: '/contacts/import', category: 'Contacts', auth: true },
   { method: 'GET', path: '/contacts/export', category: 'Contacts', auth: true },
 
   // Email Module
   { method: 'GET', path: '/email/campaigns', category: 'Email', auth: true },
   { method: 'POST', path: '/email/campaigns', category: 'Email', auth: true },
-  { method: 'GET', path: '/email/campaigns/1', category: 'Email', auth: true },
-  { method: 'PUT', path: '/email/campaigns/1', category: 'Email', auth: true },
-  { method: 'DELETE', path: '/email/campaigns/1', category: 'Email', auth: true },
+  { method: 'GET', path: '/email/campaigns/cmfwyrp6n0039r2kt85aqj5k6', category: 'Email', auth: true },
+  { method: 'PUT', path: '/email/campaigns/cmfwyrp6n0039r2kt85aqj5k6', category: 'Email', auth: true },
+  { method: 'DELETE', path: '/email/campaigns/cmfwyrp6n0039r2kt85aqj5k6', category: 'Email', auth: true },
   { method: 'GET', path: '/email/templates', category: 'Email', auth: true },
   { method: 'POST', path: '/email/templates', category: 'Email', auth: true },
   { method: 'GET', path: '/email/providers', category: 'Email', auth: true },
@@ -80,9 +80,9 @@ const endpoints = [
   // SMS Module
   { method: 'GET', path: '/sms/campaigns', category: 'SMS', auth: true },
   { method: 'POST', path: '/sms/campaigns', category: 'SMS', auth: true },
-  { method: 'GET', path: '/sms/campaigns/1', category: 'SMS', auth: true },
-  { method: 'PUT', path: '/sms/campaigns/1', category: 'SMS', auth: true },
-  { method: 'DELETE', path: '/sms/campaigns/1', category: 'SMS', auth: true },
+  { method: 'GET', path: '/sms/campaigns/cmfwyrtzg003br2kt9mwikp05', category: 'SMS', auth: true },
+  { method: 'PUT', path: '/sms/campaigns/cmfwyrtzg003br2kt9mwikp05', category: 'SMS', auth: true },
+  { method: 'DELETE', path: '/sms/campaigns/cmfwyrtzg003br2kt9mwikp05', category: 'SMS', auth: true },
   { method: 'GET', path: '/sms/templates', category: 'SMS', auth: true },
   { method: 'POST', path: '/sms/templates', category: 'SMS', auth: true },
   { method: 'GET', path: '/sms/providers', category: 'SMS', auth: true },
@@ -91,9 +91,9 @@ const endpoints = [
   // WhatsApp Module
   { method: 'GET', path: '/whatsapp/campaigns', category: 'WhatsApp', auth: true },
   { method: 'POST', path: '/whatsapp/campaigns', category: 'WhatsApp', auth: true },
-  { method: 'GET', path: '/whatsapp/campaigns/1', category: 'WhatsApp', auth: true },
-  { method: 'PUT', path: '/whatsapp/campaigns/1', category: 'WhatsApp', auth: true },
-  { method: 'DELETE', path: '/whatsapp/campaigns/1', category: 'WhatsApp', auth: true },
+  { method: 'GET', path: '/whatsapp/campaigns/cmfwyrz10003dr2ktzc3q5s5y', category: 'WhatsApp', auth: true },
+  { method: 'PUT', path: '/whatsapp/campaigns/cmfwyrz10003dr2ktzc3q5s5y', category: 'WhatsApp', auth: true },
+  { method: 'DELETE', path: '/whatsapp/campaigns/cmfwyrz10003dr2ktzc3q5s5y', category: 'WhatsApp', auth: true },
   { method: 'GET', path: '/whatsapp/templates', category: 'WhatsApp', auth: true },
   { method: 'POST', path: '/whatsapp/templates', category: 'WhatsApp', auth: true },
 
@@ -163,9 +163,232 @@ const endpoints = [
 // Real authentication credentials
 const TEST_CREDENTIALS = {
   email: process.env.TEST_USER_EMAIL || 'admin@marketsage.com',
-  password: process.env.TEST_USER_PASSWORD || 'admin123',
-  organizationId: process.env.TEST_ORG_ID || '1'
+  password: process.env.TEST_USER_PASSWORD || 'admin123'
 };
+
+// Helper function to generate valid test data for POST requests
+function getTestData(endpoint) {
+  const baseData = {
+    name: 'Test Item',
+    description: 'Test Description',
+    content: 'Test Content',
+    subject: 'Test Subject',
+    from: 'test@example.com',
+    message: 'Test Message',
+    email: 'test@example.com',
+    password: 'password123',
+    plan: 'FREE',
+    channels: ['EMAIL'],
+    emailConfig: {
+      subject: 'Test Subject',
+      content: 'Test Content',
+      from: 'test@example.com'
+    }
+  };
+
+  switch (endpoint.path) {
+    case '/auth/register':
+      return {
+        email: 'newuser@example.com',
+        password: 'password123',
+        name: 'New User'
+      };
+    case '/users':
+      return {
+        email: 'newuser@example.com',
+        password: 'password123',
+        name: 'New User',
+        role: 'USER'
+      };
+    case '/organizations':
+      return {
+        name: 'New Organization',
+        plan: 'FREE'
+      };
+    case '/campaigns':
+      return {
+        name: 'Test Campaign',
+        channels: ['EMAIL'],
+        emailConfig: {
+          subject: 'Test Subject',
+          content: 'Test Content',
+          from: 'test@example.com'
+        }
+      };
+    // PATCH endpoints - only send fields that can be updated
+    case '/users/cmfwux6jm0000r2lua1jmj47n':
+      return {
+        name: 'Updated Test Admin'
+      };
+    case '/organizations/cmfwww2wq0001r2mf198nyple':
+      return {
+        name: 'Updated Organization'
+      };
+    case '/campaigns/cmfwwwdb60005r2mf8wbbqffh':
+      return {
+        name: 'Updated Campaign',
+        description: 'Updated description'
+      };
+    case '/contacts':
+      return {
+        email: 'contact@example.com',
+        firstName: 'Test',
+        lastName: 'Contact',
+        phone: '+1234567890'
+      };
+    // PUT endpoints for contacts and campaigns
+    case '/contacts/cmfwyrk100037r2kt2oi6i3el':
+      return {
+        firstName: 'Updated',
+        lastName: 'Contact'
+      };
+    case '/email/campaigns/cmfwyrp6n0039r2kt85aqj5k6':
+      return {
+        name: 'Updated Email Campaign',
+        subject: 'Updated Subject'
+      };
+    case '/sms/campaigns/cmfwyrtzg003br2kt9mwikp05':
+      return {
+        name: 'Updated SMS Campaign',
+        content: 'Updated SMS content'
+      };
+    case '/whatsapp/campaigns/cmfwyrz10003dr2ktzc3q5s5y':
+      return {
+        name: 'Updated WhatsApp Campaign',
+        content: 'Updated WhatsApp content'
+      };
+    case '/email/campaigns':
+      return {
+        name: 'Test Email Campaign',
+        subject: 'Test Subject',
+        content: 'Test Content',
+        from: 'test@example.com'
+      };
+    case '/sms/campaigns':
+      return {
+        name: 'Test SMS Campaign',
+        content: 'Test SMS Message',
+        from: '+1234567890'
+      };
+    case '/whatsapp/campaigns':
+      return {
+        name: 'Test WhatsApp Campaign',
+        content: 'Test WhatsApp Message',
+        from: '+1234567890'
+      };
+    case '/email/templates':
+      return {
+        name: 'Test Email Template',
+        subject: 'Test Subject',
+        content: 'Test Content'
+      };
+    case '/sms/templates':
+      return {
+        name: 'Test SMS Template',
+        content: 'Test SMS Message'
+      };
+    case '/whatsapp/templates':
+      return {
+        name: 'Test WhatsApp Template',
+        content: 'Test WhatsApp Message'
+      };
+    case '/email/providers':
+      return {
+        name: 'Test Email Provider',
+        providerType: 'smtp',
+        smtpHost: 'smtp.example.com',
+        smtpPort: 587,
+        smtpUsername: 'test@example.com',
+        smtpPassword: 'password123',
+        fromEmail: 'test@example.com'
+      };
+    case '/sms/providers':
+      return {
+        provider: 'twilio',
+        senderId: 'TestSender',
+        apiKey: 'test-api-key',
+        apiSecret: 'test-api-secret'
+      };
+    case '/ai/autonomous-segmentation':
+      return {
+        name: 'Test Segmentation',
+        criteria: { revenue: '>1000' }
+      };
+    case '/ai/customer-journey-optimization':
+      return {
+        name: 'Test Journey',
+        stages: ['awareness', 'purchase']
+      };
+    case '/ai/predictive-analytics':
+      return {
+        name: 'Test Analytics',
+        type: 'revenue',
+        timeframe: 'next_month'
+      };
+    case '/ai/feedback':
+      return {
+        type: 'positive',
+        message: 'Test feedback',
+        rating: 5
+      };
+    case '/notifications':
+      return {
+        title: 'Test Notification',
+        message: 'Test message',
+        type: 'info'
+      };
+    // Campaign send endpoint
+    case '/campaigns/cmfwwwdb60005r2mf8wbbqffh/send':
+      return {
+        targetAudience: 'all',
+        scheduledFor: null
+      };
+    // AI endpoints with proper validation
+    case '/ai/autonomous-segmentation':
+      return {
+        name: 'Test Segmentation',
+        criteria: { revenue: '>1000' },
+        description: 'Test segmentation description'
+      };
+    case '/ai/customer-journey-optimization':
+      return {
+        name: 'Test Journey',
+        stages: ['awareness', 'purchase'],
+        description: 'Test journey description'
+      };
+    case '/ai/predictive-analytics':
+      return {
+        name: 'Test Analytics',
+        type: 'revenue',
+        timeframe: 'next_month',
+        description: 'Test analytics description'
+      };
+    case '/ai/feedback':
+      return {
+        type: 'positive',
+        message: 'Test feedback',
+        rating: 5,
+        category: 'general'
+      };
+    case '/workflows':
+      return {
+        name: 'Test Workflow',
+        description: 'Test workflow description',
+        definition: {
+          type: 'automation',
+          steps: []
+        }
+      };
+    case '/contacts/import':
+      return {
+        contacts: [
+          { name: 'Test Contact', email: 'test@example.com' }
+        ]
+      };
+    default:
+      return baseData;
+  }
+}
 
 let REAL_JWT_TOKEN = null;
 let REFRESH_TOKEN = null;
@@ -200,9 +423,12 @@ async function authenticate() {
       
       res.on('end', () => {
         try {
-          const body = JSON.parse(Buffer.concat(chunks).toString());
+          const responseBody = Buffer.concat(chunks).toString();
+          console.log('Auth response status:', res.statusCode);
+          console.log('Auth response body:', responseBody);
+          const body = JSON.parse(responseBody);
           if (res.statusCode === 200 && body.success) {
-            REAL_JWT_TOKEN = body.data.accessToken;
+            REAL_JWT_TOKEN = body.data.token;
             REFRESH_TOKEN = body.data.refreshToken;
             console.log('✅ Authentication successful');
             console.log(`   User: ${body.data.user.email}`);
@@ -300,7 +526,8 @@ function makeRequest(endpoint) {
 
     // Add body for POST/PUT requests
     if (['POST', 'PUT', 'PATCH'].includes(endpoint.method)) {
-      req.write(JSON.stringify({ test: true }));
+      const testData = getTestData(endpoint);
+      req.write(JSON.stringify(testData));
     }
 
     req.end();
