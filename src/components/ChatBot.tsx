@@ -8,6 +8,7 @@ import {
   DialogTitle, 
   DialogDescription
 } from '@/components/ui/dialog';
+import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MessageCircle, Send, User, MessagesSquare, Bot } from 'lucide-react';
@@ -83,25 +84,13 @@ export default function ChatBot({
     
     try {
       // Try to connect to local Supreme-AI engine (not OpenAI)
-      const response = await fetch('/api/v2/ai/supreme-v3', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: 'question',
-          question: currentMessage,
-          userId: 'chat-user-' + Date.now(),
-          localOnly: true,  // Force local Supreme AI processing
-          enableTaskExecution: true  // Enable actual task execution
-        }),
+      const data = await apiClient.post('/ai/supreme-v3', {
+        type: 'question',
+        question: currentMessage,
+        userId: 'chat-user-' + Date.now(),
+        localOnly: true,  // Force local Supreme AI processing
+        enableTaskExecution: true  // Enable actual task execution
       });
-
-      if (!response.ok) {
-        throw new Error(`Supreme-AI connection error: ${response.status}`);
-      }
-
-      const data = await response.json();
       const aiAnswer = data.data?.answer || data.data?.response || getLocalAgentResponse(currentMessage);
       
       // Check if task was executed

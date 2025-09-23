@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
+import { apiClient } from '@/lib/api/client';
 
 interface AutonomousTestConfiguration {
   id: string;
@@ -108,20 +109,20 @@ export function useAutonomousABTesting(options: UseAutonomousABTestingOptions = 
   // API call wrapper
   const makeApiCall = useCallback(async (endpoint: string, options: RequestInit = {}) => {
     try {
-      const response = await fetch(`/api/ai/autonomous-ab-testing${endpoint}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
-        ...options,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || `HTTP ${response.status}`);
+      const method = options.method || 'GET';
+      const body = options.body;
+      
+      if (method === 'GET') {
+        return await apiClient.get(`/ai/autonomous-ab-testing${endpoint}`);
+      } else if (method === 'POST') {
+        return await apiClient.post(`/ai/autonomous-ab-testing${endpoint}`, body ? JSON.parse(body as string) : undefined);
+      } else if (method === 'PUT') {
+        return await apiClient.put(`/ai/autonomous-ab-testing${endpoint}`, body ? JSON.parse(body as string) : undefined);
+      } else if (method === 'DELETE') {
+        return await apiClient.delete(`/ai/autonomous-ab-testing${endpoint}`);
       }
-
-      return await response.json();
+      
+      throw new Error(`Unsupported method: ${method}`);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       handleError(errorMessage);

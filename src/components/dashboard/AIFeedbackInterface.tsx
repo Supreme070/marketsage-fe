@@ -10,6 +10,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { apiClient } from '@/lib/api/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -95,26 +96,15 @@ export default function AIFeedbackInterface() {
     try {
       setLoading(true);
       
-      const [feedbackResponse, pendingResponse, analyticsResponse] = await Promise.all([
-        fetch('/api/v2/ai/feedback?action=list'),
-        fetch('/api/v2/ai/feedback?action=pending-actions'),
-        fetch('/api/v2/ai/feedback?action=analytics')
+      const [feedbackData, pendingData, analyticsData] = await Promise.all([
+        apiClient.get('/ai/feedback?action=list'),
+        apiClient.get('/ai/feedback?action=pending-actions'),
+        apiClient.get('/ai/feedback?action=analytics')
       ]);
 
-      if (feedbackResponse.ok) {
-        const feedbackData = await feedbackResponse.json();
-        setFeedback(feedbackData.data || []);
-      }
-
-      if (pendingResponse.ok) {
-        const pendingData = await pendingResponse.json();
-        setPendingActions(pendingData.data || []);
-      }
-
-      if (analyticsResponse.ok) {
-        const analyticsData = await analyticsResponse.json();
-        setAnalytics(analyticsData.data);
-      }
+      setFeedback(feedbackData.data || []);
+      setPendingActions(pendingData.data || []);
+      setAnalytics(analyticsData.data);
 
     } catch (error) {
       console.error('Failed to load feedback data:', error);
@@ -125,21 +115,15 @@ export default function AIFeedbackInterface() {
 
   const submitFeedback = async (actionId: string, feedbackType: 'positive' | 'negative' | 'neutral', rating: number, comments?: string) => {
     try {
-      const response = await fetch('/api/v2/ai/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          actionId,
-          feedbackType,
-          rating,
-          comments,
-          category: 'general' // Could be made dynamic
-        })
+      await apiClient.post('/ai/feedback', {
+        actionId,
+        feedbackType,
+        rating,
+        comments,
+        category: 'general' // Could be made dynamic
       });
 
-      if (response.ok) {
-        await loadFeedbackData(); // Refresh data
-      }
+      await loadFeedbackData(); // Refresh data
 
     } catch (error) {
       console.error('Failed to submit feedback:', error);

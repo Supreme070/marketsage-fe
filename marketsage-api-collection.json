@@ -1,0 +1,1449 @@
+{
+  "info": {
+    "name": "MarketSage API - Complete Endpoint Collection",
+    "description": "Comprehensive collection of all 150+ MarketSage backend endpoints for testing and verification",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "{{NESTJS_BACKEND_URL}}/api/v2",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "{{JWT_TOKEN}}",
+      "type": "string"
+    },
+    {
+      "key": "testUserEmail",
+      "value": "{{TEST_USER_EMAIL}}",
+      "type": "string"
+    },
+    {
+      "key": "testUserPassword",
+      "value": "{{TEST_USER_PASSWORD}}",
+      "type": "string"
+    },
+    {
+      "key": "testOrgId",
+      "value": "{{TEST_ORG_ID}}",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Core & Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testUserEmail}}\",\n  \"password\": \"{{testUserPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"{{testUserEmail}}\",\n  \"password\": \"{{testUserPassword}}\",\n  \"organizationId\": \"{{testOrgId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users Management",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New User\",\n  \"email\": \"newuser@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"user\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            }
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "1"]
+            }
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated User\",\n  \"email\": \"updated@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "1"]
+            }
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Organizations",
+      "item": [
+        {
+          "name": "Get All Organizations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/organizations",
+              "host": ["{{baseUrl}}"],
+              "path": ["organizations"]
+            }
+          }
+        },
+        {
+          "name": "Create Organization",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Organization\",\n  \"description\": \"Test organization for API testing\",\n  \"industry\": \"Technology\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organizations",
+              "host": ["{{baseUrl}}"],
+              "path": ["organizations"]
+            }
+          }
+        },
+        {
+          "name": "Get Organization by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["organizations", "1"]
+            }
+          }
+        },
+        {
+          "name": "Update Organization",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Organization\",\n  \"description\": \"Updated description\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organizations/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["organizations", "1"]
+            }
+          }
+        },
+        {
+          "name": "Delete Organization",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["organizations", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Campaigns",
+      "item": [
+        {
+          "name": "Get All Campaigns",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/campaigns",
+              "host": ["{{baseUrl}}"],
+              "path": ["campaigns"]
+            }
+          }
+        },
+        {
+          "name": "Create Campaign",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Campaign\",\n  \"type\": \"email\",\n  \"subject\": \"Test Subject\",\n  \"content\": \"Test content\",\n  \"targetAudience\": \"all\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/campaigns",
+              "host": ["{{baseUrl}}"],
+              "path": ["campaigns"]
+            }
+          }
+        },
+        {
+          "name": "Get Campaign by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/campaigns/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["campaigns", "1"]
+            }
+          }
+        },
+        {
+          "name": "Update Campaign",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Campaign\",\n  \"subject\": \"Updated Subject\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/campaigns/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["campaigns", "1"]
+            }
+          }
+        },
+        {
+          "name": "Send Campaign",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schedule\": \"immediate\",\n  \"targetAudience\": \"all\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/campaigns/1/send",
+              "host": ["{{baseUrl}}"],
+              "path": ["campaigns", "1", "send"]
+            }
+          }
+        },
+        {
+          "name": "Get Campaign Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/campaigns/1/analytics",
+              "host": ["{{baseUrl}}"],
+              "path": ["campaigns", "1", "analytics"]
+            }
+          }
+        },
+        {
+          "name": "Delete Campaign",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/campaigns/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["campaigns", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contacts",
+      "item": [
+        {
+          "name": "Get All Contacts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/contacts?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["contacts"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Contact",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"phone\": \"+1234567890\",\n  \"tags\": [\"lead\", \"vip\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/contacts",
+              "host": ["{{baseUrl}}"],
+              "path": ["contacts"]
+            }
+          }
+        },
+        {
+          "name": "Get Contact by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/contacts/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["contacts", "1"]
+            }
+          }
+        },
+        {
+          "name": "Update Contact",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"email\": \"jane.smith@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/contacts/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["contacts", "1"]
+            }
+          }
+        },
+        {
+          "name": "Import Contacts",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contacts\": [\n    {\n      \"firstName\": \"Contact1\",\n      \"lastName\": \"Test\",\n      \"email\": \"contact1@example.com\"\n    },\n    {\n      \"firstName\": \"Contact2\",\n      \"lastName\": \"Test\",\n      \"email\": \"contact2@example.com\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/contacts/import",
+              "host": ["{{baseUrl}}"],
+              "path": ["contacts", "import"]
+            }
+          }
+        },
+        {
+          "name": "Export Contacts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/contacts/export?format=csv",
+              "host": ["{{baseUrl}}"],
+              "path": ["contacts", "export"],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "csv"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Contact",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/contacts/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["contacts", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Email Module",
+      "item": [
+        {
+          "name": "Get Email Campaigns",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/email/campaigns",
+              "host": ["{{baseUrl}}"],
+              "path": ["email", "campaigns"]
+            }
+          }
+        },
+        {
+          "name": "Create Email Campaign",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Email Campaign\",\n  \"subject\": \"Test Email Subject\",\n  \"content\": \"<h1>Test Email Content</h1>\",\n  \"senderEmail\": \"noreply@example.com\",\n  \"senderName\": \"Test Sender\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/email/campaigns",
+              "host": ["{{baseUrl}}"],
+              "path": ["email", "campaigns"]
+            }
+          }
+        },
+        {
+          "name": "Get Email Templates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/email/templates",
+              "host": ["{{baseUrl}}"],
+              "path": ["email", "templates"]
+            }
+          }
+        },
+        {
+          "name": "Create Email Template",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Welcome Template\",\n  \"subject\": \"Welcome to {{companyName}}\",\n  \"content\": \"<h1>Welcome {{firstName}}!</h1>\",\n  \"category\": \"welcome\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/email/templates",
+              "host": ["{{baseUrl}}"],
+              "path": ["email", "templates"]
+            }
+          }
+        },
+        {
+          "name": "Get Email Providers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/email/providers",
+              "host": ["{{baseUrl}}"],
+              "path": ["email", "providers"]
+            }
+          }
+        },
+        {
+          "name": "Create Email Provider",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"SMTP Provider\",\n  \"type\": \"smtp\",\n  \"host\": \"smtp.example.com\",\n  \"port\": 587,\n  \"username\": \"user@example.com\",\n  \"password\": \"password\",\n  \"secure\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/email/providers",
+              "host": ["{{baseUrl}}"],
+              "path": ["email", "providers"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SMS Module",
+      "item": [
+        {
+          "name": "Get SMS Campaigns",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sms/campaigns",
+              "host": ["{{baseUrl}}"],
+              "path": ["sms", "campaigns"]
+            }
+          }
+        },
+        {
+          "name": "Create SMS Campaign",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"SMS Campaign\",\n  \"message\": \"Hello {{firstName}}, this is a test SMS!\",\n  \"senderId\": \"MarketSage\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sms/campaigns",
+              "host": ["{{baseUrl}}"],
+              "path": ["sms", "campaigns"]
+            }
+          }
+        },
+        {
+          "name": "Get SMS Templates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sms/templates",
+              "host": ["{{baseUrl}}"],
+              "path": ["sms", "templates"]
+            }
+          }
+        },
+        {
+          "name": "Create SMS Template",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Welcome SMS\",\n  \"message\": \"Welcome {{firstName}} to {{companyName}}!\",\n  \"category\": \"welcome\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sms/templates",
+              "host": ["{{baseUrl}}"],
+              "path": ["sms", "templates"]
+            }
+          }
+        },
+        {
+          "name": "Get SMS Providers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sms/providers",
+              "host": ["{{baseUrl}}"],
+              "path": ["sms", "providers"]
+            }
+          }
+        },
+        {
+          "name": "Create SMS Provider",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Twilio Provider\",\n  \"type\": \"twilio\",\n  \"accountSid\": \"ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\n  \"authToken\": \"your_auth_token\",\n  \"fromNumber\": \"+1234567890\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sms/providers",
+              "host": ["{{baseUrl}}"],
+              "path": ["sms", "providers"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "WhatsApp Module",
+      "item": [
+        {
+          "name": "Get WhatsApp Campaigns",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/whatsapp/campaigns",
+              "host": ["{{baseUrl}}"],
+              "path": ["whatsapp", "campaigns"]
+            }
+          }
+        },
+        {
+          "name": "Create WhatsApp Campaign",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"WhatsApp Campaign\",\n  \"message\": \"Hello {{firstName}}, welcome to our service!\",\n  \"templateName\": \"welcome_message\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/whatsapp/campaigns",
+              "host": ["{{baseUrl}}"],
+              "path": ["whatsapp", "campaigns"]
+            }
+          }
+        },
+        {
+          "name": "Get WhatsApp Templates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/whatsapp/templates",
+              "host": ["{{baseUrl}}"],
+              "path": ["whatsapp", "templates"]
+            }
+          }
+        },
+        {
+          "name": "Create WhatsApp Template",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Welcome Template\",\n  \"content\": \"Hello {{1}}, welcome to {{2}}!\",\n  \"category\": \"UTILITY\",\n  \"language\": \"en_US\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/whatsapp/templates",
+              "host": ["{{baseUrl}}"],
+              "path": ["whatsapp", "templates"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Intelligence (Phase 4)",
+      "item": [
+        {
+          "name": "Get AI Intelligence",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ai/intelligence",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "intelligence"]
+            }
+          }
+        },
+        {
+          "name": "Create AI Intelligence",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"content_analysis\",\n  \"data\": {\n    \"content\": \"Test content for AI analysis\",\n    \"userId\": \"user123\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/intelligence",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "intelligence"]
+            }
+          }
+        },
+        {
+          "name": "Autonomous Segmentation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ai/autonomous-segmentation",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "autonomous-segmentation"]
+            }
+          }
+        },
+        {
+          "name": "Create Autonomous Segmentation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"criteria\": {\n    \"behavior\": \"purchase_history\",\n    \"demographics\": \"age_range\"\n  },\n  \"autoUpdate\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/autonomous-segmentation",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "autonomous-segmentation"]
+            }
+          }
+        },
+        {
+          "name": "Customer Journey Optimization",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ai/customer-journey-optimization",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "customer-journey-optimization"]
+            }
+          }
+        },
+        {
+          "name": "Predictive Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ai/predictive-analytics",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "predictive-analytics"]
+            }
+          }
+        },
+        {
+          "name": "Content Generation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ai/content-generation",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "content-generation"]
+            }
+          }
+        },
+        {
+          "name": "Supreme AI v3",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ai/supreme-v3",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "supreme-v3"]
+            }
+          }
+        },
+        {
+          "name": "Supreme AI v3 Query",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"question\",\n  \"question\": \"How can I improve my email campaign performance?\",\n  \"userId\": \"user123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/supreme-v3",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "supreme-v3"]
+            }
+          }
+        },
+        {
+          "name": "Autonomous A/B Testing",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ai/autonomous-ab-testing",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "autonomous-ab-testing"]
+            }
+          }
+        },
+        {
+          "name": "Create A/B Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Email Subject Test\",\n  \"type\": \"email_campaign\",\n  \"objective\": \"increase_open_rate\",\n  \"variants\": [\n    {\n      \"name\": \"Control\",\n      \"subject\": \"Original Subject\"\n    },\n    {\n      \"name\": \"Variant A\",\n      \"subject\": \"New Subject Line\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/autonomous-ab-testing",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "autonomous-ab-testing"]
+            }
+          }
+        },
+        {
+          "name": "AI Feedback",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ai/feedback",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "feedback"]
+            }
+          }
+        },
+        {
+          "name": "Submit AI Feedback",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actionId\": \"action123\",\n  \"feedbackType\": \"positive\",\n  \"rating\": 5,\n  \"comments\": \"Great AI recommendation!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/feedback",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "feedback"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics (Phase 5)",
+      "item": [
+        {
+          "name": "Query Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/query",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "query"]
+            }
+          }
+        },
+        {
+          "name": "Custom Analytics Query",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"SELECT * FROM campaigns WHERE status = 'active'\",\n  \"timeRange\": {\n    \"start\": \"2024-01-01\",\n    \"end\": \"2024-12-31\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/analytics/query",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "query"]
+            }
+          }
+        },
+        {
+          "name": "Predictive Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/predictive",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "predictive"]
+            }
+          }
+        },
+        {
+          "name": "Organization Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/organization",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "organization"]
+            }
+          }
+        },
+        {
+          "name": "Campaign Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/campaigns",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "campaigns"]
+            }
+          }
+        },
+        {
+          "name": "User Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "users"]
+            }
+          }
+        },
+        {
+          "name": "Revenue Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/revenue",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "revenue"]
+            }
+          }
+        },
+        {
+          "name": "Performance Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/performance",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "performance"]
+            }
+          }
+        },
+        {
+          "name": "Engagement Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/engagement",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "engagement"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Module",
+      "item": [
+        {
+          "name": "Admin Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "dashboard"]
+            }
+          }
+        },
+        {
+          "name": "Admin Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users"]
+            }
+          }
+        },
+        {
+          "name": "Admin Organizations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/organizations",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "organizations"]
+            }
+          }
+        },
+        {
+          "name": "Admin Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/analytics",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "analytics"]
+            }
+          }
+        },
+        {
+          "name": "Admin System",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/system",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "system"]
+            }
+          }
+        },
+        {
+          "name": "Admin Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/logs",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "logs"]
+            }
+          }
+        },
+        {
+          "name": "Admin Maintenance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/maintenance",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "maintenance"]
+            }
+          }
+        },
+        {
+          "name": "Admin Backups",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/backups",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "backups"]
+            }
+          }
+        },
+        {
+          "name": "Admin Security",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/security",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "security"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Additional Modules",
+      "item": [
+        {
+          "name": "Billing",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/billing",
+              "host": ["{{baseUrl}}"],
+              "path": ["billing"]
+            }
+          }
+        },
+        {
+          "name": "Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard"]
+            }
+          }
+        },
+        {
+          "name": "Messages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["messages"]
+            }
+          }
+        },
+        {
+          "name": "Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications"]
+            }
+          }
+        },
+        {
+          "name": "Settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["settings"]
+            }
+          }
+        },
+        {
+          "name": "Support",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/support",
+              "host": ["{{baseUrl}}"],
+              "path": ["support"]
+            }
+          }
+        },
+        {
+          "name": "Workflows",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflows",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows"]
+            }
+          }
+        },
+        {
+          "name": "LeadPulse",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/leadpulse",
+              "host": ["{{baseUrl}}"],
+              "path": ["leadpulse"]
+            }
+          }
+        },
+        {
+          "name": "Audit",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/audit",
+              "host": ["{{baseUrl}}"],
+              "path": ["audit"]
+            }
+          }
+        },
+        {
+          "name": "Incidents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/incidents",
+              "host": ["{{baseUrl}}"],
+              "path": ["incidents"]
+            }
+          }
+        },
+        {
+          "name": "Security",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/security",
+              "host": ["{{baseUrl}}"],
+              "path": ["security"]
+            }
+          }
+        },
+        {
+          "name": "Tracing",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tracing",
+              "host": ["{{baseUrl}}"],
+              "path": ["tracing"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
