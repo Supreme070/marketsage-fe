@@ -46,7 +46,7 @@ class BatchProxyMigration {
       this.files.push({
         path: file,
         hasPrismaImport: /import.*prisma|from.*@\/lib\/db\/prisma/.test(content),
-        hasProxyImport: /import.*proxyToBackend.*from.*api-proxy/.test(content),
+        hasProxyImport: /import.*proxyToNestJS.*from.*api-proxy/.test(content),
         migrated: false
       });
     }
@@ -115,10 +115,10 @@ class BatchProxyMigration {
     console.log('}');
     console.log('');
     console.log('// AFTER - Proxy pattern');
-    console.log('import { proxyToBackend } from "@/lib/api-proxy";');
+    console.log('import { proxyToNestJS } from "@/lib/nestjs-proxy";');
     console.log('');
     console.log('export async function GET(request: NextRequest) {');
-    console.log('  return proxyToBackend(request, {');
+    console.log('  return proxyToNestJS(request, {');
     console.log('    backendPath: "users",');
     console.log('    requireAuth: true');
     console.log('  });');
@@ -135,7 +135,7 @@ class BatchProxyMigration {
     console.log(`find src/app/api -name "route.ts" -exec sed -i '' '/import.*prisma.*from.*@\\/lib\\/db\\/prisma/d' {} \\;`);
     
     console.log('\n# Add proxy import (manual review needed):');
-    console.log(`# Add to each file: import { proxyToBackend } from "@/lib/api-proxy";`);
+    console.log(`# Add to each file: import { proxyToNestJS } from "@/lib/nestjs-proxy";`);
     
     console.log('\n# Files that need manual conversion:');
     needsMigration.slice(0, 10).forEach(f => {

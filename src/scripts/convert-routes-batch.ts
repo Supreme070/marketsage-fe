@@ -48,7 +48,7 @@ function generateProxyCode(fullPath: string): string {
 
   if (hasParams) {
     return `import { type NextRequest } from "next/server";
-import { proxyToBackend } from "@/lib/api-proxy";
+import { proxyToNestJS } from "@/lib/nestjs-proxy";
 
 // Proxy ${backendPath} to NestJS backend
 
@@ -58,7 +58,7 @@ export async function GET(
 ) {
   const params = await context.params;
   const dynamicPath = "${backendPath}".replace(/\\[(\\w+)\\]/g, (_, key) => params[key] || key);
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: dynamicPath,
     requireAuth: ${requiresAuth},
     enableLogging: process.env.NODE_ENV === 'development',
@@ -71,7 +71,7 @@ export async function POST(
 ) {
   const params = await context.params;
   const dynamicPath = "${backendPath}".replace(/\\[(\\w+)\\]/g, (_, key) => params[key] || key);
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: dynamicPath,
     requireAuth: ${requiresAuth},
     enableLogging: process.env.NODE_ENV === 'development',
@@ -84,7 +84,7 @@ export async function PATCH(
 ) {
   const params = await context.params;
   const dynamicPath = "${backendPath}".replace(/\\[(\\w+)\\]/g, (_, key) => params[key] || key);
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: dynamicPath,
     requireAuth: ${requiresAuth},
     enableLogging: process.env.NODE_ENV === 'development',
@@ -97,7 +97,7 @@ export async function DELETE(
 ) {
   const params = await context.params;
   const dynamicPath = "${backendPath}".replace(/\\[(\\w+)\\]/g, (_, key) => params[key] || key);
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: dynamicPath,
     requireAuth: ${requiresAuth},
     enableLogging: process.env.NODE_ENV === 'development',
@@ -105,12 +105,12 @@ export async function DELETE(
 }`;
   } else {
     return `import { type NextRequest } from "next/server";
-import { proxyToBackend } from "@/lib/api-proxy";
+import { proxyToNestJS } from "@/lib/nestjs-proxy";
 
 // Proxy ${backendPath} to NestJS backend
 
 export async function GET(request: NextRequest) {
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: '${backendPath}',
     requireAuth: ${requiresAuth},
     enableLogging: process.env.NODE_ENV === 'development',
@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: '${backendPath}',
     requireAuth: ${requiresAuth},
     enableLogging: process.env.NODE_ENV === 'development',
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: '${backendPath}',
     requireAuth: ${requiresAuth},
     enableLogging: process.env.NODE_ENV === 'development',
@@ -134,7 +134,7 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: '${backendPath}',
     requireAuth: ${requiresAuth},
     enableLogging: process.env.NODE_ENV === 'development',
@@ -161,7 +161,7 @@ async function main() {
 
       // Check if already converted
       const currentContent = fs.readFileSync(routePath, 'utf-8');
-      if (currentContent.includes('proxyToBackend') && !currentContent.includes('import.*prisma')) {
+      if (currentContent.includes('proxyToNestJS') && !currentContent.includes('import.*prisma')) {
         console.log(`✅ ${routePath} - Already converted`);
         converted++;
         continue;

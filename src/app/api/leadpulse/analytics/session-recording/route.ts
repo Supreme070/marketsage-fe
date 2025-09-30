@@ -1,10 +1,10 @@
 import type { NextRequest } from "next/server";
-import { proxyToBackend } from "@/lib/api-proxy";
+import { proxyToNestJS } from "@/lib/nestjs-proxy";
 
 // Proxy leadpulse/analytics/session-recording to NestJS backend
 
 export async function GET(request: NextRequest, context?: any) {
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: 'leadpulse/analytics/session-recording',
     requireAuth: true,
     enableLogging: process.env.NODE_ENV === 'development',
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest, context?: any) {
 }
 
 export async function POST(request: NextRequest, context?: any) {
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: 'leadpulse/analytics/session-recording',
     requireAuth: true,
     enableLogging: process.env.NODE_ENV === 'development',
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest, context?: any) {
 }
 
 export async function PATCH(request: NextRequest, context?: any) {
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: 'leadpulse/analytics/session-recording',
     requireAuth: true,
     enableLogging: process.env.NODE_ENV === 'development',
@@ -28,7 +28,7 @@ export async function PATCH(request: NextRequest, context?: any) {
 }
 
 export async function DELETE(request: NextRequest, context?: any) {
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: 'leadpulse/analytics/session-recording',
     requireAuth: true,
     enableLogging: process.env.NODE_ENV === 'development',

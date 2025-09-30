@@ -117,7 +117,7 @@ export default function AdvancedAnalyticsPage() {
       setIsRefreshing(true);
       try {
         // Use new Phase 5 analytics endpoint
-        const response = await fetch('/api/analytics/query', {
+        const response = await fetch('/api/v2/analytics/query', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
@@ -154,7 +154,7 @@ export default function AdvancedAnalyticsPage() {
     generatePredictiveAnalytics: async (baseData: any) => {
       try {
         // Use new Phase 5 predictive analytics endpoint
-        const response = await fetch('/api/analytics/predictive', {
+        const response = await fetch('/api/v2/analytics/predictive', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
@@ -181,7 +181,7 @@ export default function AdvancedAnalyticsPage() {
       setIsGeneratingReport(true);
       try {
         // Use new Phase 5 reporting endpoint
-        const response = await fetch('/api/analytics/reports/generate/custom', {
+        const response = await fetch('/api/v2/analytics/reports/generate/custom', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',

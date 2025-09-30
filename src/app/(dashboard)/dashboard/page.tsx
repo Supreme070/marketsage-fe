@@ -204,31 +204,33 @@ export default function CommandCenterDashboard() {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const [dashboardResponse, decisionResponse] = await Promise.all([
-        fetch('/api/v2/dashboard'),
-        fetch('/api/v2/dashboard/decision-support')
-      ]);
-
-      if (dashboardResponse.ok && decisionResponse.ok) {
-        const dashboardData = await dashboardResponse.json();
-        const decisionData = await decisionResponse.json();
+      const response = await fetch('/api/v2/dashboard');
+      
+      if (response.ok) {
+        const result = await response.json();
         
-        // Update real-time data with API response
-        setRealTimeData(prev => ({
-          ...prev,
-          dashboard: {
-            ...prev.dashboard,
-            revenueToday: decisionData.stats?.totalRevenue || prev.dashboard.revenueToday,
-            activeCampaigns: decisionData.stats?.totalCampaigns || prev.dashboard.activeCampaigns,
-            conversionRate: dashboardData.emailStats?.clickRate || prev.dashboard.conversionRate
-          },
-          campaigns: {
-            email: dashboardData.emailStats || prev.campaigns.email,
-            sms: prev.campaigns.sms,
-            whatsapp: prev.campaigns.whatsapp,
-            workflows: { active: decisionData.stats?.activeWorkflows || prev.campaigns.workflows.active, triggered: prev.campaigns.workflows.triggered, completed: prev.campaigns.workflows.completed }
-          }
-        }));
+        if (result.success && result.data) {
+          // Update real-time data with API response
+          setRealTimeData(prev => ({
+            ...prev,
+            dashboard: {
+              ...prev.dashboard,
+              ...result.data.dashboard
+            },
+            campaigns: {
+              ...prev.campaigns,
+              ...result.data.campaigns
+            },
+            leadpulse: {
+              ...prev.leadpulse,
+              ...result.data.leadpulse
+            },
+            ai: {
+              ...prev.ai,
+              ...result.data.ai
+            }
+          }));
+        }
       }
 
       setLastUpdated(new Date());
@@ -452,7 +454,7 @@ export default function CommandCenterDashboard() {
 
   const trackDashboardAction = async (action: string, module: string) => {
     try {
-      await fetch('/api/v2/dashboard/overview', {
+      await fetch('/api/v2/dashboard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, module, metadata: { timeRange } })
@@ -462,7 +464,17 @@ export default function CommandCenterDashboard() {
     }
   };
 
-  // No loading states needed - we always have simulation data available
+  // Show loading state when fetching real data
+  if (loading && !realTimeData.dashboard.revenueToday) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading dashboard data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

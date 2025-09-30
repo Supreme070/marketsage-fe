@@ -42,7 +42,7 @@ class BatchRouteConverter {
       const content = fs.readFileSync(fullPath, 'utf-8');
       
       // Skip if already converted
-      if (content.includes('proxyToBackend') && !content.includes('import.*prisma')) {
+      if (content.includes('proxyToNestJS') && !content.includes('import.*prisma')) {
         continue;
       }
 
@@ -156,7 +156,7 @@ class BatchRouteConverter {
       return `export async function ${method}(
   request: NextRequest${route.backendPath.includes('[') ? ',\n  context: { params: Promise<Record<string, string>> }' : ''}
 ) {${paramHandling}
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: ${route.backendPath.includes('[') ? 'dynamicPath' : `'${route.backendPath}'`},
     requireAuth: ${route.requiresAuth},
     enableLogging: process.env.NODE_ENV === 'development',
@@ -165,7 +165,7 @@ class BatchRouteConverter {
     }).join('\n\n');
 
     return `import { type NextRequest } from "next/server";
-import { proxyToBackend } from "@/lib/api-proxy";
+import { proxyToNestJS } from "@/lib/nestjs-proxy";
 
 // Proxy ${route.path.replace('src/app/api/', '').replace('/route.ts', '')} to NestJS backend
 

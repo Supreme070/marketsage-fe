@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/card";
 import { useNotifications } from "@/context/notification-context";
 
-// This would come from an API in a real application
+// Sample notifications as fallback
 const SAMPLE_NOTIFICATIONS = [
   {
     id: "1",
@@ -102,11 +102,66 @@ const SAMPLE_NOTIFICATIONS = [
 
 export default function NotificationsPage() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, loading } = useNotifications();
+  const [apiNotifications, setApiNotifications] = useState<any[]>([]);
+  const [apiLoading, setApiLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("newest");
 
-  const filteredNotifications = notifications
+  // Fetch notifications from API
+  const fetchNotifications = async () => {
+    setApiLoading(true);
+    setApiError(null);
+    try {
+      const response = await fetch('/api/v2/notifications', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch notifications');
+      }
+      
+      const data = await response.json();
+      if (data.success && data.data) {
+        // Transform API data to match expected format
+        const transformedNotifications = data.data.map((notification: any) => ({
+          id: notification.id,
+          title: notification.title,
+          message: notification.message,
+          timestamp: new Date(notification.timestamp),
+          read: notification.read,
+          type: notification.type?.toLowerCase() || 'info',
+          link: notification.link,
+          category: notification.category?.toLowerCase() || 'general'
+        }));
+        setApiNotifications(transformedNotifications);
+      } else {
+        throw new Error(data.error?.message || 'Failed to fetch notifications');
+      }
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+      setApiError(err instanceof Error ? err.message : 'Failed to load notifications');
+      // Fall back to sample data
+      setApiNotifications(SAMPLE_NOTIFICATIONS);
+    } finally {
+      setApiLoading(false);
+    }
+  };
+
+  // Load notifications on component mount
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  // Use API notifications if available, otherwise fall back to context notifications
+  const allNotifications = apiNotifications.length > 0 ? apiNotifications : notifications;
+
+  const filteredNotifications = allNotifications
     .filter(notification => {
       // Filter by type
       if (filter !== "all" && notification.type !== filter && notification.category !== filter) {
@@ -148,7 +203,7 @@ export default function NotificationsPage() {
             View and manage your notifications
           </p>
         </div>
-        {unreadCount > 0 && (
+        {allNotifications.filter(n => !n.read).length > 0 && (
           <Button onClick={() => markAllAsRead()} variant="outline" className="flex items-center gap-2">
             <CheckCheck className="h-4 w-4" />
             Mark all as read

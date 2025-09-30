@@ -52,7 +52,7 @@ export async function fetchWithCorrelation(
 /**
  * Proxy request to NestJS with correlation ID
  */
-export async function proxyToNestJS(
+export async function proxyToNestJSWithCorrelation(
   request: NextRequest,
   nestjsPath: string,
   correlationId: string
