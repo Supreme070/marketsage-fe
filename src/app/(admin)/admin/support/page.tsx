@@ -186,7 +186,7 @@ export default function AdminSupportPage() {
     refreshAll 
   } = useAdminSupportDashboard();
 
-  const formatTime = (minutes: number) => {
+  const formatTimeHelper = (minutes: number) => {
     if (minutes < 60) return `${minutes}m`;
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
@@ -284,16 +284,6 @@ export default function AdminSupportPage() {
     return <Minus className="h-3 w-3 text-[hsl(var(--admin-text-muted))]" />;
   };
 
-  const formatTime = (minutes: number) => {
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
-  };
-
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat().format(num);
-  };
 
   if (loading) {
     return (

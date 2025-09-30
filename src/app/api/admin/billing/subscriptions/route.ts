@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { proxyToBackend } from "@/lib/api-proxy";
+import { proxyToNestJS } from "@/lib/nestjs-proxy";
 
 // Proxy admin/billing/subscriptions to NestJS backend
 

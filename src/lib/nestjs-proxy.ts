@@ -4,7 +4,6 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { randomUUID } from 'crypto';
 import { getAppRouterSession } from '@/lib/auth/session-utils';
 
 const NESTJS_BASE_URL = process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';

@@ -1,10 +1,10 @@
 import type { NextRequest } from "next/server";
-import { proxyToBackend } from "@/lib/api-proxy";
+import { proxyToNestJS } from "@/lib/nestjs-proxy";
 
 // Proxy admin/organizations to NestJS backend
 
 export async function GET(request: NextRequest) {
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: 'admin/organizations',
     requireAuth: true,
     enableLogging: process.env.NODE_ENV === 'development',
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: 'admin/organizations',
     requireAuth: true,
     enableLogging: process.env.NODE_ENV === 'development',
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: 'admin/organizations',
     requireAuth: true,
     enableLogging: process.env.NODE_ENV === 'development',
@@ -28,7 +28,7 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: 'admin/organizations',
     requireAuth: true,
     enableLogging: process.env.NODE_ENV === 'development',

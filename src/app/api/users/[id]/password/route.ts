@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { proxyToBackend } from "@/lib/api-proxy";
+import { proxyToNestJS } from "@/lib/nestjs-proxy";
 
 // Proxy users/id/password to NestJS backend
 
@@ -9,7 +9,7 @@ export async function GET(
 ) {
   const params = await context.params;
   const dynamicPath = "users/id/password".replace(/\[(\w+)\]/g, (_, key) => params[key] || key);
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: dynamicPath,
     requireAuth: true,
     enableLogging: process.env.NODE_ENV === 'development',
@@ -22,7 +22,7 @@ export async function POST(
 ) {
   const params = await context.params;
   const dynamicPath = "users/id/password".replace(/\[(\w+)\]/g, (_, key) => params[key] || key);
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: dynamicPath,
     requireAuth: true,
     enableLogging: process.env.NODE_ENV === 'development',
@@ -35,7 +35,7 @@ export async function PATCH(
 ) {
   const params = await context.params;
   const dynamicPath = "users/id/password".replace(/\[(\w+)\]/g, (_, key) => params[key] || key);
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: dynamicPath,
     requireAuth: true,
     enableLogging: process.env.NODE_ENV === 'development',
@@ -48,7 +48,7 @@ export async function DELETE(
 ) {
   const params = await context.params;
   const dynamicPath = "users/id/password".replace(/\[(\w+)\]/g, (_, key) => params[key] || key);
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: dynamicPath,
     requireAuth: true,
     enableLogging: process.env.NODE_ENV === 'development',

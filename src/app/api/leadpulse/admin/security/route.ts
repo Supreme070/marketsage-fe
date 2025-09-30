@@ -1,12 +1,12 @@
 import type { NextRequest } from "next/server";
-import { proxyToBackend } from "@/lib/api-proxy";
+import { proxyToNestJS } from "@/lib/nestjs-proxy";
 
 // Proxy leadpulse/admin/security to NestJS backend
 
 export async function GET(
   request: NextRequest
 ) {
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: 'leadpulse/admin/security',
     requireAuth: true,
     enableLogging: process.env.NODE_ENV === 'development',
@@ -16,7 +16,7 @@ export async function GET(
 export async function POST(
   request: NextRequest
 ) {
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: 'leadpulse/admin/security',
     requireAuth: true,
     enableLogging: process.env.NODE_ENV === 'development',

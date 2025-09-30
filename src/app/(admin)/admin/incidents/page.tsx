@@ -265,10 +265,10 @@ export default function AdminIncidentsPage() {
     }
   };
 
-  const activeIncidents = incidents.filter(i => i.status !== 'resolved');
-  const criticalIncidents = incidents.filter(i => i.severity === 'critical');
+  const activeIncidentsCount = incidents.filter(i => i.status !== 'resolved');
+  const criticalIncidentsCount = incidents.filter(i => i.severity === 'critical');
   const avgResolutionTime = "2.5 hours"; // Mock data
-  const systemHealth = Math.round((systemComponents.filter(c => c.status === 'operational').length / systemComponents.length) * 100);
+  const systemHealthPercentage = Math.round((systemComponents.filter(c => c.status === 'operational').length / systemComponents.length) * 100);
 
   if (loading) {
     return (
@@ -349,9 +349,9 @@ export default function AdminIncidentsPage() {
             <AlertTriangle className="h-6 w-6 text-[hsl(var(--admin-warning))]" />
             <Target className="h-4 w-4 text-[hsl(var(--admin-warning))]" />
           </div>
-          <div className="admin-stat-value">{metrics?.activeIncidents || activeIncidents.length}</div>
+          <div className="admin-stat-value">{metrics?.activeIncidents || activeIncidentsCount.length}</div>
           <div className="admin-stat-label">ACTIVE_INCIDENTS</div>
-          <div className="admin-stat-change negative">{metrics?.criticalIncidents || criticalIncidents.length}_CRITICAL</div>
+          <div className="admin-stat-change negative">{metrics?.criticalIncidents || criticalIncidentsCount.length}_CRITICAL</div>
         </div>
 
         <div className="admin-stat-card admin-glow-hover">
@@ -359,7 +359,7 @@ export default function AdminIncidentsPage() {
             <Activity className="h-6 w-6 text-[hsl(var(--admin-success))]" />
             <div className="admin-pulse"></div>
           </div>
-          <div className="admin-stat-value">{metrics?.systemHealth || systemHealth || 0}%</div>
+          <div className="admin-stat-value">{metrics?.systemHealth || systemHealthPercentage || 0}%</div>
           <div className="admin-stat-label">SYSTEM_HEALTH</div>
           <div className="admin-stat-change positive">OPERATIONAL_STATUS</div>
         </div>
@@ -497,7 +497,7 @@ export default function AdminIncidentsPage() {
                 </button>
               </div>
               
-              {activeIncidents.length === 0 ? (
+              {activeIncidentsCount.length === 0 ? (
                 <div className="text-center py-8">
                   <CheckCircle className="h-12 w-12 text-[hsl(var(--admin-success))] mx-auto mb-4" />
                   <div className="admin-title">NO_ACTIVE_INCIDENTS</div>
@@ -505,7 +505,7 @@ export default function AdminIncidentsPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {activeIncidents.map((incident) => (
+                  {activeIncidentsCount.map((incident) => (
                     <div key={incident.id} className="admin-card p-4 border border-[hsl(var(--admin-border))]">
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex-1">

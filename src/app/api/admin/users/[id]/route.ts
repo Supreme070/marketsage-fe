@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { proxyToBackend } from "@/lib/api-proxy";
+import { proxyToNestJS } from "@/lib/nestjs-proxy";
 
 // Proxy admin user operations to NestJS backend
 
@@ -8,7 +8,7 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   const params = await context.params;
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: `admin/users/${params.id}`,
     requireAuth: true,
     enableLogging: process.env.NODE_ENV === 'development',
@@ -20,7 +20,7 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   const params = await context.params;
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: `admin/users/${params.id}`,
     requireAuth: true,
     enableLogging: process.env.NODE_ENV === 'development',
@@ -32,7 +32,7 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   const params = await context.params;
-  return proxyToBackend(request, {
+  return proxyToNestJS(request, {
     backendPath: `admin/users/${params.id}`,
     requireAuth: true,
     enableLogging: process.env.NODE_ENV === 'development',

@@ -19,8 +19,8 @@ function main() {
   // Count total API routes
   const totalRoutes = Number.parseInt(runCommand('find src/app/api -name "route.ts" | wc -l'));
   
-  // Count converted routes (have proxyToBackend)
-  const convertedRoutes = Number.parseInt(runCommand('grep -r "proxyToBackend" src/app/api --include="*.ts" | wc -l'));
+  // Count converted routes (have proxyToNestJS)
+  const convertedRoutes = Number.parseInt(runCommand('grep -r "proxyToNestJS" src/app/api --include="*.ts" | wc -l'));
   
   // Count routes still using direct DB (have prisma import)
   const directDbRoutes = Number.parseInt(runCommand('grep -r "import.*prisma" src/app/api --include="*.ts" | wc -l'));
@@ -56,7 +56,7 @@ function main() {
   for (const category of categories) {
     try {
       const totalCat = Number.parseInt(runCommand(`find src/app/api/${category.path} -name "route.ts" 2>/dev/null | wc -l`));
-      const convertedCat = Number.parseInt(runCommand(`grep -r "proxyToBackend" src/app/api/${category.path} --include="*.ts" 2>/dev/null | wc -l`));
+      const convertedCat = Number.parseInt(runCommand(`grep -r "proxyToNestJS" src/app/api/${category.path} --include="*.ts" 2>/dev/null | wc -l`));
       const directCat = Number.parseInt(runCommand(`grep -r "import.*prisma" src/app/api/${category.path} --include="*.ts" 2>/dev/null | wc -l`));
       
       if (totalCat > 0) {
