@@ -1,7 +1,7 @@
 # Multi-stage Dockerfile for MarketSage Frontend
 # Supports both development and production builds with MCP server support
 
-FROM node:20-alpine AS base
+FROM node:24-alpine AS base
 
 # Stage 1: Dependencies
 FROM base AS deps
