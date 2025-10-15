@@ -1,13 +1,14 @@
 /**
  * Smart Segmentation Module
- * 
+ *
  * This module provides functionality to create intelligent user segments
  * based on engagement data, behavior patterns, and basic statistical analysis.
  */
 
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (SmartSegment, Contact, EmailActivity tables exist in backend)
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 import { logger } from '@/lib/logger';
-import type { ActivityType } from '@prisma/client';
+import type { ActivityType } from '@/types/prisma-types';
 
 // Types for segmentation module
 export interface SegmentRule {
@@ -53,12 +54,16 @@ export async function generateSmartSegments(
 ): Promise<SegmentPreview[]> {
   try {
     // Check for existing smart segments
-    const existingSegments = await prisma.$queryRaw<Array<{id: string, name: string, description: string, rules: string, score: number}>>`
-      SELECT id, name, description, rules, score 
-      FROM "SmartSegment"
-      WHERE status = 'ACTIVE'
-    `;
-    
+    const response = await fetch(`${BACKEND_URL}/api/v2/smart-segments?status=ACTIVE`, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch smart segments: ${response.status}`);
+    }
+
+    const existingSegments = await response.json();
+
     if (existingSegments.length > 0) {
       // Add estimated counts to existing segments
       const segmentsWithCounts = await Promise.all(
@@ -132,31 +137,29 @@ export async function generateSmartSegments(
     for (const segment of segments) {
       // Estimate segment size
       const estimatedCount = await estimateSegmentSize(segment.rules);
-      
-      // Store in database
-      const result = await prisma.$queryRaw<Array<{id: string, name: string, description: string, rules: string, score: number}>>`
-        INSERT INTO "SmartSegment" (
-          id, name, description, rules, score, status, "createdAt", "lastUpdated"
-        )
-        VALUES (
-          gen_random_uuid(),
-          ${segment.name},
-          ${segment.description},
-          ${JSON.stringify(segment.rules)},
-          ${segment.score},
-          'ACTIVE',
-          NOW(),
-          NOW()
-        )
-        RETURNING id, name, description, rules, score
-      `;
-      
-      if (result.length > 0) {
-        createdSegments.push({
-          ...result[0],
-          estimatedCount
-        });
+
+      // Store in database via backend API
+      const createResponse = await fetch(`${BACKEND_URL}/api/v2/smart-segments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: segment.name,
+          description: segment.description,
+          rules: segment.rules,
+          score: segment.score,
+          status: 'ACTIVE',
+        }),
+      });
+
+      if (!createResponse.ok) {
+        throw new Error(`Failed to create smart segment: ${createResponse.status}`);
       }
+
+      const result = await createResponse.json();
+      createdSegments.push({
+        ...result,
+        estimatedCount
+      });
     }
     
     return createdSegments;
@@ -220,18 +223,20 @@ async function estimateSegmentSize(rules: SegmentDefinition): Promise<number> {
       }
     }
     
-    // If we have conditions, run the query
+    // If we have conditions, query the backend API
     if (whereConditions.length > 0) {
-      const queryStr = `
-        SELECT COUNT(*) as count
-        FROM "Contact"
-        WHERE ${whereConditions.join(rules.operator === 'AND' ? ' AND ' : ' OR ')}
-      `;
-      
-      const result = await prisma.$queryRaw<Array<{count: number}>>`${queryStr}`;
-      if (result.length > 0) {
-        return Number(result[0].count);
+      const response = await fetch(`${BACKEND_URL}/api/v2/segments/estimate-size`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rules }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to estimate segment size: ${response.status}`);
       }
+
+      const result = await response.json();
+      return result.count || 0;
     }
     
     // Fallback to reasonable estimates
@@ -279,15 +284,21 @@ export async function getContactsInSegment(
 ): Promise<Contact[]> {
   try {
     // Get segment definition
-    const segment = await prisma.$queryRaw<Array<{rules: string}>>`
-      SELECT rules FROM "SmartSegment" WHERE id = ${segmentId}
-    `;
-    
-    if (segment.length === 0) {
+    const response = await fetch(`${BACKEND_URL}/api/v2/smart-segments/${segmentId}`, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch segment: ${response.status}`);
+    }
+
+    const segment = await response.json();
+
+    if (!segment) {
       return [];
     }
-    
-    const rules: SegmentDefinition = JSON.parse(segment[0].rules);
+
+    const rules: SegmentDefinition = JSON.parse(segment.rules);
     
     // Convert rules to a SQL WHERE clause (simplified version)
     const whereConditions: string[] = [];
@@ -335,24 +346,21 @@ export async function getContactsInSegment(
       }
     }
     
-    // If we have conditions, run the query
+    // If we have conditions, query the backend API
     if (whereConditions.length > 0) {
-      const queryStr = `
-        SELECT 
-          "Contact".id, 
-          "Contact".email, 
-          "Contact"."firstName", 
-          "Contact"."lastName", 
-          "Contact".company
-        FROM "Contact"
-        WHERE ${whereConditions.join(rules.operator === 'AND' ? ' AND ' : ' OR ')}
-        LIMIT ${limit} OFFSET ${offset}
-      `;
-      
-      const contacts = await prisma.$queryRaw<Contact[]>`${queryStr}`;
+      const contactsResponse = await fetch(
+        `${BACKEND_URL}/api/v2/segments/${segmentId}/contacts?limit=${limit}&offset=${offset}`,
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+
+      if (!contactsResponse.ok) {
+        throw new Error(`Failed to fetch segment contacts: ${contactsResponse.status}`);
+      }
+
+      const contacts = await contactsResponse.json();
       return contacts;
     }
-    
+
     return [];
   } catch (error) {
     logger.error("Error getting contacts in segment", error);

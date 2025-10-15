@@ -1,16 +1,15 @@
 /**
  * LeadPulse CRM Integration API
- * 
- * Endpoints for managing CRM integrations
+ * Proxies to backend /api/v2/users/:userId/crm-integrations
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { crmIntegrationManager, type CRMIntegrationConfig } from '@/lib/leadpulse/integrations/crm-connectors';
-import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 
 /**
  * GET: List CRM integrations
@@ -18,54 +17,49 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.id || !session?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
     const platform = searchParams.get('platform');
 
-    // Get user's CRM integrations
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { crmIntegrations: true },
+    // Call backend endpoint
+    const url = `${BACKEND_URL}/api/v2/users/${session.user.id}/crm-integrations${platform ? `?platform=${platform}` : ''}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.accessToken}`,
+        'Content-Type': 'application/json',
+      },
     });
 
-    let integrations = user?.crmIntegrations || {};
-
-    if (platform) {
-      integrations = integrations[platform] ? { [platform]: integrations[platform] } : {};
-    }
-
-    return NextResponse.json({
-      success: true,
-      integrations,
-      availablePlatforms: ['salesforce', 'hubspot', 'pipedrive', 'zoho'],
-    });
+    const data = await response.json();
+    return NextResponse.json(data, { status: response.status });
 
   } catch (error) {
-    logger.error('Error listing CRM integrations:', error);
+    console.error('CRM integration GET error:', error);
     return NextResponse.json({
       success: false,
-      error: 'Failed to list CRM integrations',
+      error: { code: 'FETCH_ERROR', message: 'Failed to list CRM integrations' },
     }, { status: 500 });
   }
 }
 
 /**
  * POST: Add new CRM integration
+ * Note: Backend expects PUT for updates, so we route POST to PUT
  */
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.id || !session?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
     const { platform, credentials, mappings, syncSettings } = body;
 
-    // Validate required fields
     if (!platform || !credentials) {
       return NextResponse.json({
         success: false,
@@ -73,8 +67,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const config: CRMIntegrationConfig = {
-      platform,
+    const settings = {
       credentials,
       mappings: mappings || {},
       syncSettings: syncSettings || {
@@ -85,26 +78,34 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    const result = await crmIntegrationManager.addIntegration(session.user.id, config);
+    // Call backend PUT endpoint
+    const url = `${BACKEND_URL}/api/v2/users/${session.user.id}/crm-integrations`;
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${session.accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ platform, settings }),
+    });
 
-    if (result.success) {
+    const data = await response.json();
+
+    if (response.ok) {
       return NextResponse.json({
         success: true,
         message: `${platform} integration added successfully`,
         platform,
       });
     } else {
-      return NextResponse.json({
-        success: false,
-        error: result.error,
-      }, { status: 400 });
+      return NextResponse.json(data, { status: response.status });
     }
 
   } catch (error) {
-    logger.error('Error adding CRM integration:', error);
+    console.error('CRM integration POST error:', error);
     return NextResponse.json({
       success: false,
-      error: 'Failed to add CRM integration',
+      error: { code: 'ADD_ERROR', message: 'Failed to add CRM integration' },
     }, { status: 500 });
   }
 }
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.id || !session?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -129,43 +130,33 @@ export async function PUT(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Update integration settings
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { crmIntegrations: true },
+    // Call backend PUT endpoint
+    const url = `${BACKEND_URL}/api/v2/users/${session.user.id}/crm-integrations`;
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${session.accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ platform, settings }),
     });
 
-    if (!user?.crmIntegrations?.[platform]) {
+    const data = await response.json();
+
+    if (response.ok) {
       return NextResponse.json({
-        success: false,
-        error: 'Integration not found',
-      }, { status: 404 });
+        success: true,
+        message: `${platform} integration updated successfully`,
+      });
+    } else {
+      return NextResponse.json(data, { status: response.status });
     }
 
-    const updatedIntegrations = {
-      ...user.crmIntegrations,
-      [platform]: {
-        ...user.crmIntegrations[platform],
-        ...settings,
-        updatedAt: new Date().toISOString(),
-      },
-    };
-
-    await prisma.user.update({
-      where: { id: session.user.id },
-      data: { crmIntegrations: updatedIntegrations },
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: `${platform} integration updated successfully`,
-    });
-
   } catch (error) {
-    logger.error('Error updating CRM integration:', error);
+    console.error('CRM integration PUT error:', error);
     return NextResponse.json({
       success: false,
-      error: 'Failed to update CRM integration',
+      error: { code: 'UPDATE_ERROR', message: 'Failed to update CRM integration' },
     }, { status: 500 });
   }
 }
@@ -176,7 +167,7 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.id || !session?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -190,37 +181,32 @@ export async function DELETE(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Remove integration
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { crmIntegrations: true },
+    // Call backend DELETE endpoint
+    const url = `${BACKEND_URL}/api/v2/users/${session.user.id}/crm-integrations/${platform}`;
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${session.accessToken}`,
+        'Content-Type': 'application/json',
+      },
     });
 
-    if (!user?.crmIntegrations?.[platform]) {
+    const data = await response.json();
+
+    if (response.ok) {
       return NextResponse.json({
-        success: false,
-        error: 'Integration not found',
-      }, { status: 404 });
+        success: true,
+        message: `${platform} integration removed successfully`,
+      });
+    } else {
+      return NextResponse.json(data, { status: response.status });
     }
 
-    const updatedIntegrations = { ...user.crmIntegrations };
-    delete updatedIntegrations[platform];
-
-    await prisma.user.update({
-      where: { id: session.user.id },
-      data: { crmIntegrations: updatedIntegrations },
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: `${platform} integration removed successfully`,
-    });
-
   } catch (error) {
-    logger.error('Error removing CRM integration:', error);
+    console.error('CRM integration DELETE error:', error);
     return NextResponse.json({
       success: false,
-      error: 'Failed to remove CRM integration',
+      error: { code: 'DELETE_ERROR', message: 'Failed to remove CRM integration' },
     }, { status: 500 });
   }
 }

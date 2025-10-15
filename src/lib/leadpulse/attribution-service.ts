@@ -1,4 +1,6 @@
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (LeadPulseAttributionConfig, LeadPulseAttribution, LeadPulseAttributionTouchpoint, LeadPulseTouchpoint exist in backend)
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
+
 import { logger } from '@/lib/logger';
 
 // Types for attribution
@@ -99,14 +101,20 @@ export class LeadPulseAttributionService {
     try {
       // If this is set as default, unset other defaults
       if (config.isDefault) {
-        await prisma.leadPulseAttributionConfig.updateMany({
-          where: { isDefault: true },
-          data: { isDefault: false }
+        const updateResponse = await fetch(`${BACKEND_URL}/api/v2/attribution-configs/bulk-update`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isDefault: true, data: { isDefault: false } })
         });
+        if (!updateResponse.ok) {
+          throw new Error(`Failed to unset default configs: ${updateResponse.status}`);
+        }
       }
 
-      const attributionConfig = await prisma.leadPulseAttributionConfig.create({
-        data: {
+      const response = await fetch(`${BACKEND_URL}/api/v2/attribution-configs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           name: config.name,
           description: config.description,
           viewThroughWindow: config.viewThroughWindow,
@@ -123,8 +131,14 @@ export class LeadPulseAttributionService {
           deduplicationWindow: config.deduplicationWindow,
           duplicateHandling: config.duplicateHandling,
           createdBy
-        }
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create attribution config: ${response.status}`);
+      }
+
+      const attributionConfig = await response.json();
 
       logger.info(`Created attribution config: ${attributionConfig.id}`, {
         name: config.name,
@@ -194,15 +208,11 @@ export class LeadPulseAttributionService {
       const config = await this.getAttributionConfig(configId);
       
       // Get conversions in the period
-      const conversions = await prisma.leadPulseAttribution.findMany({
-        where: {
-          conversionTime: {
-            gte: startDate,
-            lte: endDate
-          },
-          configId: config.id
-        }
-      });
+      const response = await fetch(`${BACKEND_URL}/api/v2/attribution?conversionTimeGte=${startDate.toISOString()}&conversionTimeLte=${endDate.toISOString()}&configId=${config.id}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch conversions: ${response.status}`);
+      }
+      const conversions = await response.json();
 
       let processed = 0;
       let succeeded = 0;
@@ -253,23 +263,28 @@ export class LeadPulseAttributionService {
    */
   private async getAttributionConfig(configId?: string): Promise<AttributionConfig> {
     let config;
-    
+
     if (configId) {
-      config = await prisma.leadPulseAttributionConfig.findUnique({
-        where: { id: configId, isActive: true }
-      });
+      const response = await fetch(`${BACKEND_URL}/api/v2/attribution-configs/${configId}?isActive=true`);
+      if (response.ok) {
+        config = await response.json();
+      }
     } else {
-      config = await prisma.leadPulseAttributionConfig.findFirst({
-        where: { isDefault: true, isActive: true }
-      });
+      const response = await fetch(`${BACKEND_URL}/api/v2/attribution-configs?isDefault=true&isActive=true&limit=1`);
+      if (response.ok) {
+        const data = await response.json();
+        config = data[0];
+      }
     }
 
     if (!config) {
       // Create default config if none exists
       const defaultConfigId = await this.createDefaultAttributionConfig();
-      config = await prisma.leadPulseAttributionConfig.findUnique({
-        where: { id: defaultConfigId }
-      });
+      const response = await fetch(`${BACKEND_URL}/api/v2/attribution-configs/${defaultConfigId}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch created config: ${response.status}`);
+      }
+      config = await response.json();
     }
 
     if (!config) {
@@ -329,10 +344,28 @@ export class LeadPulseAttributionService {
       whereConditions.type = { in: config.touchpointTypes };
     }
 
-    const touchpoints = await prisma.leadPulseTouchpoint.findMany({
-      where: whereConditions,
-      orderBy: { timestamp: 'asc' }
+    const params = new URLSearchParams({
+      timestampGte: whereConditions.timestamp.gte.toISOString(),
+      timestampLte: whereConditions.timestamp.lte.toISOString(),
+      sortBy: 'timestamp',
+      order: 'asc'
     });
+
+    if (whereConditions.visitorId) {
+      params.append('visitorId', whereConditions.visitorId);
+    }
+    if (whereConditions.anonymousVisitorId) {
+      params.append('anonymousVisitorId', whereConditions.anonymousVisitorId);
+    }
+    if (whereConditions.type) {
+      params.append('type', whereConditions.type.in.join(','));
+    }
+
+    const response = await fetch(`${BACKEND_URL}/api/v2/touchpoints?${params}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch touchpoints: ${response.status}`);
+    }
+    const touchpoints = await response.json();
 
     return touchpoints.map(tp => ({
       id: tp.id,
@@ -740,53 +773,66 @@ export class LeadPulseAttributionService {
     configId: string
   ): Promise<void> {
     try {
-      // Store main attribution record
-      const attribution = await prisma.leadPulseAttribution.upsert({
-        where: { conversionId: result.conversionId },
-        create: {
-          configId,
-          conversionId: result.conversionId,
-          conversionType: 'unknown', // This should be passed from conversion event
-          conversionTime: new Date(), // This should be passed from conversion event
-          attributionModel: result.attributionModel,
-          touchpointsCount: result.touchpointsCount,
-          totalCredit: result.totalCredit,
-          attributionData: JSON.stringify({
-            channelBreakdown: result.channelBreakdown,
-            journeyDuration: result.journeyDuration,
-            uniqueChannels: result.uniqueChannels
-          }),
-          firstTouch: result.firstTouch ? JSON.stringify(result.firstTouch) : null,
-          lastTouch: result.lastTouch ? JSON.stringify(result.lastTouch) : null,
-          channelBreakdown: JSON.stringify(result.channelBreakdown),
+      // Store main attribution record using upsert
+      const attributionData = {
+        configId,
+        conversionId: result.conversionId,
+        conversionType: 'unknown', // This should be passed from conversion event
+        conversionTime: new Date(), // This should be passed from conversion event
+        attributionModel: result.attributionModel,
+        touchpointsCount: result.touchpointsCount,
+        totalCredit: result.totalCredit,
+        attributionData: JSON.stringify({
+          channelBreakdown: result.channelBreakdown,
           journeyDuration: result.journeyDuration,
-          touchpointCount: result.touchpointCount,
           uniqueChannels: result.uniqueChannels
-        },
-        update: {
-          attributionModel: result.attributionModel,
-          touchpointsCount: result.touchpointsCount,
-          totalCredit: result.totalCredit,
-          attributionData: JSON.stringify({
-            channelBreakdown: result.channelBreakdown,
+        }),
+        firstTouch: result.firstTouch ? JSON.stringify(result.firstTouch) : null,
+        lastTouch: result.lastTouch ? JSON.stringify(result.lastTouch) : null,
+        channelBreakdown: JSON.stringify(result.channelBreakdown),
+        journeyDuration: result.journeyDuration,
+        touchpointCount: result.touchpointCount,
+        uniqueChannels: result.uniqueChannels
+      };
+
+      const upsertResponse = await fetch(`${BACKEND_URL}/api/v2/attribution/upsert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversionId: result.conversionId,
+          createData: attributionData,
+          updateData: {
+            attributionModel: result.attributionModel,
+            touchpointsCount: result.touchpointsCount,
+            totalCredit: result.totalCredit,
+            attributionData: JSON.stringify({
+              channelBreakdown: result.channelBreakdown,
+              journeyDuration: result.journeyDuration,
+              uniqueChannels: result.uniqueChannels
+            }),
+            firstTouch: result.firstTouch ? JSON.stringify(result.firstTouch) : null,
+            lastTouch: result.lastTouch ? JSON.stringify(result.lastTouch) : null,
+            channelBreakdown: JSON.stringify(result.channelBreakdown),
             journeyDuration: result.journeyDuration,
-            uniqueChannels: result.uniqueChannels
-          }),
-          firstTouch: result.firstTouch ? JSON.stringify(result.firstTouch) : null,
-          lastTouch: result.lastTouch ? JSON.stringify(result.lastTouch) : null,
-          channelBreakdown: JSON.stringify(result.channelBreakdown),
-          journeyDuration: result.journeyDuration,
-          touchpointCount: result.touchpointCount,
-          uniqueChannels: result.uniqueChannels,
-          recalculatedAt: new Date(),
-          version: { increment: 1 }
-        }
+            touchpointCount: result.touchpointCount,
+            uniqueChannels: result.uniqueChannels,
+            recalculatedAt: new Date()
+          }
+        })
       });
 
+      if (!upsertResponse.ok) {
+        throw new Error(`Failed to upsert attribution: ${upsertResponse.status}`);
+      }
+      const attribution = await upsertResponse.json();
+
       // Delete existing touchpoint attributions
-      await prisma.leadPulseAttributionTouchpoint.deleteMany({
-        where: { attributionId: attribution.id }
+      const deleteResponse = await fetch(`${BACKEND_URL}/api/v2/attribution-touchpoints?attributionId=${attribution.id}`, {
+        method: 'DELETE'
       });
+      if (!deleteResponse.ok) {
+        throw new Error(`Failed to delete old touchpoint attributions: ${deleteResponse.status}`);
+      }
 
       // Store touchpoint attributions
       if (result.touchpoints.length > 0) {
@@ -809,9 +855,15 @@ export class LeadPulseAttributionService {
           timestamp: tp.timestamp
         }));
 
-        await prisma.leadPulseAttributionTouchpoint.createMany({
-          data: touchpointData
+        const createResponse = await fetch(`${BACKEND_URL}/api/v2/attribution-touchpoints/bulk`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(touchpointData)
         });
+
+        if (!createResponse.ok) {
+          throw new Error(`Failed to create touchpoint attributions: ${createResponse.status}`);
+        }
       }
 
     } catch (error) {

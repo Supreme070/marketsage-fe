@@ -1,7 +1,14 @@
-import { PrismaClient } from '@prisma/client';
+/**
+ * Prisma Client Stub (Frontend)
+ * ==============================
+ *
+ * This file has been converted to a stub to prevent direct database access from the frontend.
+ * All database operations should go through the backend API at http://localhost:3006/api/v2/
+ *
+ * This is a simplified version that re-exports from @/lib/db/prisma for compatibility.
+ */
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
+import prismaClient from '@/lib/db/prisma';
 
-export const prisma = globalForPrisma.prisma || new PrismaClient();
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma; 
+export const prisma = prismaClient;
+export default prismaClient;

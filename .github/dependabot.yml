@@ -1,0 +1,148 @@
+# Dependabot Configuration for MarketSage Frontend
+# Purpose: Automated dependency updates for security and maintenance
+# Reference: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+
+version: 2
+updates:
+  # NPM Dependencies (Production + Development)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Africa/Lagos"
+
+    # Open pull requests for dependency updates
+    open-pull-requests-limit: 10
+
+    # Group updates to reduce PR noise
+    groups:
+      # Security updates - high priority
+      security:
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+
+      # Next.js ecosystem updates
+      nextjs:
+        patterns:
+          - "next"
+          - "@next/*"
+        update-types:
+          - "minor"
+          - "patch"
+
+      # React ecosystem updates
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+        update-types:
+          - "minor"
+          - "patch"
+
+      # UI components (shadcn/ui dependencies)
+      ui-components:
+        patterns:
+          - "@radix-ui/*"
+          - "tailwindcss"
+          - "class-variance-authority"
+          - "clsx"
+          - "tailwind-merge"
+        update-types:
+          - "minor"
+          - "patch"
+
+      # Development dependencies
+      dev-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+
+    # Assignees and reviewers
+    assignees:
+      - "supreme"
+    reviewers:
+      - "supreme"
+
+    # Labels for categorization
+    labels:
+      - "dependencies"
+      - "automated"
+      - "frontend"
+
+    # Pull request configuration
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+
+    # Version requirements
+    versioning-strategy: "increase"
+
+    # Ignore specific dependencies (if needed)
+    ignore:
+      # Ignore Prisma client (not used in frontend anymore)
+      - dependency-name: "@prisma/client"
+        update-types: ["version-update:semver-major", "version-update:semver-minor", "version-update:semver-patch"]
+      - dependency-name: "prisma"
+        update-types: ["version-update:semver-major", "version-update:semver-minor", "version-update:semver-patch"]
+
+    # Allow Dependabot to update lockfiles
+    allow:
+      - dependency-type: "all"
+
+  # GitHub Actions (Workflow Dependencies)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Africa/Lagos"
+
+    open-pull-requests-limit: 5
+
+    assignees:
+      - "supreme"
+    reviewers:
+      - "supreme"
+
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "automated"
+
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+
+  # Docker (if using Dockerfile)
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Africa/Lagos"
+
+    open-pull-requests-limit: 3
+
+    assignees:
+      - "supreme"
+    reviewers:
+      - "supreme"
+
+    labels:
+      - "dependencies"
+      - "docker"
+      - "automated"
+
+    commit-message:
+      prefix: "chore"
+      include: "scope"

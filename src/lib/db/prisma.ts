@@ -1,268 +1,79 @@
-// Browser-safe imports
-let PrismaClient: any;
-let Prisma: any;
-let fs: any;
-let path: any;
-let extractTenantIdFromEnvironment: any;
+/**
+ * Prisma Client Stub (Frontend)
+ * ==============================
+ *
+ * This file has been converted to a stub to prevent direct database access from the frontend.
+ * All database operations should go through the backend API at http://localhost:3006/api/v2/
+ *
+ * Importing this file will not cause errors, but attempting to use the Prisma client
+ * will throw clear error messages directing developers to use the API instead.
+ */
 
-// Only import server-side modules when not in browser
-if (typeof window === 'undefined') {
-  const prismaModule = require("@prisma/client");
-  PrismaClient = prismaModule.PrismaClient;
-  Prisma = prismaModule.Prisma;
-  fs = require('fs');
-  path = require('path');
-  
-  // Import tenant context utilities (Edge Runtime compatible)
-  try {
-    const tenantModule = require('@/lib/tenant/edge-tenant-context');
-    extractTenantIdFromEnvironment = tenantModule.extractTenantIdFromEnvironment;
-  } catch (error) {
-    console.warn('Could not load tenant context utilities:', error);
-    extractTenantIdFromEnvironment = () => null;
-  }
-}
+import { PrismaClient } from '@/types/prisma-types';
 
-// Add custom methods to PrismaClient
+// Custom Prisma Client interface with helper methods
 interface CustomPrismaClient {
   $healthCheck: () => Promise<boolean>;
   $reconnect: () => Promise<boolean>;
   $connect: () => Promise<void>;
   $disconnect: () => Promise<void>;
-  
+  $queryRaw: (...args: any[]) => Promise<any>;
+  $on: (...args: any[]) => any;
+  $use: (...args: any[]) => any;
+  $transaction: (...args: any[]) => Promise<any>;
+
   // Add type for models (using index signature)
   [key: string]: any;
 }
 
-// Prevent multiple instances of Prisma Client in development
-const globalForPrisma = globalThis as unknown as {
-  prisma: CustomPrismaClient | undefined;
-};
-
-// Configuration
-const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 500;
-const CONNECTION_CHECK_INTERVAL = 60000; // 1 minute
-
-// Check if we're running in a Docker environment (server-side only)
-const isDocker = typeof window === 'undefined' && fs && 
-  (fs.existsSync('/.dockerenv') || (process.env.DOCKER_CONTAINER === 'true'));
-
-// Create a new PrismaClient instance
-const createPrismaClient = (): CustomPrismaClient => {
-  // Return null client if in browser
-  if (typeof window !== 'undefined') {
-    return {
-      $healthCheck: async () => false,
-      $reconnect: async () => false,
-      $connect: async () => {},
-      $disconnect: async () => {},
-    } as CustomPrismaClient;
-  }
-
-  // ENFORCE API-ONLY MODE: Block direct database access when API-only mode is enabled
-  if (process.env.NEXT_PUBLIC_USE_API_ONLY === 'true') {
-    console.warn('⚠️  API-ONLY MODE: Direct database access blocked. Use API endpoints instead.');
-    return {
-      $healthCheck: async () => {
-        console.warn('⚠️  API-ONLY MODE: Database health check blocked. Check backend API health instead.');
-        return false;
-      },
-      $reconnect: async () => {
-        console.warn('⚠️  API-ONLY MODE: Database reconnect blocked.');
-        return false;
-      },
-      $connect: async () => {
-        console.warn('⚠️  API-ONLY MODE: Database connect blocked.');
-      },
-      $disconnect: async () => {
-        console.warn('⚠️  API-ONLY MODE: Database disconnect blocked.');
-      },
-      $queryRaw: async () => {
-        throw new Error('⚠️  API-ONLY MODE: Direct database queries blocked. Use API endpoints instead.');
-      },
-      $on: () => {
-        throw new Error('⚠️  API-ONLY MODE: Database event listeners blocked.');
-      },
-      $use: () => {
-        throw new Error('⚠️  API-ONLY MODE: Database middleware blocked.');
-      },
-      $transaction: async () => {
-        throw new Error('⚠️  API-ONLY MODE: Direct database transactions blocked. Use API endpoints instead.');
-      },
-      // Block all model operations with dynamic getters
-      ...new Proxy({}, {
-        get(target, prop) {
-          if (typeof prop === 'string' && !prop.startsWith('$')) {
-            // This is likely a model name (user, contact, campaign, etc.)
-            return new Proxy({}, {
-              get(modelTarget, operation) {
-                throw new Error(`⚠️  API-ONLY MODE: Direct database operation blocked: ${prop}.${String(operation)}(). Use /api/v2/${prop}/* endpoints instead.`);
-              }
-            });
-          }
-          return undefined;
+// Create a blocked Prisma client that throws errors on use
+const createBlockedClient = (): CustomPrismaClient => {
+  return {
+    $healthCheck: async () => {
+      console.warn('⚠️  FRONTEND DATABASE ACCESS BLOCKED: Database health check not available. Check backend API health instead.');
+      return false;
+    },
+    $reconnect: async () => {
+      console.warn('⚠️  FRONTEND DATABASE ACCESS BLOCKED: Database reconnect not available.');
+      return false;
+    },
+    $connect: async () => {
+      console.warn('⚠️  FRONTEND DATABASE ACCESS BLOCKED: Database connect not available.');
+    },
+    $disconnect: async () => {
+      // Silently succeed for disconnect (no-op)
+    },
+    $queryRaw: async () => {
+      throw new Error('⚠️  FRONTEND DATABASE ACCESS BLOCKED: Direct database queries not allowed. Use backend API endpoints instead.');
+    },
+    $on: () => {
+      throw new Error('⚠️  FRONTEND DATABASE ACCESS BLOCKED: Database event listeners not allowed.');
+    },
+    $use: () => {
+      throw new Error('⚠️  FRONTEND DATABASE ACCESS BLOCKED: Database middleware not allowed.');
+    },
+    $transaction: async () => {
+      throw new Error('⚠️  FRONTEND DATABASE ACCESS BLOCKED: Direct database transactions not allowed. Use backend API endpoints instead.');
+    },
+    // Block all model operations with dynamic getters
+    ...new Proxy({}, {
+      get(_target, prop) {
+        if (typeof prop === 'string' && !prop.startsWith('$')) {
+          // This is likely a model name (user, contact, campaign, etc.)
+          return new Proxy({}, {
+            get(_modelTarget, operation) {
+              throw new Error(`⚠️  FRONTEND DATABASE ACCESS BLOCKED: prisma.${prop}.${String(operation)}() not allowed. Use backend API endpoint /api/v2/${prop}/* instead.`);
+            }
+          });
         }
-      }),
-    } as unknown as CustomPrismaClient;
-  }
-
-  try {
-    // Set up Prisma client with appropriate options
-    const clientOptions: any = {
-      log: [
-        { level: 'error', emit: 'stdout' },
-        { level: 'warn', emit: 'stdout' }
-      ]
-    };
-
-    // Add database URL if available
-    if (process.env.DATABASE_URL) {
-      clientOptions.datasources = {
-        db: {
-          url: process.env.DATABASE_URL
-        }
-      };
-    }
-
-    const client = new PrismaClient(clientOptions) as CustomPrismaClient;
-
-    // Add custom health check method
-    client.$healthCheck = async (): Promise<boolean> => {
-      try {
-        await client.$queryRaw`SELECT 1`;
-        return true;
-      } catch (error) {
-        console.error('Database health check failed:', error);
-        return false;
+        return undefined;
       }
-    };
-
-    // Add custom reconnect method
-    client.$reconnect = async (): Promise<boolean> => {
-      try {
-        await client.$disconnect();
-        await client.$connect();
-        return true;
-      } catch (error) {
-        console.error('Database reconnect failed:', error);
-        return false;
-      }
-    };
-
-    return client;
-  } catch (error) {
-    console.error('Error creating Prisma client:', error);
-    throw error;
-  }
-};
-
-// Initialize Prisma client
-let prisma: CustomPrismaClient;
-let isConnected = false;
-
-// Create the client
-if (typeof window !== 'undefined') {
-  // Browser environment - use mock client
-  prisma = {
-    $connect: async () => Promise.resolve(),
-    $disconnect: async () => Promise.resolve(),
-    $healthCheck: async () => Promise.resolve(false),
-    $reconnect: async () => Promise.resolve(false),
-    $queryRaw: async () => Promise.resolve([]),
-    $on: () => ({ mock: true }),
-    $use: () => ({ mock: true }),
-    $transaction: async (arg: any) => arg instanceof Function ? arg([]) : [],
+    }),
   } as unknown as CustomPrismaClient;
-} else if (process.env.NEXT_PUBLIC_USE_API_ONLY === 'true') {
-  // API-ONLY MODE: Block all database operations
-  console.warn('🚧 INITIALIZATION: API-ONLY MODE ENABLED - Database operations will be blocked');
-  prisma = createPrismaClient(); // This will return the blocked client
-} else {
-  try {
-    // Use cached client if available (in development)
-    if (globalForPrisma.prisma) {
-      console.log('Using existing Prisma client instance');
-      prisma = globalForPrisma.prisma;
-    } else {
-      console.log('Creating new Prisma client instance');
-      prisma = createPrismaClient();
-    }
-    
-    // Connect to the database only if not in build mode and not in browser
-    const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build' || 
-      process.env.BUILDING === 'true' ||
-      process.argv.includes('build') ||
-      (process.argv.includes('next') && process.argv.includes('build')) ||
-      process.env.NODE_ENV === 'test' ||
-      process.env.CI === 'true';
-    
-    if (typeof window === 'undefined' && !isBuildTime) {
-      prisma.$connect()
-        .then(() => {
-          console.log('Successfully connected to database');
-          isConnected = true;
-        
-          // Set up periodic health checks in production
-          if (process.env.NODE_ENV === 'production') {
-            setInterval(async () => {
-              const healthy = await prisma.$healthCheck();
-              if (!healthy) {
-                console.error('Database health check failed');
-                isConnected = false;
-              }
-            }, CONNECTION_CHECK_INTERVAL);
-          }
-        })
-        .catch(e => {
-          console.error('Failed to connect to database:', e);
-          isConnected = false;
-        });
-    }
-  } catch (error) {
-    console.error('Critical error initializing Prisma client:', error);
-    
-    // Provide a mock client as fallback for non-critical routes
-    prisma = {
-      $connect: async () => Promise.resolve(),
-      $disconnect: async () => Promise.resolve(),
-      $healthCheck: async () => Promise.resolve(false),
-      $reconnect: async () => Promise.resolve(false),
-      $queryRaw: async () => Promise.resolve([]),
-      $on: () => ({ mock: true }),
-      $use: () => ({ mock: true }),
-      $transaction: async (arg: any) => arg instanceof Function ? arg([]) : [],
-    } as unknown as CustomPrismaClient;
-  }
-}
+};
 
-// Helper function to get current tenant ID from request context
-function getCurrentTenantId(): string | null {
-  try {
-    // Use the tenant context utility
-    return extractTenantIdFromEnvironment ? extractTenantIdFromEnvironment() : null;
-  } catch (error) {
-    console.warn('Could not determine tenant context:', error);
-    return null;
-  }
-}
-
-// Setup proper shutdown for production
-if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
-  const gracefulShutdown = async () => {
-    console.log('Closing Prisma client connection...');
-    await prisma.$disconnect();
-    console.log('Prisma client disconnected');
-  };
-
-  process.on('SIGTERM', gracefulShutdown);
-  process.on('SIGINT', gracefulShutdown);
-}
-
-// In development, we reuse the same client across requests
-if (typeof window === 'undefined' && process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
+// Export the blocked client
+const prisma: CustomPrismaClient = createBlockedClient();
 
 export default prisma;
 export { prisma };

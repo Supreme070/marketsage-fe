@@ -211,6 +211,45 @@ export enum WorkflowExecutionStatus {
   CANCELLED = 'CANCELLED'
 }
 
+export enum WinnerCriteria {
+  OPEN_RATE = 'OPEN_RATE',
+  CLICK_RATE = 'CLICK_RATE',
+  CONVERSION_RATE = 'CONVERSION_RATE',
+  REVENUE = 'REVENUE',
+  ENGAGEMENT = 'ENGAGEMENT'
+}
+
+export enum VariantType {
+  SUBJECT = 'SUBJECT',
+  CONTENT = 'CONTENT',
+  SENDER = 'SENDER',
+  CTA = 'CTA',
+  IMAGE = 'IMAGE',
+  LAYOUT = 'LAYOUT'
+}
+
+export enum TriggerType {
+  MANUAL = 'MANUAL',
+  SCHEDULED = 'SCHEDULED',
+  EVENT = 'EVENT',
+  BEHAVIOR = 'BEHAVIOR',
+  API = 'API',
+  WEBHOOK = 'WEBHOOK'
+}
+
+export enum ActionType {
+  SEND_EMAIL = 'SEND_EMAIL',
+  SEND_SMS = 'SEND_SMS',
+  SEND_WHATSAPP = 'SEND_WHATSAPP',
+  WAIT = 'WAIT',
+  CONDITION = 'CONDITION',
+  UPDATE_CONTACT = 'UPDATE_CONTACT',
+  ADD_TAG = 'ADD_TAG',
+  REMOVE_TAG = 'REMOVE_TAG',
+  WEBHOOK = 'WEBHOOK',
+  API_CALL = 'API_CALL'
+}
+
 // Unified Campaigns Hook
 export function useUnifiedCampaigns(query?: CampaignQueryDto) {
   const apiClient = useApiClient();

@@ -8,8 +8,15 @@
 import { EventEmitter } from 'events';
 import { logger } from '@/lib/logger';
 import { getMCPVisitorData, getMCPVisitorInsights, getMCPVisitorLocations } from '@/lib/leadpulse/mcp-data-provider';
-import type { MCPAuthContext } from '@/mcp/types/mcp-types';
 import type { VisitorLocation, VisitorJourney, InsightItem } from '@/lib/leadpulse/dataProvider';
+
+// Minimal type definition (backend has full implementation)
+interface MCPAuthContext {
+  userId: string;
+  organizationId: string;
+  permissions: string[];
+  role: string;
+}
 
 interface WebSocketConnectionConfig {
   autoReconnect: boolean;

@@ -1,11 +1,13 @@
 /**
  * Unified MarketSage API Client
  * Single client for all API calls with automatic authentication handling
+ * Enhanced with monitoring and performance tracking
  */
 
 import { getSession } from 'next-auth/react';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth-options';
+import * as Sentry from '@sentry/nextjs';
 
 // Types
 export interface ApiError {
@@ -111,7 +113,7 @@ export class MarketSageApiClient {
   }
 
   /**
-   * Make authenticated HTTP request with retry logic
+   * Make authenticated HTTP request with retry logic and performance monitoring
    */
   private async makeRequest<T>(
     endpoint: string,
@@ -122,92 +124,200 @@ export class MarketSageApiClient {
     const timeout = config.timeout || this.defaultTimeout;
     const retries = config.retries || this.defaultRetries;
     const retryDelay = config.retryDelay || this.defaultRetryDelay;
+    const method = options.method || 'GET';
+
+    // Performance tracking - START
+    const startTime = performance.now();
+    let statusCode: number | undefined;
+    let responseSize = 0;
+    let success = false;
+
+    // Sentry transaction for performance monitoring
+    const transaction = Sentry.startTransaction({
+      op: 'http.client',
+      name: `${method} ${endpoint}`,
+      tags: {
+        'http.method': method,
+        'http.url': endpoint,
+      },
+    });
 
     let lastError: any;
 
-    for (let attempt = 0; attempt <= retries; attempt++) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeout);
+    try {
+      for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-        const token = await this.getAuthToken();
-        
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-          ...config.headers,
-        };
+          const token = await this.getAuthToken();
 
-        if (token) {
-          headers.Authorization = `Bearer ${token}`;
-          console.log('🔐 ApiClient: Adding Authorization header for request to:', url);
-        } else {
-          console.warn('🔐 ApiClient: No token available for request to:', url);
-        }
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+            ...config.headers,
+          };
 
-        const response = await fetch(url, {
-          ...options,
-          headers,
-          signal: controller.signal,
-        });
+          if (token) {
+            headers.Authorization = `Bearer ${token}`;
+            console.log('🔐 ApiClient: Adding Authorization header for request to:', url);
+          } else {
+            console.warn('🔐 ApiClient: No token available for request to:', url);
+          }
 
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.error('🔐 ApiClient: Request failed:', {
-            url,
-            status: response.status,
-            statusText: response.statusText,
-            errorData,
-            hasToken: !!token
+          // Add Sentry breadcrumb
+          Sentry.addBreadcrumb({
+            category: 'http',
+            message: `${method} ${endpoint}`,
+            level: 'info',
+            data: {
+              url,
+              method,
+              attempt: attempt + 1,
+            },
           });
-          
-          throw new ApiClientError(
-            errorData.message || `HTTP ${response.status}: ${response.statusText}`,
-            errorData.code || 'HTTP_ERROR',
-            response.status,
-            errorData
-          );
-        }
 
-        const data = await response.json();
-        
-        // Handle API response format
-        if (data && typeof data === 'object' && 'success' in data) {
-          if (!data.success) {
+          const response = await fetch(url, {
+            ...options,
+            headers,
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeoutId);
+          statusCode = response.status;
+
+          // Track response size
+          const contentLength = response.headers.get('content-length');
+          if (contentLength) {
+            responseSize = parseInt(contentLength, 10);
+          }
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('🔐 ApiClient: Request failed:', {
+              url,
+              status: response.status,
+              statusText: response.statusText,
+              errorData,
+              hasToken: !!token
+            });
+
             throw new ApiClientError(
-              data.error?.message || 'API request failed',
-              data.error?.code || 'API_ERROR',
-              undefined,
-              data.error?.details
+              errorData.message || `HTTP ${response.status}: ${response.statusText}`,
+              errorData.code || 'HTTP_ERROR',
+              response.status,
+              errorData
             );
           }
-          return data.data || data;
-        }
 
-        return data;
-      } catch (error) {
-        lastError = error;
+          const data = await response.json();
 
-        // Don't retry on client errors (4xx) except for auth issues
-        if (error instanceof ApiClientError && error.statusCode) {
-          if (error.statusCode >= 400 && error.statusCode < 500 && error.statusCode !== 401) {
-            throw error;
+          // Handle API response format
+          if (data && typeof data === 'object' && 'success' in data) {
+            if (!data.success) {
+              throw new ApiClientError(
+                data.error?.message || 'API request failed',
+                data.error?.code || 'API_ERROR',
+                undefined,
+                data.error?.details
+              );
+            }
+            success = true;
+            return data.data || data;
           }
-        }
 
-        // Don't retry on last attempt
-        if (attempt === retries) {
-          break;
-        }
+          success = true;
+          return data;
+        } catch (error) {
+          lastError = error;
 
-        // Wait before retrying with exponential backoff
-        const delay = retryDelay * Math.pow(2, attempt) + Math.random() * 1000;
-        await new Promise(resolve => setTimeout(resolve, delay));
+          // Capture error in Sentry
+          if (attempt === retries) {
+            Sentry.captureException(error, {
+              tags: {
+                'http.method': method,
+                'http.url': endpoint,
+                'http.status_code': statusCode || 0,
+              },
+              extra: {
+                attempt: attempt + 1,
+                maxRetries: retries,
+              },
+            });
+          }
+
+          // Don't retry on client errors (4xx) except for auth issues
+          if (error instanceof ApiClientError && error.statusCode) {
+            if (error.statusCode >= 400 && error.statusCode < 500 && error.statusCode !== 401) {
+              throw error;
+            }
+          }
+
+          // Don't retry on last attempt
+          if (attempt === retries) {
+            break;
+          }
+
+          // Wait before retrying with exponential backoff
+          const delay = retryDelay * Math.pow(2, attempt) + Math.random() * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+
+      throw lastError;
+    } finally {
+      // Performance tracking - END
+      const duration = performance.now() - startTime;
+
+      // Finish Sentry transaction
+      transaction.setTag('http.status_code', statusCode || 0);
+      transaction.setData('response_size', responseSize);
+      transaction.finish();
+
+      // Send metrics to analytics (client-side only)
+      if (!this.isServer) {
+        this.trackApiCall({
+          method,
+          endpoint,
+          url,
+          statusCode: statusCode || 0,
+          duration,
+          success,
+          responseSize,
+          timestamp: Date.now(),
+        });
       }
     }
+  }
 
-    throw lastError;
+  /**
+   * Track API call metrics (client-side only)
+   */
+  private trackApiCall(metrics: {
+    method: string;
+    endpoint: string;
+    url: string;
+    statusCode: number;
+    duration: number;
+    success: boolean;
+    responseSize: number;
+    timestamp: number;
+  }): void {
+    try {
+      // Send to analytics endpoint asynchronously
+      fetch('/api/analytics/api-calls', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(metrics),
+        keepalive: true,
+      }).catch((error) => {
+        // Silently fail - don't disrupt the user experience
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Failed to track API call:', error);
+        }
+      });
+    } catch (error) {
+      // Silently fail
+    }
   }
 
   // HTTP Methods

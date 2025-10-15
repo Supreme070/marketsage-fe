@@ -1,11 +1,12 @@
 /**
  * SMS Cost Tracking and Budget Management Service
- * 
+ *
  * Handles cost tracking, budget management, and billing for SMS campaigns
  * with support for multiple providers and regional pricing.
  */
 
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (SMSUsage, SMSBudget tables exist in backend)
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 import { smsLogger } from '@/lib/sms-campaign-logger';
 import { logger } from '@/lib/logger';
 
@@ -175,8 +176,10 @@ export class SMSCostTracker {
     metadata?: any
   ): Promise<{ success: boolean; usageId?: string; error?: string }> {
     try {
-      const usage = await prisma.sMSUsage.create({
-        data: {
+      const response = await fetch(`${BACKEND_URL}/api/v2/sms-usage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           campaignId,
           userId,
           messageCount,
@@ -186,8 +189,14 @@ export class SMSCostTracker {
           billingPeriod: this.getCurrentBillingPeriod(),
           recordedAt: new Date(),
           metadata: metadata ? JSON.stringify(metadata) : null
-        }
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to record usage: ${response.status}`);
+      }
+
+      const usage = await response.json();
 
       await smsLogger.logCostRecorded(campaignId, cost, messageCount, {
         userId,
@@ -216,12 +225,16 @@ export class SMSCostTracker {
       const billingPeriod = period === 'current' ? this.getCurrentBillingPeriod() :
                            period === 'last' ? this.getLastBillingPeriod() : period;
 
-      const usageRecords = await prisma.sMSUsage.findMany({
-        where: {
-          userId,
-          billingPeriod
-        }
-      });
+      const response = await fetch(
+        `${BACKEND_URL}/api/v2/sms-usage?userId=${userId}&billingPeriod=${billingPeriod}`,
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to get user usage: ${response.status}`);
+      }
+
+      const usageRecords = await response.json();
 
       const totalMessages = usageRecords.reduce((sum, record) => sum + record.messageCount, 0);
       const totalCost = usageRecords.reduce((sum, record) => sum + record.cost, 0);
@@ -259,29 +272,47 @@ export class SMSCostTracker {
     alerts: BudgetAlert[] = []
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const existingBudget = await prisma.sMSBudget.findFirst({
-        where: { userId }
+      const existingResponse = await fetch(`${BACKEND_URL}/api/v2/sms-budgets?userId=${userId}`, {
+        headers: { 'Content-Type': 'application/json' },
       });
 
+      if (!existingResponse.ok) {
+        throw new Error(`Failed to check existing budget: ${existingResponse.status}`);
+      }
+
+      const existingBudgets = await existingResponse.json();
+      const existingBudget = existingBudgets.length > 0 ? existingBudgets[0] : null;
+
       if (existingBudget) {
-        await prisma.sMSBudget.update({
-          where: { id: existingBudget.id },
-          data: {
+        const updateResponse = await fetch(`${BACKEND_URL}/api/v2/sms-budgets/${existingBudget.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             monthlyLimit: monthlyBudget,
             alerts: JSON.stringify(alerts),
             updatedAt: new Date()
-          }
+          }),
         });
+
+        if (!updateResponse.ok) {
+          throw new Error(`Failed to update budget: ${updateResponse.status}`);
+        }
       } else {
-        await prisma.sMSBudget.create({
-          data: {
+        const createResponse = await fetch(`${BACKEND_URL}/api/v2/sms-budgets`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             userId,
             monthlyLimit: monthlyBudget,
             currentUsage: 0,
             alerts: JSON.stringify(alerts),
             isActive: true
-          }
+          }),
         });
+
+        if (!createResponse.ok) {
+          throw new Error(`Failed to create budget: ${createResponse.status}`);
+        }
       }
 
       await smsLogger.logBudgetUpdated(userId, monthlyBudget, {
@@ -300,9 +331,16 @@ export class SMSCostTracker {
    */
   async getBudgetStatus(userId: string): Promise<BudgetStatus> {
     try {
-      const budget = await prisma.sMSBudget.findFirst({
-        where: { userId }
+      const response = await fetch(`${BACKEND_URL}/api/v2/sms-budgets?userId=${userId}`, {
+        headers: { 'Content-Type': 'application/json' },
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to get budget: ${response.status}`);
+      }
+
+      const budgets = await response.json();
+      const budget = budgets.length > 0 ? budgets[0] : null;
 
       if (!budget) {
         return {
@@ -417,13 +455,16 @@ export class SMSCostTracker {
       const startDate = new Date();
       startDate.setMonth(startDate.getMonth() - months);
 
-      const usageRecords = await prisma.sMSUsage.findMany({
-        where: {
-          userId,
-          recordedAt: { gte: startDate }
-        },
-        orderBy: { recordedAt: 'asc' }
-      });
+      const response = await fetch(
+        `${BACKEND_URL}/api/v2/sms-usage?userId=${userId}&fromDate=${startDate.toISOString()}`,
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to get cost analytics: ${response.status}`);
+      }
+
+      const usageRecords = await response.json();
 
       // Monthly breakdown
       const monthlyData = new Map<string, { messageCount: number; cost: number }>();

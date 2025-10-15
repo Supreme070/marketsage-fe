@@ -3,6 +3,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import Providers from "@/providers";
 import ChatBotWrapper from "@/components/ChatBotWrapper";
+import WebVitalsInit from "@/components/WebVitalsInit";
 
 // Temporarily using system fonts to avoid Docker build issues
 // const inter = Inter({
@@ -69,6 +70,7 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16x16.png" />
       </head>
       <body className="font-sans">
+        <WebVitalsInit />
         <Providers>{children}</Providers>
         <ChatBotWrapper />
         <script
@@ -86,7 +88,7 @@ export default function RootLayout({
                     });
                 });
               }
-              
+
               // PWA install prompt handling
               let deferredPrompt;
               window.addEventListener('beforeinstallprompt', (e) => {
@@ -95,7 +97,7 @@ export default function RootLayout({
                 // Show install button or banner
                 window.dispatchEvent(new CustomEvent('marketsage:installable'));
               });
-              
+
               // Handle successful installation
               window.addEventListener('appinstalled', (e) => {
                 console.log('PWA was installed');

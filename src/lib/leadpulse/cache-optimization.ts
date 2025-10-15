@@ -8,8 +8,10 @@ import { EventEmitter } from 'events';
 import { redisService } from '@/lib/cache/redis';
 import { getIORedisClient } from '@/lib/cache/redis-pool';
 import { logger } from '@/lib/logger';
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (LeadPulseVisitor exists in backend)
 import { leadPulseCache } from '@/lib/cache/leadpulse-cache';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 
 export interface CacheWarmingStrategy {
   id: string;
@@ -293,12 +295,16 @@ export class LeadPulseCacheOptimizer extends EventEmitter {
       keys: ['leadpulse:journey:*'],
       preloadData: async () => {
         // Preload top 20 most active visitor journeys
-        const activeVisitors = await prisma.leadPulseVisitor.findMany({
-          where: { isActive: true },
-          orderBy: { engagementScore: 'desc' },
-          take: 20,
-          select: { id: true }
+        const response = await fetch(`${BACKEND_URL}/api/v2/visitors?isActive=true&orderBy=engagementScore:desc&limit=20&select=id`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
         });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch active visitors: ${response.status}`);
+        }
+
+        const activeVisitors = await response.json();
 
         for (const visitor of activeVisitors) {
           await leadPulseCache.getCachedVisitorJourney(visitor.id);

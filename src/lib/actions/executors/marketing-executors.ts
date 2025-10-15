@@ -9,8 +9,10 @@
 import { ActionType, type ActionExecutionResult } from '../action-plan-interface';
 import type { ExecutionContext } from '../action-dispatcher';
 import { BaseExecutor } from './base-executor';
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (Task table exists in backend)
 import { logger } from '@/lib/logger';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 
 /**
  * Discount Apply Executor
@@ -94,19 +96,25 @@ export class DiscountApplyExecutor extends BaseExecutor {
 
   private async createDiscountRecord(context: ExecutionContext, discountData: any): Promise<any> {
     // Since we don't have a specific discount table, we'll create a task to track this
-    return await prisma.task.create({
-      data: {
+    const response = await fetch(`${BACKEND_URL}/api/v2/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         title: `Discount Created: ${discountData.discountCode}`,
         description: `AI-generated discount for ${discountData.contact.firstName || 'customer'}: ${discountData.discountValue}${discountData.discountType === 'percentage' ? '%' : ' currency'} off`,
         priority: 'MEDIUM',
         status: 'todo',
-        dueDate: new Date(discountData.validUntil),
-        creator: {
-          connect: { id: context.userId || 'supreme-ai-v3' }
-        }
-        // metadata field not available - storing discount info in description instead
-      }
+        dueDate: new Date(discountData.validUntil).toISOString(),
+        createdBy: context.userId || 'supreme-ai-v3',
+        organizationId: context.organizationId
+      })
     });
+
+    if (!response.ok) {
+      throw new Error(`Failed to create discount task: ${response.status}`);
+    }
+
+    return await response.json();
   }
 
   estimateExecutionTime(): number {

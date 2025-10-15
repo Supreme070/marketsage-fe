@@ -18,7 +18,7 @@ import { redisCache } from '@/lib/cache/redis-client';
 import { aiAuditTrailSystem } from '@/lib/ai/ai-audit-trail-system';
 import { aiOperationRollbackSystem } from '@/lib/ai/ai-operation-rollback-system';
 import { universalTaskExecutionEngine } from '@/lib/ai/universal-task-execution-engine';
-import type { UserRole } from '@prisma/client';
+import type { UserRole } from '@/types/prisma-types';
 
 // AI streaming event types
 export enum AIStreamEventType {

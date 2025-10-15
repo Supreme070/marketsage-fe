@@ -2,7 +2,11 @@
  * Security Utilities for MarketSage Security Center
  */
 
-import { prisma } from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
+
 import { type SecurityThreat, IPBlocklistEntry, SecurityStats } from './security-types';
 
 /**
@@ -46,51 +50,26 @@ export async function detectThreats(timeWindow: Date = new Date(Date.now() - 24 
 
   try {
     // Detect brute force attacks (multiple failed login attempts from same IP)
-    const bruteForceAttempts = await prisma.securityEvent.groupBy({
-      by: ['ipAddress'],
-      _count: {
-        ipAddress: true
-      },
-      where: {
-        eventType: 'FAILED_LOGIN',
-        timestamp: {
-          gte: timeWindow
-        },
-        ipAddress: {
-          not: null
-        }
-      },
-      having: {
-        ipAddress: {
-          _count: {
-            gte: 5 // 5 or more failed attempts
-          }
-        }
-      }
+    const bruteForceResponse = await fetch(`${BACKEND_URL}/api/v2/security-events/group-by?by=ipAddress&eventType=FAILED_LOGIN&timestampGte=${timeWindow.toISOString()}&countGte=5`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
+    const bruteForceAttempts = bruteForceResponse.ok ? await bruteForceResponse.json() : [];
 
     for (const attempt of bruteForceAttempts) {
       if (!attempt.ipAddress) continue;
 
-      const events = await prisma.securityEvent.findMany({
-        where: {
-          eventType: 'FAILED_LOGIN',
-          ipAddress: attempt.ipAddress,
-          timestamp: { gte: timeWindow }
-        },
-        orderBy: { timestamp: 'asc' },
-        take: 1
+      const eventsResponse = await fetch(`${BACKEND_URL}/api/v2/security-events?eventType=FAILED_LOGIN&ipAddress=${attempt.ipAddress}&timestampGte=${timeWindow.toISOString()}&orderBy=timestamp&order=asc&take=1`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const events = eventsResponse.ok ? await eventsResponse.json() : [];
 
-      const lastEvents = await prisma.securityEvent.findMany({
-        where: {
-          eventType: 'FAILED_LOGIN',
-          ipAddress: attempt.ipAddress,
-          timestamp: { gte: timeWindow }
-        },
-        orderBy: { timestamp: 'desc' },
-        take: 1
+      const lastEventsResponse = await fetch(`${BACKEND_URL}/api/v2/security-events?eventType=FAILED_LOGIN&ipAddress=${attempt.ipAddress}&timestampGte=${timeWindow.toISOString()}&orderBy=timestamp&order=desc&take=1`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const lastEvents = lastEventsResponse.ok ? await lastEventsResponse.json() : [];
 
       if (events.length > 0 && lastEvents.length > 0) {
         const location = await getIPLocation(attempt.ipAddress);
@@ -115,51 +94,26 @@ export async function detectThreats(timeWindow: Date = new Date(Date.now() - 24 
     }
 
     // Detect suspicious API abuse patterns
-    const apiAbuseAttempts = await prisma.securityEvent.groupBy({
-      by: ['ipAddress'],
-      _count: {
-        ipAddress: true
-      },
-      where: {
-        eventType: 'RATE_LIMIT_EXCEEDED',
-        timestamp: {
-          gte: timeWindow
-        },
-        ipAddress: {
-          not: null
-        }
-      },
-      having: {
-        ipAddress: {
-          _count: {
-            gte: 10 // 10 or more rate limit violations
-          }
-        }
-      }
+    const apiAbuseResponse = await fetch(`${BACKEND_URL}/api/v2/security-events/group-by?by=ipAddress&eventType=RATE_LIMIT_EXCEEDED&timestampGte=${timeWindow.toISOString()}&countGte=10`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
+    const apiAbuseAttempts = apiAbuseResponse.ok ? await apiAbuseResponse.json() : [];
 
     for (const abuse of apiAbuseAttempts) {
       if (!abuse.ipAddress) continue;
 
-      const events = await prisma.securityEvent.findMany({
-        where: {
-          eventType: 'RATE_LIMIT_EXCEEDED',
-          ipAddress: abuse.ipAddress,
-          timestamp: { gte: timeWindow }
-        },
-        orderBy: { timestamp: 'asc' },
-        take: 1
+      const eventsResponse = await fetch(`${BACKEND_URL}/api/v2/security-events?eventType=RATE_LIMIT_EXCEEDED&ipAddress=${abuse.ipAddress}&timestampGte=${timeWindow.toISOString()}&orderBy=timestamp&order=asc&take=1`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const events = eventsResponse.ok ? await eventsResponse.json() : [];
 
-      const lastEvents = await prisma.securityEvent.findMany({
-        where: {
-          eventType: 'RATE_LIMIT_EXCEEDED',
-          ipAddress: abuse.ipAddress,
-          timestamp: { gte: timeWindow }
-        },
-        orderBy: { timestamp: 'desc' },
-        take: 1
+      const lastEventsResponse = await fetch(`${BACKEND_URL}/api/v2/security-events?eventType=RATE_LIMIT_EXCEEDED&ipAddress=${abuse.ipAddress}&timestampGte=${timeWindow.toISOString()}&orderBy=timestamp&order=desc&take=1`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const lastEvents = lastEventsResponse.ok ? await lastEventsResponse.json() : [];
 
       if (events.length > 0 && lastEvents.length > 0) {
         const location = await getIPLocation(abuse.ipAddress);
@@ -183,26 +137,21 @@ export async function detectThreats(timeWindow: Date = new Date(Date.now() - 24 
     }
 
     // Detect SQL injection attempts
-    const sqlInjectionAttempts = await prisma.securityEvent.findMany({
-      where: {
-        eventType: 'SQL_INJECTION_ATTEMPT',
-        timestamp: {
-          gte: timeWindow
-        }
-      },
-      distinct: ['ipAddress'],
+    const sqlInjectionResponse = await fetch(`${BACKEND_URL}/api/v2/security-events?eventType=SQL_INJECTION_ATTEMPT&timestampGte=${timeWindow.toISOString()}&distinct=ipAddress`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
+    const sqlInjectionAttempts = sqlInjectionResponse.ok ? await sqlInjectionResponse.json() : [];
 
     for (const attempt of sqlInjectionAttempts) {
       if (!attempt.ipAddress) continue;
 
-      const eventCount = await prisma.securityEvent.count({
-        where: {
-          eventType: 'SQL_INJECTION_ATTEMPT',
-          ipAddress: attempt.ipAddress,
-          timestamp: { gte: timeWindow }
-        }
+      const eventCountResponse = await fetch(`${BACKEND_URL}/api/v2/security-events/count?eventType=SQL_INJECTION_ATTEMPT&ipAddress=${attempt.ipAddress}&timestampGte=${timeWindow.toISOString()}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const eventCountData = eventCountResponse.ok ? await eventCountResponse.json() : { count: 0 };
+      const eventCount = eventCountData.count || 0;
 
       const location = await getIPLocation(attempt.ipAddress);
 
@@ -236,35 +185,40 @@ export async function detectThreats(timeWindow: Date = new Date(Date.now() - 24 
 export async function calculateSecurityScore(timeWindow: Date = new Date(Date.now() - 24 * 60 * 60 * 1000)): Promise<number> {
   try {
     const [
-      totalEvents,
-      criticalEvents,
-      highEvents,
-      unresolvedEvents,
+      totalEventsRes,
+      criticalEventsRes,
+      highEventsRes,
+      unresolvedEventsRes,
       threats
     ] = await Promise.all([
-      prisma.securityEvent.count({
-        where: { timestamp: { gte: timeWindow } }
+      fetch(`${BACKEND_URL}/api/v2/security-events/count?timestampGte=${timeWindow.toISOString()}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       }),
-      prisma.securityEvent.count({
-        where: { 
-          severity: 'CRITICAL',
-          timestamp: { gte: timeWindow }
-        }
+      fetch(`${BACKEND_URL}/api/v2/security-events/count?severity=CRITICAL&timestampGte=${timeWindow.toISOString()}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       }),
-      prisma.securityEvent.count({
-        where: { 
-          severity: 'HIGH',
-          timestamp: { gte: timeWindow }
-        }
+      fetch(`${BACKEND_URL}/api/v2/security-events/count?severity=HIGH&timestampGte=${timeWindow.toISOString()}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       }),
-      prisma.securityEvent.count({
-        where: { 
-          resolved: false,
-          timestamp: { gte: timeWindow }
-        }
+      fetch(`${BACKEND_URL}/api/v2/security-events/count?resolved=false&timestampGte=${timeWindow.toISOString()}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       }),
       detectThreats(timeWindow)
     ]);
+
+    const totalEventsData = totalEventsRes.ok ? await totalEventsRes.json() : { count: 0 };
+    const criticalEventsData = criticalEventsRes.ok ? await criticalEventsRes.json() : { count: 0 };
+    const highEventsData = highEventsRes.ok ? await highEventsRes.json() : { count: 0 };
+    const unresolvedEventsData = unresolvedEventsRes.ok ? await unresolvedEventsRes.json() : { count: 0 };
+
+    const totalEvents = totalEventsData.count || 0;
+    const criticalEvents = criticalEventsData.count || 0;
+    const highEvents = highEventsData.count || 0;
+    const unresolvedEvents = unresolvedEventsData.count || 0;
 
     // Start with base score of 100
     let score = 100;
@@ -297,16 +251,12 @@ export async function isIPBlocked(ipAddress: string): Promise<boolean> {
   try {
     // For now, we'll simulate with SecurityEvent data
     // In a real implementation, you might have a separate IP blocklist table
-    const recentBlocks = await prisma.securityEvent.findFirst({
-      where: {
-        ipAddress,
-        eventType: 'UNAUTHORIZED_ACCESS',
-        severity: 'CRITICAL',
-        timestamp: {
-          gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
-        }
-      }
+    const timeWindow = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const response = await fetch(`${BACKEND_URL}/api/v2/security-events/first?ipAddress=${ipAddress}&eventType=UNAUTHORIZED_ACCESS&severity=CRITICAL&timestampGte=${timeWindow.toISOString()}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
+    const recentBlocks = response.ok ? await response.json() : null;
 
     return !!recentBlocks;
   } catch (error) {
@@ -331,37 +281,28 @@ export async function getSecurityTrends(days = 7): Promise<Array<{date: string, 
       const nextDate = new Date(date);
       nextDate.setDate(nextDate.getDate() + 1);
 
-      const [events, threats, blocked] = await Promise.all([
-        prisma.securityEvent.count({
-          where: {
-            timestamp: {
-              gte: date,
-              lt: nextDate
-            }
-          }
+      const [eventsRes, threatsRes, blockedRes] = await Promise.all([
+        fetch(`${BACKEND_URL}/api/v2/security-events/count?timestampGte=${date.toISOString()}&timestampLt=${nextDate.toISOString()}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
         }),
-        prisma.securityEvent.count({
-          where: {
-            eventType: {
-              in: ['SUSPICIOUS_ACTIVITY', 'SQL_INJECTION_ATTEMPT', 'MALICIOUS_REQUEST']
-            },
-            timestamp: {
-              gte: date,
-              lt: nextDate
-            }
-          }
+        fetch(`${BACKEND_URL}/api/v2/security-events/count?eventTypeIn=SUSPICIOUS_ACTIVITY,SQL_INJECTION_ATTEMPT,MALICIOUS_REQUEST&timestampGte=${date.toISOString()}&timestampLt=${nextDate.toISOString()}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
         }),
-        prisma.securityEvent.count({
-          where: {
-            eventType: 'UNAUTHORIZED_ACCESS',
-            severity: 'CRITICAL',
-            timestamp: {
-              gte: date,
-              lt: nextDate
-            }
-          }
+        fetch(`${BACKEND_URL}/api/v2/security-events/count?eventType=UNAUTHORIZED_ACCESS&severity=CRITICAL&timestampGte=${date.toISOString()}&timestampLt=${nextDate.toISOString()}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
         })
       ]);
+
+      const eventsData = eventsRes.ok ? await eventsRes.json() : { count: 0 };
+      const threatsData = threatsRes.ok ? await threatsRes.json() : { count: 0 };
+      const blockedData = blockedRes.ok ? await blockedRes.json() : { count: 0 };
+
+      const events = eventsData.count || 0;
+      const threats = threatsData.count || 0;
+      const blocked = blockedData.count || 0;
 
       trends.push({
         date: date.toISOString().split('T')[0],

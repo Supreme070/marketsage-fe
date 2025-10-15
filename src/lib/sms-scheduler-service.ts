@@ -1,11 +1,13 @@
 /**
  * SMS Campaign Scheduler Service
- * 
+ *
  * Handles scheduling and automatic execution of SMS campaigns
  * with timezone support and comprehensive logging.
  */
 
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (SMSCampaign exists in backend)
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
+
 import { smsLogger } from '@/lib/sms-campaign-logger';
 import { logger } from '@/lib/logger';
 
@@ -41,22 +43,12 @@ export class SMSSchedulerService {
       const { campaignId, scheduledAt, timezone = 'UTC', userId, metadata = {} } = config;
 
       // Validate campaign exists and is in correct state
-      const campaign = await prisma.sMSCampaign.findUnique({
-        where: { id: campaignId },
-        select: {
-          id: true,
-          status: true,
-          createdById: true,
-          name: true,
-          content: true,
-          templateId: true
-        }
-      });
-
-      if (!campaign) {
+      const response = await fetch(`${BACKEND_URL}/api/v2/sms-campaigns/${campaignId}`);
+      if (!response.ok) {
         logger.error('Cannot schedule non-existent campaign', { campaignId });
         return false;
       }
+      const campaign = await response.json();
 
       if (campaign.status !== 'DRAFT') {
         logger.error('Cannot schedule campaign that is not in DRAFT status', { 
@@ -84,13 +76,17 @@ export class SMSSchedulerService {
       }
 
       // Update campaign status to SCHEDULED and set scheduled time
-      await prisma.sMSCampaign.update({
-        where: { id: campaignId },
-        data: { 
+      const updateResponse = await fetch(`${BACKEND_URL}/api/v2/sms-campaigns/${campaignId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           status: 'SCHEDULED',
           scheduledFor: scheduledAt
-        }
+        }),
       });
+      if (!updateResponse.ok) {
+        throw new Error(`Failed to schedule campaign: ${updateResponse.status}`);
+      }
 
       await smsLogger.logCampaignScheduled(campaignId, scheduledAt, {
         userId,
@@ -119,23 +115,13 @@ export class SMSSchedulerService {
   async processScheduledCampaigns(): Promise<void> {
     try {
       const now = new Date();
-      
+
       // Get all scheduled campaigns that are due
-      const dueCampaigns = await prisma.sMSCampaign.findMany({
-        where: {
-          status: 'SCHEDULED',
-          scheduledFor: { lte: now }
-        },
-        select: {
-          id: true,
-          name: true,
-          status: true,
-          createdById: true,
-          scheduledFor: true
-        },
-        orderBy: { scheduledFor: 'asc' },
-        take: 50 // Process in batches
-      });
+      const response = await fetch(`${BACKEND_URL}/api/v2/sms-campaigns?status=SCHEDULED&scheduledForLte=${now.toISOString()}&orderBy=scheduledFor&limit=50`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch scheduled campaigns: ${response.status}`);
+      }
+      const dueCampaigns = await response.json();
 
       if (dueCampaigns.length === 0) {
         return;
@@ -187,14 +173,15 @@ export class SMSSchedulerService {
           campaignId: campaign.id,
           error: sendResult.error
         });
-        
+
         // Reset campaign to DRAFT state on failure
-        await prisma.sMSCampaign.update({
-          where: { id: campaign.id },
-          data: { 
+        await fetch(`${BACKEND_URL}/api/v2/sms-campaigns/${campaign.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             status: 'DRAFT',
             scheduledFor: null
-          }
+          }),
         });
       }
     } catch (error) {
@@ -204,12 +191,13 @@ export class SMSSchedulerService {
       });
       
       // Reset campaign to DRAFT state on error
-      await prisma.sMSCampaign.update({
-        where: { id: campaign.id },
-        data: { 
+      await fetch(`${BACKEND_URL}/api/v2/sms-campaigns/${campaign.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           status: 'DRAFT',
           scheduledFor: null
-        }
+        }),
       });
     }
   }
@@ -223,12 +211,13 @@ export class SMSSchedulerService {
   }> {
     try {
       // Reset campaign to DRAFT so it can be sent
-      await prisma.sMSCampaign.update({
-        where: { id: campaignId },
-        data: { 
+      await fetch(`${BACKEND_URL}/api/v2/sms-campaigns/${campaignId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           status: 'DRAFT',
           scheduledFor: null
-        }
+        }),
       });
 
       // Note: In a production implementation, this would make an HTTP request to the send endpoint
@@ -252,19 +241,12 @@ export class SMSSchedulerService {
    */
   async cancelScheduledCampaign(campaignId: string, userId: string): Promise<boolean> {
     try {
-      const campaign = await prisma.sMSCampaign.findUnique({
-        where: { id: campaignId },
-        select: {
-          id: true,
-          status: true,
-          scheduledFor: true
-        }
-      });
-
-      if (!campaign) {
+      const response = await fetch(`${BACKEND_URL}/api/v2/sms-campaigns/${campaignId}`);
+      if (!response.ok) {
         logger.warn('Campaign not found to cancel', { campaignId });
         return false;
       }
+      const campaign = await response.json();
 
       if (campaign.status !== 'SCHEDULED') {
         logger.warn('Campaign is not scheduled', { campaignId, status: campaign.status });
@@ -272,13 +254,17 @@ export class SMSSchedulerService {
       }
 
       // Update campaign status back to DRAFT
-      await prisma.sMSCampaign.update({
-        where: { id: campaignId },
-        data: {
+      const updateResponse = await fetch(`${BACKEND_URL}/api/v2/sms-campaigns/${campaignId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           status: 'DRAFT',
           scheduledFor: null
-        }
+        }),
       });
+      if (!updateResponse.ok) {
+        throw new Error(`Failed to cancel campaign: ${updateResponse.status}`);
+      }
 
       await smsLogger.logScheduledCampaignCancelled(campaignId, campaignId, { userId });
 
@@ -305,44 +291,29 @@ export class SMSSchedulerService {
     cancelled: number;
   }> {
     try {
-      const [scheduled, sending, sent, draft, cancelled] = await Promise.all([
-        prisma.sMSCampaign.count({ 
-          where: { 
-            status: 'SCHEDULED',
-            scheduledFor: { gt: new Date() } // Future scheduled
-          } 
-        }),
-        prisma.sMSCampaign.count({ 
-          where: { 
-            status: 'SENDING'
-          } 
-        }),
-        prisma.sMSCampaign.count({ 
-          where: { 
-            status: 'SENT',
-            scheduledFor: { not: null } // Was scheduled
-          } 
-        }),
-        prisma.sMSCampaign.count({ 
-          where: { 
-            status: 'DRAFT',
-            scheduledFor: { not: null } // Was scheduled but reset
-          } 
-        }),
-        prisma.sMSCampaign.count({ 
-          where: { 
-            status: 'CANCELLED',
-            scheduledFor: { not: null } // Was scheduled
-          } 
-        })
+      const now = new Date();
+      const [scheduledRes, sendingRes, sentRes, draftRes, cancelledRes] = await Promise.all([
+        fetch(`${BACKEND_URL}/api/v2/sms-campaigns/count?status=SCHEDULED&scheduledForGt=${now.toISOString()}`),
+        fetch(`${BACKEND_URL}/api/v2/sms-campaigns/count?status=SENDING`),
+        fetch(`${BACKEND_URL}/api/v2/sms-campaigns/count?status=SENT&scheduledForNotNull=true`),
+        fetch(`${BACKEND_URL}/api/v2/sms-campaigns/count?status=DRAFT&scheduledForNotNull=true`),
+        fetch(`${BACKEND_URL}/api/v2/sms-campaigns/count?status=CANCELLED&scheduledForNotNull=true`)
       ]);
 
-      return { 
-        pending: scheduled, 
-        processing: sending, 
-        completed: sent, 
-        failed: draft, 
-        cancelled 
+      const [scheduled, sending, sent, draft, cancelled] = await Promise.all([
+        scheduledRes.ok ? scheduledRes.json() : 0,
+        sendingRes.ok ? sendingRes.json() : 0,
+        sentRes.ok ? sentRes.json() : 0,
+        draftRes.ok ? draftRes.json() : 0,
+        cancelledRes.ok ? cancelledRes.json() : 0
+      ]);
+
+      return {
+        pending: scheduled,
+        processing: sending,
+        completed: sent,
+        failed: draft,
+        cancelled
       };
     } catch (error) {
       logger.error('Error getting SMS schedule stats', { error });
@@ -359,19 +330,20 @@ export class SMSSchedulerService {
       cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
 
       // Reset old scheduled campaigns that were never sent
-      const result = await prisma.sMSCampaign.updateMany({
-        where: {
-          status: 'SCHEDULED',
-          scheduledFor: { lt: cutoffDate }
-        },
-        data: {
+      const response = await fetch(`${BACKEND_URL}/api/v2/sms-campaigns?status=SCHEDULED&scheduledForLt=${cutoffDate.toISOString()}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           status: 'DRAFT',
           scheduledFor: null
-        }
+        }),
       });
 
-      logger.info(`Cleaned up ${result.count} old scheduled SMS campaigns`);
-      return result.count;
+      const result = response.ok ? await response.json() : { count: 0 };
+      const count = result.count || 0;
+
+      logger.info(`Cleaned up ${count} old scheduled SMS campaigns`);
+      return count;
     } catch (error) {
       logger.error('Error cleaning up old SMS schedules', { error });
       return 0;

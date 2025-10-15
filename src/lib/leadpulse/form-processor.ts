@@ -4,10 +4,12 @@
  * Handles form submissions, data validation, contact creation, and analytics
  */
 
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (LeadPulseForm, LeadPulseFormSubmission, Contact, etc. exist in backend)
 import { logger } from '@/lib/logger';
 import { leadPulseErrorHandler, withDatabaseFallback } from './error-handler';
 import { leadPulseCache } from '@/lib/cache/leadpulse-cache';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 
 export interface FormSubmissionData {
   formId: string;
@@ -127,18 +129,24 @@ export class FormProcessor {
 
   // Get form configuration
   private async getForm(formId: string) {
-    return await withDatabaseFallback(
-      () => prisma.leadPulseForm.findUnique({
-        where: { id: formId },
-        include: {
-          fields: {
-            orderBy: { order: 'asc' }
-          }
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/api/v2/leadpulse-forms/${formId}?include=fields&fieldsOrderBy=order:asc`,
+        {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
         }
-      }),
-      null,
-      { additionalData: { formId } }
-    );
+      );
+
+      if (!response.ok) {
+        return null;
+      }
+
+      return await response.json();
+    } catch (error) {
+      logger.error('Failed to fetch form:', { formId, error });
+      return null;
+    }
   }
 
   // Validate submission data against form fields
@@ -231,22 +239,21 @@ export class FormProcessor {
 
     if (!emailField) return false;
 
-    const recentDuplicate = await prisma.leadPulseFormSubmission.findFirst({
-      where: {
-        formId: data.formId,
-        submittedAt: {
-          gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
-        },
-        data: {
-          some: {
-            fieldName: emailField[0],
-            value: emailField[1]
-          }
-        }
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const response = await fetch(
+      `${BACKEND_URL}/api/v2/form-submissions?formId=${data.formId}&submittedAt[gte]=${twentyFourHoursAgo}&fieldName=${emailField[0]}&fieldValue=${encodeURIComponent(emailField[1])}&limit=1`,
+      {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       }
-    });
+    );
 
-    return !!recentDuplicate;
+    if (!response.ok) {
+      return false;
+    }
+
+    const submissions = await response.json();
+    return submissions.length > 0;
   }
 
   // Score the submission for lead quality
@@ -347,28 +354,41 @@ export class FormProcessor {
       const jobTitle = this.extractFieldValue(submissionData, ['title', 'job_title', 'position']);
 
       // Check if contact exists
-      let contact = await prisma.contact.findUnique({
-        where: { email }
+      const findResponse = await fetch(`${BACKEND_URL}/api/v2/contacts?email=${encodeURIComponent(email)}&limit=1`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
 
-      if (contact) {
+      let contact;
+      const existingContacts = findResponse.ok ? await findResponse.json() : [];
+
+      if (existingContacts.length > 0) {
         // Update existing contact
-        contact = await prisma.contact.update({
-          where: { id: contact.id },
-          data: {
-            firstName: firstName || contact.firstName,
-            lastName: lastName || contact.lastName,
-            phone: phone || contact.phone,
-            company: company || contact.company,
-            jobTitle: jobTitle || contact.jobTitle,
+        const updateResponse = await fetch(`${BACKEND_URL}/api/v2/contacts/${existingContacts[0].id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            firstName: firstName || existingContacts[0].firstName,
+            lastName: lastName || existingContacts[0].lastName,
+            phone: phone || existingContacts[0].phone,
+            company: company || existingContacts[0].company,
+            jobTitle: jobTitle || existingContacts[0].jobTitle,
             lastEngaged: new Date(),
-            source: contact.source || 'leadpulse_form'
-          }
+            source: existingContacts[0].source || 'leadpulse_form'
+          })
         });
+
+        if (!updateResponse.ok) {
+          throw new Error(`Failed to update contact: ${updateResponse.status}`);
+        }
+
+        contact = await updateResponse.json();
       } else {
         // Create new contact
-        contact = await prisma.contact.create({
-          data: {
+        const createResponse = await fetch(`${BACKEND_URL}/api/v2/contacts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             email,
             firstName,
             lastName,
@@ -378,8 +398,14 @@ export class FormProcessor {
             source: 'leadpulse_form',
             lastEngaged: new Date(),
             createdById: 'system' // You might want to get this from form or user context
-          }
+          })
         });
+
+        if (!createResponse.ok) {
+          throw new Error(`Failed to create contact: ${createResponse.status}`);
+        }
+
+        contact = await createResponse.json();
       }
 
       return contact.id;
@@ -398,9 +424,11 @@ export class FormProcessor {
     quality: 'UNKNOWN' | 'COLD' | 'WARM' | 'HOT' | 'QUALIFIED',
     contactId?: string
   ): Promise<ProcessedSubmission> {
-    
-    const submission = await prisma.leadPulseFormSubmission.create({
-      data: {
+
+    const submissionResponse = await fetch(`${BACKEND_URL}/api/v2/form-submissions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         formId: data.formId,
         visitorId: data.visitorId,
         contactId,
@@ -416,8 +444,14 @@ export class FormProcessor {
         score,
         quality,
         metadata: data.context
-      }
+      })
     });
+
+    if (!submissionResponse.ok) {
+      throw new Error(`Failed to create submission: ${submissionResponse.status}`);
+    }
+
+    const submission = await submissionResponse.json();
 
     // Create submission data records
     if (status === 'PROCESSED') {
@@ -426,15 +460,21 @@ export class FormProcessor {
         for (const [fieldName, value] of Object.entries(data.submissionData)) {
           const field = form.fields.find((f: any) => f.name === fieldName);
           if (field && value !== null && value !== undefined) {
-            await prisma.leadPulseSubmissionData.create({
-              data: {
+            const dataResponse = await fetch(`${BACKEND_URL}/api/v2/submission-data`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
                 submissionId: submission.id,
                 fieldId: field.id,
                 fieldName,
                 fieldType: field.type,
                 value: String(value)
-              }
+              })
             });
+
+            if (!dataResponse.ok) {
+              logger.error('Failed to create submission data:', { fieldName, error: dataResponse.status });
+            }
           }
         }
       }
@@ -456,24 +496,32 @@ export class FormProcessor {
     try {
       const today = new Date().toISOString().split('T')[0];
 
-      await prisma.leadPulseFormAnalytics.upsert({
-        where: {
-          formId_date: {
+      const response = await fetch(`${BACKEND_URL}/api/v2/form-analytics/upsert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          where: {
+            formId_date: {
+              formId,
+              date: new Date(today)
+            }
+          },
+          update: {
+            submissions: { increment: 1 },
+            completions: { increment: 1 }
+          },
+          create: {
             formId,
-            date: new Date(today)
+            date: new Date(today),
+            submissions: 1,
+            completions: 1
           }
-        },
-        update: {
-          submissions: { increment: 1 },
-          completions: { increment: 1 }
-        },
-        create: {
-          formId,
-          date: new Date(today),
-          submissions: 1,
-          completions: 1
-        }
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update form analytics: ${response.status}`);
+      }
 
       // Invalidate analytics cache
       await leadPulseCache.invalidateAnalyticsOverview();

@@ -5,9 +5,11 @@
  * for marketing campaigns and content creation.
  */
 
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (Contact, ContentAnalysis, EmailActivity tables exist in backend)
 import { logger } from '@/lib/logger';
 import { randomUUID } from 'crypto';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 
 // Import additional NLP libraries as needed
 // import natural from 'natural';
@@ -434,24 +436,14 @@ export async function personalizeContent(
   contentType: ContentType
 ): Promise<PersonalizationResult> {
   try {
-    // Get contact data
-    const contact = await prisma.contact.findUnique({
-      where: { id: contactId },
-      select: {
-        firstName: true,
-        lastName: true,
-        email: true,
-        company: true,
-        city: true,
-        state: true,
-        country: true,
-        tagsString: true,
-      }
-    });
-    
-    if (!contact) {
+    // Get contact data via backend API
+    const response = await fetch(`${BACKEND_URL}/api/v2/contacts/${contactId}?select=firstName,lastName,email,company,city,state,country,tagsString`);
+
+    if (!response.ok) {
       throw new Error(`Contact not found: ${contactId}`);
     }
+
+    const contact = await response.json();
     
     // Parse tags
     const tags = contact.tagsString ? JSON.parse(contact.tagsString) : [];
@@ -552,15 +544,17 @@ async function saveContentAnalysis({
   result: string;
 }) {
   try {
-    await prisma.contentAnalysis.create({
-      data: {
+    await fetch(`${BACKEND_URL}/api/v2/content-analyses`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         id: randomUUID(),
         type,
         contentType,
         originalContent,
         result,
         createdAt: new Date()
-      }
+      })
     });
   } catch (error) {
     logger.error('Error saving content analysis', error);
@@ -808,17 +802,16 @@ function addPersonalizationPlaceholders(content: string, contentType: ContentTyp
  */
 async function determineContactSegments(contactId: string): Promise<string[]> {
   try {
-    // Get contact's activity history
-    const emailActivities = await prisma.emailActivity.findMany({
-      where: { contactId },
-      select: { type: true, timestamp: true }
-    });
-    
+    // Get contact's activity history via backend API
+    const response = await fetch(`${BACKEND_URL}/api/v2/email-activities?contactId=${contactId}&select=type,timestamp`);
+
+    const emailActivities = response.ok ? await response.json() : [];
+
     const segments: string[] = [];
-    
+
     // Check for high engagement
-    const openCount = emailActivities.filter(a => a.type === 'OPENED').length;
-    const clickCount = emailActivities.filter(a => a.type === 'CLICKED').length;
+    const openCount = emailActivities.filter((a: any) => a.type === 'OPENED').length;
+    const clickCount = emailActivities.filter((a: any) => a.type === 'CLICKED').length;
     
     if (clickCount > 5) {
       segments.push('high_engagement');
@@ -829,8 +822,8 @@ async function determineContactSegments(contactId: string): Promise<string[]> {
     }
     
     // Check for recency
-    const recentActivities = emailActivities.filter(
-      a => new Date(a.timestamp) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
+    const recentActivities = emailActivities.filter((a: any) =>
+      new Date(a.timestamp) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
     );
     
     if (recentActivities.length > 0) {

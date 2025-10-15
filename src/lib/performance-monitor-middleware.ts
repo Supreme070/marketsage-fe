@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (SystemMetrics table exists in backend)
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 import { performance } from 'perf_hooks';
 
 /**
@@ -94,11 +95,16 @@ class PerformanceMonitor {
         },
       }));
 
-      // Store in database
-      await prisma.systemMetrics.createMany({
-        data: systemMetrics,
-        skipDuplicates: true,
+      // Store in database via backend API
+      const response = await fetch(`${BACKEND_URL}/api/v2/system-metrics/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ metrics: systemMetrics }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to flush metrics: ${response.status}`);
+      }
 
       console.log(`Flushed ${systemMetrics.length} performance metrics to database`);
 
@@ -251,13 +257,16 @@ export async function getPerformanceStats(timeRange = '1h'): Promise<any> {
   const fromDate = new Date(Date.now() - timeRangeMs);
 
   try {
-    const metrics = await prisma.systemMetrics.findMany({
-      where: {
-        metricType: 'api_response_time',
-        timestamp: { gte: fromDate },
-      },
-      orderBy: { timestamp: 'desc' },
-    });
+    const response = await fetch(
+      `${BACKEND_URL}/api/v2/system-metrics?metricType=api_response_time&fromDate=${fromDate.toISOString()}`,
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to get performance stats: ${response.status}`);
+    }
+
+    const metrics = await response.json();
 
     if (metrics.length === 0) {
       return {

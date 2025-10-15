@@ -9,8 +9,10 @@
 import { ActionType, type ActionExecutionResult } from '../action-plan-interface';
 import type { ExecutionContext } from '../action-dispatcher';
 import { BaseExecutor } from './base-executor';
-import { prisma } from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (Task, User tables exist in backend)
 import { logger } from '@/lib/logger';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 
 /**
  * Task Creation Executor
@@ -46,13 +48,15 @@ export class TaskCreationExecutor extends BaseExecutor {
       }
 
       // Create the task
-      const task = await prisma.task.create({
-        data: {
+      const response = await fetch(`${BACKEND_URL}/api/v2/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           title: taskTitle,
           description: taskDescription,
           priority: this.mapPriority(taskPriority),
           status: 'todo',
-          dueDate: new Date(dueDate),
+          dueDate: new Date(dueDate).toISOString(),
           organizationId: context.organizationId,
           createdBy: context.userId || 'supreme-ai-v3',
           assigneeId: assigneeId,
@@ -65,8 +69,14 @@ export class TaskCreationExecutor extends BaseExecutor {
             customerEmail: contact.email,
             customerPhone: contact.phone
           }
-        }
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create task: ${response.status}`);
+      }
+
+      const task = await response.json();
 
       logger.info('Task created successfully via AI action', {
         actionPlanId: context.actionPlan.id,
@@ -132,22 +142,22 @@ export class TaskAssignmentExecutor extends BaseExecutor {
       const assignmentNotes = this.getParameter(context, 'notes', '');
 
       // Check if task exists
-      const task = await prisma.task.findUnique({
-        where: { id: taskId }
-      });
+      const taskResponse = await fetch(`${BACKEND_URL}/api/v2/tasks/${taskId}`);
 
-      if (!task) {
+      if (!taskResponse.ok) {
         return this.createFailureResult('Task not found');
       }
 
-      // Check if assignee exists
-      const assignee = await prisma.user.findUnique({
-        where: { id: assigneeId }
-      });
+      const task = await taskResponse.json();
 
-      if (!assignee) {
+      // Check if assignee exists
+      const assigneeResponse = await fetch(`${BACKEND_URL}/api/v2/users/${assigneeId}`);
+
+      if (!assigneeResponse.ok) {
         return this.createFailureResult('Assignee not found');
       }
+
+      const assignee = await assigneeResponse.json();
 
       if (this.isDryRun(context)) {
         return this.createSuccessResult({
@@ -160,20 +170,26 @@ export class TaskAssignmentExecutor extends BaseExecutor {
       }
 
       // Update task assignment
-      const updatedTask = await prisma.task.update({
-        where: { id: taskId },
-        data: {
+      const updateResponse = await fetch(`${BACKEND_URL}/api/v2/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           assigneeId,
-          updatedAt: new Date(),
           metadata: {
             ...task.metadata,
             lastAssignedBy: context.userId || 'supreme-ai-v3',
-            assignedAt: new Date(),
+            assignedAt: new Date().toISOString(),
             assignmentNotes,
             aiAssigned: true
           }
-        }
+        })
       });
+
+      if (!updateResponse.ok) {
+        throw new Error(`Failed to update task assignment: ${updateResponse.status}`);
+      }
+
+      const updatedTask = await updateResponse.json();
 
       logger.info('Task assigned successfully via AI action', {
         actionPlanId: context.actionPlan.id,
@@ -231,13 +247,13 @@ export class TaskUpdateExecutor extends BaseExecutor {
       const updateNotes = this.getParameter(context, 'notes', '');
 
       // Check if task exists
-      const task = await prisma.task.findUnique({
-        where: { id: taskId }
-      });
+      const taskResponse = await fetch(`${BACKEND_URL}/api/v2/tasks/${taskId}`);
 
-      if (!task) {
+      if (!taskResponse.ok) {
         return this.createFailureResult('Task not found');
       }
+
+      const task = await taskResponse.json();
 
       if (this.isDryRun(context)) {
         return this.createSuccessResult({
@@ -267,10 +283,17 @@ export class TaskUpdateExecutor extends BaseExecutor {
       if (dueDate) updateData.dueDate = new Date(dueDate);
 
       // Update the task
-      const updatedTask = await prisma.task.update({
-        where: { id: taskId },
-        data: updateData
+      const updateResponse = await fetch(`${BACKEND_URL}/api/v2/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData)
       });
+
+      if (!updateResponse.ok) {
+        throw new Error(`Failed to update task: ${updateResponse.status}`);
+      }
+
+      const updatedTask = await updateResponse.json();
 
       logger.info('Task updated successfully via AI action', {
         actionPlanId: context.actionPlan.id,

@@ -4,7 +4,11 @@
  * Real-time monitoring and alerting for database performance
  */
 
-import prisma from './prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
+
 import { logger } from '@/lib/logger';
 import { leadPulseCache } from '@/lib/cache/leadpulse-cache';
 
@@ -142,22 +146,30 @@ export class LeadPulseDBMonitor {
    * Get database activity statistics
    */
   private async getActivityStats() {
-    const stats = await prisma.$queryRaw`
-      SELECT 
-        COUNT(*) as query_count,
-        AVG(EXTRACT(EPOCH FROM (now() - query_start)) * 1000) as avg_query_time,
-        COUNT(CASE WHEN EXTRACT(EPOCH FROM (now() - query_start)) * 1000 > ${this.alertThresholds.slowQueryThreshold} THEN 1 END) as slow_queries,
-        COUNT(CASE WHEN state = 'active' THEN 1 END) as active_connections
-      FROM pg_stat_activity 
-      WHERE datname = current_database()
-        AND state IS NOT NULL
-    ` as any[];
+    const response = await fetch(`${BACKEND_URL}/api/v2/database/query-raw`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: `
+          SELECT
+            COUNT(*) as query_count,
+            AVG(EXTRACT(EPOCH FROM (now() - query_start)) * 1000) as avg_query_time,
+            COUNT(CASE WHEN EXTRACT(EPOCH FROM (now() - query_start)) * 1000 > $1 THEN 1 END) as slow_queries,
+            COUNT(CASE WHEN state = 'active' THEN 1 END) as active_connections
+          FROM pg_stat_activity
+          WHERE datname = current_database()
+            AND state IS NOT NULL
+        `,
+        parameters: [this.alertThresholds.slowQueryThreshold]
+      })
+    });
+    const stats = response.ok ? await response.json() : [];
 
     return {
-      queryCount: Number(stats[0].query_count),
-      avgQueryTime: Number(stats[0].avg_query_time) || 0,
-      slowQueries: Number(stats[0].slow_queries),
-      activeConnections: Number(stats[0].active_connections)
+      queryCount: Number(stats[0]?.query_count) || 0,
+      avgQueryTime: Number(stats[0]?.avg_query_time) || 0,
+      slowQueries: Number(stats[0]?.slow_queries) || 0,
+      activeConnections: Number(stats[0]?.active_connections) || 0
     };
   }
 
@@ -165,30 +177,44 @@ export class LeadPulseDBMonitor {
    * Get buffer cache statistics
    */
   private async getBufferStats() {
-    const stats = await prisma.$queryRaw`
-      SELECT 
-        ROUND(
-          (blks_hit::float / (blks_hit + blks_read)) * 100, 2
-        ) as hit_ratio,
-        blks_read as disk_reads,
-        pg_size_pretty(
-          pg_database_size(current_database())
-        ) as database_size
-      FROM pg_stat_database 
-      WHERE datname = current_database()
-    ` as any[];
+    const statsResponse = await fetch(`${BACKEND_URL}/api/v2/database/query-raw`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: `
+          SELECT
+            ROUND(
+              (blks_hit::float / (blks_hit + blks_read)) * 100, 2
+            ) as hit_ratio,
+            blks_read as disk_reads,
+            pg_size_pretty(
+              pg_database_size(current_database())
+            ) as database_size
+          FROM pg_stat_database
+          WHERE datname = current_database()
+        `
+      })
+    });
+    const stats = statsResponse.ok ? await statsResponse.json() : [];
 
     // Get shared buffer usage
-    const bufferUsage = await prisma.$queryRaw`
-      SELECT 
-        setting as shared_buffers,
-        ROUND(
-          (current_setting('shared_buffers')::numeric / 
-           current_setting('max_connections')::numeric) * 100, 2
-        ) as memory_usage_pct
-      FROM pg_settings 
-      WHERE name = 'shared_buffers'
-    ` as any[];
+    const bufferUsageResponse = await fetch(`${BACKEND_URL}/api/v2/database/query-raw`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: `
+          SELECT
+            setting as shared_buffers,
+            ROUND(
+              (current_setting('shared_buffers')::numeric /
+               current_setting('max_connections')::numeric) * 100, 2
+            ) as memory_usage_pct
+          FROM pg_settings
+          WHERE name = 'shared_buffers'
+        `
+      })
+    });
+    const bufferUsage = bufferUsageResponse.ok ? await bufferUsageResponse.json() : [];
 
     return {
       hitRatio: Number(stats[0]?.hit_ratio) || 0,
@@ -201,16 +227,23 @@ export class LeadPulseDBMonitor {
    * Get table scan statistics
    */
   private async getTableStats() {
-    const stats = await prisma.$queryRaw`
-      SELECT 
-        SUM(seq_scan) as seq_scans,
-        SUM(idx_scan) as idx_scans,
-        SUM(n_tup_ins) as insertions,
-        SUM(n_tup_upd) as updates,
-        SUM(n_tup_del) as deletions
-      FROM pg_stat_user_tables
-      WHERE schemaname = 'public'
-    ` as any[];
+    const response = await fetch(`${BACKEND_URL}/api/v2/database/query-raw`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: `
+          SELECT
+            SUM(seq_scan) as seq_scans,
+            SUM(idx_scan) as idx_scans,
+            SUM(n_tup_ins) as insertions,
+            SUM(n_tup_upd) as updates,
+            SUM(n_tup_del) as deletions
+          FROM pg_stat_user_tables
+          WHERE schemaname = 'public'
+        `
+      })
+    });
+    const stats = response.ok ? await response.json() : [];
 
     return {
       seqScans: Number(stats[0]?.seq_scans) || 0,
@@ -225,12 +258,19 @@ export class LeadPulseDBMonitor {
    * Get lock statistics
    */
   private async getLockStats() {
-    const stats = await prisma.$queryRaw`
-      SELECT 
-        COUNT(CASE WHEN NOT granted THEN 1 END) as waiting_locks,
-        COUNT(*) as total_locks
-      FROM pg_locks
-    ` as any[];
+    const response = await fetch(`${BACKEND_URL}/api/v2/database/query-raw`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: `
+          SELECT
+            COUNT(CASE WHEN NOT granted THEN 1 END) as waiting_locks,
+            COUNT(*) as total_locks
+          FROM pg_locks
+        `
+      })
+    });
+    const stats = response.ok ? await response.json() : [];
 
     return {
       waitingLocks: Number(stats[0]?.waiting_locks) || 0,
@@ -244,19 +284,27 @@ export class LeadPulseDBMonitor {
   async getSlowQueries(limit = 10): Promise<SlowQuery[]> {
     try {
       // Note: This requires pg_stat_statements extension
-      const slowQueries = await prisma.$queryRaw`
-        SELECT 
-          query,
-          calls,
-          total_time,
-          mean_time,
-          min_time,
-          max_time
-        FROM pg_stat_statements 
-        WHERE query NOT LIKE '%pg_stat_statements%'
-        ORDER BY mean_time DESC 
-        LIMIT ${limit}
-      ` as any[];
+      const response = await fetch(`${BACKEND_URL}/api/v2/database/query-raw`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `
+            SELECT
+              query,
+              calls,
+              total_time,
+              mean_time,
+              min_time,
+              max_time
+            FROM pg_stat_statements
+            WHERE query NOT LIKE '%pg_stat_statements%'
+            ORDER BY mean_time DESC
+            LIMIT $1
+          `,
+          parameters: [limit]
+        })
+      });
+      const slowQueries = response.ok ? await response.json() : [];
 
       return slowQueries.map((q: any) => ({
         query: q.query.substring(0, 200) + (q.query.length > 200 ? '...' : ''),
@@ -279,26 +327,33 @@ export class LeadPulseDBMonitor {
    */
   async getDetailedTableStats(): Promise<TableStats[]> {
     try {
-      const tableStats = await prisma.$queryRaw`
-        SELECT 
-          t.tablename,
-          pg_size_pretty(pg_total_relation_size(t.tablename::regclass)) as total_size,
-          pg_size_pretty(pg_indexes_size(t.tablename::regclass)) as index_size,
-          s.n_tup_ins as insertions,
-          s.n_tup_upd as updates,
-          s.n_tup_del as deletions,
-          s.seq_scan as seq_scans,
-          s.seq_tup_read as seq_tup_read,
-          s.idx_scan as idx_scans,
-          s.idx_tup_fetch as idx_tup_fetch,
-          c.reltuples::bigint as row_count
-        FROM pg_tables t
-        LEFT JOIN pg_stat_user_tables s ON t.tablename = s.relname
-        LEFT JOIN pg_class c ON t.tablename = c.relname
-        WHERE t.schemaname = 'public'
-          AND t.tablename LIKE 'LeadPulse%'
-        ORDER BY pg_total_relation_size(t.tablename::regclass) DESC
-      ` as any[];
+      const response = await fetch(`${BACKEND_URL}/api/v2/database/query-raw`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `
+            SELECT
+              t.tablename,
+              pg_size_pretty(pg_total_relation_size(t.tablename::regclass)) as total_size,
+              pg_size_pretty(pg_indexes_size(t.tablename::regclass)) as index_size,
+              s.n_tup_ins as insertions,
+              s.n_tup_upd as updates,
+              s.n_tup_del as deletions,
+              s.seq_scan as seq_scans,
+              s.seq_tup_read as seq_tup_read,
+              s.idx_scan as idx_scans,
+              s.idx_tup_fetch as idx_tup_fetch,
+              c.reltuples::bigint as row_count
+            FROM pg_tables t
+            LEFT JOIN pg_stat_user_tables s ON t.tablename = s.relname
+            LEFT JOIN pg_class c ON t.tablename = c.relname
+            WHERE t.schemaname = 'public'
+              AND t.tablename LIKE 'LeadPulse%'
+            ORDER BY pg_total_relation_size(t.tablename::regclass) DESC
+          `
+        })
+      });
+      const tableStats = response.ok ? await response.json() : [];
 
       return tableStats.map((t: any) => ({
         tableName: t.tablename,
@@ -472,20 +527,33 @@ export class LeadPulseDBMonitor {
       logger.info('Starting database maintenance tasks');
 
       // Update table statistics
-      await prisma.$executeRaw`ANALYZE`;
+      const analyzeResponse = await fetch(`${BACKEND_URL}/api/v2/database/query-raw`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: 'ANALYZE'
+        })
+      });
 
       // Reindex if needed (check for bloated indexes)
-      const indexStats = await prisma.$queryRaw`
-        SELECT 
-          schemaname,
-          tablename,
-          indexname,
-          pg_size_pretty(pg_relation_size(indexrelid)) as size
-        FROM pg_stat_user_indexes 
-        WHERE schemaname = 'public'
-          AND idx_scan < 10
-        ORDER BY pg_relation_size(indexrelid) DESC
-      ` as any[];
+      const indexStatsResponse = await fetch(`${BACKEND_URL}/api/v2/database/query-raw`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `
+            SELECT
+              schemaname,
+              tablename,
+              indexname,
+              pg_size_pretty(pg_relation_size(indexrelid)) as size
+            FROM pg_stat_user_indexes
+            WHERE schemaname = 'public'
+              AND idx_scan < 10
+            ORDER BY pg_relation_size(indexrelid) DESC
+          `
+        })
+      });
+      const indexStats = indexStatsResponse.ok ? await indexStatsResponse.json() : [];
 
       // Log unused indexes for manual review
       if (indexStats.length > 0) {

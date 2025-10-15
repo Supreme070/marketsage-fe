@@ -223,7 +223,7 @@ export default function FormIntegrationSettings() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             payload: { source: 'marketsage_form' },
-            authentication: { type: 'api_key', credentials: { api_key: 'sk_live_xxx' } },
+            authentication: { type: 'api_key', credentials: { api_key: 'demo_placeholder_replace_with_real_key' } },
             enabled: true,
             triggers: ['form_submission'],
             lastTriggered: '2024-01-15T10:30:00Z',

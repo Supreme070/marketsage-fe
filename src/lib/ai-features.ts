@@ -8,9 +8,11 @@
  * - Natural language campaign building
  */
 
-import prisma from '@/lib/db/prisma';
-import type { ActivityType, EntityType } from '@prisma/client';
+// NOTE: Prisma removed - using Redis cache (ContentTemplate, SendTimeOptimization, EngagementTime, SmartSegment tables don't exist in backend)
+import { redisCache } from '@/lib/cache/redis-client';
+import type { ActivityType, EntityType } from '@/types/prisma-types';
 import { logger } from '@/lib/logger';
+import { randomUUID } from 'crypto';
 
 // Enum to match the one in schema.prisma
 export enum ContentTemplateType {
@@ -57,14 +59,10 @@ export interface NLCommandResult {
  */
 export async function generateContent(params: ContentGenerationParams): Promise<string> {
   try {
-    // Find appropriate templates by direct query until contentTemplate is available
-    // This is a temporary workaround until we migrate the schema
-    const templates = await prisma.$queryRaw<Array<{id: string, template: string}>>`
-      SELECT id, template FROM "ContentTemplate" 
-      WHERE type = ${params.type}
-      ${params.industry ? `AND industry = ${params.industry}` : ''}
-      LIMIT 5
-    `;
+    // Get templates from Redis cache
+    const cacheKey = `content_templates:${params.type}:${params.industry || 'default'}`;
+    const cached = await redisCache.get(cacheKey);
+    let templates: Array<{id: string, template: string}> = cached ? JSON.parse(cached) : [];
 
     if (templates.length === 0) {
       // Fall back to default templates if none found for specific industry
@@ -74,7 +72,7 @@ export async function generateContent(params: ContentGenerationParams): Promise<
 
     // Get a random template from the matches
     const template = templates[Math.floor(Math.random() * templates.length)];
-    
+
     // Process the template with keywords
     return processTemplate(template.template, params);
   } catch (error) {
@@ -207,34 +205,37 @@ export async function getOptimalSendTime(
   params: SendTimeParams
 ): Promise<{ dayOfWeek: number; hourOfDay: number; confidence: number } | null> {
   try {
-    // Use raw query as a temporary solution until schema migration
-    const optimization = await prisma.$queryRaw<Array<{dayOfWeek: number, hourOfDay: number, confidenceLevel: number}>>`
-      SELECT "dayOfWeek", "hourOfDay", "confidenceLevel" 
-      FROM "SendTimeOptimization"
-      WHERE "contactId" = ${params.contactId}
-      AND "confidenceLevel" >= ${params.minConfidence || 0.3}
-      ORDER BY "engagementScore" DESC
-      LIMIT 1
-    `;
+    // Get optimizations from Redis cache
+    const optKey = `send_time_optimization:${params.contactId}`;
+    const cachedOpt = await redisCache.get(optKey);
 
-    if (optimization.length > 0) {
-      return {
-        dayOfWeek: optimization[0].dayOfWeek,
-        hourOfDay: optimization[0].hourOfDay,
-        confidence: optimization[0].confidenceLevel,
-      };
+    if (cachedOpt) {
+      const optimizations: Array<{dayOfWeek: number, hourOfDay: number, confidenceLevel: number, engagementScore: number}> = JSON.parse(cachedOpt);
+      const filtered = optimizations.filter(o => o.confidenceLevel >= (params.minConfidence || 0.3))
+        .sort((a, b) => b.engagementScore - a.engagementScore);
+
+      if (filtered.length > 0) {
+        return {
+          dayOfWeek: filtered[0].dayOfWeek,
+          hourOfDay: filtered[0].hourOfDay,
+          confidence: filtered[0].confidenceLevel,
+        };
+      }
     }
-    
-    // Raw query for engagement times
-    const engagements = await prisma.$queryRaw<Array<{dayOfWeek: number, hourOfDay: number, timestamp: Date}>>`
-      SELECT "dayOfWeek", "hourOfDay", timestamp
-      FROM "EngagementTime"
-      WHERE "contactId" = ${params.contactId}
-      ${params.entityType ? `AND "entityType" = ${params.entityType}` : ''}
-      ORDER BY timestamp DESC
-      LIMIT 50
-    `;
-    
+
+    // Get engagement times from Redis cache
+    const engKey = `engagement_times:${params.contactId}`;
+    const cachedEng = await redisCache.get(engKey);
+    let engagements: Array<{dayOfWeek: number, hourOfDay: number, timestamp: string, entityType?: string}> = cachedEng ? JSON.parse(cachedEng) : [];
+
+    // Filter by entity type if specified
+    if (params.entityType) {
+      engagements = engagements.filter(e => e.entityType === params.entityType);
+    }
+
+    // Limit to 50 most recent
+    engagements = engagements.slice(0, 50);
+
     if (engagements.length === 0) {
       // Fall back to general best practices if no data
       return {
@@ -243,10 +244,10 @@ export async function getOptimalSendTime(
         confidence: 0.2,
       };
     }
-    
+
     // Aggregate by day/hour and find most common engagement time
     const timeCounts: Record<string, { count: number; dayOfWeek: number; hourOfDay: number }> = {};
-    
+
     engagements.forEach((engagement) => {
       const key = `${engagement.dayOfWeek}-${engagement.hourOfDay}`;
       if (!timeCounts[key]) {
@@ -254,32 +255,30 @@ export async function getOptimalSendTime(
       }
       timeCounts[key].count++;
     });
-    
+
     // Find the time with most engagements
     const bestTime = Object.values(timeCounts).sort((a, b) => b.count - a.count)[0];
-    
+
     // Calculate confidence based on data points and recency
     const confidence = Math.min(bestTime.count / 10, 1);
-    
-    // Store this result for future reference via raw query
-    await prisma.$executeRaw`
-      INSERT INTO "SendTimeOptimization" ("id", "contactId", "dayOfWeek", "hourOfDay", "engagementScore", "confidenceLevel", "lastUpdated")
-      VALUES (
-        gen_random_uuid(), 
-        ${params.contactId}, 
-        ${bestTime.dayOfWeek}, 
-        ${bestTime.hourOfDay}, 
-        ${bestTime.count / engagements.length}, 
-        ${confidence},
-        NOW()
-      )
-      ON CONFLICT ("contactId", "dayOfWeek", "hourOfDay") 
-      DO UPDATE SET 
-        "engagementScore" = ${bestTime.count / engagements.length},
-        "confidenceLevel" = ${confidence},
-        "lastUpdated" = NOW()
-    `;
-    
+
+    // Store this result in Redis cache
+    const newOptimization = {
+      dayOfWeek: bestTime.dayOfWeek,
+      hourOfDay: bestTime.hourOfDay,
+      engagementScore: bestTime.count / engagements.length,
+      confidenceLevel: confidence,
+      lastUpdated: new Date().toISOString()
+    };
+
+    const existingOpts: any[] = cachedOpt ? JSON.parse(cachedOpt) : [];
+    const updatedOpts = existingOpts.filter(o =>
+      !(o.dayOfWeek === bestTime.dayOfWeek && o.hourOfDay === bestTime.hourOfDay)
+    );
+    updatedOpts.push(newOptimization);
+
+    await redisCache.set(optKey, JSON.stringify(updatedOpts), 86400 * 90); // 90 days
+
     return {
       dayOfWeek: bestTime.dayOfWeek,
       hourOfDay: bestTime.hourOfDay,
@@ -304,25 +303,28 @@ export async function recordEngagementTime(
     const now = new Date();
     const dayOfWeek = now.getDay(); // 0-6, 0 is Sunday
     const hourOfDay = now.getHours(); // 0-23
-    
-    // Use raw query until schema migration is complete
-    await prisma.$executeRaw`
-      INSERT INTO "EngagementTime" (
-        "id", "contactId", "entityType", "entityId", "engagementType", 
-        "dayOfWeek", "hourOfDay", "timestamp"
-      )
-      VALUES (
-        gen_random_uuid(), 
-        ${contactId}, 
-        ${entityType}, 
-        ${entityId}, 
-        ${engagementType}, 
-        ${dayOfWeek}, 
-        ${hourOfDay}, 
-        ${now}
-      )
-    `;
-    
+
+    // Store in Redis cache
+    const engKey = `engagement_times:${contactId}`;
+    const cached = await redisCache.get(engKey);
+    const engagements: any[] = cached ? JSON.parse(cached) : [];
+
+    // Add new engagement time
+    engagements.unshift({
+      id: randomUUID(),
+      contactId,
+      entityType,
+      entityId,
+      engagementType,
+      dayOfWeek,
+      hourOfDay,
+      timestamp: now.toISOString()
+    });
+
+    // Keep only the most recent 100 engagements
+    const trimmed = engagements.slice(0, 100);
+    await redisCache.set(engKey, JSON.stringify(trimmed), 86400 * 90); // 90 days
+
     logger.info("Recorded engagement time", {
       contactId,
       entityType,
@@ -343,17 +345,15 @@ export async function generateSmartSegments(
   params: SmartSegmentParams = {}
 ): Promise<{ id: string; name: string; description: string; rules: string; score: number }[]> {
   try {
-    // First, check if we already have smart segments via raw query
-    const existingSegments = await prisma.$queryRaw<Array<{id: string, name: string, description: string, rules: string, score: number}>>`
-      SELECT id, name, description, rules, score 
-      FROM "SmartSegment"
-      WHERE status = 'ACTIVE'
-    `;
-    
-    if (existingSegments.length > 0) {
+    // Check if we already have smart segments in Redis cache
+    const segKey = 'smart_segments:active';
+    const cached = await redisCache.get(segKey);
+
+    if (cached) {
+      const existingSegments: Array<{id: string, name: string, description: string, rules: string, score: number}> = JSON.parse(cached);
       return existingSegments;
     }
-    
+
     // Generate some basic segments based on engagement patterns
     const segments = [
       {
@@ -405,33 +405,21 @@ export async function generateSmartSegments(
         score: 0.75
       }
     ];
-    
-    // Store these segments for future use via raw queries
-    const createdSegments = [];
-    
-    for (const segment of segments) {
-      const result = await prisma.$queryRaw<Array<{id: string, name: string, description: string, rules: string, score: number}>>`
-        INSERT INTO "SmartSegment" (
-          id, name, description, rules, score, status, "createdAt", "lastUpdated"
-        )
-        VALUES (
-          gen_random_uuid(),
-          ${segment.name},
-          ${segment.description},
-          ${segment.rules},
-          ${segment.score},
-          'ACTIVE',
-          NOW(),
-          NOW()
-        )
-        RETURNING id, name, description, rules, score
-      `;
-      
-      if (result.length > 0) {
-        createdSegments.push(result[0]);
-      }
-    }
-    
+
+    // Store these segments in Redis cache
+    const createdSegments = segments.map(segment => ({
+      id: randomUUID(),
+      name: segment.name,
+      description: segment.description,
+      rules: segment.rules,
+      score: segment.score,
+      status: 'ACTIVE',
+      createdAt: new Date().toISOString(),
+      lastUpdated: new Date().toISOString()
+    }));
+
+    await redisCache.set(segKey, JSON.stringify(createdSegments), 86400 * 30); // 30 days
+
     return createdSegments;
   } catch (error) {
     logger.error("Error generating smart segments", error);

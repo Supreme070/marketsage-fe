@@ -7,7 +7,10 @@
 
 import { logger } from '@/lib/logger';
 import { trace } from '@opentelemetry/api';
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
 import { EventEmitter } from 'events';
 import { 
   AttributionModel, 
@@ -15,7 +18,7 @@ import {
   EntityType,
   type ConversionEvent,
   type ConversionTracking
-} from '@prisma/client';
+} from '@/types/prisma-types';
 import { 
   trackConversion, 
   applyAttributionModel,
@@ -183,14 +186,24 @@ class AutonomousAttributionEngine extends EventEmitter {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const conversions = await prisma.conversionTracking.findMany({
-        where: {
-          occurredAt: { gte: thirtyDaysAgo }
-        },
-        include: {
-          event: true
-        }
+      const response = await fetch(`${BACKEND_URL}/api/conversions/tracking`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          where: {
+            occurredAt: { gte: thirtyDaysAgo.toISOString() }
+          },
+          include: {
+            event: true
+          }
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch conversion tracking: ${response.statusText}`);
+      }
+
+      const conversions = await response.json();
 
       // Calculate baseline performance by channel
       const channelData = new Map<string, any>();
@@ -349,14 +362,24 @@ class AutonomousAttributionEngine extends EventEmitter {
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-      const conversions = await prisma.conversionTracking.findMany({
-        where: {
-          occurredAt: { gte: sevenDaysAgo }
-        },
-        include: {
-          event: true
-        }
+      const response = await fetch(`${BACKEND_URL}/api/conversions/tracking`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          where: {
+            occurredAt: { gte: sevenDaysAgo.toISOString() }
+          },
+          include: {
+            event: true
+          }
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch conversion tracking: ${response.statusText}`);
+      }
+
+      const conversions = await response.json();
 
       // Analyze by channel and attribution model
       const channelMetrics = new Map<string, ChannelPerformance>();
@@ -476,16 +499,26 @@ class AutonomousAttributionEngine extends EventEmitter {
 
     try {
       // Get conversions with multiple touchpoints
-      const conversions = await prisma.conversionTracking.findMany({
-        where: {
-          touchPoints: { not: null }
-        },
-        include: {
-          event: true
-        },
-        take: 1000,
-        orderBy: { occurredAt: 'desc' }
+      const response = await fetch(`${BACKEND_URL}/api/conversions/tracking`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          where: {
+            touchPoints: { not: null }
+          },
+          include: {
+            event: true
+          },
+          take: 1000,
+          orderBy: { occurredAt: 'desc' }
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch conversion tracking: ${response.statusText}`);
+      }
+
+      const conversions = await response.json();
 
       // Extract journey patterns
       const patternMap = new Map<string, JourneyPattern>();
@@ -903,11 +936,21 @@ class AutonomousAttributionEngine extends EventEmitter {
     };
 
     // Calculate metrics from recent data
-    const recentConversions = await prisma.conversionTracking.findMany({
-      where: {
-        occurredAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
-      }
+    const response = await fetch(`${BACKEND_URL}/api/conversions/tracking`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        where: {
+          occurredAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString() }
+        }
+      })
     });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch conversion tracking: ${response.statusText}`);
+    }
+
+    const recentConversions = await response.json();
 
     metrics.totalConversions = recentConversions.length;
     metrics.totalRevenue = recentConversions.reduce((sum, c) => sum + (c.value || 0), 0);

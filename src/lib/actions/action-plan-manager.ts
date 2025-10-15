@@ -6,20 +6,22 @@
  * Handles creation, validation, approval, scheduling, and execution
  */
 
-import { 
-  type ActionPlan, 
-  ActionPlanBuilder, 
-  ActionPlanValidator, 
+import {
+  type ActionPlan,
+  ActionPlanBuilder,
+  ActionPlanValidator,
   ActionPlanUtils,
-  ActionStatus, 
+  ActionStatus,
   ActionType,
   ExecutionMode,
   RiskLevel,
   type ActionExecutionResult
 } from './action-plan-interface';
-import { prisma } from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (AIActionPlan table exists in backend)
 import { getCustomerEventBus, CustomerEventType, type EventPriority } from '@/lib/events/event-bus';
 import { logger } from '@/lib/logger';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 
 export interface ActionPlanQuery {
   contactId?: string;
@@ -68,8 +70,10 @@ export class ActionPlanManager {
       }
 
       // Store in database
-      const createdPlan = await prisma.aIActionPlan.create({
-        data: {
+      const response = await fetch(`${BACKEND_URL}/api/v2/action-plans`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           id: plan.id,
           contactId: plan.contactId,
           organizationId: plan.organizationId,
@@ -81,8 +85,8 @@ export class ActionPlanManager {
           confidence: plan.aiConfidence || 0,
           reasoning: plan.aiReasoning || '',
           createdBy: plan.createdBy || 'system',
-          scheduledAt: plan.scheduledAt,
-          expiresAt: plan.expiresAt,
+          scheduledAt: plan.scheduledAt?.toISOString(),
+          expiresAt: plan.expiresAt?.toISOString(),
           actionData: {
             parameters: plan.parameters,
             context: plan.context,
@@ -97,8 +101,14 @@ export class ActionPlanManager {
             costEstimate: plan.costEstimate,
             maxRetries: plan.maxRetries
           }
-        }
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create action plan: ${response.status}`);
+      }
+
+      const createdPlan = await response.json();
 
       // Publish action plan created event
       await ActionPlanManager.publishActionEvent(plan, 'action_plan_created');
@@ -129,14 +139,13 @@ export class ActionPlanManager {
    */
   static async getActionPlan(actionPlanId: string): Promise<ActionPlan | null> {
     try {
-      const dbPlan = await prisma.aIActionPlan.findUnique({
-        where: { id: actionPlanId }
-      });
+      const response = await fetch(`${BACKEND_URL}/api/v2/action-plans/${actionPlanId}`);
 
-      if (!dbPlan) {
+      if (!response.ok) {
         return null;
       }
 
+      const dbPlan = await response.json();
       return ActionPlanManager.mapDbToActionPlan(dbPlan);
 
     } catch (error) {
@@ -183,12 +192,41 @@ export class ActionPlanManager {
         };
       }
 
-      const dbPlans = await prisma.aIActionPlan.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        take: query.limit || 100,
-        skip: query.offset || 0
-      });
+      // Build query string
+      const params = new URLSearchParams();
+      if (query.contactId) params.append('contactId', query.contactId);
+      if (query.organizationId) params.append('organizationId', query.organizationId);
+      if (query.createdBy) params.append('createdBy', query.createdBy);
+      if (query.status) {
+        if (Array.isArray(query.status)) {
+          query.status.forEach(s => params.append('status', s));
+        } else {
+          params.append('status', query.status);
+        }
+      }
+      if (query.actionType) {
+        if (Array.isArray(query.actionType)) {
+          query.actionType.forEach(t => params.append('actionType', t));
+        } else {
+          params.append('actionType', query.actionType);
+        }
+      }
+      if (query.dateRange) {
+        params.append('fromDate', query.dateRange.from.toISOString());
+        params.append('toDate', query.dateRange.to.toISOString());
+      }
+      params.append('limit', String(query.limit || 100));
+      params.append('offset', String(query.offset || 0));
+      params.append('orderBy', 'createdAt');
+      params.append('order', 'desc');
+
+      const response = await fetch(`${BACKEND_URL}/api/v2/action-plans?${params.toString()}`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to query action plans: ${response.status}`);
+      }
+
+      const dbPlans = await response.json();
 
       const actionPlans = dbPlans.map(ActionPlanManager.mapDbToActionPlan);
 
@@ -292,10 +330,15 @@ export class ActionPlanManager {
           break;
       }
 
-      await prisma.aIActionPlan.update({
-        where: { id: actionPlanId },
-        data: updateFields
+      const response = await fetch(`${BACKEND_URL}/api/v2/action-plans/${actionPlanId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateFields)
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update action plan status: ${response.status}`);
+      }
 
       // Publish status change event
       const plan = await ActionPlanManager.getActionPlan(actionPlanId);
@@ -435,17 +478,22 @@ export class ActionPlanManager {
     
     if (plan && plan.retryCount < plan.maxRetries) {
       // Increment retry count and reset to pending
-      await prisma.aIActionPlan.update({
-        where: { id: actionPlanId },
-        data: {
+      const response = await fetch(`${BACKEND_URL}/api/v2/action-plans/${actionPlanId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           status: ActionStatus.PENDING,
           actionData: {
             ...plan.metadata,
             retryCount: plan.retryCount + 1,
             lastFailure: executionResult
           }
-        }
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update action plan for retry: ${response.status}`);
+      }
       
       logger.info('Action plan scheduled for retry', {
         actionPlanId,
@@ -490,13 +538,26 @@ export class ActionPlanManager {
         where.organizationId = organizationId;
       }
 
-      const result = await prisma.aIActionPlan.updateMany({
-        where,
-        data: {
-          status: ActionStatus.EXPIRED,
-          updatedAt: new Date()
-        }
+      // Build query string for filtering
+      const params = new URLSearchParams();
+      params.append('expiredBefore', new Date().toISOString());
+      params.append('status', ActionStatus.PENDING);
+      params.append('status', ActionStatus.QUEUED);
+      params.append('status', ActionStatus.APPROVED);
+      if (organizationId) {
+        params.append('organizationId', organizationId);
+      }
+
+      const response = await fetch(`${BACKEND_URL}/api/v2/action-plans/expire?${params.toString()}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' }
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to cleanup expired action plans: ${response.status}`);
+      }
+
+      const result = await response.json();
 
       logger.info('Expired action plans cleaned up', {
         count: result.count,
@@ -521,15 +582,19 @@ export class ActionPlanManager {
     try {
       const where = organizationId ? { organizationId } : {};
       
-      const plans = await prisma.aIActionPlan.findMany({
-        where,
-        select: {
-          status: true,
-          actionType: true,
-          confidence: true,
-          actionData: true
-        }
-      });
+      const params = new URLSearchParams();
+      if (organizationId) {
+        params.append('organizationId', organizationId);
+      }
+      params.append('select', 'status,actionType,confidence,actionData');
+
+      const response = await fetch(`${BACKEND_URL}/api/v2/action-plans?${params.toString()}`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to get action plan stats: ${response.status}`);
+      }
+
+      const plans = await response.json();
 
       const stats: ActionPlanStats = {
         total: plans.length,

@@ -13,7 +13,10 @@
 import { logger } from '@/lib/logger';
 import { leadPulseCache } from '@/lib/cache/leadpulse-cache';
 import { leadPulseErrorHandler, LeadPulseErrorType } from '../error-handler';
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
 import crypto from 'crypto';
 
 // Webhook Types
@@ -141,8 +144,10 @@ export class WebhookSystem {
       };
 
       // Store in database
-      await prisma.webhookEndpoint.create({
-        data: {
+      const response = await fetch(`${BACKEND_URL}/api/v2/webhook-endpoints`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           id: webhook.id,
           userId: webhook.userId,
           url: webhook.url,
@@ -156,8 +161,11 @@ export class WebhookSystem {
           transformations: webhook.transformations,
           successCount: webhook.successCount,
           failureCount: webhook.failureCount,
-        },
+        })
       });
+      if (!response.ok) {
+        throw new Error('Failed to create webhook endpoint');
+      }
 
       // Cache for quick access
       await leadPulseCache.set(`webhook:${webhookId}`, webhook, 24 * 60 * 60);
@@ -272,15 +280,17 @@ export class WebhookSystem {
       const result = await this.runWebhookProcessor(webhook, body);
       
       // Log successful processing
-      await prisma.webhookDelivery.create({
-        data: {
+      await fetch(`${BACKEND_URL}/api/v2/webhook-deliveries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           id: this.generateDeliveryId(),
           webhookId: webhook.id,
           direction: 'incoming',
           payload: body,
           status: 'success',
           processedAt: new Date(),
-        },
+        })
       });
 
       logger.info(`Incoming webhook processed: ${webhookId}`);
@@ -300,19 +310,21 @@ export class WebhookSystem {
   // Get active webhooks for an event
   private async getActiveWebhooks(event: WebhookEvent, userId?: string): Promise<WebhookEndpoint[]> {
     try {
-      const whereClause: any = {
-        active: true,
-        events: { has: event },
-      };
-      
-      if (userId) {
-        whereClause.userId = userId;
-      }
-
-      const webhooks = await prisma.webhookEndpoint.findMany({
-        where: whereClause,
+      const params = new URLSearchParams({
+        active: 'true',
+        event: event,
       });
 
+      if (userId) {
+        params.append('userId', userId);
+      }
+
+      const response = await fetch(`${BACKEND_URL}/api/v2/webhook-endpoints?${params.toString()}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const webhooks = response.ok ? await response.json() : [];
       return webhooks as WebhookEndpoint[];
     } catch (error) {
       logger.error('Error getting active webhooks:', error);
@@ -518,11 +530,13 @@ export class WebhookSystem {
       const cached = await leadPulseCache.get<IncomingWebhook>(`incoming_webhook:${webhookId}`);
       if (cached) return cached;
 
-      const webhook = await prisma.incomingWebhook.findUnique({
-        where: { id: webhookId },
+      const response = await fetch(`${BACKEND_URL}/api/v2/incoming-webhooks/${webhookId}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
       });
 
-      if (webhook) {
+      if (response.ok) {
+        const webhook = await response.json();
         await leadPulseCache.set(`incoming_webhook:${webhookId}`, webhook, 60 * 60);
         return webhook as IncomingWebhook;
       }
@@ -585,17 +599,24 @@ export class WebhookSystem {
 
     // Sync with LeadPulse contacts
     if (contactData.email) {
-      const contact = await prisma.contact.upsert({
-        where: { email: contactData.email },
-        update: contactData,
-        create: {
-          ...contactData,
-          source: 'Webhook',
-          createdById: 'system',
-        },
+      const response = await fetch(`${BACKEND_URL}/api/v2/contacts/upsert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: contactData.email,
+          updateData: contactData,
+          createData: {
+            ...contactData,
+            source: 'Webhook',
+            createdById: 'system',
+          },
+        })
       });
 
-      return { contactId: contact.id, action: 'synced' };
+      if (response.ok) {
+        const contact = await response.json();
+        return { contactId: contact.id, action: 'synced' };
+      }
     }
 
     return null;
@@ -617,18 +638,24 @@ export class WebhookSystem {
   private async processVisitorUpdate(payload: any, mapping: IncomingWebhook['mapping']): Promise<any> {
     // Update visitor data from external source
     const visitorData: any = {};
-    
+
     Object.entries(mapping.dataMapping).forEach(([visitorField, webhookField]) => {
       visitorData[visitorField] = this.getNestedValue(payload, webhookField);
     });
 
     if (visitorData.visitorId) {
-      await prisma.leadPulseVisitor.update({
-        where: { id: visitorData.visitorId },
-        data: visitorData,
+      const visitorId = visitorData.visitorId;
+      delete visitorData.visitorId;
+
+      const response = await fetch(`${BACKEND_URL}/api/v2/leadpulse-visitors/${visitorId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(visitorData)
       });
 
-      return { visitorId: visitorData.visitorId, action: 'updated' };
+      if (response.ok) {
+        return { visitorId: visitorId, action: 'updated' };
+      }
     }
 
     return null;
@@ -657,12 +684,13 @@ export class WebhookSystem {
   private async updateWebhookStats(webhookId: string, success: boolean): Promise<void> {
     try {
       const field = success ? 'successCount' : 'failureCount';
-      await prisma.webhookEndpoint.update({
-        where: { id: webhookId },
-        data: {
-          [field]: { increment: 1 },
+      await fetch(`${BACKEND_URL}/api/v2/webhook-endpoints/${webhookId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          incrementField: field,
           lastTriggered: new Date(),
-        },
+        })
       });
 
       // Update cached version
@@ -679,30 +707,34 @@ export class WebhookSystem {
 
   private async saveDelivery(delivery: WebhookDelivery): Promise<void> {
     try {
-      await prisma.webhookDelivery.upsert({
-        where: { id: delivery.id },
-        update: {
-          status: delivery.status,
-          attempts: delivery.attempts,
-          lastAttempt: delivery.lastAttempt,
-          nextRetry: delivery.nextRetry,
-          response: delivery.response,
-          error: delivery.error,
-        },
-        create: {
+      await fetch(`${BACKEND_URL}/api/v2/webhook-deliveries/upsert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           id: delivery.id,
-          webhookId: delivery.endpointId,
-          direction: 'outgoing',
-          event: delivery.event,
-          payload: delivery.payload,
-          status: delivery.status,
-          attempts: delivery.attempts,
-          lastAttempt: delivery.lastAttempt,
-          nextRetry: delivery.nextRetry,
-          response: delivery.response,
-          error: delivery.error,
-          createdAt: delivery.createdAt,
-        },
+          updateData: {
+            status: delivery.status,
+            attempts: delivery.attempts,
+            lastAttempt: delivery.lastAttempt,
+            nextRetry: delivery.nextRetry,
+            response: delivery.response,
+            error: delivery.error,
+          },
+          createData: {
+            id: delivery.id,
+            webhookId: delivery.endpointId,
+            direction: 'outgoing',
+            event: delivery.event,
+            payload: delivery.payload,
+            status: delivery.status,
+            attempts: delivery.attempts,
+            lastAttempt: delivery.lastAttempt,
+            nextRetry: delivery.nextRetry,
+            response: delivery.response,
+            error: delivery.error,
+            createdAt: delivery.createdAt,
+          },
+        })
       });
     } catch (error) {
       logger.error('Error saving webhook delivery:', error);
@@ -739,12 +771,15 @@ export class WebhookSystem {
     setInterval(async () => {
       try {
         const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // 7 days ago
-        
-        await prisma.webhookDelivery.deleteMany({
-          where: {
-            createdAt: { lt: cutoff },
-            status: { in: ['success', 'failed'] },
-          },
+
+        const params = new URLSearchParams({
+          createdBefore: cutoff.toISOString(),
+          status: 'success,failed',
+        });
+
+        await fetch(`${BACKEND_URL}/api/v2/webhook-deliveries?${params.toString()}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
         });
 
         logger.info('Webhook delivery cleanup completed');
@@ -757,17 +792,27 @@ export class WebhookSystem {
   // Public methods for management
   async getWebhookStats(webhookId: string): Promise<any> {
     try {
-      const webhook = await prisma.webhookEndpoint.findUnique({
-        where: { id: webhookId },
+      const webhookResponse = await fetch(`${BACKEND_URL}/api/v2/webhook-endpoints/${webhookId}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
       });
 
-      if (!webhook) return null;
+      if (!webhookResponse.ok) return null;
+      const webhook = await webhookResponse.json();
 
-      const deliveries = await prisma.webhookDelivery.findMany({
-        where: { webhookId },
-        orderBy: { createdAt: 'desc' },
-        take: 100,
+      const deliveriesParams = new URLSearchParams({
+        webhookId: webhookId,
+        orderBy: 'createdAt',
+        order: 'desc',
+        limit: '100',
       });
+
+      const deliveriesResponse = await fetch(`${BACKEND_URL}/api/v2/webhook-deliveries?${deliveriesParams.toString()}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const deliveries = deliveriesResponse.ok ? await deliveriesResponse.json() : [];
 
       const stats = {
         webhook,
@@ -785,13 +830,17 @@ export class WebhookSystem {
 
   async disableWebhook(webhookId: string): Promise<boolean> {
     try {
-      await prisma.webhookEndpoint.update({
-        where: { id: webhookId },
-        data: { active: false },
+      const response = await fetch(`${BACKEND_URL}/api/v2/webhook-endpoints/${webhookId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: false })
       });
 
-      await leadPulseCache.del(`webhook:${webhookId}`);
-      return true;
+      if (response.ok) {
+        await leadPulseCache.del(`webhook:${webhookId}`);
+        return true;
+      }
+      return false;
     } catch (error) {
       logger.error('Error disabling webhook:', error);
       return false;

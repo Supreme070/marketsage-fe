@@ -18,7 +18,11 @@
  * Based on user's blueprint: Build Performance Monitoring & Analytics
  */
 
-import { prisma } from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
+
 import { logger } from '@/lib/logger';
 import { getCustomerEventBus } from '@/lib/events/event-bus';
 
@@ -354,17 +358,11 @@ export class PerformanceAnalyticsEngine {
    */
   private async collectMLModelMetrics(organizationId: string, period: any) {
     // Get actual ML model performance data
-    const modelPerformance = await prisma.aI_ModelPerformance.findMany({
-      where: {
-        organizationId,
-        createdAt: {
-          gte: period.start,
-          lte: period.end
-        }
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 20
+    const response = await fetch(`${BACKEND_URL}/api/v2/ai-model-performance?organizationId=${organizationId}&createdAtGte=${period.start.toISOString()}&createdAtLte=${period.end.toISOString()}&orderBy=createdAt&order=desc&limit=20`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
+    const modelPerformance = response.ok ? await response.json() : [];
 
     // Calculate average performance across models
     const avgAccuracy = modelPerformance.length > 0 ?
@@ -407,35 +405,23 @@ export class PerformanceAnalyticsEngine {
    */
   private async collectCampaignMetrics(organizationId: string, period: any) {
     // Get campaign data
-    const emailCampaigns = await prisma.emailCampaign.findMany({
-      where: {
-        organizationId,
-        sentAt: {
-          gte: period.start,
-          lte: period.end
-        }
-      }
+    const emailResponse = await fetch(`${BACKEND_URL}/api/v2/email-campaign?organizationId=${organizationId}&sentAtGte=${period.start.toISOString()}&sentAtLte=${period.end.toISOString()}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
+    const emailCampaigns = emailResponse.ok ? await emailResponse.json() : [];
 
-    const smsCampaigns = await prisma.sMSCampaign.findMany({
-      where: {
-        organizationId,
-        sentAt: {
-          gte: period.start,
-          lte: period.end
-        }
-      }
+    const smsResponse = await fetch(`${BACKEND_URL}/api/v2/sms-campaign?organizationId=${organizationId}&sentAtGte=${period.start.toISOString()}&sentAtLte=${period.end.toISOString()}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
+    const smsCampaigns = smsResponse.ok ? await smsResponse.json() : [];
 
-    const whatsappCampaigns = await prisma.whatsAppCampaign.findMany({
-      where: {
-        organizationId,
-        sentAt: {
-          gte: period.start,
-          lte: period.end
-        }
-      }
+    const whatsappResponse = await fetch(`${BACKEND_URL}/api/v2/whatsapp-campaign?organizationId=${organizationId}&sentAtGte=${period.start.toISOString()}&sentAtLte=${period.end.toISOString()}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
+    const whatsappCampaigns = whatsappResponse.ok ? await whatsappResponse.json() : [];
 
     // Calculate aggregated metrics
     const totalCampaigns = emailCampaigns.length + smsCampaigns.length + whatsappCampaigns.length;
@@ -481,18 +467,11 @@ export class PerformanceAnalyticsEngine {
    */
   private async collectCustomerJourneyMetrics(organizationId: string, period: any) {
     // Get customer journey data
-    const journeys = await prisma.journey.findMany({
-      where: {
-        organizationId,
-        createdAt: {
-          gte: period.start,
-          lte: period.end
-        }
-      },
-      include: {
-        stages: true
-      }
+    const response = await fetch(`${BACKEND_URL}/api/v2/journey?organizationId=${organizationId}&createdAtGte=${period.start.toISOString()}&createdAtLte=${period.end.toISOString()}&include=stages`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
+    const journeys = response.ok ? await response.json() : [];
 
     const completionRate = journeys.length > 0 ?
       journeys.filter(j => j.status === 'completed').length / journeys.length : 0;
@@ -534,15 +513,11 @@ export class PerformanceAnalyticsEngine {
    */
   private async collectBusinessImpactMetrics(organizationId: string, period: any) {
     // Calculate business impact from various sources
-    const campaigns = await prisma.emailCampaign.findMany({
-      where: {
-        organizationId,
-        sentAt: {
-          gte: period.start,
-          lte: period.end
-        }
-      }
+    const response = await fetch(`${BACKEND_URL}/api/v2/email-campaign?organizationId=${organizationId}&sentAtGte=${period.start.toISOString()}&sentAtLte=${period.end.toISOString()}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
+    const campaigns = response.ok ? await response.json() : [];
 
     const totalRevenue = campaigns.reduce((sum, c) => sum + (c.revenue || 0), 0);
 
@@ -592,15 +567,11 @@ export class PerformanceAnalyticsEngine {
    */
   private async collectGovernanceMetrics(organizationId: string, period: any) {
     // Get governance data
-    const decisions = await prisma.aI_GovernanceDecision.findMany({
-      where: {
-        organizationId,
-        createdAt: {
-          gte: period.start,
-          lte: period.end
-        }
-      }
+    const response = await fetch(`${BACKEND_URL}/api/v2/ai-governance-decision?organizationId=${organizationId}&createdAtGte=${period.start.toISOString()}&createdAtLte=${period.end.toISOString()}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
+    const decisions = response.ok ? await response.json() : [];
 
     const approvalRate = decisions.length > 0 ?
       decisions.filter(d => d.humanDecision === 'approve').length / decisions.length : 0;
@@ -642,15 +613,11 @@ export class PerformanceAnalyticsEngine {
    */
   private async calculateAfricanMarketMetrics(organizationId: string, period: any) {
     // African market-specific calculations
-    const contacts = await prisma.contact.findMany({
-      where: {
-        organizationId,
-        country: { in: ['NG', 'KE', 'ZA', 'GH'] }
-      },
-      include: {
-        customerProfile: true
-      }
+    const response = await fetch(`${BACKEND_URL}/api/v2/contact?organizationId=${organizationId}&countryIn=NG,KE,ZA,GH&include=customerProfile`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
+    const contacts = response.ok ? await response.json() : [];
 
     const mobileUsers = contacts.filter(c => c.customerProfile?.mobileEngagementRate && c.customerProfile.mobileEngagementRate > 0.8);
     const localPaymentUsers = contacts.filter(c => c.customerProfile?.localPaymentRate && c.customerProfile.localPaymentRate > 0.5);
@@ -796,8 +763,10 @@ export class PerformanceAnalyticsEngine {
    */
   private async storePerformanceReport(report: PerformanceReport): Promise<void> {
     try {
-      await prisma.aI_PerformanceReport.create({
-        data: {
+      await fetch(`${BACKEND_URL}/api/v2/ai-performance-report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           organizationId: report.organizationId,
           period: report.period,
           summary: report.summary,
@@ -806,7 +775,7 @@ export class PerformanceAnalyticsEngine {
           africanMarketMetrics: report.africanMarketMetrics,
           predictiveInsights: report.predictiveInsights,
           generatedAt: report.generatedAt
-        }
+        })
       });
     } catch (error) {
       logger.error('Failed to store performance report', {

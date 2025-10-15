@@ -6,7 +6,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { getAppRouterSession } from '@/lib/auth/session-utils';
 
-const NESTJS_BASE_URL = process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
+const NESTJS_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 
 export async function proxyToNestJS(request: NextRequest) {
   try {

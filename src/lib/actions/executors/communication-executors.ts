@@ -9,8 +9,10 @@
 import { ActionType, type ActionExecutionResult } from '../action-plan-interface';
 import type { ExecutionContext } from '../action-dispatcher';
 import { BaseExecutor } from './base-executor';
-import { prisma } from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (EmailCampaign, SMSCampaign, WhatsAppCampaign, ContactEmailCampaign, ContactSMSCampaign, ContactWhatsAppCampaign tables exist in backend)
 import { logger } from '@/lib/logger';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 
 /**
  * Email Executor - Integrates with existing email campaign system
@@ -89,8 +91,10 @@ export class EmailExecutor extends BaseExecutor {
 
   private async createEmailCampaign(context: ExecutionContext, emailData: any): Promise<any> {
     // Create a single-recipient email campaign
-    const campaign = await prisma.emailCampaign.create({
-      data: {
+    const campaignResponse = await fetch(`${BACKEND_URL}/api/v2/email-campaigns`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         name: `AI Action: ${context.actionPlan.actionName}`,
         description: `Automated email from AI action plan: ${context.actionPlan.id}`,
         subject: emailData.subject,
@@ -105,22 +109,34 @@ export class EmailExecutor extends BaseExecutor {
           templateId: emailData.templateId,
           personalizationData: emailData.personalizationData
         }
-      }
+      })
     });
 
+    if (!campaignResponse.ok) {
+      throw new Error(`Failed to create email campaign: ${campaignResponse.status}`);
+    }
+
+    const campaign = await campaignResponse.json();
+
     // Create contact campaign relationship
-    await prisma.contactEmailCampaign.create({
-      data: {
+    const relationResponse = await fetch(`${BACKEND_URL}/api/v2/contact-email-campaigns`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         contactId: context.actionPlan.contactId,
         campaignId: campaign.id,
         status: 'SENT',
-        sentAt: new Date(),
+        sentAt: new Date().toISOString(),
         metadata: {
           actionPlanId: context.actionPlan.id,
           automatedSend: true
         }
-      }
+      })
     });
+
+    if (!relationResponse.ok) {
+      throw new Error(`Failed to create contact email campaign relation: ${relationResponse.status}`);
+    }
 
     return campaign;
   }
@@ -225,8 +241,10 @@ export class SMSExecutor extends BaseExecutor {
   }
 
   private async createSMSCampaign(context: ExecutionContext, smsData: any): Promise<any> {
-    const campaign = await prisma.sMSCampaign.create({
-      data: {
+    const campaignResponse = await fetch(`${BACKEND_URL}/api/v2/sms-campaigns`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         name: `AI Action: ${context.actionPlan.actionName}`,
         description: `Automated SMS from AI action plan: ${context.actionPlan.id}`,
         message: this.personalizeMessage(smsData.message, smsData.personalizationData),
@@ -238,22 +256,34 @@ export class SMSExecutor extends BaseExecutor {
           aiGenerated: true,
           personalizationData: smsData.personalizationData
         }
-      }
+      })
     });
 
+    if (!campaignResponse.ok) {
+      throw new Error(`Failed to create SMS campaign: ${campaignResponse.status}`);
+    }
+
+    const campaign = await campaignResponse.json();
+
     // Create contact campaign relationship
-    await prisma.contactSMSCampaign.create({
-      data: {
+    const relationResponse = await fetch(`${BACKEND_URL}/api/v2/contact-sms-campaigns`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         contactId: context.actionPlan.contactId,
         campaignId: campaign.id,
         status: 'SENT',
-        sentAt: new Date(),
+        sentAt: new Date().toISOString(),
         metadata: {
           actionPlanId: context.actionPlan.id,
           automatedSend: true
         }
-      }
+      })
     });
+
+    if (!relationResponse.ok) {
+      throw new Error(`Failed to create contact SMS campaign relation: ${relationResponse.status}`);
+    }
 
     return campaign;
   }
@@ -348,8 +378,10 @@ export class WhatsAppExecutor extends BaseExecutor {
   }
 
   private async createWhatsAppCampaign(context: ExecutionContext, whatsappData: any): Promise<any> {
-    const campaign = await prisma.whatsAppCampaign.create({
-      data: {
+    const campaignResponse = await fetch(`${BACKEND_URL}/api/v2/whatsapp-campaigns`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         name: `AI Action: ${context.actionPlan.actionName}`,
         description: `Automated WhatsApp from AI action plan: ${context.actionPlan.id}`,
         message: this.personalizeMessage(whatsappData.message, whatsappData.personalizationData),
@@ -362,22 +394,34 @@ export class WhatsAppExecutor extends BaseExecutor {
           messageType: whatsappData.messageType,
           personalizationData: whatsappData.personalizationData
         }
-      }
+      })
     });
 
+    if (!campaignResponse.ok) {
+      throw new Error(`Failed to create WhatsApp campaign: ${campaignResponse.status}`);
+    }
+
+    const campaign = await campaignResponse.json();
+
     // Create contact campaign relationship
-    await prisma.contactWhatsAppCampaign.create({
-      data: {
+    const relationResponse = await fetch(`${BACKEND_URL}/api/v2/contact-whatsapp-campaigns`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         contactId: context.actionPlan.contactId,
         campaignId: campaign.id,
         status: 'SENT',
-        sentAt: new Date(),
+        sentAt: new Date().toISOString(),
         metadata: {
           actionPlanId: context.actionPlan.id,
           automatedSend: true
         }
-      }
+      })
     });
+
+    if (!relationResponse.ok) {
+      throw new Error(`Failed to create contact WhatsApp campaign relation: ${relationResponse.status}`);
+    }
 
     return campaign;
   }

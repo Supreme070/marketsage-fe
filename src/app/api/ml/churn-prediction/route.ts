@@ -439,71 +439,39 @@ async function handleModelInfo(searchParams: URLSearchParams, session: any): Pro
 
 /**
  * Handle get predictions request
+ * Proxies to backend /api/v2/ai/churn-predictions
  */
 async function handleGetPredictions(searchParams: URLSearchParams, session: any): Promise<NextResponse> {
-  const organizationId = session.user.role === 'SUPER_ADMIN' ? 
-    searchParams.get('organizationId') || session.user.organizationId : 
+  const organizationId = session.user.role === 'SUPER_ADMIN' ?
+    searchParams.get('organizationId') || session.user.organizationId :
     session.user.organizationId;
 
   const riskLevel = searchParams.get('riskLevel');
-  const limit = Number.parseInt(searchParams.get('limit') || '50');
-  const offset = Number.parseInt(searchParams.get('offset') || '0');
+  const limit = searchParams.get('limit') || '50';
+  const offset = searchParams.get('offset') || '0';
 
   try {
-    // Get predictions from database
-    const whereClause: any = { organizationId };
-    
-    if (riskLevel && ['low', 'medium', 'high', 'critical'].includes(riskLevel)) {
-      whereClause.riskLevel = riskLevel;
-    }
+    // Build backend URL with query params
+    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
+    const params = new URLSearchParams();
+    if (organizationId) params.append('organizationId', organizationId);
+    if (riskLevel) params.append('riskLevel', riskLevel);
+    if (limit) params.append('limit', limit);
+    if (offset) params.append('offset', offset);
 
-    const predictions = await prisma.churnPrediction.findMany({
-      where: whereClause,
-      orderBy: { predictedAt: 'desc' },
-      take: Math.min(limit, 100),
-      skip: offset,
-      include: {
-        contact: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            phone: true
-          }
-        }
-      }
+    const url = `${BACKEND_URL}/api/v2/ai/churn-predictions?${params.toString()}`;
+
+    // Call backend endpoint
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.accessToken}`,
+        'Content-Type': 'application/json',
+      },
     });
 
-    const total = await prisma.churnPrediction.count({
-      where: whereClause
-    });
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        predictions: predictions.map(p => ({
-          contactId: p.contactId,
-          contact: p.contact,
-          churnProbability: p.probability,
-          riskLevel: p.riskLevel,
-          confidence: p.confidence,
-          reasoningFactors: p.reasoningFactors,
-          predictedAt: p.predictedAt,
-          modelVersion: p.modelVersion
-        })),
-        pagination: {
-          total,
-          limit,
-          offset,
-          hasMore: offset + predictions.length < total
-        },
-        filters: {
-          organizationId,
-          riskLevel: riskLevel || 'all'
-        }
-      }
-    });
+    const data = await response.json();
+    return NextResponse.json(data, { status: response.status });
 
   } catch (error) {
     logger.error('Failed to get predictions', {

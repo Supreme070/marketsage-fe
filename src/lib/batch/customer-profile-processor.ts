@@ -13,7 +13,11 @@
  * Based on user's blueprint: Batch Processing (nightly cron jobs)
  */
 
-import { prisma } from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
+
 import { SupremeAIv3 } from '@/lib/ai/supreme-ai-v3-engine';
 import { getCustomerEventBus, CustomerEventType, EventPriority } from '@/lib/events/event-bus';
 import { ContactEventListener } from '@/lib/events/listeners/contact-event-listener';
@@ -133,31 +137,33 @@ export class CustomerProfileProcessor {
    * Get contacts that need profile processing
    */
   private static async getContactsToProcess(organizationId?: string): Promise<any[]> {
-    const where = organizationId ? { organizationId } : {};
-    
-    return await prisma.contact.findMany({
-      where: {
-        ...where,
-        isActive: true
+    const params = new URLSearchParams();
+    params.append('isActive', 'true');
+    params.append('includeCustomerProfile', 'true');
+    params.append('includeLists', 'true');
+    params.append('includeSegments', 'true');
+    params.append('includeEmailCampaigns', 'true');
+    params.append('includeSmsCampaigns', 'true');
+    params.append('includeWhatsappCampaigns', 'true');
+    params.append('campaignLimit', '10');
+
+    if (organizationId) {
+      params.append('organizationId', organizationId);
+    }
+
+    const response = await fetch(`${BACKEND_URL}/api/contacts?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      include: {
-        customerProfile: true,
-        lists: true,
-        segments: true,
-        emailCampaigns: {
-          take: 10,
-          orderBy: { createdAt: 'desc' }
-        },
-        smsCampaigns: {
-          take: 10,
-          orderBy: { createdAt: 'desc' }
-        },
-        whatsappCampaigns: {
-          take: 10,
-          orderBy: { createdAt: 'desc' }
-        }
-      }
     });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch contacts: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.contacts || data.data || data;
   }
 
   /**
@@ -475,9 +481,12 @@ export class CustomerProfileProcessor {
    * Update existing customer profile
    */
   private static async updateCustomerProfile(profileId: string, data: CustomerProfileData): Promise<void> {
-    await prisma.customerProfile.update({
-      where: { id: profileId },
-      data: {
+    const response = await fetch(`${BACKEND_URL}/api/customer-profiles/${profileId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         totalTransactions: data.totalTransactions,
         totalRevenue: data.totalRevenue,
         avgOrderValue: data.avgOrderValue,
@@ -494,19 +503,27 @@ export class CustomerProfileProcessor {
         customerSegment: data.customerSegment,
         behaviorTags: data.behaviorTags,
         nextBestActions: data.nextBestActions,
-        lastUpdated: new Date(),
+        lastUpdated: new Date().toISOString(),
         profileCompleteness: CustomerProfileProcessor.calculateCompleteness(data),
         churnRisk: data.churnRiskScore > 0.7 ? 'high' : data.churnRiskScore > 0.4 ? 'medium' : 'low'
-      }
+      }),
     });
+
+    if (!response.ok) {
+      throw new Error(`Failed to update customer profile: ${response.statusText}`);
+    }
   }
 
   /**
    * Create new customer profile
    */
   private static async createCustomerProfile(data: CustomerProfileData): Promise<void> {
-    await prisma.customerProfile.create({
-      data: {
+    const response = await fetch(`${BACKEND_URL}/api/customer-profiles`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         contactId: data.contactId,
         organizationId: data.organizationId,
         totalTransactions: data.totalTransactions,
@@ -525,13 +542,17 @@ export class CustomerProfileProcessor {
         customerSegment: data.customerSegment,
         behaviorTags: data.behaviorTags,
         nextBestActions: data.nextBestActions,
-        firstInteraction: new Date(),
-        lastInteraction: new Date(),
-        lastUpdated: new Date(),
+        firstInteraction: new Date().toISOString(),
+        lastInteraction: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
         profileCompleteness: CustomerProfileProcessor.calculateCompleteness(data),
         churnRisk: data.churnRiskScore > 0.7 ? 'high' : data.churnRiskScore > 0.4 ? 'medium' : 'low'
-      }
+      }),
     });
+
+    if (!response.ok) {
+      throw new Error(`Failed to create customer profile: ${response.statusText}`);
+    }
   }
 
   /**
@@ -644,16 +665,23 @@ export class CustomerProfileProcessor {
       if (aiResponse.success) {
         // Parse AI recommendations
         const nextBestActions = CustomerProfileProcessor.parseAIRecommendations(aiResponse.data.answer);
-        
+
         // Update customer profile with AI insights
-        await prisma.customerProfile.updateMany({
-          where: { contactId: contact.id },
-          data: {
+        const response = await fetch(`${BACKEND_URL}/api/customer-profiles/by-contact/${contact.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
             nextBestActions,
             aiInsights: aiResponse.data.answer,
-            lastAIAnalysis: new Date()
-          }
+            lastAIAnalysis: new Date().toISOString()
+          }),
         });
+
+        if (!response.ok) {
+          throw new Error(`Failed to update customer profile with AI insights: ${response.statusText}`);
+        }
 
         result.aiInsightsGenerated++;
       }

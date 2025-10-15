@@ -18,7 +18,11 @@
  * Based on user's blueprint: Create High-Value Customer Detection Rules
  */
 
-import { prisma } from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
+
 import { logger } from '@/lib/logger';
 import { getCustomerEventBus } from '@/lib/events/event-bus';
 import { getActionDispatcher } from '@/lib/actions/action-dispatcher';
@@ -388,26 +392,33 @@ export class HighValueCustomerDetectionEngine {
    * Get customers for evaluation
    */
   private async getCustomersForEvaluation(organizationId: string) {
-    return await prisma.contact.findMany({
-      where: {
-        organizationId,
-        isDeleted: false
-      },
-      include: {
-        customerProfile: true,
-        orders: {
-          where: {
-            createdAt: { gte: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) } // Last year
-          }
-        },
-        emailCampaigns: {
-          where: {
-            sentAt: { gte: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000) } // Last 6 months
-          }
-        },
-        referrals: true
+    try {
+      const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+      const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
+
+      const response = await fetch(
+        `${BACKEND_URL}/api/contacts?organizationId=${organizationId}&isDeleted=false&include=customerProfile,orders,emailCampaigns,referrals&ordersAfter=${oneYearAgo.toISOString()}&campaignsAfter=${sixMonthsAgo.toISOString()}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch customers: ${response.statusText}`);
       }
-    });
+
+      const data = await response.json();
+      return data.contacts || data.data || data;
+    } catch (error) {
+      logger.error('Failed to fetch customers for evaluation', {
+        organizationId,
+        error: error instanceof Error ? error.message : error
+      });
+      throw error;
+    }
   }
 
   /**
@@ -704,11 +715,31 @@ export class HighValueCustomerDetectionEngine {
    */
   private async compareWithPrevious(organizationId: string, currentCustomers: HighValueCustomer[]) {
     // Get previous high-value customer records
-    const previousRecords = await prisma.aI_HighValueCustomer.findMany({
-      where: { organizationId }
-    });
+    let previousRecords = [];
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/api/ai/high-value-customers?organizationId=${organizationId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
-    const previousMap = new Map(previousRecords.map(record => [record.contactId, record.valueTier]));
+      if (response.ok) {
+        const data = await response.json();
+        previousRecords = data.customers || data.data || data;
+      }
+    } catch (error) {
+      logger.error('Failed to fetch previous high-value customers', {
+        organizationId,
+        error: error instanceof Error ? error.message : error
+      });
+      // Continue with empty previousRecords
+    }
+
+    const previousMap = new Map(previousRecords.map((record: any) => [record.contactId, record.valueTier]));
     const currentMap = new Map(currentCustomers.map(customer => [customer.contactId, customer.valueTier]));
 
     const newDetections: HighValueCustomer[] = [];
@@ -895,41 +926,34 @@ export class HighValueCustomerDetectionEngine {
   private async updateCustomerProfiles(customers: HighValueCustomer[]): Promise<void> {
     for (const customer of customers) {
       try {
-        await prisma.aI_HighValueCustomer.upsert({
-          where: {
-            contactId_organizationId: {
+        const response = await fetch(
+          `${BACKEND_URL}/api/ai/high-value-customers`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
               contactId: customer.contactId,
-              organizationId: customer.organizationId
-            }
-          },
-          update: {
-            valueTier: customer.valueTier,
-            valueScore: customer.valueScore,
-            lifetimeValue: customer.lifetimeValue,
-            riskAssessment: customer.riskAssessment,
-            behavioralIndicators: customer.behavioralIndicators,
-            africanMarketFactors: customer.africanMarketFactors,
-            detectionTriggers: customer.detectionTriggers,
-            recommendations: customer.recommendations,
-            lastUpdated: customer.lastUpdated,
-            nextReviewDate: customer.nextReviewDate
-          },
-          create: {
-            contactId: customer.contactId,
-            organizationId: customer.organizationId,
-            valueTier: customer.valueTier,
-            valueScore: customer.valueScore,
-            lifetimeValue: customer.lifetimeValue,
-            riskAssessment: customer.riskAssessment,
-            behavioralIndicators: customer.behavioralIndicators,
-            africanMarketFactors: customer.africanMarketFactors,
-            detectionTriggers: customer.detectionTriggers,
-            recommendations: customer.recommendations,
-            detectedAt: customer.detectedAt,
-            lastUpdated: customer.lastUpdated,
-            nextReviewDate: customer.nextReviewDate
+              organizationId: customer.organizationId,
+              valueTier: customer.valueTier,
+              valueScore: customer.valueScore,
+              lifetimeValue: customer.lifetimeValue,
+              riskAssessment: customer.riskAssessment,
+              behavioralIndicators: customer.behavioralIndicators,
+              africanMarketFactors: customer.africanMarketFactors,
+              detectionTriggers: customer.detectionTriggers,
+              recommendations: customer.recommendations,
+              detectedAt: customer.detectedAt,
+              lastUpdated: customer.lastUpdated,
+              nextReviewDate: customer.nextReviewDate
+            })
           }
-        });
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to update customer profile: ${response.statusText}`);
+        }
       } catch (error) {
         logger.error('Failed to update customer profile', {
           customerId: customer.contactId,

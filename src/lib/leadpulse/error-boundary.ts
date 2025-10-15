@@ -8,7 +8,9 @@
 
 import { logger } from '@/lib/logger';
 import { leadPulseCache } from '@/lib/cache/leadpulse-cache';
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (LeadPulseSecurityEvent exists in backend)
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 
 // Error severity levels
 export enum ErrorSeverity {
@@ -757,9 +759,11 @@ class LeadPulseErrorBoundary {
     context: ErrorContext
   ): Promise<void> {
     try {
-      // Try to store in database
-      await prisma.leadPulseSecurityEvent.create({
-        data: {
+      // Try to store in database via backend API
+      const response = await fetch(`${BACKEND_URL}/api/v2/leadpulse-security-events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           type: 'OPERATION_ERROR',
           severity: this.determineSeverity(category, error),
           description: `${operationName} failed: ${error.message}`,
@@ -776,8 +780,12 @@ class LeadPulseErrorBoundary {
             context,
             timestamp: new Date().toISOString(),
           }),
-        },
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to record error: ${response.status}`);
+      }
     } catch (dbError) {
       // If database is unavailable, log to file/console
       logger.error('Failed to record error in database', {
@@ -885,10 +893,18 @@ class LeadPulseErrorBoundary {
       details.warnings.push('High error queue size');
     }
     
-    // Test database connectivity
+    // Test database connectivity via health endpoint
     try {
-      await prisma.$queryRaw`SELECT 1`;
-      details.database = 'connected';
+      const response = await fetch(`${BACKEND_URL}/health/db`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        details.database = 'connected';
+      } else {
+        throw new Error('Health check failed');
+      }
     } catch (error) {
       status = 'unhealthy';
       details.database = 'disconnected';

@@ -1,4 +1,6 @@
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (OfflineSession, OfflineEvent, OfflineSyncLog, OfflineCache, AnonymousVisitor, LeadPulseVisitor, LeadPulseTouchpoint, Form exist in backend)
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
+
 import { logger } from '@/lib/logger';
 
 // Types for offline synchronization
@@ -85,8 +87,10 @@ export class LeadPulseOfflineSyncService {
       await this.endActiveSessionsForDevice(deviceId);
 
       // Create new offline session
-      const session = await prisma.leadPulseOfflineSession.create({
-        data: {
+      const response = await fetch(`${BACKEND_URL}/api/v2/sync-queue/offline-sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           deviceId,
           sessionId,
           deviceInfo: JSON.stringify(deviceInfo),
@@ -94,8 +98,13 @@ export class LeadPulseOfflineSyncService {
           connectionStatus: 'offline',
           lastKnownLocation: location ? JSON.stringify(location) : null,
           timezone: deviceInfo.timezone
-        }
+        })
       });
+      if (!response.ok) {
+        throw new Error(`Failed to create offline session: ${response.status}`);
+      }
+      const data = await response.json();
+      const session = data.data;
 
       // Initialize cache for this device
       await this.initializeDeviceCache(deviceId);
@@ -121,43 +130,43 @@ export class LeadPulseOfflineSyncService {
     events: OfflineEvent[]
   ): Promise<void> {
     try {
-      const session = await prisma.leadPulseOfflineSession.findUnique({
-        where: { id: sessionId }
-      });
-
-      if (!session) {
+      const sessionResponse = await fetch(`${BACKEND_URL}/api/v2/sync-queue/offline-sessions/${sessionId}`);
+      if (!sessionResponse.ok) {
         throw new Error(`Session not found: ${sessionId}`);
       }
 
       // Create offline events
-      const eventPromises = events.map(event => 
-        prisma.leadPulseOfflineEvent.create({
-          data: {
-            sessionId,
+      const response = await fetch(`${BACKEND_URL}/api/v2/sync-queue/offline-events/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          events: events.map(event => ({
             localEventId: event.localEventId,
             eventType: event.eventType,
             eventData: JSON.stringify(event.eventData),
             url: event.url,
             timestamp: event.timestamp,
             syncStatus: 'PENDING'
-          }
+          }))
         })
-      );
-
-      await Promise.all(eventPromises);
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to queue offline events: ${response.status}`);
+      }
 
       // Update session metrics
-      await prisma.leadPulseOfflineSession.update({
-        where: { id: sessionId },
-        data: {
-          eventsCount: {
-            increment: events.length
-          },
-          dataSize: {
-            increment: this.calculateEventsSize(events)
-          }
-        }
+      const updateResponse = await fetch(`${BACKEND_URL}/api/v2/sync-queue/offline-sessions/${sessionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventsCount_increment: events.length,
+          dataSize_increment: this.calculateEventsSize(events)
+        })
       });
+      if (!updateResponse.ok) {
+        throw new Error(`Failed to update session metrics: ${updateResponse.status}`);
+      }
 
       logger.info(`Queued ${events.length} offline events for session: ${sessionId}`);
 
@@ -179,52 +188,55 @@ export class LeadPulseOfflineSyncService {
 
     try {
       // Get active session for device
-      const session = await prisma.leadPulseOfflineSession.findFirst({
-        where: {
-          deviceId,
-          isActive: true
-        },
-        include: {
-          events: {
-            where: {
-              syncStatus: 'PENDING'
-            },
-            orderBy: {
-              timestamp: 'asc'
-            }
-          }
-        }
-      });
+      const sessionResponse = await fetch(
+        `${BACKEND_URL}/api/v2/sync-queue/offline-sessions?deviceId=${deviceId}&isActive=true&include=events&events.syncStatus=PENDING&events.orderBy=timestamp:asc&limit=1`
+      );
+      if (!sessionResponse.ok) {
+        throw new Error(`Failed to get active session: ${sessionResponse.status}`);
+      }
+      const sessionData = await sessionResponse.json();
+      const session = sessionData.data?.[0];
 
       if (!session) {
         throw new Error(`No active session found for device: ${deviceId}`);
       }
 
       // Create sync log
-      const syncLog = await prisma.leadPulseOfflineSyncLog.create({
-        data: {
+      const syncLogResponse = await fetch(`${BACKEND_URL}/api/v2/sync-queue/sync-logs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           sessionId: session.id,
           syncType: 'UPLOAD',
           status: 'STARTED',
           startTime: new Date(),
           connectionType,
           networkSpeed
-        }
+        })
       });
+      if (!syncLogResponse.ok) {
+        throw new Error(`Failed to create sync log: ${syncLogResponse.status}`);
+      }
+      const syncLogData = await syncLogResponse.json();
+      const syncLog = syncLogData.data;
       syncLogId = syncLog.id;
 
       // Update session status
-      await prisma.leadPulseOfflineSession.update({
-        where: { id: session.id },
-        data: {
+      const updateSessionResponse = await fetch(`${BACKEND_URL}/api/v2/sync-queue/offline-sessions/${session.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           connectionStatus: 'syncing',
           syncStatus: 'SYNCING'
-        }
+        })
       });
+      if (!updateSessionResponse.ok) {
+        throw new Error(`Failed to update session status: ${updateSessionResponse.status}`);
+      }
 
       // Process events in batches
       const batchSize = 50;
-      const events = session.events;
+      const events = session.events || [];
       let eventsProcessed = 0;
       let eventsSucceeded = 0;
       let eventsFailed = 0;
@@ -234,9 +246,9 @@ export class LeadPulseOfflineSyncService {
 
       for (let i = 0; i < events.length; i += batchSize) {
         const batch = events.slice(i, i + batchSize);
-        
+
         const batchResult = await this.processBatchEvents(batch);
-        
+
         eventsProcessed += batch.length;
         eventsSucceeded += batchResult.succeeded;
         eventsFailed += batchResult.failed;
@@ -245,15 +257,19 @@ export class LeadPulseOfflineSyncService {
         conflictCount += batchResult.conflicts;
 
         // Update sync progress
-        await prisma.leadPulseOfflineSyncLog.update({
-          where: { id: syncLogId },
-          data: {
+        const progressResponse = await fetch(`${BACKEND_URL}/api/v2/sync-queue/sync-logs/${syncLogId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             status: 'IN_PROGRESS',
             eventsProcessed,
             eventsSucceeded,
             eventsFailed
-          }
+          })
         });
+        if (!progressResponse.ok) {
+          logger.error('Failed to update sync progress');
+        }
       }
 
       // Finalize sync
@@ -262,18 +278,20 @@ export class LeadPulseOfflineSyncService {
 
       await Promise.all([
         // Update session
-        prisma.leadPulseOfflineSession.update({
-          where: { id: session.id },
-          data: {
+        fetch(`${BACKEND_URL}/api/v2/sync-queue/offline-sessions/${session.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             connectionStatus,
-            syncStatus: syncStatus as any,
+            syncStatus,
             lastSyncAt: new Date()
-          }
+          })
         }),
         // Complete sync log
-        prisma.leadPulseOfflineSyncLog.update({
-          where: { id: syncLogId },
-          data: {
+        fetch(`${BACKEND_URL}/api/v2/sync-queue/sync-logs/${syncLogId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             status: 'COMPLETED',
             endTime: new Date(),
             eventsProcessed,
@@ -281,7 +299,7 @@ export class LeadPulseOfflineSyncService {
             eventsFailed,
             dataTransferred,
             errors: errors.length > 0 ? JSON.stringify(errors) : null
-          }
+          })
         })
       ]);
 
@@ -306,9 +324,10 @@ export class LeadPulseOfflineSyncService {
       logger.error('Sync failed:', error);
 
       if (syncLogId) {
-        await prisma.leadPulseOfflineSyncLog.update({
-          where: { id: syncLogId },
-          data: {
+        await fetch(`${BACKEND_URL}/api/v2/sync-queue/sync-logs/${syncLogId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             status: 'FAILED',
             endTime: new Date(),
             errors: JSON.stringify([{
@@ -316,7 +335,7 @@ export class LeadPulseOfflineSyncService {
               errorCode: 'SYNC_FAILED',
               retryable: true
             }])
-          }
+          })
         });
       }
 
@@ -344,15 +363,16 @@ export class LeadPulseOfflineSyncService {
       try {
         // Check for duplicate events
         const existingEvent = await this.findDuplicateEvent(event);
-        
+
         if (existingEvent) {
           // Mark as duplicate
-          await prisma.leadPulseOfflineEvent.update({
-            where: { id: event.id },
-            data: {
+          await fetch(`${BACKEND_URL}/api/v2/sync-queue/offline-events/${event.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
               syncStatus: 'DUPLICATE',
               serverTimestamp: new Date()
-            }
+            })
           });
           conflicts++;
           continue;
@@ -364,12 +384,13 @@ export class LeadPulseOfflineSyncService {
 
         if (touchpoint) {
           // Mark event as synced
-          await prisma.leadPulseOfflineEvent.update({
-            where: { id: event.id },
-            data: {
+          await fetch(`${BACKEND_URL}/api/v2/sync-queue/offline-events/${event.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
               syncStatus: 'COMPLETED',
               serverTimestamp: new Date()
-            }
+            })
           });
 
           succeeded++;
@@ -380,14 +401,15 @@ export class LeadPulseOfflineSyncService {
 
       } catch (error) {
         // Mark event as failed
-        await prisma.leadPulseOfflineEvent.update({
-          where: { id: event.id },
-          data: {
+        await fetch(`${BACKEND_URL}/api/v2/sync-queue/offline-events/${event.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             syncStatus: 'FAILED',
-            syncAttempts: { increment: 1 },
+            syncAttempts_increment: 1,
             lastSyncAttempt: new Date(),
             syncError: error instanceof Error ? error.message : 'Unknown error'
-          }
+          })
         });
 
         errors.push({
@@ -396,7 +418,7 @@ export class LeadPulseOfflineSyncService {
           errorCode: 'PROCESSING_FAILED',
           retryable: true
         });
-        
+
         failed++;
       }
     }
@@ -409,32 +431,30 @@ export class LeadPulseOfflineSyncService {
    */
   private async findDuplicateEvent(offlineEvent: any): Promise<any> {
     // Check in offline events table
-    const duplicateOffline = await prisma.leadPulseOfflineEvent.findFirst({
-      where: {
-        localEventId: offlineEvent.localEventId,
-        syncStatus: { in: ['COMPLETED', 'DUPLICATE'] },
-        id: { not: offlineEvent.id }
-      }
-    });
-
-    if (duplicateOffline) return duplicateOffline;
+    const duplicateOfflineResponse = await fetch(
+      `${BACKEND_URL}/api/v2/sync-queue/offline-events?localEventId=${offlineEvent.localEventId}&syncStatus=COMPLETED,DUPLICATE&id_not=${offlineEvent.id}&limit=1`
+    );
+    if (duplicateOfflineResponse.ok) {
+      const data = await duplicateOfflineResponse.json();
+      const duplicateOffline = data.data?.[0];
+      if (duplicateOffline) return duplicateOffline;
+    }
 
     // Check in regular touchpoints table based on timestamp and event type
-    const eventData = JSON.parse(offlineEvent.eventData);
     const timeWindow = 60000; // 1 minute window
-    
-    const duplicateTouchpoint = await prisma.leadPulseTouchpoint.findFirst({
-      where: {
-        type: this.mapEventTypeToTouchpointType(offlineEvent.eventType),
-        timestamp: {
-          gte: new Date(offlineEvent.timestamp.getTime() - timeWindow),
-          lte: new Date(offlineEvent.timestamp.getTime() + timeWindow)
-        },
-        url: offlineEvent.url
-      }
-    });
+    const timestamp = new Date(offlineEvent.timestamp);
+    const timeGte = new Date(timestamp.getTime() - timeWindow).toISOString();
+    const timeLte = new Date(timestamp.getTime() + timeWindow).toISOString();
 
-    return duplicateTouchpoint;
+    const duplicateTouchpointResponse = await fetch(
+      `${BACKEND_URL}/api/v2/leadpulse-touchpoints?type=${this.mapEventTypeToTouchpointType(offlineEvent.eventType)}&timestamp_gte=${timeGte}&timestamp_lte=${timeLte}&url=${encodeURIComponent(offlineEvent.url)}&limit=1`
+    );
+    if (duplicateTouchpointResponse.ok) {
+      const data = await duplicateTouchpointResponse.json();
+      return data.data?.[0];
+    }
+
+    return null;
   }
 
   /**
@@ -446,56 +466,71 @@ export class LeadPulseOfflineSyncService {
   ): Promise<any> {
     try {
       // Find or create visitor based on device ID
-      const session = await prisma.leadPulseOfflineSession.findUnique({
-        where: { id: offlineEvent.sessionId }
-      });
-
-      if (!session) {
+      const sessionResponse = await fetch(`${BACKEND_URL}/api/v2/sync-queue/offline-sessions/${offlineEvent.sessionId}`);
+      if (!sessionResponse.ok) {
         throw new Error('Session not found');
       }
+      const sessionData = await sessionResponse.json();
+      const session = sessionData.data;
 
       // Try to find existing visitor by device fingerprint or create anonymous visitor
       let visitorId = null;
       let anonymousVisitorId = null;
 
       // Check if we can match to an existing visitor
-      const existingVisitor = await prisma.leadPulseVisitor.findFirst({
-        where: {
-          fingerprint: session.deviceId
+      const existingVisitorResponse = await fetch(
+        `${BACKEND_URL}/api/v2/leadpulse-visitors?fingerprint=${session.deviceId}&limit=1`
+      );
+      if (existingVisitorResponse.ok) {
+        const visitorData = await existingVisitorResponse.json();
+        const existingVisitor = visitorData.data?.[0];
+        if (existingVisitor) {
+          visitorId = existingVisitor.id;
         }
-      });
+      }
 
-      if (existingVisitor) {
-        visitorId = existingVisitor.id;
-      } else {
+      if (!visitorId) {
         // Create/update anonymous visitor
-        const anonymousVisitor = await prisma.anonymousVisitor.upsert({
-          where: { fingerprint: session.deviceId },
-          create: {
-            fingerprint: session.deviceId,
-            firstVisit: session.startTime,
-            lastVisit: offlineEvent.timestamp,
-            totalVisits: 1,
-            visitCount: 1,
-            userAgent: eventData.userAgent,
-            city: eventData.location?.city,
-            country: eventData.location?.country,
-            region: eventData.location?.region,
-            latitude: eventData.location?.latitude,
-            longitude: eventData.location?.longitude
-          },
-          update: {
-            lastVisit: offlineEvent.timestamp,
-            totalVisits: { increment: 1 },
-            visitCount: { increment: 1 }
+        const anonVisitorResponse = await fetch(
+          `${BACKEND_URL}/api/v2/anonymous-visitors/upsert`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fingerprint: session.deviceId,
+              create: {
+                fingerprint: session.deviceId,
+                firstVisit: session.startTime,
+                lastVisit: offlineEvent.timestamp,
+                totalVisits: 1,
+                visitCount: 1,
+                userAgent: eventData.userAgent,
+                city: eventData.location?.city,
+                country: eventData.location?.country,
+                region: eventData.location?.region,
+                latitude: eventData.location?.latitude,
+                longitude: eventData.location?.longitude
+              },
+              update: {
+                lastVisit: offlineEvent.timestamp,
+                totalVisits_increment: 1,
+                visitCount_increment: 1
+              }
+            })
           }
-        });
-        anonymousVisitorId = anonymousVisitor.id;
+        );
+        if (!anonVisitorResponse.ok) {
+          throw new Error(`Failed to upsert anonymous visitor: ${anonVisitorResponse.status}`);
+        }
+        const anonData = await anonVisitorResponse.json();
+        anonymousVisitorId = anonData.data.id;
       }
 
       // Create touchpoint
-      const touchpoint = await prisma.leadPulseTouchpoint.create({
-        data: {
+      const touchpointResponse = await fetch(`${BACKEND_URL}/api/v2/leadpulse-touchpoints`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           visitorId,
           anonymousVisitorId,
           timestamp: offlineEvent.timestamp,
@@ -505,10 +540,13 @@ export class LeadPulseOfflineSyncService {
           value: eventData.value || 1,
           score: eventData.score || 1,
           metadata: eventData
-        }
+        })
       });
-
-      return touchpoint;
+      if (!touchpointResponse.ok) {
+        throw new Error(`Failed to create touchpoint: ${touchpointResponse.status}`);
+      }
+      const touchpointData = await touchpointResponse.json();
+      return touchpointData.data;
 
     } catch (error) {
       logger.error('Failed to convert offline event to touchpoint:', error);
@@ -550,30 +588,34 @@ export class LeadPulseOfflineSyncService {
       const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
       const version = Date.now().toString();
 
-      await prisma.leadPulseOfflineCache.upsert({
-        where: {
-          deviceId_cacheKey: {
-            deviceId,
-            cacheKey
-          }
-        },
-        create: {
+      const response = await fetch(`${BACKEND_URL}/api/v2/sync-queue/offline-cache/upsert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           deviceId,
           cacheKey,
-          cacheType: cacheType as any,
-          data: JSON.stringify(data),
-          version,
-          expiresAt,
-          lastUpdated: new Date()
-        },
-        update: {
-          data: JSON.stringify(data),
-          version,
-          expiresAt,
-          lastUpdated: new Date(),
-          isStale: false
-        }
+          create: {
+            deviceId,
+            cacheKey,
+            cacheType,
+            data: JSON.stringify(data),
+            version,
+            expiresAt,
+            lastUpdated: new Date()
+          },
+          update: {
+            data: JSON.stringify(data),
+            version,
+            expiresAt,
+            lastUpdated: new Date(),
+            isStale: false
+          }
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to cache data: ${response.status}`);
+      }
 
       logger.info(`Cached data for offline access: ${cacheKey}`, {
         deviceId,
@@ -595,25 +637,29 @@ export class LeadPulseOfflineSyncService {
     cacheKey: string
   ): Promise<any> {
     try {
-      const cached = await prisma.leadPulseOfflineCache.findUnique({
-        where: {
-          deviceId_cacheKey: {
-            deviceId,
-            cacheKey
-          }
-        }
-      });
+      const response = await fetch(
+        `${BACKEND_URL}/api/v2/sync-queue/offline-cache?deviceId=${deviceId}&cacheKey=${encodeURIComponent(cacheKey)}&limit=1`
+      );
+
+      if (!response.ok) {
+        if (response.status === 404) return null;
+        throw new Error(`Failed to get cached data: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const cached = data.data?.[0];
 
       if (!cached) {
         return null;
       }
 
       // Check if expired
-      if (cached.expiresAt < new Date()) {
+      if (new Date(cached.expiresAt) < new Date()) {
         // Mark as stale but still return data
-        await prisma.leadPulseOfflineCache.update({
-          where: { id: cached.id },
-          data: { isStale: true }
+        await fetch(`${BACKEND_URL}/api/v2/sync-queue/offline-cache/${cached.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isStale: true })
         });
 
         return {
@@ -640,32 +686,24 @@ export class LeadPulseOfflineSyncService {
    */
   async getSyncStatus(deviceId: string): Promise<any> {
     try {
-      const session = await prisma.leadPulseOfflineSession.findFirst({
-        where: {
-          deviceId,
-          isActive: true
-        },
-        include: {
-          events: {
-            where: {
-              syncStatus: 'PENDING'
-            }
-          },
-          syncLogs: {
-            orderBy: {
-              startTime: 'desc'
-            },
-            take: 1
-          }
-        }
-      });
+      const sessionResponse = await fetch(
+        `${BACKEND_URL}/api/v2/sync-queue/offline-sessions?deviceId=${deviceId}&isActive=true&include=events,syncLogs&events.syncStatus=PENDING&syncLogs.orderBy=startTime:desc&syncLogs.limit=1&limit=1`
+      );
+
+      if (!sessionResponse.ok) {
+        if (sessionResponse.status === 404) return null;
+        throw new Error(`Failed to get sync status: ${sessionResponse.status}`);
+      }
+
+      const sessionData = await sessionResponse.json();
+      const session = sessionData.data?.[0];
 
       if (!session) {
         return null;
       }
 
-      const pendingEvents = session.events.length;
-      const lastSync = session.syncLogs[0];
+      const pendingEvents = session.events?.length || 0;
+      const lastSync = session.syncLogs?.[0];
 
       return {
         sessionId: session.id,
@@ -693,16 +731,20 @@ export class LeadPulseOfflineSyncService {
    * End active sessions for a device
    */
   private async endActiveSessionsForDevice(deviceId: string): Promise<void> {
-    await prisma.leadPulseOfflineSession.updateMany({
-      where: {
-        deviceId,
-        isActive: true
-      },
-      data: {
-        isActive: false,
-        endTime: new Date(),
-        connectionStatus: 'offline'
-      }
+    await fetch(`${BACKEND_URL}/api/v2/sync-queue/offline-sessions/bulk-update`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        where: {
+          deviceId,
+          isActive: true
+        },
+        data: {
+          isActive: false,
+          endTime: new Date(),
+          connectionStatus: 'offline'
+        }
+      })
     });
   }
 
@@ -711,24 +753,25 @@ export class LeadPulseOfflineSyncService {
    */
   private async initializeDeviceCache(deviceId: string): Promise<void> {
     // Cache form configurations
-    const forms = await prisma.leadPulseForm.findMany({
-      where: { isActive: true },
-      select: {
-        id: true,
-        name: true,
-        fields: true,
-        settings: true
-      }
-    });
+    const formsResponse = await fetch(`${BACKEND_URL}/api/v2/leadpulse-forms?isActive=true`);
+    if (formsResponse.ok) {
+      const formsData = await formsResponse.json();
+      const forms = (formsData.data || []).map((f: any) => ({
+        id: f.id,
+        name: f.name,
+        fields: f.fields,
+        settings: f.settings
+      }));
 
-    if (forms.length > 0) {
-      await this.cacheDataForOffline(
-        deviceId,
-        'forms_config',
-        'FORM_CONFIG',
-        forms,
-        48 // 48 hours TTL
-      );
+      if (forms.length > 0) {
+        await this.cacheDataForOffline(
+          deviceId,
+          'forms_config',
+          'FORM_CONFIG',
+          forms,
+          48 // 48 hours TTL
+        );
+      }
     }
 
     // Cache engagement rules
@@ -769,26 +812,32 @@ export class LeadPulseOfflineSyncService {
 
     try {
       // Delete old completed events
-      await prisma.leadPulseOfflineEvent.deleteMany({
-        where: {
+      await fetch(`${BACKEND_URL}/api/v2/sync-queue/offline-events/bulk-delete`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           syncStatus: 'COMPLETED',
-          createdAt: { lt: cutoffDate }
-        }
+          createdAt_lt: cutoffDate
+        })
       });
 
       // Delete old sync logs
-      await prisma.leadPulseOfflineSyncLog.deleteMany({
-        where: {
+      await fetch(`${BACKEND_URL}/api/v2/sync-queue/sync-logs/bulk-delete`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           status: 'COMPLETED',
-          startTime: { lt: cutoffDate }
-        }
+          startTime_lt: cutoffDate
+        })
       });
 
       // Delete expired cache entries
-      await prisma.leadPulseOfflineCache.deleteMany({
-        where: {
-          expiresAt: { lt: new Date() }
-        }
+      await fetch(`${BACKEND_URL}/api/v2/sync-queue/offline-cache/bulk-delete`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          expiresAt_lt: new Date()
+        })
       });
 
       logger.info(`Cleaned up offline data older than ${daysOld} days`);

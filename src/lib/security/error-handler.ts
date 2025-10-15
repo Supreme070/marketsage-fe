@@ -7,7 +7,7 @@
 
 import { NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@/types/prisma-types';
 
 export interface ErrorContext {
   userId?: string;

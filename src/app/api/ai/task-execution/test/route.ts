@@ -8,7 +8,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { supremeAIV3Enhanced } from '@/lib/ai/supreme-ai-v3-mcp-integration';
+import { supremeAIv3 } from '@/lib/ai/supreme-ai-v3-engine';
 import { safetyApprovalSystem } from '@/lib/ai/safety-approval-system';
 import { taskExecutionMonitor } from '@/lib/ai/task-execution-monitor';
 import { logger } from '@/lib/logger';
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
           enableTaskExecution: true
         };
 
-        const result = await supremeAIV3Enhanced.processWithMCP(aiTask);
+        const result = await supremeAIv3.process(aiTask);
         
         results.results.basicExecution = {
           success: result.success,

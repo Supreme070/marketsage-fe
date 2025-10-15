@@ -3,8 +3,10 @@
  * Links anonymous visitor sessions to known customer records
  */
 
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (Contact, LeadPulseVisitor exist in backend)
 import { visitorTracker } from './visitor-tracking';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 
 export interface ConversionEvent {
   visitorId: string;
@@ -67,14 +69,24 @@ class ConversionBridge {
     const visitorIdentity = visitorTracker.getVisitorIdentity();
     
     try {
-      // 1. Find or create contact record
-      let contact = await prisma.contact.findUnique({
-        where: { email: conversionData.email }
+      // 1. Find or create contact record via backend API
+      let contactResponse = await fetch(`${BACKEND_URL}/api/v2/contacts?email=${encodeURIComponent(conversionData.email)}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
 
+      let contact;
+
+      if (contactResponse.ok) {
+        const contacts = await contactResponse.json();
+        contact = contacts[0]; // Get first match
+      }
+
       if (!contact) {
-        contact = await prisma.contact.create({
-          data: {
+        const createResponse = await fetch(`${BACKEND_URL}/api/v2/contacts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             email: conversionData.email,
             firstName: conversionData.name?.split(' ')[0] || '',
             lastName: conversionData.name?.split(' ').slice(1).join(' ') || '',
@@ -89,8 +101,14 @@ class ConversionBridge {
               originalVisitorId: visitorIdentity.visitorId,
               conversionDate: new Date().toISOString()
             }
-          }
+          })
         });
+
+        if (!createResponse.ok) {
+          throw new Error(`Failed to create contact: ${createResponse.status}`);
+        }
+
+        contact = await createResponse.json();
       }
 
       // 2. Get all anonymous sessions for this visitor
@@ -111,26 +129,34 @@ class ConversionBridge {
         }
       };
 
-      // 4. Update visitor record to link with contact
-      await prisma.leadPulseVisitor.updateMany({
-        where: {
-          OR: [
-            { fingerprint: visitorIdentity.visitorId },
-            { fingerprint: visitorIdentity.fingerprint }
-          ]
-        },
-        data: {
-          contactId: contact.id,
-          isConverted: true,
-          conversionDate: new Date(),
-          conversionType: conversionData.conversionType,
-          metadata: {
-            linkedToContact: true,
-            contactEmail: contact.email,
-            conversionEvent: conversionEvent
+      // 4. Update visitor record to link with contact via backend API
+      const updateVisitorResponse = await fetch(`${BACKEND_URL}/api/v2/visitors/bulk-update`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          where: {
+            OR: [
+              { fingerprint: visitorIdentity.visitorId },
+              { fingerprint: visitorIdentity.fingerprint }
+            ]
+          },
+          data: {
+            contactId: contact.id,
+            isConverted: true,
+            conversionDate: new Date(),
+            conversionType: conversionData.conversionType,
+            metadata: {
+              linkedToContact: true,
+              contactEmail: contact.email,
+              conversionEvent: conversionEvent
+            }
           }
-        }
+        })
       });
+
+      if (!updateVisitorResponse.ok) {
+        throw new Error(`Failed to update visitor records: ${updateVisitorResponse.status}`);
+      }
 
       // 5. Create customer journey record
       const totalTouchpoints = anonymousSessions.reduce((sum, session) => sum + session.touchpoints.length, 0);
@@ -170,19 +196,20 @@ class ConversionBridge {
    * Get all anonymous visitor history
    */
   private async getAnonymousVisitorHistory(visitorId: string): Promise<AnonymousSession[]> {
-    const visitors = await prisma.leadPulseVisitor.findMany({
-      where: {
-        OR: [
-          { fingerprint: visitorId },
-          { fingerprint: visitorTracker.getVisitorIdentity().fingerprint }
-        ]
-      },
-      include: {
-        touchpoints: {
-          orderBy: { timestamp: 'asc' }
-        }
+    const visitorFingerprint = visitorTracker.getVisitorIdentity().fingerprint;
+    const response = await fetch(
+      `${BACKEND_URL}/api/v2/visitors?fingerprint=${visitorId},${visitorFingerprint}&include=touchpoints&touchpointsOrderBy=timestamp:asc`,
+      {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       }
-    });
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch visitor history: ${response.status}`);
+    }
+
+    const visitors = await response.json();
 
     return visitors.map(visitor => ({
       visitorId: visitor.fingerprint,
@@ -282,10 +309,11 @@ class ConversionBridge {
    * Store customer journey in database
    */
   private async storeCustomerJourney(journey: CustomerJourney): Promise<void> {
-    // Store in a CustomerJourney table or in Contact metadata
-    await prisma.contact.update({
-      where: { id: journey.contactId },
-      data: {
+    // Store in a CustomerJourney table or in Contact metadata via backend API
+    const response = await fetch(`${BACKEND_URL}/api/v2/contacts/${journey.contactId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         metadata: {
           customerJourney: {
             totalTouchpoints: journey.totalTouchpoints,
@@ -298,8 +326,12 @@ class ConversionBridge {
             lastUpdated: new Date().toISOString()
           }
         }
-      }
+      })
     });
+
+    if (!response.ok) {
+      throw new Error(`Failed to store customer journey: ${response.status}`);
+    }
   }
 
   /**
@@ -354,18 +386,19 @@ class ConversionBridge {
    */
   async getCustomerJourney(contactId: string): Promise<CustomerJourney | null> {
     try {
-      const contact = await prisma.contact.findUnique({
-        where: { id: contactId },
-        include: {
-          leadPulseVisitors: {
-            include: {
-              touchpoints: {
-                orderBy: { timestamp: 'asc' }
-              }
-            }
-          }
+      const response = await fetch(
+        `${BACKEND_URL}/api/v2/contacts/${contactId}?include=leadPulseVisitors.touchpoints&touchpointsOrderBy=timestamp:asc`,
+        {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
         }
-      });
+      );
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const contact = await response.json();
 
       if (!contact || !contact.leadPulseVisitors.length) {
         return null;
@@ -448,19 +481,29 @@ class ConversionBridge {
         startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     }
 
-    const [totalVisitors, convertedContacts] = await Promise.all([
-      prisma.leadPulseVisitor.count({
-        where: {
-          firstVisit: { gte: startDate }
+    const [totalVisitorsResponse, convertedContactsResponse] = await Promise.all([
+      fetch(
+        `${BACKEND_URL}/api/v2/visitors/count?firstVisit[gte]=${startDate.toISOString()}`,
+        {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
         }
-      }),
-      prisma.contact.findMany({
-        where: {
-          createdAt: { gte: startDate },
-          source: 'leadpulse_conversion'
+      ),
+      fetch(
+        `${BACKEND_URL}/api/v2/contacts?createdAt[gte]=${startDate.toISOString()}&source=leadpulse_conversion`,
+        {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
         }
-      })
+      )
     ]);
+
+    if (!totalVisitorsResponse.ok || !convertedContactsResponse.ok) {
+      throw new Error('Failed to fetch conversion analytics');
+    }
+
+    const { count: totalVisitors } = await totalVisitorsResponse.json();
+    const convertedContacts = await convertedContactsResponse.json();
 
     const totalConversions = convertedContacts.length;
     const conversionRate = totalVisitors > 0 ? (totalConversions / totalVisitors) * 100 : 0;

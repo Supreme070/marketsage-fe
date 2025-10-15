@@ -40,7 +40,11 @@
 import { logger } from '@/lib/logger';
 import { trace } from '@opentelemetry/api';
 import { EventEmitter } from 'events';
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
+
 import { supremeAI } from '../supreme-ai-engine';
 import { enhancedPredictiveProactiveEngine } from '../enhanced-predictive-proactive-engine';
 import { multiAgentCoordinator } from '../multi-agent-coordinator';
@@ -981,14 +985,13 @@ export class EnhancedRealTimeLearningEngine extends EventEmitter {
       return this.userModels.get(userId)!;
     }
 
-    // Load from database
+    // Load from database via backend API
     try {
-      const stored = await prisma.user.findUnique({
-        where: { id: userId },
-        include: {
-          userLearningModel: true,
-        },
+      const response = await fetch(`${BACKEND_URL}/api/v2/users/${userId}?include=userLearningModel`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const stored = response.ok ? await response.json() : null;
 
       let userModel: UserModel;
 
@@ -1068,18 +1071,15 @@ export class EnhancedRealTimeLearningEngine extends EventEmitter {
 
   private async saveUserModel(userModel: UserModel): Promise<void> {
     try {
-      await prisma.userLearningModel.upsert({
-        where: { userId: userModel.userId },
-        update: {
-          modelData: JSON.stringify(userModel),
-          lastUpdated: new Date(),
-        },
-        create: {
+      await fetch(`${BACKEND_URL}/api/v2/user-learning-models/upsert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           userId: userModel.userId,
           modelData: JSON.stringify(userModel),
           version: 1,
-          lastUpdated: new Date(),
-        },
+          lastUpdated: new Date()
+        })
       });
 
       // Update in-memory cache
@@ -1137,8 +1137,10 @@ export class EnhancedRealTimeLearningEngine extends EventEmitter {
 
   private async storeInteraction(interaction: UserInteraction): Promise<void> {
     try {
-      await prisma.userInteraction.create({
-        data: {
+      await fetch(`${BACKEND_URL}/api/v2/user-interactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           userId: interaction.userId,
           type: interaction.type,
           context: JSON.stringify(interaction.context),
@@ -1146,7 +1148,7 @@ export class EnhancedRealTimeLearningEngine extends EventEmitter {
           feedback: interaction.feedback ? JSON.stringify(interaction.feedback) : null,
           outcome: interaction.outcome ? JSON.stringify(interaction.outcome) : null,
           metadata: interaction.metadata ? JSON.stringify(interaction.metadata) : null,
-        },
+        })
       });
     } catch (error) {
       logger.error('Failed to store interaction', { error, interaction });

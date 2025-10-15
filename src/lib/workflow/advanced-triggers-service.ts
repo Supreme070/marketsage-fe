@@ -5,7 +5,7 @@
  * Builds on top of existing WorkflowTriggerManager without disrupting core functionality.
  */
 
-import prisma from '@/lib/db/prisma';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 import { logger } from '@/lib/logger';
 import { triggerManager, queueTriggerEvent, type TriggerEvent } from './trigger-manager';
 
@@ -230,8 +230,10 @@ export class AdvancedTriggersService {
       const triggerAt = new Date(Date.now() + delayMs);
 
       // Store the scheduled trigger (in production, you'd use a job scheduler like Bull/Agenda)
-      await prisma.workflowEvent.create({
-        data: {
+      const response = await fetch(`${BACKEND_URL}/api/workflows/events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           eventType: 'DELAYED_TRIGGER',
           contactId,
           eventData: JSON.stringify({
@@ -241,8 +243,9 @@ export class AdvancedTriggersService {
           }),
           processed: false,
           createdAt: new Date(),
-        },
+        })
       });
+      if (!response.ok) throw new Error(`Failed to create delayed trigger: ${response.statusText}`);
 
       logger.info('Scheduled delayed trigger', {
         workflowId,
@@ -263,9 +266,11 @@ export class AdvancedTriggersService {
   // Private helper methods
 
   private async getWorkflowsWithTimeTriggers(): Promise<any[]> {
-    const workflows = await prisma.workflow.findMany({
-      where: { status: 'ACTIVE' },
+    const response = await fetch(`${BACKEND_URL}/api/workflows?status=ACTIVE`, {
+      headers: { 'Content-Type': 'application/json' }
     });
+    if (!response.ok) throw new Error(`Failed to fetch workflows: ${response.statusText}`);
+    const workflows = await response.json();
 
     return workflows.filter(workflow => {
       const definition = JSON.parse(workflow.definition);
@@ -284,9 +289,11 @@ export class AdvancedTriggersService {
   }
 
   private async getWorkflowsWithBehavioralTriggers(): Promise<any[]> {
-    const workflows = await prisma.workflow.findMany({
-      where: { status: 'ACTIVE' },
+    const response = await fetch(`${BACKEND_URL}/api/workflows?status=ACTIVE`, {
+      headers: { 'Content-Type': 'application/json' }
     });
+    if (!response.ok) throw new Error(`Failed to fetch workflows: ${response.statusText}`);
+    const workflows = await response.json();
 
     return workflows.filter(workflow => {
       const definition = JSON.parse(workflow.definition);
@@ -304,9 +311,11 @@ export class AdvancedTriggersService {
   }
 
   private async getWorkflowsWithPredictiveTriggers(): Promise<any[]> {
-    const workflows = await prisma.workflow.findMany({
-      where: { status: 'ACTIVE' },
+    const response = await fetch(`${BACKEND_URL}/api/workflows?status=ACTIVE`, {
+      headers: { 'Content-Type': 'application/json' }
     });
+    if (!response.ok) throw new Error(`Failed to fetch workflows: ${response.statusText}`);
+    const workflows = await response.json();
 
     return workflows.filter(workflow => {
       const definition = JSON.parse(workflow.definition);
@@ -547,24 +556,20 @@ export class AdvancedTriggersService {
     const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
     // Aggregate activity from multiple sources
-    const [emailActivities, workflowEvents] = await Promise.all([
-      prisma.emailActivity.findMany({
-        where: {
-          contactId,
-          timestamp: { gte: cutoffDate },
-        },
-        orderBy: { timestamp: 'desc' },
-        take: 100,
+    const [emailActivitiesRes, workflowEventsRes] = await Promise.all([
+      fetch(`${BACKEND_URL}/api/email/activities?contactId=${contactId}&startDate=${cutoffDate.toISOString()}&limit=100&orderBy=timestamp&order=desc`, {
+        headers: { 'Content-Type': 'application/json' }
       }),
-      prisma.workflowEvent.findMany({
-        where: {
-          contactId,
-          createdAt: { gte: cutoffDate },
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 100,
-      }),
+      fetch(`${BACKEND_URL}/api/workflows/events?contactId=${contactId}&startDate=${cutoffDate.toISOString()}&limit=100&orderBy=createdAt&order=desc`, {
+        headers: { 'Content-Type': 'application/json' }
+      })
     ]);
+
+    if (!emailActivitiesRes.ok) throw new Error(`Failed to fetch email activities: ${emailActivitiesRes.statusText}`);
+    if (!workflowEventsRes.ok) throw new Error(`Failed to fetch workflow events: ${workflowEventsRes.statusText}`);
+
+    const emailActivities = await emailActivitiesRes.json();
+    const workflowEvents = await workflowEventsRes.json();
 
     // Combine and normalize activities
     const activities = [
@@ -606,13 +611,11 @@ export class AdvancedTriggersService {
 
   private async getEligibleContactsForWorkflow(workflowId: string): Promise<any[]> {
     // For safety, limit to a small number of contacts
-    return await prisma.contact.findMany({
-      where: { 
-        status: 'ACTIVE',
-        // Add workflow-specific targeting rules here
-      },
-      take: 50, // Conservative limit
+    const response = await fetch(`${BACKEND_URL}/api/contacts?status=ACTIVE&limit=50`, {
+      headers: { 'Content-Type': 'application/json' }
     });
+    if (!response.ok) throw new Error(`Failed to fetch contacts: ${response.statusText}`);
+    return await response.json();
   }
 }
 

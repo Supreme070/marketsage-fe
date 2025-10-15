@@ -4,9 +4,13 @@
  * Comprehensive authorization system with fine-grained permissions
  */
 
-import { UserRole } from '@prisma/client';
+import { UserRole } from '@/types/prisma-types';
 import { logger } from '@/lib/logger';
-import prisma from '@/lib/db/prisma';
+
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
 
 // Permission definitions
 export enum Permission {
@@ -401,10 +405,11 @@ export class AuthorizationService {
         // Fetch resource ownership info based on entity type
         switch (entityType) {
           case 'USER':
-            const user = await prisma.user.findUnique({
-              where: { id: entityId },
-              select: { id: true, organizationId: true }
+            const userResponse = await fetch(`${BACKEND_URL}/api/v2/users/${entityId}`, {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' }
             });
+            const user = userResponse.ok ? await userResponse.json() : null;
             resourceOwnership = {
               userId: user?.id,
               organizationId: user?.organizationId || undefined
@@ -412,10 +417,11 @@ export class AuthorizationService {
             break;
             
           case 'CONTACT':
-            const contact = await prisma.contact.findUnique({
-              where: { id: entityId },
-              select: { organizationId: true, createdById: true }
+            const contactResponse = await fetch(`${BACKEND_URL}/api/v2/contacts/${entityId}`, {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' }
             });
+            const contact = contactResponse.ok ? await contactResponse.json() : null;
             resourceOwnership = {
               organizationId: contact?.organizationId,
               createdById: contact?.createdById
@@ -423,10 +429,11 @@ export class AuthorizationService {
             break;
             
           case 'CAMPAIGN':
-            const campaign = await prisma.emailCampaign.findUnique({
-              where: { id: entityId },
-              select: { organizationId: true, createdById: true }
+            const campaignResponse = await fetch(`${BACKEND_URL}/api/v2/email-campaigns/${entityId}`, {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' }
             });
+            const campaign = campaignResponse.ok ? await campaignResponse.json() : null;
             resourceOwnership = {
               organizationId: campaign?.organizationId,
               createdById: campaign?.createdById
@@ -434,10 +441,11 @@ export class AuthorizationService {
             break;
             
           case 'TASK':
-            const task = await prisma.task.findUnique({
-              where: { id: entityId },
-              select: { organizationId: true, createdById: true, assigneeId: true }
+            const taskResponse = await fetch(`${BACKEND_URL}/api/v2/tasks/${entityId}`, {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' }
             });
+            const task = taskResponse.ok ? await taskResponse.json() : null;
             resourceOwnership = {
               organizationId: task?.organizationId,
               createdById: task?.createdById,

@@ -6,8 +6,10 @@
 
 import { logger } from '@/lib/logger';
 import { leadPulseCache } from '@/lib/cache/leadpulse-cache';
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (LeadPulseDataProcessingLog, LeadPulseSecurityEvent exist in backend)
 import crypto from 'crypto';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 
 interface SecurityEvent {
   type: 'SUSPICIOUS_ACTIVITY' | 'RATE_LIMIT_EXCEEDED' | 'INVALID_INPUT' | 'UNAUTHORIZED_ACCESS' | 'DATA_BREACH_ATTEMPT';
@@ -440,8 +442,10 @@ export class LeadPulseSecurityManager {
     }
   ) {
     try {
-      await prisma.leadPulseDataProcessingLog.create({
-        data: {
+      const response = await fetch(`${BACKEND_URL}/api/v2/leadpulse-data-processing-logs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           type: activity.type,
           dataSubject: activity.dataSubject,
           dataTypes: activity.dataTypes,
@@ -449,8 +453,12 @@ export class LeadPulseSecurityManager {
           legalBasis: activity.legalBasis,
           processor: activity.processor,
           timestamp: new Date()
-        }
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to log data processing activity: ${response.status}`);
+      }
 
       logger.info('Data processing activity logged', activity);
 
@@ -468,9 +476,11 @@ export class LeadPulseSecurityManager {
       const eventKey = `security_event:${Date.now()}:${Math.random().toString(36).substr(2, 9)}`;
       await leadPulseCache.set(eventKey, event, 86400); // Keep for 24 hours
 
-      // Store in database for permanent record
-      await prisma.leadPulseSecurityEvent.create({
-        data: {
+      // Store in database for permanent record via backend API
+      const response = await fetch(`${BACKEND_URL}/api/v2/leadpulse-security-events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           type: event.type,
           severity: event.severity,
           source: event.source,
@@ -479,8 +489,12 @@ export class LeadPulseSecurityManager {
           userId: event.userId,
           ipAddress: event.ipAddress,
           userAgent: event.userAgent
-        }
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to log security event: ${response.status}`);
+      }
 
       logger.warn('Security event logged', event);
 

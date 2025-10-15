@@ -6,10 +6,13 @@
  * optimizing future communications.
  */
 
-import type { ActivityType, EntityType } from '@prisma/client';
-import prisma from '@/lib/db/prisma';
+import type { ActivityType, EntityType } from '@/types/prisma-types';
+// NOTE: Prisma removed - using backend API for activity tables, Redis for EngagementTime/SendTimeOptimization
+import { redisCache } from '@/lib/cache/redis-client';
 import { logger } from '@/lib/logger';
 import { v4 as uuidv4 } from 'uuid';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 
 /**
  * Records an engagement event in the system
@@ -33,63 +36,58 @@ export async function recordEngagement(
     const hourOfDay = now.getHours(); // 0-23
     const activityId = uuidv4(); // Generate a unique ID for the activity
 
-    // Create activity record based on entity type
+    // Create activity record via backend API based on entity type
+    let endpoint = '';
     switch (entityType) {
       case 'EMAIL_CAMPAIGN':
-        await prisma.emailActivity.create({
-          data: {
-            id: activityId, // Add the required ID field
-            campaignId: entityId,
-            contactId,
-            type: activityType,
-            metadata: metadata ? JSON.stringify(metadata) : null,
-          },
-        });
+        endpoint = '/api/v2/email-activities';
         break;
       case 'SMS_CAMPAIGN':
-        await prisma.sMSActivity.create({
-          data: {
-            id: activityId, // Add the required ID field
-            campaignId: entityId,
-            contactId,
-            type: activityType,
-            metadata: metadata ? JSON.stringify(metadata) : null,
-          },
-        });
+        endpoint = '/api/v2/sms-activities';
         break;
       case 'WHATSAPP_CAMPAIGN':
-        await prisma.whatsAppActivity.create({
-          data: {
-            id: activityId, // Add the required ID field
-            campaignId: entityId,
-            contactId,
-            type: activityType,
-            metadata: metadata ? JSON.stringify(metadata) : null,
-          },
-        });
+        endpoint = '/api/v2/whatsapp-activities';
         break;
       default:
         logger.warn(`No specific activity table for entity type: ${entityType}`);
+        return;
     }
 
-    // Create raw SQL query for engagement time tracking
-    // This will be replaced with proper Prisma model once migrations are created
-    await prisma.$executeRaw`
-      INSERT INTO "EngagementTime" (
-        "id", "contactId", "entityType", "entityId", "engagementType", 
-        "dayOfWeek", "hourOfDay", "timestamp"
-      )
-      VALUES (
-        ${activityId}, 
-        ${contactId}, 
-        ${entityType}, 
-        ${entityId}, 
-        ${activityType}, 
-        ${dayOfWeek}, 
-        ${hourOfDay}, 
-        ${now}
-      )
-    `;
+    const response = await fetch(`${BACKEND_URL}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: activityId,
+        campaignId: entityId,
+        contactId,
+        type: activityType,
+        metadata: metadata ? JSON.stringify(metadata) : null,
+      })
+    });
+
+    if (!response.ok) {
+      logger.warn(`Failed to create ${entityType} activity: ${response.status}`);
+    }
+
+    // Store engagement time in Redis cache
+    const engKey = `engagement_times:${contactId}`;
+    const cached = await redisCache.get(engKey);
+    const engagements: any[] = cached ? JSON.parse(cached) : [];
+
+    engagements.unshift({
+      id: activityId,
+      contactId,
+      entityType,
+      entityId,
+      engagementType: activityType,
+      dayOfWeek,
+      hourOfDay,
+      timestamp: now.toISOString()
+    });
+
+    // Keep only the most recent 100 engagements
+    const trimmed = engagements.slice(0, 100);
+    await redisCache.set(engKey, JSON.stringify(trimmed), 86400 * 90); // 90 days
 
     logger.info("Recorded engagement event", {
       contactId,
@@ -122,22 +120,17 @@ export async function getEngagementStats(
   try {
     let activities: any[] = [];
 
-    // Fetch activities based on entity type
+    // Fetch activities from backend API based on entity type
+    let endpoint = '';
     switch (entityType) {
       case 'EMAIL_CAMPAIGN':
-        activities = await prisma.emailActivity.findMany({
-          where: { campaignId: entityId },
-        });
+        endpoint = `/api/v2/email-activities?campaignId=${entityId}`;
         break;
       case 'SMS_CAMPAIGN':
-        activities = await prisma.sMSActivity.findMany({
-          where: { campaignId: entityId },
-        });
+        endpoint = `/api/v2/sms-activities?campaignId=${entityId}`;
         break;
       case 'WHATSAPP_CAMPAIGN':
-        activities = await prisma.whatsAppActivity.findMany({
-          where: { campaignId: entityId },
-        });
+        endpoint = `/api/v2/whatsapp-activities?campaignId=${entityId}`;
         break;
       default:
         logger.warn(`No specific activity table for entity type: ${entityType}`);
@@ -148,6 +141,16 @@ export async function getEngagementStats(
         };
     }
 
+    const response = await fetch(`${BACKEND_URL}${endpoint}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      activities = result.data || result || [];
+    }
+
     // Count activity types
     const totalActivities = activities.length;
     const sentCount = activities.filter(a => a.type === 'SENT').length;
@@ -156,30 +159,30 @@ export async function getEngagementStats(
     const bounceCount = activities.filter(a => a.type === 'BOUNCED').length;
     const unsubscribeCount = activities.filter(a => a.type === 'UNSUBSCRIBED').length;
 
-    // Calculate engagement by hour and day
+    // Calculate engagement by hour and day from Redis cache
     const engagementByHour: Record<number, number> = {};
     const engagementByDay: Record<number, number> = {};
 
-    // Use raw SQL query since we don't have the EngagementTime model in Prisma yet
-    const timeData = await prisma.$queryRaw<Array<{dayOfWeek: number, hourOfDay: number, count: number}>>`
-      SELECT "dayOfWeek", "hourOfDay", COUNT(*) as count
-      FROM "EngagementTime"
-      WHERE "entityType" = ${entityType} AND "entityId" = ${entityId}
-      GROUP BY "dayOfWeek", "hourOfDay"
-    `;
+    // Get all engagement times for this entity from Redis
+    // Since engagement times are stored per contact, we need to aggregate
+    const timeKey = `engagement_times_entity:${entityType}:${entityId}`;
+    const cached = await redisCache.get(timeKey);
 
-    // Process time data
-    timeData.forEach(item => {
-      if (!engagementByHour[item.hourOfDay]) {
-        engagementByHour[item.hourOfDay] = 0;
-      }
-      if (!engagementByDay[item.dayOfWeek]) {
-        engagementByDay[item.dayOfWeek] = 0;
-      }
-      
-      engagementByHour[item.hourOfDay] += Number(item.count);
-      engagementByDay[item.dayOfWeek] += Number(item.count);
-    });
+    if (cached) {
+      const timeData: Array<{dayOfWeek: number, hourOfDay: number, count: number}> = JSON.parse(cached);
+
+      timeData.forEach(item => {
+        if (!engagementByHour[item.hourOfDay]) {
+          engagementByHour[item.hourOfDay] = 0;
+        }
+        if (!engagementByDay[item.dayOfWeek]) {
+          engagementByDay[item.dayOfWeek] = 0;
+        }
+
+        engagementByHour[item.hourOfDay] += Number(item.count);
+        engagementByDay[item.dayOfWeek] += Number(item.count);
+      });
+    }
 
     return {
       totalActivities,
@@ -209,33 +212,32 @@ export async function getBestSendTime(
   minConfidence = 0.3
 ): Promise<{ dayOfWeek: number; hourOfDay: number; confidence: number } | null> {
   try {
-    // Try to get optimization data from database
-    const optimization = await prisma.$queryRaw<Array<{dayOfWeek: number, hourOfDay: number, confidenceLevel: number}>>`
-      SELECT "dayOfWeek", "hourOfDay", "confidenceLevel" 
-      FROM "SendTimeOptimization"
-      WHERE "contactId" = ${contactId}
-      AND "confidenceLevel" >= ${minConfidence}
-      ORDER BY "engagementScore" DESC
-      LIMIT 1
-    `;
+    // Get optimization data from Redis cache
+    const optKey = `send_time_optimization:${contactId}`;
+    const cachedOpt = await redisCache.get(optKey);
 
-    if (optimization.length > 0) {
-      return {
-        dayOfWeek: optimization[0].dayOfWeek,
-        hourOfDay: optimization[0].hourOfDay,
-        confidence: optimization[0].confidenceLevel,
-      };
+    if (cachedOpt) {
+      const optimizations: Array<{dayOfWeek: number, hourOfDay: number, confidenceLevel: number, engagementScore: number}> = JSON.parse(cachedOpt);
+      const filtered = optimizations.filter(o => o.confidenceLevel >= minConfidence)
+        .sort((a, b) => b.engagementScore - a.engagementScore);
+
+      if (filtered.length > 0) {
+        return {
+          dayOfWeek: filtered[0].dayOfWeek,
+          hourOfDay: filtered[0].hourOfDay,
+          confidence: filtered[0].confidenceLevel,
+        };
+      }
     }
-    
-    // If no optimization data, analyze engagement times
-    const engagements = await prisma.$queryRaw<Array<{dayOfWeek: number, hourOfDay: number, timestamp: Date}>>`
-      SELECT "dayOfWeek", "hourOfDay", timestamp
-      FROM "EngagementTime"
-      WHERE "contactId" = ${contactId}
-      ORDER BY timestamp DESC
-      LIMIT 50
-    `;
-    
+
+    // If no optimization data, analyze engagement times from Redis cache
+    const engKey = `engagement_times:${contactId}`;
+    const cachedEng = await redisCache.get(engKey);
+    let engagements: Array<{dayOfWeek: number, hourOfDay: number, timestamp: string}> = cachedEng ? JSON.parse(cachedEng) : [];
+
+    // Limit to 50 most recent
+    engagements = engagements.slice(0, 50);
+
     if (engagements.length === 0) {
       // Fall back to general best practices
       return {
@@ -244,10 +246,10 @@ export async function getBestSendTime(
         confidence: 0.2,
       };
     }
-    
+
     // Find most common engagement time
     const timeCounts: Record<string, { count: number; dayOfWeek: number; hourOfDay: number }> = {};
-    
+
     engagements.forEach((engagement) => {
       const key = `${engagement.dayOfWeek}-${engagement.hourOfDay}`;
       if (!timeCounts[key]) {
@@ -255,29 +257,27 @@ export async function getBestSendTime(
       }
       timeCounts[key].count++;
     });
-    
+
     const bestTime = Object.values(timeCounts).sort((a, b) => b.count - a.count)[0];
     const confidence = Math.min(bestTime.count / 10, 1);
-    
-    // Store this result for future reference
-    await prisma.$executeRaw`
-      INSERT INTO "SendTimeOptimization" ("id", "contactId", "dayOfWeek", "hourOfDay", "engagementScore", "confidenceLevel", "lastUpdated")
-      VALUES (
-        gen_random_uuid(), 
-        ${contactId}, 
-        ${bestTime.dayOfWeek}, 
-        ${bestTime.hourOfDay}, 
-        ${bestTime.count / engagements.length}, 
-        ${confidence},
-        NOW()
-      )
-      ON CONFLICT ("contactId", "dayOfWeek", "hourOfDay") 
-      DO UPDATE SET 
-        "engagementScore" = ${bestTime.count / engagements.length},
-        "confidenceLevel" = ${confidence},
-        "lastUpdated" = NOW()
-    `;
-    
+
+    // Store this result in Redis cache
+    const newOptimization = {
+      dayOfWeek: bestTime.dayOfWeek,
+      hourOfDay: bestTime.hourOfDay,
+      engagementScore: bestTime.count / engagements.length,
+      confidenceLevel: confidence,
+      lastUpdated: new Date().toISOString()
+    };
+
+    const existingOpts: any[] = cachedOpt ? JSON.parse(cachedOpt) : [];
+    const updatedOpts = existingOpts.filter(o =>
+      !(o.dayOfWeek === bestTime.dayOfWeek && o.hourOfDay === bestTime.hourOfDay)
+    );
+    updatedOpts.push(newOptimization);
+
+    await redisCache.set(optKey, JSON.stringify(updatedOpts), 86400 * 90); // 90 days
+
     return {
       dayOfWeek: bestTime.dayOfWeek,
       hourOfDay: bestTime.hourOfDay,

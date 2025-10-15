@@ -7,7 +7,9 @@
  */
 
 import { logger } from '@/lib/logger';
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (LeadPulseVisitor, LeadPulseSecurityEvent exist in backend)
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 
 // Bot detection confidence levels
 export enum BotConfidence {
@@ -457,10 +459,11 @@ class BotDetectionEngine {
     context: DetectionContext
   ): Promise<void> {
     try {
-      // Update visitor record with bot score
-      await prisma.leadPulseVisitor.update({
-        where: { id: visitorId },
-        data: {
+      // Update visitor record with bot score via backend API
+      const updateResponse = await fetch(`${BACKEND_URL}/api/v2/visitors/${visitorId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           metadata: {
             botDetection: {
               lastCheck: new Date().toISOString(),
@@ -469,13 +472,19 @@ class BotDetectionEngine {
               action: result.action,
             },
           },
-        },
+        })
       });
+
+      if (!updateResponse.ok) {
+        throw new Error(`Failed to update visitor: ${updateResponse.status}`);
+      }
 
       // Log security event for significant detections
       if (result.confidence >= BotConfidence.LIKELY_BOT) {
-        await prisma.leadPulseSecurityEvent.create({
-          data: {
+        const eventResponse = await fetch(`${BACKEND_URL}/api/v2/leadpulse-security-events`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             type: 'BOT_DETECTED',
             severity: result.confidence === BotConfidence.CONFIRMED_BOT ? 'HIGH' : 'MEDIUM',
             description: `Bot detected: ${result.reasons.join(', ')}`,
@@ -488,8 +497,12 @@ class BotDetectionEngine {
               action: result.action,
             }),
             resolvedAt: null,
-          },
+          })
         });
+
+        if (!eventResponse.ok) {
+          throw new Error(`Failed to create security event: ${eventResponse.status}`);
+        }
       }
     } catch (error) {
       logger.error('Failed to store bot detection result', {
@@ -510,14 +523,20 @@ class BotDetectionEngine {
     flaggedRequests: number;
   }> {
     try {
-      const securityEvents = await prisma.leadPulseSecurityEvent.findMany({
-        where: {
-          type: 'BOT_DETECTED',
-          createdAt: {
-            gte: new Date(Date.now() - 24 * 60 * 60 * 1000), // Last 24 hours
-          },
-        },
-      });
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const response = await fetch(
+        `${BACKEND_URL}/api/v2/leadpulse-security-events?type=BOT_DETECTED&createdAt[gte]=${twentyFourHoursAgo}`,
+        {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch security events: ${response.status}`);
+      }
+
+      const securityEvents = await response.json();
 
       const detectionsByConfidence: Record<string, number> = {
         [BotConfidence.SUSPICIOUS]: 0,
@@ -528,7 +547,7 @@ class BotDetectionEngine {
       let blockedRequests = 0;
       let flaggedRequests = 0;
 
-      securityEvents.forEach(event => {
+      securityEvents.forEach((event: any) => {
         const metadata = JSON.parse(event.metadata || '{}');
         const confidence = metadata.confidence || BotConfidence.SUSPICIOUS;
         const action = metadata.action || 'flag';

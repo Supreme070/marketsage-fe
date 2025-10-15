@@ -3,8 +3,10 @@
  * Links LeadPulse visitor data with Contact management system
  */
 
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (Contact, LeadPulseVisitor, LeadPulseTouchpoint exist in backend)
 import { conversionBridge, type CustomerJourney } from './conversion-bridge';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 
 export interface ContactLeadPulseData {
   contactId: string;
@@ -41,18 +43,19 @@ class ContactLeadPulseIntegration {
    */
   async getContactLeadPulseData(contactId: string): Promise<ContactLeadPulseData | null> {
     try {
-      const contact = await prisma.contact.findUnique({
-        where: { id: contactId },
-        include: {
-          leadPulseVisitors: {
-            include: {
-              touchpoints: {
-                orderBy: { timestamp: 'desc' }
-              }
-            }
-          }
+      const contactResponse = await fetch(
+        `${BACKEND_URL}/api/v2/contacts/${contactId}?include=leadPulseVisitors.touchpoints&touchpointsOrderBy=timestamp:desc`,
+        {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
         }
-      });
+      );
+
+      if (!contactResponse.ok) {
+        throw new Error(`Failed to fetch contact: ${contactResponse.status}`);
+      }
+
+      const contact = await contactResponse.json();
 
       if (!contact || !contact.leadPulseVisitors.length) {
         return null;
@@ -106,43 +109,38 @@ class ContactLeadPulseIntegration {
    * Get all contacts with LeadPulse data
    */
   async getContactsWithLeadPulseData(limit = 50, offset = 0): Promise<{
-    contacts: Array<ContactLeadPulseData & { 
-      email: string; 
-      name: string; 
+    contacts: Array<ContactLeadPulseData & {
+      email: string;
+      name: string;
       company?: string;
       tags: string[];
     }>;
     total: number;
   }> {
     try {
-      const [contacts, total] = await Promise.all([
-        prisma.contact.findMany({
-          where: {
-            leadPulseVisitors: {
-              some: {}
-            }
-          },
-          include: {
-            leadPulseVisitors: {
-              include: {
-                touchpoints: true
-              }
-            }
-          },
-          skip: offset,
-          take: limit,
-          orderBy: {
-            updatedAt: 'desc'
+      const [contactsResponse, totalResponse] = await Promise.all([
+        fetch(
+          `${BACKEND_URL}/api/v2/contacts?leadPulseVisitors[some]=true&include=leadPulseVisitors.touchpoints&skip=${offset}&take=${limit}&orderBy=updatedAt:desc`,
+          {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
           }
-        }),
-        prisma.contact.count({
-          where: {
-            leadPulseVisitors: {
-              some: {}
-            }
+        ),
+        fetch(
+          `${BACKEND_URL}/api/v2/contacts/count?leadPulseVisitors[some]=true`,
+          {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
           }
-        })
+        )
       ]);
+
+      if (!contactsResponse.ok || !totalResponse.ok) {
+        throw new Error('Failed to fetch contacts with LeadPulse data');
+      }
+
+      const contacts = await contactsResponse.json();
+      const { count: total } = await totalResponse.json();
 
       const contactsWithData = await Promise.all(
         contacts.map(async (contact) => {
@@ -177,10 +175,11 @@ class ContactLeadPulseIntegration {
       const leadPulseData = await this.getContactLeadPulseData(contactId);
       if (!leadPulseData) return;
 
-      // Update contact with enriched data
-      await prisma.contact.update({
-        where: { id: contactId },
-        data: {
+      // Update contact with enriched data via backend API
+      const response = await fetch(`${BACKEND_URL}/api/v2/contacts/${contactId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           leadScore: Math.round(leadPulseData.engagementScore),
           metadata: {
             leadPulse: {
@@ -195,8 +194,12 @@ class ContactLeadPulseIntegration {
               lastUpdated: new Date().toISOString()
             }
           }
-        }
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update contact: ${response.status}`);
+      }
 
       // Auto-tag based on insights
       await this.autoTagContact(contactId, leadPulseData);
@@ -231,20 +234,26 @@ class ContactLeadPulseIntegration {
     if (data.aiInsights.conversionProbability > 0.7) newTags.push('high-conversion-probability');
     if (data.aiInsights.churnRisk > 0.7) newTags.push('churn-risk');
 
-    // Add tags to contact
-    const contact = await prisma.contact.findUnique({
-      where: { id: contactId },
-      select: { tags: true }
+    // Add tags to contact via backend API
+    const contactResponse = await fetch(`${BACKEND_URL}/api/v2/contacts/${contactId}?select=tags`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
 
-    if (contact) {
+    if (contactResponse.ok) {
+      const contact = await contactResponse.json();
       const existingTags = contact.tags || [];
       const updatedTags = [...new Set([...existingTags, ...newTags])];
 
-      await prisma.contact.update({
-        where: { id: contactId },
-        data: { tags: updatedTags }
+      const updateResponse = await fetch(`${BACKEND_URL}/api/v2/contacts/${contactId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tags: updatedTags })
       });
+
+      if (!updateResponse.ok) {
+        throw new Error(`Failed to update contact tags: ${updateResponse.status}`);
+      }
     }
   }
 
@@ -436,14 +445,19 @@ class ContactLeadPulseIntegration {
     let errors = 0;
 
     try {
-      const contacts = await prisma.contact.findMany({
-        where: {
-          leadPulseVisitors: {
-            some: {}
-          }
-        },
-        select: { id: true }
-      });
+      const contactsResponse = await fetch(
+        `${BACKEND_URL}/api/v2/contacts?leadPulseVisitors[some]=true&select=id`,
+        {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+
+      if (!contactsResponse.ok) {
+        throw new Error(`Failed to fetch contacts: ${contactsResponse.status}`);
+      }
+
+      const contacts = await contactsResponse.json();
 
       for (const contact of contacts) {
         try {

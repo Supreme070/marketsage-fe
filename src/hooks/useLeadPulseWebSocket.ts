@@ -8,8 +8,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { leadPulseWebSocketService } from '@/lib/websocket/leadpulse-websocket-service';
-import type { MCPAuthContext } from '@/mcp/types/mcp-types';
 import type { VisitorLocation, VisitorJourney, InsightItem } from '@/lib/leadpulse/dataProvider';
+
+// Minimal type definition (backend has full implementation)
+interface MCPAuthContext {
+  userId: string;
+  organizationId: string;
+  permissions: string[];
+  role: string;
+}
 
 interface UseLeadPulseWebSocketOptions {
   timeRange?: string;

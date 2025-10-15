@@ -134,54 +134,43 @@ export async function POST(request: NextRequest) {
 
 /**
  * GET: Retrieve content analysis history
+ * Proxies to backend /api/v2/ai/content-analysis
  */
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  
+
   // Check if user is authenticated
   if (!session || !session.user) {
     return unauthorized();
   }
-  
+
   try {
-    // Get query parameters
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type");
     const contentType = searchParams.get("contentType");
-    const limit = Number.parseInt(searchParams.get("limit") || "10", 10);
-    
-    // Create filter
-    const filter: any = {};
-    
-    if (type) {
-      filter.type = type;
-    }
-    
-    if (contentType) {
-      filter.contentType = contentType;
-    }
-    
-    // Only show the user's own analyses or all if admin
-    if (!["ADMIN", "SUPER_ADMIN"].includes(session.user.role)) {
-      filter.userId = session.user.id;
-    }
-    
-    // Get analyses from database
-    const analyses = await prisma.contentAnalysis.findMany({
-      where: filter,
-      orderBy: {
-        createdAt: "desc"
+    const limit = searchParams.get("limit") || "10";
+
+    // Build backend URL with query params
+    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
+    const params = new URLSearchParams();
+    if (type) params.append('type', type);
+    if (contentType) params.append('contentType', contentType);
+    if (limit) params.append('limit', limit);
+
+    const url = `${BACKEND_URL}/api/v2/ai/content-analysis?${params.toString()}`;
+
+    // Call backend endpoint
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.accessToken}`,
+        'Content-Type': 'application/json',
       },
-      take: Math.min(limit, 100),
     });
-    
-    // Parse the JSON results
-    const parsedAnalyses = analyses.map(analysis => ({
-      ...analysis,
-      result: JSON.parse(analysis.result)
-    }));
-    
-    return NextResponse.json(parsedAnalyses);
+
+    const data = await response.json();
+    return NextResponse.json(data, { status: response.status });
+
   } catch (error) {
     return handleApiError(error, "/api/ai-features/content-intelligence/route.ts [GET]");
   }

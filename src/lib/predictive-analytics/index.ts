@@ -1,12 +1,14 @@
 /**
  * Predictive Analytics Module
- * 
+ *
  * Provides machine learning-based predictions for contact churn, lifetime value,
  * campaign performance, and optimal send times.
  */
 
+// NOTE: Prisma removed - using backend API (Prediction, PredictionModel tables exist in backend)
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
+
 import { logger } from '@/lib/logger';
-import prisma from '@/lib/db/prisma';
 import { randomUUID } from 'crypto';
 
 // Export all prediction services
@@ -59,21 +61,30 @@ export async function savePrediction(
   explanation?: string[]
 ): Promise<string> {
   try {
-    // Create the prediction record
-    const prediction = await prisma.prediction.create({
-      data: {
-        id: randomUUID(),
-        modelId,
-        entityType,
-        entityId,
-        predictionType,
-        value,
-        confidence,
-        features: features ? JSON.stringify(features) : null,
-        explanation: explanation ? JSON.stringify(explanation) : null,
-        createdAt: new Date()
-      }
+    const payload = {
+      id: randomUUID(),
+      modelId,
+      entityType,
+      entityId,
+      predictionType,
+      value,
+      confidence,
+      features: features ? JSON.stringify(features) : null,
+      explanation: explanation ? JSON.stringify(explanation) : null,
+      createdAt: new Date()
+    };
+
+    const response = await fetch(`${BACKEND_URL}/api/v2/ml-predictions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
+
+    if (!response.ok) {
+      throw new Error('Failed to save prediction to backend');
+    }
+
+    const prediction = await response.json();
 
     logger.info(`Saved ${predictionType} prediction for ${entityType}:${entityId}`, {
       predictionId: prediction.id,
@@ -93,21 +104,21 @@ export async function savePrediction(
  */
 export async function getActiveModel(type: PredictionModelType): Promise<any> {
   try {
-    const model = await prisma.predictionModel.findFirst({
-      where: {
-        type,
-        isActive: true
-      },
-      orderBy: {
-        updatedAt: 'desc'
-      }
+    const response = await fetch(`${BACKEND_URL}/api/v2/ml-models?type=${type}&isActive=true&orderBy=updatedAt&order=desc&limit=1`, {
+      headers: { 'Content-Type': 'application/json' }
     });
 
-    if (!model) {
+    if (!response.ok) {
       throw new Error(`No active model found for type: ${type}`);
     }
 
-    return model;
+    const models = await response.json();
+
+    if (!models || models.length === 0) {
+      throw new Error(`No active model found for type: ${type}`);
+    }
+
+    return models[0];
   } catch (error) {
     logger.error(`Error getting active model for type: ${type}`, error);
     throw new Error(`Failed to get active model: ${(error as Error).message}`);

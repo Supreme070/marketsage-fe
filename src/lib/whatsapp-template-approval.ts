@@ -1,13 +1,15 @@
 /**
  * WhatsApp Template Approval Workflow Integration with Meta
- * 
+ *
  * Handles template submission, approval tracking, and Meta Business API integration
  * for WhatsApp Business Account template management.
  */
 
+// NOTE: Prisma removed - using backend API (WhatsAppTemplate exists in backend)
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
+
 import { logger } from '@/lib/logger';
 import { whatsappLogger } from '@/lib/whatsapp-campaign-logger';
-import prisma from '@/lib/db/prisma';
 
 interface MetaTemplateComponent {
   type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS';
@@ -86,14 +88,11 @@ export class WhatsAppTemplateApprovalService {
     userId: string
   ): Promise<{ success: boolean; metaTemplateId?: string; error?: string }> {
     try {
-      const template = await prisma.whatsAppTemplate.findUnique({
-        where: { id: templateId },
-        include: { createdBy: true }
-      });
-
-      if (!template) {
+      const response = await fetch(`${BACKEND_URL}/api/v2/whatsapp-templates/${templateId}?include=createdBy`);
+      if (!response.ok) {
         return { success: false, error: 'Template not found' };
       }
+      const template = await response.json();
 
       if (template.status === 'PENDING' || template.status === 'APPROVED') {
         return { success: false, error: `Template is already ${template.status.toLowerCase()}` };
@@ -112,35 +111,36 @@ export class WhatsAppTemplateApprovalService {
       }
 
       // Submit to Meta API
-      const response = await this.submitToMetaAPI(metaTemplate);
+      const submissionResult = await this.submitToMetaAPI(metaTemplate);
 
-      if (response.success && response.metaTemplateId) {
+      if (submissionResult.success && submissionResult.metaTemplateId) {
         // Update template status in database
-        await prisma.whatsAppTemplate.update({
-          where: { id: templateId },
-          data: {
+        await fetch(`${BACKEND_URL}/api/v2/whatsapp-templates/${templateId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             status: 'PENDING',
-            metaTemplateId: response.metaTemplateId,
+            metaTemplateId: submissionResult.metaTemplateId,
             submittedAt: new Date(),
             updatedAt: new Date()
-          }
+          }),
         });
 
-        await whatsappLogger.logTemplateSubmitted(templateId, response.metaTemplateId, {
+        await whatsappLogger.logTemplateSubmitted(templateId, submissionResult.metaTemplateId, {
           userId,
           templateName: template.name,
           category: template.category
         });
 
-        return { 
-          success: true, 
-          metaTemplateId: response.metaTemplateId 
+        return {
+          success: true,
+          metaTemplateId: submissionResult.metaTemplateId
         };
       }
 
-      return { 
-        success: false, 
-        error: response.error || 'Failed to submit template to Meta' 
+      return {
+        success: false,
+        error: submissionResult.error || 'Failed to submit template to Meta'
       };
 
     } catch (error) {
@@ -157,11 +157,13 @@ export class WhatsAppTemplateApprovalService {
    */
   async getTemplateApprovalStatus(templateId: string): Promise<TemplateApprovalStatus | null> {
     try {
-      const template = await prisma.whatsAppTemplate.findUnique({
-        where: { id: templateId }
-      });
+      const response = await fetch(`${BACKEND_URL}/api/v2/whatsapp-templates/${templateId}`);
+      if (!response.ok) {
+        return null;
+      }
+      const template = await response.json();
 
-      if (!template || !template.metaTemplateId) {
+      if (!template.metaTemplateId) {
         return null;
       }
 
@@ -229,32 +231,31 @@ export class WhatsAppTemplateApprovalService {
    */
   async retryFailedTemplates(): Promise<{ processed: number; succeeded: number; failed: number }> {
     try {
-      const failedTemplates = await prisma.whatsAppTemplate.findMany({
-        where: {
-          status: 'REJECTED',
-          retryCount: { lt: 3 }, // Max 3 retries
-          nextRetryAt: { lte: new Date() }
-        },
-        include: { createdBy: true }
-      });
+      const now = new Date();
+      const response = await fetch(`${BACKEND_URL}/api/v2/whatsapp-templates?status=REJECTED&retryCountLt=3&nextRetryAtLte=${now.toISOString()}&include=createdBy`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch failed templates: ${response.status}`);
+      }
+      const failedTemplates = await response.json();
 
       let succeeded = 0;
       let failed = 0;
 
       for (const template of failedTemplates) {
         const result = await this.submitTemplateForApproval(template.id, template.createdById);
-        
+
         if (result.success) {
           succeeded++;
         } else {
           failed++;
           // Update retry count and next retry time
-          await prisma.whatsAppTemplate.update({
-            where: { id: template.id },
-            data: {
-              retryCount: { increment: 1 },
+          await fetch(`${BACKEND_URL}/api/v2/whatsapp-templates/${template.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              retryCount: (template.retryCount || 0) + 1,
               nextRetryAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // Retry in 24 hours
-            }
+            }),
           });
         }
       }
@@ -293,16 +294,11 @@ export class WhatsAppTemplateApprovalService {
     };
   }> {
     try {
-      const templates = await prisma.whatsAppTemplate.findMany({
-        where: { createdById: userId },
-        select: {
-          status: true,
-          submittedAt: true,
-          approvedAt: true,
-          rejectionReason: true,
-          qualityScore: true
-        }
-      });
+      const response = await fetch(`${BACKEND_URL}/api/v2/whatsapp-templates?createdById=${userId}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch templates: ${response.status}`);
+      }
+      const templates = await response.json();
 
       const totalTemplates = templates.length;
       
@@ -551,9 +547,10 @@ export class WhatsAppTemplateApprovalService {
         updateData.qualityScore = metaStatus.quality_score.score;
       }
 
-      await prisma.whatsAppTemplate.update({
-        where: { id: templateId },
-        data: updateData
+      await fetch(`${BACKEND_URL}/api/v2/whatsapp-templates/${templateId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData),
       });
 
     } catch (error) {
@@ -573,9 +570,13 @@ export class WhatsAppTemplateApprovalService {
       }
 
       // Find template by Meta ID
-      const template = await prisma.whatsAppTemplate.findFirst({
-        where: { metaTemplateId: message_template_id }
-      });
+      const response = await fetch(`${BACKEND_URL}/api/v2/whatsapp-templates?metaTemplateId=${message_template_id}&limit=1`);
+      if (!response.ok) {
+        logger.warn('Template not found for webhook update', { message_template_id });
+        return;
+      }
+      const templates = await response.json();
+      const template = templates[0];
 
       if (!template) {
         logger.warn('Template not found for webhook update', { message_template_id });
@@ -605,9 +606,10 @@ export class WhatsAppTemplateApprovalService {
           break;
       }
 
-      await prisma.whatsAppTemplate.update({
-        where: { id: template.id },
-        data: updateData
+      await fetch(`${BACKEND_URL}/api/v2/whatsapp-templates/${template.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData),
       });
 
       await whatsappLogger.logTemplateStatusChanged(template.id, event, {

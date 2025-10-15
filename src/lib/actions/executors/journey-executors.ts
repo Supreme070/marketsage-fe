@@ -9,8 +9,10 @@
 import { ActionType, type ActionExecutionResult } from '../action-plan-interface';
 import type { ExecutionContext } from '../action-dispatcher';
 import { BaseExecutor } from './base-executor';
-import { prisma } from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (Workflow, WorkflowExecution, Segment, ContactSegment, List, ContactList tables exist in backend)
 import { logger } from '@/lib/logger';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 
 /**
  * Workflow Trigger Executor
@@ -37,13 +39,13 @@ export class WorkflowTriggerExecutor extends BaseExecutor {
       }
 
       // Check if workflow exists
-      const workflow = await prisma.workflow.findUnique({
-        where: { id: workflowId }
-      });
+      const workflowResponse = await fetch(`${BACKEND_URL}/api/v2/workflows/${workflowId}`);
 
-      if (!workflow) {
+      if (!workflowResponse.ok) {
         return this.createFailureResult('Workflow not found');
       }
+
+      const workflow = await workflowResponse.json();
 
       if (this.isDryRun(context)) {
         return this.createSuccessResult({
@@ -56,8 +58,10 @@ export class WorkflowTriggerExecutor extends BaseExecutor {
       }
 
       // Create workflow execution record
-      const workflowExecution = await prisma.workflowExecution.create({
-        data: {
+      const executionResponse = await fetch(`${BACKEND_URL}/api/v2/workflow-executions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           workflowId,
           contactId: context.actionPlan.contactId,
           organizationId: context.organizationId,
@@ -69,8 +73,14 @@ export class WorkflowTriggerExecutor extends BaseExecutor {
             aiTriggered: true,
             startNodeId
           }
-        }
+        })
       });
+
+      if (!executionResponse.ok) {
+        throw new Error(`Failed to create workflow execution: ${executionResponse.status}`);
+      }
+
+      const workflowExecution = await executionResponse.json();
 
       logger.info('Workflow triggered successfully via AI action', {
         actionPlanId: context.actionPlan.id,
@@ -129,13 +139,13 @@ export class SegmentMoveExecutor extends BaseExecutor {
       }
 
       // Check if segment exists
-      const segment = await prisma.segment.findUnique({
-        where: { id: segmentId }
-      });
+      const segmentResponse = await fetch(`${BACKEND_URL}/api/v2/segments/${segmentId}`);
 
-      if (!segment) {
+      if (!segmentResponse.ok) {
         return this.createFailureResult('Segment not found');
       }
+
+      const segment = await segmentResponse.json();
 
       if (this.isDryRun(context)) {
         return this.createSuccessResult({
@@ -150,37 +160,44 @@ export class SegmentMoveExecutor extends BaseExecutor {
 
       // Remove from other segments if requested
       if (removeFromOtherSegments) {
-        await prisma.contactSegment.deleteMany({
-          where: {
-            contactId: context.actionPlan.contactId,
-            segmentId: { not: segmentId }
-          }
+        const deleteResponse = await fetch(`${BACKEND_URL}/api/v2/contact-segments?contactId=${context.actionPlan.contactId}&excludeSegmentId=${segmentId}`, {
+          method: 'DELETE'
         });
+
+        if (!deleteResponse.ok) {
+          throw new Error(`Failed to remove from other segments: ${deleteResponse.status}`);
+        }
+      }
+
+      // Check if already in segment
+      const checkResponse = await fetch(`${BACKEND_URL}/api/v2/contact-segments?contactId=${context.actionPlan.contactId}&segmentId=${segmentId}`);
+
+      let existingRelation = null;
+      if (checkResponse.ok) {
+        const relations = await checkResponse.json();
+        existingRelation = relations.length > 0 ? relations[0] : null;
       }
 
       // Add to new segment (if not already in it)
-      const existingRelation = await prisma.contactSegment.findUnique({
-        where: {
-          contactId_segmentId: {
-            contactId: context.actionPlan.contactId,
-            segmentId
-          }
-        }
-      });
-
       if (!existingRelation) {
-        await prisma.contactSegment.create({
-          data: {
+        const createResponse = await fetch(`${BACKEND_URL}/api/v2/contact-segments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             contactId: context.actionPlan.contactId,
             segmentId,
             addedBy: context.userId || 'supreme-ai-v3',
             metadata: {
               actionPlanId: context.actionPlan.id,
               aiAdded: true,
-              addedAt: new Date()
+              addedAt: new Date().toISOString()
             }
-          }
+          })
         });
+
+        if (!createResponse.ok) {
+          throw new Error(`Failed to add to segment: ${createResponse.status}`);
+        }
       }
 
       logger.info('Contact moved to segment successfully via AI action', {
@@ -238,13 +255,13 @@ export class ListAddExecutor extends BaseExecutor {
       }
 
       // Check if list exists
-      const list = await prisma.list.findUnique({
-        where: { id: listId }
-      });
+      const listResponse = await fetch(`${BACKEND_URL}/api/v2/lists/${listId}`);
 
-      if (!list) {
+      if (!listResponse.ok) {
         return this.createFailureResult('List not found');
       }
+
+      const list = await listResponse.json();
 
       if (this.isDryRun(context)) {
         return this.createSuccessResult({
@@ -257,28 +274,33 @@ export class ListAddExecutor extends BaseExecutor {
       }
 
       // Check if contact is already in the list
-      const existingRelation = await prisma.contactList.findUnique({
-        where: {
-          contactId_listId: {
-            contactId: context.actionPlan.contactId,
-            listId
-          }
-        }
-      });
+      const checkResponse = await fetch(`${BACKEND_URL}/api/v2/contact-lists?contactId=${context.actionPlan.contactId}&listId=${listId}`);
+
+      let existingRelation = null;
+      if (checkResponse.ok) {
+        const relations = await checkResponse.json();
+        existingRelation = relations.length > 0 ? relations[0] : null;
+      }
 
       if (!existingRelation) {
-        await prisma.contactList.create({
-          data: {
+        const createResponse = await fetch(`${BACKEND_URL}/api/v2/contact-lists`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             contactId: context.actionPlan.contactId,
             listId,
             addedBy: context.userId || 'supreme-ai-v3',
             metadata: {
               actionPlanId: context.actionPlan.id,
               aiAdded: true,
-              addedAt: new Date()
+              addedAt: new Date().toISOString()
             }
-          }
+          })
         });
+
+        if (!createResponse.ok) {
+          throw new Error(`Failed to add contact to list: ${createResponse.status}`);
+        }
       }
 
       logger.info('Contact added to list successfully via AI action', {
@@ -335,13 +357,13 @@ export class ListRemoveExecutor extends BaseExecutor {
       }
 
       // Check if list exists
-      const list = await prisma.list.findUnique({
-        where: { id: listId }
-      });
+      const listResponse = await fetch(`${BACKEND_URL}/api/v2/lists/${listId}`);
 
-      if (!list) {
+      if (!listResponse.ok) {
         return this.createFailureResult('List not found');
       }
+
+      const list = await listResponse.json();
 
       if (this.isDryRun(context)) {
         return this.createSuccessResult({
@@ -354,24 +376,22 @@ export class ListRemoveExecutor extends BaseExecutor {
       }
 
       // Check if contact is in the list
-      const existingRelation = await prisma.contactList.findUnique({
-        where: {
-          contactId_listId: {
-            contactId: context.actionPlan.contactId,
-            listId
-          }
-        }
-      });
+      const checkResponse = await fetch(`${BACKEND_URL}/api/v2/contact-lists?contactId=${context.actionPlan.contactId}&listId=${listId}`);
+
+      let existingRelation = null;
+      if (checkResponse.ok) {
+        const relations = await checkResponse.json();
+        existingRelation = relations.length > 0 ? relations[0] : null;
+      }
 
       if (existingRelation) {
-        await prisma.contactList.delete({
-          where: {
-            contactId_listId: {
-              contactId: context.actionPlan.contactId,
-              listId
-            }
-          }
+        const deleteResponse = await fetch(`${BACKEND_URL}/api/v2/contact-lists/${existingRelation.id}`, {
+          method: 'DELETE'
         });
+
+        if (!deleteResponse.ok) {
+          throw new Error(`Failed to remove contact from list: ${deleteResponse.status}`);
+        }
       }
 
       logger.info('Contact removed from list successfully via AI action', {

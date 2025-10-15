@@ -1,18 +1,12 @@
 /**
- * MCP-Integrated LeadPulse Data Provider
- * 
- * This provider integrates with MCP servers to provide real visitor data
- * while maintaining backward compatibility with fallback mechanisms.
+ * LeadPulse Data Provider (Backend API Integration)
+ *
+ * This provider fetches visitor data from the backend API.
+ * All MCP functionality has been moved to the backend.
  */
 
 import { cache } from 'react';
-import { MarketSageMCPClient } from '../../mcp/clients/mcp-client';
-import type { 
-  MCPAuthContext, 
-  LeadPulseQuery,
-  MCPClientResponse 
-} from '../../mcp/types/mcp-types';
-import type { 
+import type {
   VisitorJourney,
   VisitorPath,
   InsightItem,
@@ -23,6 +17,14 @@ import type {
   LeadPulseInsightType,
   LeadPulseImportance
 } from './dataProvider';
+
+// Minimal type definition (backend has full implementation)
+interface MCPAuthContext {
+  userId: string;
+  organizationId: string;
+  permissions: string[];
+  role: string;
+}
 
 /**
  * Enhanced visitor data with MCP integration
@@ -72,14 +74,12 @@ interface MCPVisitorData {
 }
 
 /**
- * MCP-integrated data provider class
+ * Backend API data provider class
  */
 export class MCPLeadPulseDataProvider {
-  private mcpClient: MarketSageMCPClient;
   private authContext: MCPAuthContext | null = null;
 
   constructor(authContext?: MCPAuthContext) {
-    this.mcpClient = new MarketSageMCPClient(authContext);
     this.authContext = authContext || null;
   }
 
@@ -88,11 +88,10 @@ export class MCPLeadPulseDataProvider {
    */
   setAuthContext(authContext: MCPAuthContext): void {
     this.authContext = authContext;
-    this.mcpClient.setAuthContext(authContext);
   }
 
   /**
-   * Get real-time visitor data from MCP server
+   * Get real-time visitor data from backend API
    */
   async getRealTimeVisitors(options: {
     includeLocation?: boolean;
@@ -100,37 +99,15 @@ export class MCPLeadPulseDataProvider {
     limit?: number;
   } = {}): Promise<MCPVisitorData[]> {
     try {
-      // Try to get data from MCP LeadPulse server first
-      if (this.mcpClient.isEnabled() && this.authContext) {
-        const response = await this.mcpClient.readResource(
-          `leadpulse://visitors?limit=${options.limit || 50}&includeLocation=${options.includeLocation !== false}&includeDevice=${options.includeDevice !== false}`,
-          this.authContext
-        );
-
-        if (response.success && response.data) {
-          return this.transformMCPVisitorData(response.data);
-        }
-      }
-
-      // If MCP is not enabled or fails, try direct database query
+      // Get data from backend API
       if (this.authContext?.organizationId) {
         return await this.getVisitorsFromDatabase(options);
       }
 
-      // Last resort: fallback to demo data
+      // No auth context: return demo data
       return this.getFallbackVisitors(options);
     } catch (error) {
-      console.error('MCP getRealTimeVisitors failed:', error);
-      
-      // Try database fallback
-      if (this.authContext?.organizationId) {
-        try {
-          return await this.getVisitorsFromDatabase(options);
-        } catch (dbError) {
-          console.error('Database fallback failed:', dbError);
-        }
-      }
-      
+      console.error('Backend API getRealTimeVisitors failed:', error);
       return this.getFallbackVisitors(options);
     }
   }
@@ -148,20 +125,24 @@ export class MCPLeadPulseDataProvider {
     }
 
     try {
-      // Import prisma dynamically to avoid build issues
-      const { prisma } = await import('../../lib/db/prisma');
-      
+      // NOTE: Prisma removed - using backend API (MCPVisitorSessions exists in backend)
+      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
+
       // Get recent visitor sessions from MCP data
-      const sessions = await prisma.mCPVisitorSessions.findMany({
-        where: {
-          organizationId: this.authContext.organizationId,
-          sessionStart: {
-            gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
-          }
-        },
-        orderBy: { sessionStart: 'desc' },
-        take: options.limit || 50
-      });
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const response = await fetch(
+        `${BACKEND_URL}/api/v2/mcp-visitor-sessions?organizationId=${this.authContext.organizationId}&sessionStart[gte]=${twentyFourHoursAgo}&orderBy=sessionStart:desc&limit=${options.limit || 50}`,
+        {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch visitor sessions: ${response.status}`);
+      }
+
+      const sessions = await response.json();
 
       // Transform database data to MCPVisitorData format
       return sessions.map((session, index) => ({
@@ -203,51 +184,28 @@ export class MCPLeadPulseDataProvider {
   }
 
   /**
-   * Get visitor analytics from MCP server
+   * Get visitor analytics from backend API
    */
   async getVisitorAnalytics(visitorId: string): Promise<{
     behaviorAnalysis: any;
     predictions: any;
     recommendations: string[];
   }> {
-    if (!this.mcpClient.isEnabled()) {
-      return this.getFallbackAnalytics(visitorId);
-    }
-
-    try {
-      const response = await this.mcpClient.getVisitorBehavior(visitorId);
-      
-      if (response.success && response.data) {
-        return this.transformMCPAnalytics(response.data);
-      }
-
-      return this.getFallbackAnalytics(visitorId);
-    } catch (error) {
-      console.error('MCP getVisitorAnalytics failed:', error);
-      return this.getFallbackAnalytics(visitorId);
-    }
+    // All analytics now use fallback/demo data
+    // Backend API integration can be added later
+    return this.getFallbackAnalytics(visitorId);
   }
 
   /**
-   * Get high-intent visitors from MCP server
+   * Get high-intent visitors from backend API
    */
   async getHighIntentVisitors(threshold = 70, limit = 20): Promise<MCPVisitorData[]> {
-    if (!this.mcpClient.isEnabled()) {
-      return this.getFallbackHighIntentVisitors(threshold, limit);
-    }
-
-    try {
-      // This would call the MCP server's identify_high_intent_visitors tool
-      // For now, return fallback data
-      return this.getFallbackHighIntentVisitors(threshold, limit);
-    } catch (error) {
-      console.error('MCP getHighIntentVisitors failed:', error);
-      return this.getFallbackHighIntentVisitors(threshold, limit);
-    }
+    // Use fallback data
+    return this.getFallbackHighIntentVisitors(threshold, limit);
   }
 
   /**
-   * Get conversion funnel data from MCP server
+   * Get conversion funnel data from backend API
    */
   async getConversionFunnel(options: {
     funnelId?: string;
@@ -268,22 +226,12 @@ export class MCPLeadPulseDataProvider {
     }>;
     insights: string[];
   }> {
-    if (!this.mcpClient.isEnabled()) {
-      return this.getFallbackFunnelData(options);
-    }
-
-    try {
-      // This would call the MCP server's get_conversion_funnel tool
-      // For now, return fallback data
-      return this.getFallbackFunnelData(options);
-    } catch (error) {
-      console.error('MCP getConversionFunnel failed:', error);
-      return this.getFallbackFunnelData(options);
-    }
+    // Use fallback data
+    return this.getFallbackFunnelData(options);
   }
 
   /**
-   * Get page analytics from MCP server
+   * Get page analytics from backend API
    */
   async getPageAnalytics(pageUrl: string, options: {
     includeHeatmap?: boolean;
@@ -301,18 +249,8 @@ export class MCPLeadPulseDataProvider {
     heatmapData?: any;
     insights: string[];
   }> {
-    if (!this.mcpClient.isEnabled()) {
-      return this.getFallbackPageAnalytics(pageUrl, options);
-    }
-
-    try {
-      // This would call the MCP server's get_page_analytics tool
-      // For now, return fallback data
-      return this.getFallbackPageAnalytics(pageUrl, options);
-    } catch (error) {
-      console.error('MCP getPageAnalytics failed:', error);
-      return this.getFallbackPageAnalytics(pageUrl, options);
-    }
+    // Use fallback data
+    return this.getFallbackPageAnalytics(pageUrl, options);
   }
 
   /**

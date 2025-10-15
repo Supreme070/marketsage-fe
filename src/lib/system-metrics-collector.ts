@@ -1,4 +1,5 @@
-import { prisma } from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (SystemMetrics table exists in backend)
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 import * as os from 'os';
 import { performance } from 'perf_hooks';
 
@@ -82,10 +83,15 @@ export class SystemMetricsCollector {
 
       // Store all metrics in batch
       if (metrics.length > 0) {
-        await prisma.systemMetrics.createMany({
-          data: metrics,
-          skipDuplicates: true,
+        const response = await fetch(`${BACKEND_URL}/api/v2/system-metrics/batch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ metrics }),
         });
+
+        if (!response.ok) {
+          throw new Error(`Failed to store metrics: ${response.status}`);
+        }
 
         console.log(`Collected and stored ${metrics.length} system metrics`);
       }
@@ -359,7 +365,9 @@ export class SystemMetricsCollector {
     try {
       // Test database connectivity and response time
       const dbStartTime = performance.now();
-      await prisma.$queryRaw`SELECT 1 as test`;
+      const response = await fetch(`${BACKEND_URL}/api/v2/system-metrics/health`, {
+        headers: { 'Content-Type': 'application/json' },
+      });
       const dbResponseTime = Math.round(performance.now() - dbStartTime);
 
       metrics.push({
@@ -376,23 +384,29 @@ export class SystemMetricsCollector {
 
       // Get database connection metrics if available
       try {
-        const dbMetrics = await prisma.$metrics.json();
-        if (dbMetrics?.counters) {
-          Object.entries(dbMetrics.counters).forEach(([key, value]: [string, any]) => {
-            if (key.includes('prisma_client')) {
-              metrics.push({
-                metricType: `database_${key}`,
-                value: value.value || 0,
-                unit: 'count',
-                source: 'database',
-                timestamp,
-                metadata: {
-                  metricKey: key,
-                  labels: value.labels,
-                },
-              });
-            }
-          });
+        const metricsResponse = await fetch(`${BACKEND_URL}/api/v2/system-metrics/database-stats`, {
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (metricsResponse.ok) {
+          const dbMetrics = await metricsResponse.json();
+          if (dbMetrics?.counters) {
+            Object.entries(dbMetrics.counters).forEach(([key, value]: [string, any]) => {
+              if (key.includes('prisma_client')) {
+                metrics.push({
+                  metricType: `database_${key}`,
+                  value: value.value || 0,
+                  unit: 'count',
+                  source: 'database',
+                  timestamp,
+                  metadata: {
+                    metricKey: key,
+                    labels: value.labels,
+                  },
+                });
+              }
+            });
+          }
         }
       } catch (error) {
         // Database metrics API not available
@@ -495,8 +509,10 @@ export class SystemMetricsCollector {
    */
   private async storeErrorMetric(errorType: string, errorMessage: string, timestamp: Date): Promise<void> {
     try {
-      await prisma.systemMetrics.create({
-        data: {
+      const response = await fetch(`${BACKEND_URL}/api/v2/system-metrics`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           metricType: 'system_error',
           value: 1,
           unit: 'count',
@@ -506,8 +522,12 @@ export class SystemMetricsCollector {
             errorType,
             errorMessage,
           },
-        },
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to store error metric: ${response.status}`);
+      }
     } catch (error) {
       console.error('Failed to store error metric:', error);
     }
@@ -519,17 +539,19 @@ export class SystemMetricsCollector {
   private async cleanupOldMetrics(): Promise<void> {
     try {
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      
-      const deletedCount = await prisma.systemMetrics.deleteMany({
-        where: {
-          timestamp: {
-            lt: sevenDaysAgo,
-          },
-        },
-      });
 
-      if (deletedCount.count > 0) {
-        console.log(`Cleaned up ${deletedCount.count} old system metrics`);
+      const response = await fetch(
+        `${BACKEND_URL}/api/v2/system-metrics/cleanup?before=${sevenDaysAgo.toISOString()}`,
+        { method: 'DELETE', headers: { 'Content-Type': 'application/json' } }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to cleanup old metrics: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (result.deletedCount > 0) {
+        console.log(`Cleaned up ${result.deletedCount} old system metrics`);
       }
 
     } catch (error) {

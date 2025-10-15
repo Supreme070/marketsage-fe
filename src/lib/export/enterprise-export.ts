@@ -298,21 +298,23 @@ class EnterpriseExportManager {
 
   private async fetchExportData(request: ExportRequest): Promise<any[]> {
     try {
-      // Import Prisma client
-      const { default: prisma } = await import('@/lib/db/prisma');
-      
+      // NOTE: Prisma removed - using backend API
+      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                          process.env.NESTJS_BACKEND_URL ||
+                          'http://localhost:3006';
+
       // Build query based on data source
       switch (request.dataSource) {
         case 'contacts':
-          return await this.fetchContactsData(prisma, request);
+          return await this.fetchContactsData(BACKEND_URL, request);
         case 'campaigns':
-          return await this.fetchCampaignData(prisma, request);
+          return await this.fetchCampaignData(BACKEND_URL, request);
         case 'analytics':
-          return await this.fetchAnalyticsData(prisma, request);
+          return await this.fetchAnalyticsData(BACKEND_URL, request);
         case 'workflows':
-          return await this.fetchWorkflowData(prisma, request);
+          return await this.fetchWorkflowData(BACKEND_URL, request);
         case 'transactions':
-          return await this.fetchTransactionData(prisma, request);
+          return await this.fetchTransactionData(BACKEND_URL, request);
         default:
           // Fallback to mock data for unknown data sources
           return this.generateMockData(request.dataSource, request.columns, request.filters);
@@ -322,44 +324,51 @@ class EnterpriseExportManager {
         error: error instanceof Error ? error.message : 'Unknown error',
         dataSource: request.dataSource
       });
-      
+
       // Fallback to mock data if database query fails
       return this.generateMockData(request.dataSource, request.columns, request.filters);
     }
   }
 
-  private async fetchContactsData(prisma: any, request: ExportRequest): Promise<any[]> {
+  private async fetchContactsData(backendUrl: string, request: ExportRequest): Promise<any[]> {
     const { filters } = request;
     const limit = Math.min(filters.limit || 10000, 50000); // Max 50k contacts
-    
-    const whereClause: any = {};
-    
-    // Apply filters
+
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+    queryParams.append('limit', limit.toString());
+    queryParams.append('orderBy', 'createdAt');
+    queryParams.append('order', 'desc');
+
     if (filters.organizationId) {
-      whereClause.organizationId = filters.organizationId;
+      queryParams.append('organizationId', filters.organizationId);
     }
     if (filters.isActive !== undefined) {
-      whereClause.isActive = filters.isActive;
+      queryParams.append('isActive', filters.isActive.toString());
     }
     if (filters.tags && filters.tags.length > 0) {
-      whereClause.tags = { hasSome: filters.tags };
+      queryParams.append('tags', filters.tags.join(','));
     }
     if (filters.createdAfter) {
-      whereClause.createdAt = { ...whereClause.createdAt, gte: new Date(filters.createdAfter) };
+      queryParams.append('createdAfter', filters.createdAfter);
     }
     if (filters.createdBefore) {
-      whereClause.createdAt = { ...whereClause.createdAt, lte: new Date(filters.createdBefore) };
+      queryParams.append('createdBefore', filters.createdBefore);
     }
 
-    const contacts = await prisma.contact.findMany({
-      where: whereClause,
-      take: limit,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        lists: { select: { name: true } },
-        segments: { select: { name: true } }
-      }
+    const response = await fetch(`${backendUrl}/api/contacts?${queryParams.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch contacts: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const contacts = data.data || data;
 
     return contacts.map((contact: any) => ({
       id: contact.id,
@@ -371,59 +380,53 @@ class EnterpriseExportManager {
       jobTitle: contact.jobTitle,
       tags: contact.tags,
       isActive: contact.isActive,
-      lists: contact.lists.map((l: any) => l.name).join(', '),
-      segments: contact.segments.map((s: any) => s.name).join(', '),
+      lists: contact.lists?.map((l: any) => l.name).join(', ') || '',
+      segments: contact.segments?.map((s: any) => s.name).join(', ') || '',
       createdAt: contact.createdAt
     }));
   }
 
-  private async fetchCampaignData(prisma: any, request: ExportRequest): Promise<any[]> {
+  private async fetchCampaignData(backendUrl: string, request: ExportRequest): Promise<any[]> {
     const { filters } = request;
     const limit = Math.min(filters.limit || 5000, 25000);
-    
-    const whereClause: any = {};
+
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+    queryParams.append('limit', limit.toString());
+    queryParams.append('orderBy', 'createdAt');
+    queryParams.append('order', 'desc');
+
     if (filters.organizationId) {
-      whereClause.organizationId = filters.organizationId;
+      queryParams.append('organizationId', filters.organizationId);
     }
     if (filters.status) {
-      whereClause.status = filters.status;
+      queryParams.append('status', filters.status);
     }
     if (filters.campaignType) {
-      // Handle different campaign types
-      if (filters.campaignType === 'email') {
-        const emailCampaigns = await prisma.emailCampaign.findMany({
-          where: whereClause,
-          take: limit,
-          orderBy: { createdAt: 'desc' }
-        });
-        return emailCampaigns.map((campaign: any) => ({
-          id: campaign.id,
-          name: campaign.name,
-          type: 'Email',
-          status: campaign.status,
-          subject: campaign.subject,
-          fromEmail: campaign.fromEmail,
-          sentCount: campaign.sentCount || 0,
-          openRate: campaign.openRate || 0,
-          clickRate: campaign.clickRate || 0,
-          createdAt: campaign.createdAt
-        }));
-      }
+      queryParams.append('type', filters.campaignType);
     }
 
-    // Default to email campaigns
-    const campaigns = await prisma.emailCampaign.findMany({
-      where: whereClause,
-      take: limit,
-      orderBy: { createdAt: 'desc' }
+    const response = await fetch(`${backendUrl}/api/campaigns?${queryParams.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch campaigns: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const campaigns = data.data || data;
 
     return campaigns.map((campaign: any) => ({
       id: campaign.id,
       name: campaign.name,
-      type: 'Email',
+      type: campaign.type || 'Email',
       status: campaign.status,
       subject: campaign.subject,
+      fromEmail: campaign.fromEmail,
       sentCount: campaign.sentCount || 0,
       openRate: campaign.openRate || 0,
       clickRate: campaign.clickRate || 0,
@@ -431,26 +434,39 @@ class EnterpriseExportManager {
     }));
   }
 
-  private async fetchAnalyticsData(prisma: any, request: ExportRequest): Promise<any[]> {
+  private async fetchAnalyticsData(backendUrl: string, request: ExportRequest): Promise<any[]> {
     const { filters } = request;
     const limit = Math.min(filters.limit || 10000, 100000);
-    
-    const whereClause: any = {};
+
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+    queryParams.append('limit', limit.toString());
+    queryParams.append('orderBy', 'createdAt');
+    queryParams.append('order', 'desc');
+
     if (filters.organizationId) {
-      whereClause.organizationId = filters.organizationId;
+      queryParams.append('organizationId', filters.organizationId);
     }
-    if (filters.startDate && filters.endDate) {
-      whereClause.createdAt = {
-        gte: new Date(filters.startDate),
-        lte: new Date(filters.endDate)
-      };
+    if (filters.startDate) {
+      queryParams.append('startDate', filters.startDate);
+    }
+    if (filters.endDate) {
+      queryParams.append('endDate', filters.endDate);
     }
 
-    const analytics = await prisma.analytics.findMany({
-      where: whereClause,
-      take: limit,
-      orderBy: { createdAt: 'desc' }
+    const response = await fetch(`${backendUrl}/api/analytics?${queryParams.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch analytics: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const analytics = data.data || data;
 
     return analytics.map((record: any) => ({
       id: record.id,
@@ -462,47 +478,56 @@ class EnterpriseExportManager {
     }));
   }
 
-  private async fetchWorkflowData(prisma: any, request: ExportRequest): Promise<any[]> {
+  private async fetchWorkflowData(backendUrl: string, request: ExportRequest): Promise<any[]> {
     const { filters } = request;
     const limit = Math.min(filters.limit || 5000, 25000);
-    
-    const whereClause: any = {};
+
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+    queryParams.append('limit', limit.toString());
+    queryParams.append('orderBy', 'createdAt');
+    queryParams.append('order', 'desc');
+
     if (filters.organizationId) {
-      whereClause.organizationId = filters.organizationId;
+      queryParams.append('organizationId', filters.organizationId);
     }
     if (filters.status) {
-      whereClause.status = filters.status;
+      queryParams.append('status', filters.status);
     }
 
-    const workflows = await prisma.workflow.findMany({
-      where: whereClause,
-      take: limit,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        nodes: { select: { type: true } },
-        executions: { select: { status: true } }
-      }
+    const response = await fetch(`${backendUrl}/api/workflows?${queryParams.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch workflows: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const workflows = data.data || data;
 
     return workflows.map((workflow: any) => ({
       id: workflow.id,
       name: workflow.name,
       description: workflow.description,
       status: workflow.status,
-      nodeCount: workflow.nodes.length,
-      executionCount: workflow.executions.length,
-      successfulExecutions: workflow.executions.filter((e: any) => e.status === 'COMPLETED').length,
+      nodeCount: workflow.nodes?.length || 0,
+      executionCount: workflow.executions?.length || 0,
+      successfulExecutions: workflow.executions?.filter((e: any) => e.status === 'COMPLETED').length || 0,
       createdAt: workflow.createdAt
     }));
   }
 
-  private async fetchTransactionData(prisma: any, request: ExportRequest): Promise<any[]> {
+  private async fetchTransactionData(backendUrl: string, request: ExportRequest): Promise<any[]> {
     // Placeholder for transaction data - would need actual transaction model
     logger.info('Transaction data export requested - using mock data', {
       dataSource: request.dataSource,
       filters: request.filters
     });
-    
+
     return this.generateMockData(request.dataSource, request.columns, request.filters);
   }
 

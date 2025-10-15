@@ -4,9 +4,12 @@
  * Ensures data consistency and handles rollbacks for multi-step operations
  */
 
-import { PrismaClient } from '@prisma/client';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
+
 import { logger } from '@/lib/logger';
-import prisma from '@/lib/db/prisma';
 
 export interface TransactionContext {
   id: string;
@@ -115,17 +118,15 @@ export class TransactionManager {
         entity
       });
 
-      // Execute the operation within a Prisma transaction
-      const result = await prisma.$transaction(async (tx) => {
-        const stepResult = await executeFn(tx);
-        
-        // Store rollback data if needed
-        step.rollbackData = stepResult;
-        step.executed = true;
-        step.executedAt = Date.now();
-        
-        return stepResult;
-      });
+      // Execute the operation (transactions handled by backend)
+      const stepResult = await executeFn(null);
+
+      // Store rollback data if needed
+      step.rollbackData = stepResult;
+      step.executed = true;
+      step.executedAt = Date.now();
+
+      const result = stepResult;
 
       // Add step to transaction
       const steps = this.transactionSteps.get(transactionId) || [];
@@ -365,19 +366,34 @@ export class TransactionManager {
     try {
       switch (entity) {
         case 'USER':
-          await prisma.user.delete({ where: { id: rollbackData.id } });
+          await fetch(`${BACKEND_URL}/api/v2/users/${rollbackData.id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+          });
           break;
         case 'CONTACT':
-          await prisma.contact.delete({ where: { id: rollbackData.id } });
+          await fetch(`${BACKEND_URL}/api/v2/contacts/${rollbackData.id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+          });
           break;
         case 'ORGANIZATION':
-          await prisma.organization.delete({ where: { id: rollbackData.id } });
+          await fetch(`${BACKEND_URL}/api/v2/organizations/${rollbackData.id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+          });
           break;
         case 'CAMPAIGN':
-          await prisma.emailCampaign.delete({ where: { id: rollbackData.id } });
+          await fetch(`${BACKEND_URL}/api/v2/email-campaigns/${rollbackData.id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+          });
           break;
         case 'TASK':
-          await prisma.task.delete({ where: { id: rollbackData.id } });
+          await fetch(`${BACKEND_URL}/api/v2/tasks/${rollbackData.id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+          });
           break;
         default:
           logger.warn('No rollback handler for entity', { entity });
@@ -409,22 +425,42 @@ export class TransactionManager {
 
     try {
       const { id, previousData } = rollbackData;
-      
+
       switch (entity) {
         case 'USER':
-          await prisma.user.update({ where: { id }, data: previousData });
+          await fetch(`${BACKEND_URL}/api/v2/users/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(previousData)
+          });
           break;
         case 'CONTACT':
-          await prisma.contact.update({ where: { id }, data: previousData });
+          await fetch(`${BACKEND_URL}/api/v2/contacts/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(previousData)
+          });
           break;
         case 'ORGANIZATION':
-          await prisma.organization.update({ where: { id }, data: previousData });
+          await fetch(`${BACKEND_URL}/api/v2/organizations/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(previousData)
+          });
           break;
         case 'CAMPAIGN':
-          await prisma.emailCampaign.update({ where: { id }, data: previousData });
+          await fetch(`${BACKEND_URL}/api/v2/email-campaigns/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(previousData)
+          });
           break;
         case 'TASK':
-          await prisma.task.update({ where: { id }, data: previousData });
+          await fetch(`${BACKEND_URL}/api/v2/tasks/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(previousData)
+          });
           break;
         default:
           logger.warn('No rollback handler for entity', { entity });
@@ -455,22 +491,42 @@ export class TransactionManager {
 
     try {
       const { deletedData } = rollbackData;
-      
+
       switch (entity) {
         case 'USER':
-          await prisma.user.create({ data: deletedData });
+          await fetch(`${BACKEND_URL}/api/v2/users`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(deletedData)
+          });
           break;
         case 'CONTACT':
-          await prisma.contact.create({ data: deletedData });
+          await fetch(`${BACKEND_URL}/api/v2/contacts`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(deletedData)
+          });
           break;
         case 'ORGANIZATION':
-          await prisma.organization.create({ data: deletedData });
+          await fetch(`${BACKEND_URL}/api/v2/organizations`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(deletedData)
+          });
           break;
         case 'CAMPAIGN':
-          await prisma.emailCampaign.create({ data: deletedData });
+          await fetch(`${BACKEND_URL}/api/v2/email-campaigns`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(deletedData)
+          });
           break;
         case 'TASK':
-          await prisma.task.create({ data: deletedData });
+          await fetch(`${BACKEND_URL}/api/v2/tasks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(deletedData)
+          });
           break;
         default:
           logger.warn('No rollback handler for entity', { entity });

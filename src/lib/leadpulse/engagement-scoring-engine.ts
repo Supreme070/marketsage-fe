@@ -5,10 +5,10 @@
  * that considers various behavioral factors, time decay, and contextual weights.
  */
 
-import { PrismaClient } from '@prisma/client';
 import { logger } from '@/lib/logger';
+// NOTE: Prisma removed - using backend API (AnonymousVisitor, LeadPulseTouchpoint exist in backend)
 
-const prisma = new PrismaClient();
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 
 // Scoring configuration
 const SCORING_CONFIG = {
@@ -151,18 +151,25 @@ export class EngagementScoringEngine {
       if (!visitor) {
         throw new Error(`Visitor not found: ${visitorId}`);
       }
-      
+
       // Get touchpoints within time range
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - timeRange);
-      
-      const touchpoints = await prisma.leadPulseTouchpoint.findMany({
-        where: {
-          anonymousVisitorId: visitorId,
-          timestamp: { gte: cutoffDate },
-        },
-        orderBy: { timestamp: 'desc' },
-      });
+      const cutoffDateISO = cutoffDate.toISOString();
+
+      const touchpointsResponse = await fetch(
+        `${BACKEND_URL}/api/v2/touchpoints?anonymousVisitorId=${visitorId}&timestamp[gte]=${cutoffDateISO}&orderBy=timestamp:desc`,
+        {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+
+      if (!touchpointsResponse.ok) {
+        throw new Error(`Failed to fetch touchpoints: ${touchpointsResponse.status}`);
+      }
+
+      const touchpoints = await touchpointsResponse.json();
       
       // Calculate score components
       const behavioral = await this.calculateBehavioralScore(touchpoints, visitor);
@@ -241,18 +248,23 @@ export class EngagementScoringEngine {
   async updateVisitorScore(visitorId: string): Promise<void> {
     try {
       const score = await this.calculateScore({ visitorId });
-      
-      await prisma.anonymousVisitor.update({
-        where: { id: visitorId },
-        data: {
+
+      const response = await fetch(`${BACKEND_URL}/api/v2/anonymous-visitors/${visitorId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           engagementScore: score.score,
           score: score.score,
           metadata: {
             ...score,
             lastUpdated: new Date().toISOString(),
           },
-        },
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update visitor score: ${response.status}`);
+      }
     } catch (error) {
       logger.error('Error updating visitor score:', error);
       throw error;
@@ -262,9 +274,16 @@ export class EngagementScoringEngine {
   // Private helper methods
   
   private async getVisitorData(visitorId: string) {
-    return prisma.anonymousVisitor.findUnique({
-      where: { id: visitorId },
+    const response = await fetch(`${BACKEND_URL}/api/v2/anonymous-visitors/${visitorId}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return await response.json();
   }
   
   private async calculateBehavioralScore(touchpoints: any[], visitor: any): Promise<number> {

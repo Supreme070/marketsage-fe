@@ -1,10 +1,12 @@
 /**
  * LeadPulse GDPR Compliance Manager
- * 
+ *
  * Handles GDPR compliance requirements for data processing
  */
 
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (GDPRConsent, DataProcessingActivity, DataSubjectRequest, ComplianceAlert, LeadPulseAuditLog, Contact, AnonymousVisitor, Form, FormSubmission, Touchpoint exist in backend)
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
+
 import { logger } from '@/lib/logger';
 import { leadPulseSecurityManager } from './security-manager';
 
@@ -43,18 +45,20 @@ export class GDPRComplianceManager {
   async recordConsent(consentData: ConsentRequest) {
     try {
       // Check if consent already exists
-      const existingConsent = await prisma.leadPulseConsent.findFirst({
-        where: {
-          email: consentData.email,
-          consentType: consentData.consentType,
-          purpose: consentData.purpose
-        },
-        orderBy: { createdAt: 'desc' }
-      });
+      const existingResponse = await fetch(
+        `${BACKEND_URL}/api/v2/gdpr-consents?email=${encodeURIComponent(consentData.email)}&consentType=${consentData.consentType}&purpose=${encodeURIComponent(consentData.purpose)}&orderBy=createdAt:desc&limit=1`
+      );
+      if (!existingResponse.ok) {
+        throw new Error(`Failed to check existing consent: ${existingResponse.status}`);
+      }
+      const existingData = await existingResponse.json();
+      const existingConsent = existingData.data?.[0];
 
       // Create new consent record
-      const consent = await prisma.leadPulseConsent.create({
-        data: {
+      const createResponse = await fetch(`${BACKEND_URL}/api/v2/gdpr-consents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           email: consentData.email,
           consentType: consentData.consentType,
           purpose: consentData.purpose,
@@ -65,8 +69,12 @@ export class GDPRComplianceManager {
           userAgent: consentData.userAgent,
           source: consentData.source,
           evidenceUrl: consentData.evidenceUrl
-        }
+        })
       });
+      if (!createResponse.ok) {
+        throw new Error(`Failed to create consent: ${createResponse.status}`);
+      }
+      const consent = await createResponse.json();
 
       // Log the consent activity
       await leadPulseSecurityManager.logDataProcessingActivity({
@@ -81,10 +89,10 @@ export class GDPRComplianceManager {
         email: consentData.email,
         consentType: consentData.consentType,
         granted: consentData.granted,
-        consentId: consent.id
+        consentId: consent.data.id
       });
 
-      return { success: true, consentId: consent.id };
+      return { success: true, consentId: consent.data.id };
 
     } catch (error) {
       logger.error('Error recording consent:', error);
@@ -96,26 +104,30 @@ export class GDPRComplianceManager {
    * Check if data processing is allowed based on consent
    */
   async checkProcessingConsent(
-    email: string, 
+    email: string,
     consentType: ConsentRequest['consentType'],
     purpose?: string
   ): Promise<{ allowed: boolean; consentDate?: Date; reason?: string }> {
     try {
-      const whereClause: any = {
+      const params = new URLSearchParams({
         email,
         consentType,
-        granted: true,
-        withdrawnAt: null
-      };
+        granted: 'true',
+        withdrawnAt: 'null',
+        orderBy: 'grantedAt:desc',
+        limit: '1'
+      });
 
       if (purpose) {
-        whereClause.purpose = purpose;
+        params.append('purpose', purpose);
       }
 
-      const validConsent = await prisma.leadPulseConsent.findFirst({
-        where: whereClause,
-        orderBy: { grantedAt: 'desc' }
-      });
+      const response = await fetch(`${BACKEND_URL}/api/v2/gdpr-consents?${params}`);
+      if (!response.ok) {
+        throw new Error(`Failed to check consent: ${response.status}`);
+      }
+      const data = await response.json();
+      const validConsent = data.data?.[0];
 
       if (!validConsent) {
         return {
@@ -128,8 +140,8 @@ export class GDPRComplianceManager {
       if (consentType === 'MARKETING' && validConsent.grantedAt) {
         const twoYearsAgo = new Date();
         twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
-        
-        if (validConsent.grantedAt < twoYearsAgo) {
+
+        if (new Date(validConsent.grantedAt) < twoYearsAgo) {
           return {
             allowed: false,
             reason: 'Consent has expired (older than 2 years)'
@@ -139,7 +151,7 @@ export class GDPRComplianceManager {
 
       return {
         allowed: true,
-        consentDate: validConsent.grantedAt || undefined
+        consentDate: validConsent.grantedAt ? new Date(validConsent.grantedAt) : undefined
       };
 
     } catch (error) {
@@ -171,76 +183,58 @@ export class GDPRComplianceManager {
 
       // Collect all personal data for this email
       const [
-        contacts,
-        visitors,
-        formSubmissions,
-        touchpoints,
-        consents,
-        auditLogs
+        contactsRes,
+        visitorsRes,
+        formSubmissionsRes,
+        touchpointsRes,
+        consentsRes,
+        auditLogsRes
       ] = await Promise.all([
         // Contact data
-        prisma.contact.findMany({
-          where: { email },
-          include: {
-            customFields: true,
-            tags: true,
-            segments: true
-          }
-        }),
-        
+        fetch(`${BACKEND_URL}/api/v2/contacts?email=${encodeURIComponent(email)}&include=customFields,tags,segments`),
+
         // Visitor data
-        prisma.leadPulseVisitor.findMany({
-          where: {
-            OR: [
-              { metadata: { path: ['email'], equals: email } },
-              // Add other email matching logic as needed
-            ]
-          },
-          include: {
-            touchpoints: true,
-            formSubmissions: true
-          }
-        }),
+        fetch(`${BACKEND_URL}/api/v2/leadpulse-visitors?metadata.email=${encodeURIComponent(email)}&include=touchpoints,formSubmissions`),
 
         // Form submissions
-        prisma.leadPulseFormSubmission.findMany({
-          where: {
-            OR: [
-              { contact: { email } },
-              { data: { some: { fieldName: 'email', value: email } } }
-            ]
-          },
-          include: {
-            data: true,
-            form: true
-          }
-        }),
+        fetch(`${BACKEND_URL}/api/v2/form-submissions?email=${encodeURIComponent(email)}&include=data,form`),
 
         // Touchpoints
-        prisma.leadPulseTouchpoint.findMany({
-          where: {
-            metadata: {
-              path: ['email'],
-              equals: email
-            }
-          }
-        }),
+        fetch(`${BACKEND_URL}/api/v2/leadpulse-touchpoints?metadata.email=${encodeURIComponent(email)}`),
 
         // Consent records
-        prisma.leadPulseConsent.findMany({
-          where: { email }
-        }),
+        fetch(`${BACKEND_URL}/api/v2/gdpr-consents?email=${encodeURIComponent(email)}`),
 
         // Audit logs
-        prisma.leadPulseAuditLog.findMany({
-          where: {
-            OR: [
-              { userEmail: email },
-              { metadata: { path: ['email'], equals: email } }
-            ]
-          }
-        })
+        fetch(`${BACKEND_URL}/api/v2/leadpulse-audit-logs?userEmail=${encodeURIComponent(email)}`)
       ]);
+
+      if (!contactsRes.ok || !visitorsRes.ok || !formSubmissionsRes.ok || !touchpointsRes.ok || !consentsRes.ok || !auditLogsRes.ok) {
+        throw new Error('Failed to fetch personal data');
+      }
+
+      const [
+        contactsData,
+        visitorsData,
+        formSubmissionsData,
+        touchpointsData,
+        consentsData,
+        auditLogsData
+      ] = await Promise.all([
+        contactsRes.json(),
+        visitorsRes.json(),
+        formSubmissionsRes.json(),
+        touchpointsRes.json(),
+        consentsRes.json(),
+        auditLogsRes.json()
+      ]);
+
+      const contacts = contactsData.data || [];
+      const visitors = visitorsData.data || [];
+      const formSubmissions = formSubmissionsData.data || [];
+      const touchpoints = touchpointsData.data || [];
+      const consents = consentsData.data || [];
+      const auditLogs = auditLogsData.data || [];
 
       // Mask sensitive data according to GDPR requirements
       const maskedData = {
@@ -288,134 +282,29 @@ export class GDPRComplianceManager {
         legalBasis: 'legal_obligation'
       });
 
-      const deletedItems = {
-        contacts: 0,
-        visitors: 0,
-        formSubmissions: 0,
-        touchpoints: 0,
-        consents: 0
-      };
-
-      // Use transaction to ensure atomicity
-      await prisma.$transaction(async (tx) => {
-        // Delete or anonymize contact data
-        const contactsToDelete = await tx.contact.findMany({
-          where: { email },
-          select: { id: true }
-        });
-
-        for (const contact of contactsToDelete) {
-          // Delete related data first
-          await tx.customField.deleteMany({
-            where: { contactId: contact.id }
-          });
-          
-          await tx.contactTag.deleteMany({
-            where: { contactId: contact.id }
-          });
-          
-          // Delete the contact
-          await tx.contact.delete({
-            where: { id: contact.id }
-          });
-          
-          deletedItems.contacts++;
-        }
-
-        // Delete or anonymize visitor data
-        const visitorsToDelete = await tx.leadPulseVisitor.findMany({
-          where: {
-            OR: [
-              { metadata: { path: ['email'], equals: email } }
-            ]
-          },
-          select: { id: true }
-        });
-
-        for (const visitor of visitorsToDelete) {
-          // Delete related touchpoints
-          await tx.leadPulseTouchpoint.deleteMany({
-            where: { visitorId: visitor.id }
-          });
-          
-          // Delete form submissions
-          await tx.leadPulseFormSubmission.deleteMany({
-            where: { visitorId: visitor.id }
-          });
-          
-          // Delete the visitor
-          await tx.leadPulseVisitor.delete({
-            where: { id: visitor.id }
-          });
-          
-          deletedItems.visitors++;
-        }
-
-        // Delete form submissions by email
-        const submissionsToDelete = await tx.leadPulseFormSubmission.findMany({
-          where: {
-            OR: [
-              { contact: { email } },
-              { data: { some: { fieldName: 'email', value: email } } }
-            ]
-          },
-          select: { id: true }
-        });
-
-        for (const submission of submissionsToDelete) {
-          await tx.leadPulseSubmissionData.deleteMany({
-            where: { submissionId: submission.id }
-          });
-          
-          await tx.leadPulseFormSubmission.delete({
-            where: { id: submission.id }
-          });
-          
-          deletedItems.formSubmissions++;
-        }
-
-        // Delete standalone touchpoints
-        const touchpointsDeleted = await tx.leadPulseTouchpoint.deleteMany({
-          where: {
-            metadata: {
-              path: ['email'],
-              equals: email
-            }
-          }
-        });
-        deletedItems.touchpoints = touchpointsDeleted.count;
-
-        // Update consent records to show withdrawal
-        const consentsUpdated = await tx.leadPulseConsent.updateMany({
-          where: { email },
-          data: {
-            granted: false,
-            withdrawnAt: new Date()
-          }
-        });
-        deletedItems.consents = consentsUpdated.count;
-
-        // Create data retention record
-        await tx.leadPulseDataRetention.create({
-          data: {
-            resource: 'contact',
-            resourceId: email,
-            dataType: 'personal_data',
-            retentionPeriod: 0, // Immediate deletion
-            scheduledDeletion: new Date(),
-            deleted: true,
-            deletedAt: new Date()
-          }
-        });
+      // Call backend erasure endpoint (handles transaction)
+      const response = await fetch(`${BACKEND_URL}/api/v2/data-subject-requests/erasure`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          reason
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to process erasure request: ${response.status}`);
+      }
+
+      const result = await response.json();
 
       logger.info('Data erasure completed', {
         email,
-        deletedItems,
+        deletedItems: result.data.deletedItems,
         reason
       });
 
-      return { success: true, deletedItems };
+      return { success: true, deletedItems: result.data.deletedItems };
 
     } catch (error) {
       logger.error('Error handling erasure request:', error);
@@ -483,57 +372,20 @@ export class GDPRComplianceManager {
    */
   async processDataRetention() {
     try {
-      const now = new Date();
-      
-      // Find data scheduled for deletion
-      const itemsToDelete = await prisma.leadPulseDataRetention.findMany({
-        where: {
-          scheduledDeletion: { lte: now },
-          deleted: false
-        }
+      // Call backend data retention endpoint
+      const response = await fetch(`${BACKEND_URL}/api/v2/data-processing-activities/retention`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
       });
 
-      let processedItems = 0;
-      
-      for (const item of itemsToDelete) {
-        try {
-          // Process deletion based on resource type
-          switch (item.resource) {
-            case 'contact':
-              await this.handleErasureRequest(item.resourceId, 'Automatic data retention');
-              break;
-            
-            case 'visitor':
-              await prisma.leadPulseVisitor.delete({
-                where: { id: item.resourceId }
-              });
-              break;
-            
-            case 'touchpoint':
-              await prisma.leadPulseTouchpoint.delete({
-                where: { id: item.resourceId }
-              });
-              break;
-          }
-
-          // Mark as deleted
-          await prisma.leadPulseDataRetention.update({
-            where: { id: item.id },
-            data: {
-              deleted: true,
-              deletedAt: now
-            }
-          });
-
-          processedItems++;
-
-        } catch (error) {
-          logger.error(`Error deleting ${item.resource} ${item.resourceId}:`, error);
-        }
+      if (!response.ok) {
+        throw new Error(`Failed to process data retention: ${response.status}`);
       }
 
-      logger.info(`Data retention processing completed: ${processedItems} items processed`);
-      return { processed: processedItems, total: itemsToDelete.length };
+      const result = await response.json();
+
+      logger.info(`Data retention processing completed: ${result.data.processed} items processed`);
+      return { processed: result.data.processed, total: result.data.total };
 
     } catch (error) {
       logger.error('Error in data retention processing:', error);
@@ -546,16 +398,20 @@ export class GDPRComplianceManager {
    */
   async getConsentSummary(email: string) {
     try {
-      const consents = await prisma.leadPulseConsent.findMany({
-        where: { email },
-        orderBy: { createdAt: 'desc' }
-      });
+      const response = await fetch(
+        `${BACKEND_URL}/api/v2/gdpr-consents?email=${encodeURIComponent(email)}&orderBy=createdAt:desc`
+      );
+      if (!response.ok) {
+        throw new Error(`Failed to get consent summary: ${response.status}`);
+      }
+      const data = await response.json();
+      const consents = data.data || [];
 
       const summary = {
         email,
         totalConsents: consents.length,
-        activeConsents: consents.filter(c => c.granted && !c.withdrawnAt).length,
-        withdrawnConsents: consents.filter(c => c.withdrawnAt).length,
+        activeConsents: consents.filter((c: any) => c.granted && !c.withdrawnAt).length,
+        withdrawnConsents: consents.filter((c: any) => c.withdrawnAt).length,
         consentsByType: {} as Record<string, any>
       };
 
@@ -577,7 +433,7 @@ export class GDPRComplianceManager {
 
         // Track latest consent
         if (!summary.consentsByType[consent.consentType].latest ||
-            consent.createdAt > summary.consentsByType[consent.consentType].latest.createdAt) {
+            new Date(consent.createdAt) > new Date(summary.consentsByType[consent.consentType].latest.createdAt)) {
           summary.consentsByType[consent.consentType].latest = consent;
         }
       }

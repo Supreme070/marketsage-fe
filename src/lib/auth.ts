@@ -11,7 +11,7 @@ declare module 'next-auth' {
     id: string;
     role: string;
   }
-  
+
   interface Session {
     user: {
       id: string;
@@ -39,8 +39,50 @@ export enum UserRole {
   SUPER_ADMIN = "SUPER_ADMIN"
 }
 
+// ============================================================================
+// SECURITY: Validate Required Environment Variables
+// ============================================================================
+// Fail loudly if critical secrets are missing - no fallbacks allowed
+
+const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET;
+const NEXTAUTH_URL = process.env.NEXTAUTH_URL;
+
+if (!NEXTAUTH_SECRET || NEXTAUTH_SECRET.length < 32) {
+  throw new Error(
+    '\n' +
+    '🔴 CRITICAL SECURITY ERROR: NEXTAUTH_SECRET is missing or too short\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+    'NEXTAUTH_SECRET must be at least 32 characters long.\n' +
+    '\n' +
+    'Generate a secure secret:\n' +
+    '  openssl rand -base64 32\n' +
+    '\n' +
+    'Then add to your .env.local file:\n' +
+    '  NEXTAUTH_SECRET=<your-generated-secret>\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'
+  );
+}
+
+if (!NEXTAUTH_URL && process.env.NODE_ENV === 'production') {
+  throw new Error(
+    '\n' +
+    '🔴 CRITICAL SECURITY ERROR: NEXTAUTH_URL is required in production\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+    'NEXTAUTH_URL must be set to your application URL in production.\n' +
+    '\n' +
+    'Add to your .env.production file:\n' +
+    '  NEXTAUTH_URL=https://app.marketsage.com\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'
+  );
+}
+
+// Log startup confirmation (safe - no secrets logged)
+console.log('✅ Auth configuration validated successfully');
+console.log('   - NEXTAUTH_SECRET: Present and valid length');
+console.log('   - NEXTAUTH_URL:', NEXTAUTH_URL || 'Not set (development mode)');
+
 export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: NEXTAUTH_SECRET,
   session: {
     strategy: "jwt",
   },

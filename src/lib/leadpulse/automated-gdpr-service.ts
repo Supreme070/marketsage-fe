@@ -5,8 +5,10 @@
  * Built on top of the existing GDPR compliance manager
  */
 
+// NOTE: Prisma removed - using backend API (LeadPulseRetentionRule, LeadPulseConsent, LeadPulseDataSubjectRequest, LeadPulseAuditLog, LeadPulseComplianceAlert, LeadPulseVisitor, Contact, LeadPulseTouchpoint exist in backend)
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
+
 import { EventEmitter } from 'events';
-import prisma from '@/lib/db/prisma';
 import { gdprComplianceManager } from './gdpr-compliance';
 import { logger } from '@/lib/logger';
 import { leadPulseSecurityManager } from './security-manager';
@@ -153,8 +155,10 @@ class AutomatedGDPRService extends EventEmitter {
     };
 
     // Store in database
-    await prisma.leadPulseRetentionRule.create({
-      data: {
+    const response = await fetch(`${BACKEND_URL}/api/v2/retention-rules`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         id: ruleId,
         name: rule.name,
         enabled: rule.enabled,
@@ -163,8 +167,11 @@ class AutomatedGDPRService extends EventEmitter {
         conditions: rule.conditions,
         actions: rule.actions,
         schedule: rule.schedule
-      }
+      })
     });
+    if (!response.ok) {
+      throw new Error(`Failed to create retention rule: ${response.status}`);
+    }
 
     this.retentionRules.set(ruleId, fullRule);
     
@@ -266,16 +273,12 @@ class AutomatedGDPRService extends EventEmitter {
       const now = new Date();
       
       // Find consents that need renewal reminders
-      const expiringSoonConsents = await prisma.leadPulseConsent.findMany({
-        where: {
-          granted: true,
-          withdrawnAt: null,
-          consentType: 'MARKETING', // Marketing consents expire after 2 years
-          grantedAt: {
-            lte: new Date(now.getTime() - 630 * 24 * 60 * 60 * 1000) // 21 months ago
-          }
-        }
-      });
+      const cutoffDate = new Date(now.getTime() - 630 * 24 * 60 * 60 * 1000); // 21 months ago
+      const response = await fetch(`${BACKEND_URL}/api/v2/gdpr-consents?granted=true&consentType=MARKETING&grantedAtLte=${cutoffDate.toISOString()}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch expiring consents: ${response.status}`);
+      }
+      const expiringSoonConsents = await response.json();
 
       for (const consent of expiringSoonConsents) {
         const reminderKey = `${consent.email}_${consent.consentType}_${consent.purpose}`;
@@ -334,13 +337,13 @@ class AutomatedGDPRService extends EventEmitter {
       const now = new Date();
       
       // Check for data retention violations
-      const retentionViolations = await prisma.leadPulseVisitor.count({
-        where: {
-          createdAt: {
-            lt: new Date(now.getTime() - 3 * 365 * 24 * 60 * 60 * 1000) // 3 years old
-          }
-        }
-      });
+      const threeYearsAgo = new Date(now.getTime() - 3 * 365 * 24 * 60 * 60 * 1000);
+      const violationsResponse = await fetch(`${BACKEND_URL}/api/v2/visitors/count?createdAtLt=${threeYearsAgo.toISOString()}`);
+      if (!violationsResponse.ok) {
+        throw new Error(`Failed to count retention violations: ${violationsResponse.status}`);
+      }
+      const violationsData = await violationsResponse.json();
+      const retentionViolations = violationsData.count;
 
       if (retentionViolations > 0) {
         await this.createComplianceAlert({
@@ -352,16 +355,13 @@ class AutomatedGDPRService extends EventEmitter {
       }
 
       // Check for consent expiry
-      const expiredConsents = await prisma.leadPulseConsent.count({
-        where: {
-          granted: true,
-          withdrawnAt: null,
-          consentType: 'MARKETING',
-          grantedAt: {
-            lt: new Date(now.getTime() - 2 * 365 * 24 * 60 * 60 * 1000) // 2 years old
-          }
-        }
-      });
+      const twoYearsAgo = new Date(now.getTime() - 2 * 365 * 24 * 60 * 60 * 1000);
+      const expiredResponse = await fetch(`${BACKEND_URL}/api/v2/gdpr-consents/count?granted=true&consentType=MARKETING&grantedAtLt=${twoYearsAgo.toISOString()}`);
+      if (!expiredResponse.ok) {
+        throw new Error(`Failed to count expired consents: ${expiredResponse.status}`);
+      }
+      const expiredData = await expiredResponse.json();
+      const expiredConsents = expiredData.count;
 
       if (expiredConsents > 0) {
         await this.createComplianceAlert({
@@ -373,14 +373,13 @@ class AutomatedGDPRService extends EventEmitter {
       }
 
       // Check for unprocessed data subject requests
-      const pendingRequests = await prisma.leadPulseDataSubjectRequest.count({
-        where: {
-          status: 'pending',
-          createdAt: {
-            lt: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) // 30 days old
-          }
-        }
-      });
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const requestsResponse = await fetch(`${BACKEND_URL}/api/v2/data-subject-requests/count?status=pending&createdAtLt=${thirtyDaysAgo.toISOString()}`);
+      if (!requestsResponse.ok) {
+        throw new Error(`Failed to count pending requests: ${requestsResponse.status}`);
+      }
+      const requestsData = await requestsResponse.json();
+      const pendingRequests = requestsData.count;
 
       if (pendingRequests > 0) {
         await this.createComplianceAlert({
@@ -415,43 +414,27 @@ class AutomatedGDPRService extends EventEmitter {
     retentionStats: any;
   }> {
     try {
+      const twoYearsAgo = new Date(Date.now() - 2 * 365 * 24 * 60 * 60 * 1000);
+
       const [
-        totalConsents,
-        activeConsents,
-        expiredConsents,
-        pendingRequests,
-        recentActivity
+        totalConsentsResp,
+        activeConsentsResp,
+        expiredConsentsResp,
+        pendingRequestsResp,
+        recentActivityResp
       ] = await Promise.all([
-        prisma.leadPulseConsent.count(),
-        prisma.leadPulseConsent.count({
-          where: {
-            granted: true,
-            withdrawnAt: null
-          }
-        }),
-        prisma.leadPulseConsent.count({
-          where: {
-            granted: true,
-            withdrawnAt: null,
-            consentType: 'MARKETING',
-            grantedAt: {
-              lt: new Date(Date.now() - 2 * 365 * 24 * 60 * 60 * 1000)
-            }
-          }
-        }),
-        prisma.leadPulseDataSubjectRequest.count({
-          where: { status: 'pending' }
-        }),
-        prisma.leadPulseAuditLog.findMany({
-          where: {
-            action: {
-              in: ['DATA_RETENTION', 'CONSENT_GRANTED', 'CONSENT_WITHDRAWN', 'DATA_DELETED']
-            }
-          },
-          orderBy: { createdAt: 'desc' },
-          take: 10
-        })
+        fetch(`${BACKEND_URL}/api/v2/gdpr-consents/count`),
+        fetch(`${BACKEND_URL}/api/v2/gdpr-consents/count?granted=true`),
+        fetch(`${BACKEND_URL}/api/v2/gdpr-consents/count?granted=true&consentType=MARKETING&grantedAtLt=${twoYearsAgo.toISOString()}`),
+        fetch(`${BACKEND_URL}/api/v2/data-subject-requests/count?status=pending`),
+        fetch(`${BACKEND_URL}/api/v2/audit-logs?action=DATA_RETENTION,CONSENT_GRANTED,CONSENT_WITHDRAWN,DATA_DELETED&sortBy=createdAt&order=desc&limit=10`)
       ]);
+
+      const totalConsents = totalConsentsResp.ok ? (await totalConsentsResp.json()).count : 0;
+      const activeConsents = activeConsentsResp.ok ? (await activeConsentsResp.json()).count : 0;
+      const expiredConsents = expiredConsentsResp.ok ? (await expiredConsentsResp.json()).count : 0;
+      const pendingRequests = pendingRequestsResp.ok ? (await pendingRequestsResp.json()).count : 0;
+      const recentActivity = recentActivityResp.ok ? await recentActivityResp.json() : [];
 
       const summary = {
         totalConsents,
@@ -501,16 +484,21 @@ class AutomatedGDPRService extends EventEmitter {
     this.complianceAlerts.set(alertId, alert);
 
     // Store in database
-    await prisma.leadPulseComplianceAlert.create({
-      data: {
+    const response = await fetch(`${BACKEND_URL}/api/v2/compliance-alerts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         id: alertId,
         type: alert.type,
         severity: alert.severity,
         message: alert.message,
         details: alert.details,
         resolved: false
-      }
+      })
     });
+    if (!response.ok) {
+      throw new Error(`Failed to create compliance alert: ${response.status}`);
+    }
 
     this.emit('alert_created', alert);
     logger.warn(`Compliance alert created: ${alert.message}`, alert);
@@ -539,13 +527,11 @@ class AutomatedGDPRService extends EventEmitter {
     try {
       switch (rule.dataType) {
         case 'visitor':
-          const visitors = await prisma.leadPulseVisitor.findMany({
-            where: {
-              createdAt: { lt: cutoffDate },
-              ...this.buildWhereClause(rule.conditions)
-            },
-            take: 100 // Process in batches
-          });
+          const visitorsResponse = await fetch(`${BACKEND_URL}/api/v2/visitors?createdAtLt=${cutoffDate.toISOString()}&limit=100`);
+          if (!visitorsResponse.ok) {
+            throw new Error(`Failed to fetch visitors for retention: ${visitorsResponse.status}`);
+          }
+          const visitors = await visitorsResponse.json();
 
           for (const visitor of visitors) {
             await this.processDataItem(visitor, rule.actions);
@@ -554,13 +540,11 @@ class AutomatedGDPRService extends EventEmitter {
           break;
 
         case 'contact':
-          const contacts = await prisma.contact.findMany({
-            where: {
-              createdAt: { lt: cutoffDate },
-              ...this.buildWhereClause(rule.conditions)
-            },
-            take: 100
-          });
+          const contactsResponse = await fetch(`${BACKEND_URL}/api/v2/contacts?createdAtLt=${cutoffDate.toISOString()}&limit=100`);
+          if (!contactsResponse.ok) {
+            throw new Error(`Failed to fetch contacts for retention: ${contactsResponse.status}`);
+          }
+          const contacts = await contactsResponse.json();
 
           for (const contact of contacts) {
             if (rule.actions.delete) {
@@ -572,13 +556,11 @@ class AutomatedGDPRService extends EventEmitter {
           break;
 
         case 'touchpoint':
-          const touchpoints = await prisma.leadPulseTouchpoint.findMany({
-            where: {
-              createdAt: { lt: cutoffDate },
-              ...this.buildWhereClause(rule.conditions)
-            },
-            take: 100
-          });
+          const touchpointsResponse = await fetch(`${BACKEND_URL}/api/v2/touchpoints?createdAtLt=${cutoffDate.toISOString()}&limit=100`);
+          if (!touchpointsResponse.ok) {
+            throw new Error(`Failed to fetch touchpoints for retention: ${touchpointsResponse.status}`);
+          }
+          const touchpoints = await touchpointsResponse.json();
 
           for (const touchpoint of touchpoints) {
             await this.processDataItem(touchpoint, rule.actions);
@@ -689,9 +671,11 @@ class AutomatedGDPRService extends EventEmitter {
    */
   private async loadRetentionRules(): Promise<void> {
     try {
-      const rules = await prisma.leadPulseRetentionRule.findMany({
-        where: { enabled: true }
-      });
+      const response = await fetch(`${BACKEND_URL}/api/v2/retention-rules?enabled=true`);
+      if (!response.ok) {
+        throw new Error(`Failed to load retention rules: ${response.status}`);
+      }
+      const rules = await response.json();
 
       for (const rule of rules) {
         this.retentionRules.set(rule.id, rule as RetentionRule);

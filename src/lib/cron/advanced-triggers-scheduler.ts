@@ -8,7 +8,11 @@
 import cron from 'node-cron';
 import { logger } from '@/lib/logger';
 import { advancedTriggersService } from '@/lib/workflow/advanced-triggers-service';
-import prisma from '@/lib/db/prisma';
+
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
 
 class AdvancedTriggersScheduler {
   private jobs: Map<string, cron.ScheduledTask> = new Map();
@@ -102,15 +106,20 @@ class AdvancedTriggersScheduler {
   private async processDelayedTriggers(): Promise<void> {
     try {
       const now = new Date();
-      
+
       // Find delayed triggers that are ready to execute
-      const readyTriggers = await prisma.workflowEvent.findMany({
-        where: {
-          eventType: 'DELAYED_TRIGGER',
-          processed: false,
+      const response = await fetch(`${BACKEND_URL}/api/workflow-events/delayed`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        take: 100, // Process in batches
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch delayed triggers: ${response.statusText}`);
+      }
+
+      const readyTriggers = await response.json();
 
       let processedCount = 0;
 
@@ -122,7 +131,7 @@ class AdvancedTriggersScheduler {
           // Check if it's time to execute this trigger
           if (scheduledFor <= now) {
             const { workflowId, originalTriggerData } = eventData;
-            
+
             // Process the delayed trigger
             await advancedTriggersService.processTriggerEvent({
               type: 'delayed_trigger_execution',
@@ -135,10 +144,17 @@ class AdvancedTriggersScheduler {
             });
 
             // Mark as processed
-            await prisma.workflowEvent.update({
-              where: { id: trigger.id },
-              data: { processed: true },
+            const updateResponse = await fetch(`${BACKEND_URL}/api/workflow-events/${trigger.id}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ processed: true }),
             });
+
+            if (!updateResponse.ok) {
+              throw new Error(`Failed to update trigger: ${updateResponse.statusText}`);
+            }
 
             processedCount++;
           }
@@ -168,18 +184,25 @@ class AdvancedTriggersScheduler {
     try {
       const cutoffDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
 
-      const deletedCount = await prisma.workflowEvent.deleteMany({
-        where: {
-          processed: true,
-          createdAt: {
-            lt: cutoffDate,
-          },
+      const response = await fetch(`${BACKEND_URL}/api/workflow-events/cleanup`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          cutoffDate: cutoffDate.toISOString(),
+        }),
       });
 
-      if (deletedCount.count > 0) {
+      if (!response.ok) {
+        throw new Error(`Failed to cleanup old trigger events: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      if (result.count > 0) {
         logger.info('Cleaned up old trigger events', {
-          deletedCount: deletedCount.count,
+          deletedCount: result.count,
           cutoffDate: cutoffDate.toISOString(),
         });
       }

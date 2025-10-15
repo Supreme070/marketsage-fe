@@ -8,7 +8,10 @@
 import { logger } from '@/lib/logger';
 import { trace } from '@opentelemetry/api';
 import { EventEmitter } from 'events';
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
 import { supremeAIv3 } from '@/lib/ai/supreme-ai-v3-engine';
 import { multiAgentCoordinator } from '@/lib/ai/multi-agent-coordinator';
 import { webhookSystem } from '@/lib/leadpulse/integrations/webhook-system';
@@ -542,10 +545,11 @@ class CrossPlatformIntegrationHub extends EventEmitter {
 
   private async loadExistingIntegrations(): Promise<void> {
     try {
-      const integrations = await prisma.integration.findMany({
-        where: { active: true },
-        take: 1000
+      const response = await fetch(`${BACKEND_URL}/api/v2/integrations?active=true&limit=1000`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const integrations = response.ok ? await response.json() : [];
 
       for (const integration of integrations) {
         // Convert database model to CrossPlatformIntegration
@@ -732,43 +736,46 @@ class CrossPlatformIntegrationHub extends EventEmitter {
 
   private async saveIntegration(integration: CrossPlatformIntegration): Promise<void> {
     try {
-      await prisma.integration.create({
-        data: {
+      await fetch(`${BACKEND_URL}/api/v2/integrations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           id: integration.id,
           organizationId: integration.organizationId,
           type: integration.platformName,
           name: integration.displayName,
-          config: integration.configuration as any,
-          credentials: integration.credentials as any,
+          config: integration.configuration,
+          credentials: integration.credentials,
           active: integration.isActive,
           lastSyncAt: integration.lastSyncAt,
           createdAt: integration.createdAt,
           updatedAt: integration.updatedAt
-        }
+        })
       });
     } catch (error) {
-      logger.error('Failed to save integration to database', { 
-        integrationId: integration.id, 
-        error 
+      logger.error('Failed to save integration to database', {
+        integrationId: integration.id,
+        error
       });
     }
   }
 
   private async updateIntegration(integration: CrossPlatformIntegration): Promise<void> {
     try {
-      await prisma.integration.update({
-        where: { id: integration.id },
-        data: {
-          config: integration.configuration as any,
+      await fetch(`${BACKEND_URL}/api/v2/integrations/${integration.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          config: integration.configuration,
           active: integration.isActive,
           lastSyncAt: integration.lastSyncAt,
           updatedAt: new Date()
-        }
+        })
       });
     } catch (error) {
-      logger.error('Failed to update integration in database', { 
-        integrationId: integration.id, 
-        error 
+      logger.error('Failed to update integration in database', {
+        integrationId: integration.id,
+        error
       });
     }
   }
@@ -879,11 +886,12 @@ class CrossPlatformIntegrationHub extends EventEmitter {
     const integration = this.integrations.get(integrationId);
     if (integration) {
       this.integrations.delete(integrationId);
-      
+
       try {
-        await prisma.integration.update({
-          where: { id: integrationId },
-          data: { active: false }
+        await fetch(`${BACKEND_URL}/api/v2/integrations/${integrationId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ active: false })
         });
       } catch (error) {
         logger.error('Failed to deactivate integration in database', { integrationId, error });

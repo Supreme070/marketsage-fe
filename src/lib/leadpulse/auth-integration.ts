@@ -5,9 +5,11 @@
  * with authenticated users to create comprehensive customer profiles.
  */
 
+// NOTE: Prisma removed - using backend API (Contact, AnonymousVisitor, LeadPulseVisitor, LeadPulseTouchpoint, CustomerProfile exist in backend)
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
+
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/db/prisma';
 import { logger } from '@/lib/logger';
 import { leadPulseRealtimeService } from '@/lib/websocket/leadpulse-realtime';
 import { leadPulseCache } from '@/lib/cache/leadpulse-cache';
@@ -110,20 +112,19 @@ export class LeadPulseAuthIntegration {
       }
 
       // Find or create contact for the authenticated user
-      let contact = await prisma.contact.findFirst({
-        where: {
-          email: session.user.email!,
-          organizationId: session.user.organizationId
-        },
-        include: {
-          customerProfile: true
-        }
-      });
+      const contactResponse = await fetch(`${BACKEND_URL}/api/v2/contacts?email=${encodeURIComponent(session.user.email!)}&organizationId=${session.user.organizationId}&limit=1`);
+      if (!contactResponse.ok) {
+        throw new Error(`Failed to check contact: ${contactResponse.status}`);
+      }
+      const existingContacts = await contactResponse.json();
+      let contact = existingContacts[0];
 
       if (!contact) {
         // Create new contact for authenticated user
-        contact = await prisma.contact.create({
-          data: {
+        const createResponse = await fetch(`${BACKEND_URL}/api/v2/contacts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             email: session.user.email!,
             firstName: session.user.name?.split(' ')[0],
             lastName: session.user.name?.split(' ').slice(1).join(' '),
@@ -131,21 +132,21 @@ export class LeadPulseAuthIntegration {
             createdById: session.user.id,
             source: 'leadpulse_auth',
             status: 'ACTIVE'
-          },
-          include: {
-            customerProfile: true
-          }
+          })
         });
+        if (!createResponse.ok) {
+          throw new Error(`Failed to create contact: ${createResponse.status}`);
+        }
+        contact = await createResponse.json();
       }
 
       // Find the anonymous visitor
-      const anonymousVisitor = await prisma.anonymousVisitor.findFirst({
-        where: { fingerprint: visitorFingerprint },
-        include: {
-          LeadPulseTouchpoint: true,
-          LeadPulseJourney: true
-        }
-      });
+      const anonResponse = await fetch(`${BACKEND_URL}/api/v2/anonymous-visitors?fingerprint=${visitorFingerprint}&limit=1`);
+      if (!anonResponse.ok) {
+        throw new Error(`Failed to fetch anonymous visitor: ${anonResponse.status}`);
+      }
+      const anonVisitors = await anonResponse.json();
+      const anonymousVisitor = anonVisitors[0];
 
       if (!anonymousVisitor) {
         logger.warn('Anonymous visitor not found for authentication integration', {
@@ -155,10 +156,14 @@ export class LeadPulseAuthIntegration {
         return this.createFailedResult();
       }
 
+      // Fetch touchpoints for anonymous visitor
+      const touchpointsResponse = await fetch(`${BACKEND_URL}/api/v2/touchpoints?anonymousVisitorId=${anonymousVisitor.id}`);
+      const LeadPulseTouchpoint = touchpointsResponse.ok ? await touchpointsResponse.json() : [];
+
       // Create or update LeadPulse visitor with authentication data
-      const leadPulseVisitor = await prisma.leadPulseVisitor.upsert({
-        where: { fingerprint: visitorFingerprint },
-        update: {
+      const upsertData = {
+        fingerprint: visitorFingerprint,
+        updateData: {
           metadata: {
             ...((anonymousVisitor.metadata as any) || {}),
             authenticatedUserId: session.user.id,
@@ -174,7 +179,7 @@ export class LeadPulseAuthIntegration {
             100
           )
         },
-        create: {
+        createData: {
           fingerprint: visitorFingerprint,
           ipAddress: anonymousVisitor.ipAddress,
           userAgent: anonymousVisitor.userAgent,
@@ -196,44 +201,81 @@ export class LeadPulseAuthIntegration {
             isAuthenticated: true
           }
         }
+      };
+
+      const visitorUpsertResponse = await fetch(`${BACKEND_URL}/api/v2/visitors/upsert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(upsertData)
       });
+      if (!visitorUpsertResponse.ok) {
+        throw new Error(`Failed to upsert visitor: ${visitorUpsertResponse.status}`);
+      }
+      const leadPulseVisitor = await visitorUpsertResponse.json();
 
       // Link anonymous visitor to contact
-      await prisma.anonymousVisitor.update({
-        where: { id: anonymousVisitor.id },
-        data: { contactId: contact.id }
+      const linkResponse = await fetch(`${BACKEND_URL}/api/v2/anonymous-visitors/${anonymousVisitor.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contactId: contact.id })
       });
+      if (!linkResponse.ok) {
+        throw new Error(`Failed to link visitor to contact: ${linkResponse.status}`);
+      }
+
+      // Get existing customer profile if any
+      const profileCheckResponse = await fetch(`${BACKEND_URL}/api/v2/customer-profiles?contactId=${contact.id}&limit=1`);
+      const existingProfiles = profileCheckResponse.ok ? await profileCheckResponse.json() : [];
+      const existingProfile = existingProfiles[0];
+
+      const pageViewCount = LeadPulseTouchpoint.filter((t: any) => t.type === 'PAGEVIEW').length;
 
       // Create or update customer profile
-      const customerProfile = await prisma.customerProfile.upsert({
-        where: { contactId: contact.id },
-        update: {
-          lastSeenDate: new Date(),
-          totalPageViews: {
-            increment: anonymousVisitor.LeadPulseTouchpoint.filter(t => t.type === 'PAGEVIEW').length
-          },
-          engagementScore: Math.min(
-            (contact.customerProfile?.engagementScore || 0) + 
-            Math.floor(anonymousVisitor.engagementScore / 10),
-            100
-          )
-        },
-        create: {
-          contactId: contact.id,
-          organizationId: session.user.organizationId,
-          engagementScore: Math.floor(anonymousVisitor.engagementScore / 10),
-          lastSeenDate: new Date(),
-          totalPageViews: anonymousVisitor.LeadPulseTouchpoint.filter(t => t.type === 'PAGEVIEW').length,
-          totalEmailOpens: 0,
-          totalEmailClicks: 0,
-          totalSMSResponses: 0,
-          preferredChannel: 'web'
+      let customerProfile;
+      if (existingProfile) {
+        const updateProfileResponse = await fetch(`${BACKEND_URL}/api/v2/customer-profiles/${existingProfile.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lastSeenDate: new Date(),
+            totalPageViews: existingProfile.totalPageViews + pageViewCount,
+            engagementScore: Math.min(
+              (existingProfile.engagementScore || 0) + Math.floor(anonymousVisitor.engagementScore / 10),
+              100
+            )
+          })
+        });
+        if (!updateProfileResponse.ok) {
+          throw new Error(`Failed to update customer profile: ${updateProfileResponse.status}`);
         }
-      });
+        customerProfile = await updateProfileResponse.json();
+      } else {
+        const createProfileResponse = await fetch(`${BACKEND_URL}/api/v2/customer-profiles`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contactId: contact.id,
+            organizationId: session.user.organizationId,
+            engagementScore: Math.floor(anonymousVisitor.engagementScore / 10),
+            lastSeenDate: new Date(),
+            totalPageViews: pageViewCount,
+            totalEmailOpens: 0,
+            totalEmailClicks: 0,
+            totalSMSResponses: 0,
+            preferredChannel: 'web'
+          })
+        });
+        if (!createProfileResponse.ok) {
+          throw new Error(`Failed to create customer profile: ${createProfileResponse.status}`);
+        }
+        customerProfile = await createProfileResponse.json();
+      }
 
       // Create authentication touchpoint
-      await prisma.leadPulseTouchpoint.create({
-        data: {
+      const touchpointCreateResponse = await fetch(`${BACKEND_URL}/api/v2/touchpoints`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           type: 'CONVERSION',
           visitorId: leadPulseVisitor.fingerprint,
           metadata: {
@@ -246,8 +288,11 @@ export class LeadPulseAuthIntegration {
           url: '/auth/signin',
           title: 'User Authentication',
           timestamp: new Date()
-        }
+        })
       });
+      if (!touchpointCreateResponse.ok) {
+        throw new Error(`Failed to create authentication touchpoint: ${touchpointCreateResponse.status}`);
+      }
 
       // Update journey stages
       const journeyStages = ['anonymous', 'authenticated'];
@@ -256,10 +301,10 @@ export class LeadPulseAuthIntegration {
       // Calculate journey phases
       const anonymousPhase = {
         duration: new Date().getTime() - anonymousVisitor.firstVisit.getTime(),
-        touchpoints: anonymousVisitor.LeadPulseTouchpoint.length,
-        pages: [...new Set(anonymousVisitor.LeadPulseTouchpoint
-          .filter(t => t.type === 'PAGEVIEW')
-          .map(t => t.url || '')
+        touchpoints: LeadPulseTouchpoint.length,
+        pages: [...new Set(LeadPulseTouchpoint
+          .filter((t: any) => t.type === 'PAGEVIEW')
+          .map((t: any) => t.url || '')
           .filter(Boolean))]
       };
 
@@ -322,9 +367,9 @@ export class LeadPulseAuthIntegration {
         success: true,
         authenticatedVisitor,
         mergedData: {
-          touchpoints: anonymousVisitor.LeadPulseTouchpoint.length + 1,
+          touchpoints: LeadPulseTouchpoint.length + 1,
           formSubmissions: 0, // TODO: Count form submissions
-          pageViews: anonymousVisitor.LeadPulseTouchpoint.filter(t => t.type === 'PAGEVIEW').length,
+          pageViews: LeadPulseTouchpoint.filter((t: any) => t.type === 'PAGEVIEW').length,
           engagementScore: leadPulseVisitor.engagementScore
         },
         journeyPhases: {
@@ -358,27 +403,23 @@ export class LeadPulseAuthIntegration {
    */
   async getAuthenticatedVisitor(visitorFingerprint: string): Promise<AuthenticatedVisitor | null> {
     try {
-      const visitor = await prisma.leadPulseVisitor.findUnique({
-        where: { fingerprint: visitorFingerprint },
-        include: {
-          touchpoints: {
-            orderBy: { timestamp: 'desc' },
-            take: 50
-          }
-        }
-      });
+      const visitorResponse = await fetch(`${BACKEND_URL}/api/v2/visitors?fingerprint=${visitorFingerprint}&limit=1`);
+      if (!visitorResponse.ok) {
+        return null;
+      }
+      const visitors = await visitorResponse.json();
+      const visitor = visitors[0];
 
       if (!visitor || !visitor.metadata || !(visitor.metadata as any).isAuthenticated) {
         return null;
       }
 
       const metadata = visitor.metadata as any;
-      const contact = await prisma.contact.findUnique({
-        where: { id: metadata.contactId },
-        include: {
-          customerProfile: true
-        }
-      });
+      const contactResponse = await fetch(`${BACKEND_URL}/api/v2/contacts/${metadata.contactId}`);
+      if (!contactResponse.ok) {
+        return null;
+      }
+      const contact = await contactResponse.json();
 
       if (!contact) {
         return null;
@@ -435,8 +476,10 @@ export class LeadPulseAuthIntegration {
       }
 
       // Create touchpoint for authenticated action
-      await prisma.leadPulseTouchpoint.create({
-        data: {
+      const touchpointResponse = await fetch(`${BACKEND_URL}/api/v2/touchpoints`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           type: 'CLICK',
           visitorId: visitorFingerprint,
           metadata: {
@@ -449,19 +492,32 @@ export class LeadPulseAuthIntegration {
           url: metadata.url || '/dashboard',
           title: `Authenticated Action: ${action}`,
           timestamp: new Date()
-        }
+        })
       });
+      if (!touchpointResponse.ok) {
+        throw new Error(`Failed to create touchpoint: ${touchpointResponse.status}`);
+      }
+
+      // Get current visitor data
+      const currentVisitorResponse = await fetch(`${BACKEND_URL}/api/v2/visitors?fingerprint=${visitorFingerprint}&limit=1`);
+      if (!currentVisitorResponse.ok) {
+        throw new Error(`Failed to fetch visitor: ${currentVisitorResponse.status}`);
+      }
+      const currentVisitors = await currentVisitorResponse.json();
+      const currentVisitor = currentVisitors[0];
 
       // Update engagement score
-      await prisma.leadPulseVisitor.update({
-        where: { fingerprint: visitorFingerprint },
-        data: {
-          engagementScore: {
-            increment: 5 // Authenticated actions are more valuable
-          },
+      const updateResponse = await fetch(`${BACKEND_URL}/api/v2/visitors/${currentVisitor.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          engagementScore: currentVisitor.engagementScore + 5, // Authenticated actions are more valuable
           lastVisit: new Date()
-        }
+        })
       });
+      if (!updateResponse.ok) {
+        throw new Error(`Failed to update visitor: ${updateResponse.status}`);
+      }
 
       return true;
 
@@ -481,43 +537,41 @@ export class LeadPulseAuthIntegration {
    */
   async getCustomerJourneyTimeline(contactId: string): Promise<any[]> {
     try {
-      const contact = await prisma.contact.findUnique({
-        where: { id: contactId },
-        include: {
-          formSubmissions: {
-            orderBy: { createdAt: 'asc' }
-          }
-        }
-      });
+      const contactResponse = await fetch(`${BACKEND_URL}/api/v2/contacts/${contactId}`);
+      if (!contactResponse.ok) {
+        return [];
+      }
+      const contact = await contactResponse.json();
 
       if (!contact) {
         return [];
       }
 
       // Get anonymous visitor data
-      const anonymousVisitor = await prisma.anonymousVisitor.findFirst({
-        where: { contactId: contactId },
-        include: {
-          LeadPulseTouchpoint: {
-            orderBy: { timestamp: 'asc' }
-          }
+      const anonVisitorResponse = await fetch(`${BACKEND_URL}/api/v2/anonymous-visitors?contactId=${contactId}&limit=1`);
+      const anonVisitors = anonVisitorResponse.ok ? await anonVisitorResponse.json() : [];
+      const anonymousVisitor = anonVisitors[0];
+
+      let LeadPulseTouchpoint: any[] = [];
+      if (anonymousVisitor) {
+        const touchpointsResponse = await fetch(`${BACKEND_URL}/api/v2/touchpoints?anonymousVisitorId=${anonymousVisitor.id}&sortBy=timestamp&order=asc`);
+        if (touchpointsResponse.ok) {
+          LeadPulseTouchpoint = await touchpointsResponse.json();
         }
-      });
+      }
 
       // Get authenticated visitor data
-      const leadPulseVisitor = await prisma.leadPulseVisitor.findFirst({
-        where: {
-          metadata: {
-            path: ['contactId'],
-            equals: contactId
-          }
-        },
-        include: {
-          touchpoints: {
-            orderBy: { timestamp: 'asc' }
-          }
+      const authVisitorResponse = await fetch(`${BACKEND_URL}/api/v2/visitors?contactId=${contactId}&limit=1`);
+      const authVisitors = authVisitorResponse.ok ? await authVisitorResponse.json() : [];
+      const leadPulseVisitor = authVisitors[0];
+
+      let touchpoints: any[] = [];
+      if (leadPulseVisitor) {
+        const touchpointsResponse = await fetch(`${BACKEND_URL}/api/v2/touchpoints?visitorId=${leadPulseVisitor.id}&sortBy=timestamp&order=asc`);
+        if (touchpointsResponse.ok) {
+          touchpoints = await touchpointsResponse.json();
         }
-      });
+      }
 
       const timeline = [];
 
@@ -527,7 +581,7 @@ export class LeadPulseAuthIntegration {
           phase: 'anonymous',
           startDate: anonymousVisitor.firstVisit,
           endDate: anonymousVisitor.lastVisit,
-          touchpoints: anonymousVisitor.LeadPulseTouchpoint.map(t => ({
+          touchpoints: LeadPulseTouchpoint.map((t: any) => ({
             type: t.type,
             timestamp: t.timestamp,
             url: t.url,
@@ -543,7 +597,7 @@ export class LeadPulseAuthIntegration {
           phase: 'authenticated',
           startDate: leadPulseVisitor.firstVisit,
           endDate: leadPulseVisitor.lastVisit,
-          touchpoints: leadPulseVisitor.touchpoints.map(t => ({
+          touchpoints: touchpoints.map((t: any) => ({
             type: t.type,
             timestamp: t.timestamp,
             url: t.url,

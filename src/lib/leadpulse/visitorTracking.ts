@@ -5,8 +5,10 @@
  * browser fingerprinting, and user behavior analysis.
  */
 
+// NOTE: Prisma removed - using backend API (AnonymousVisitor, LeadPulseTouchpoint, Contact exist in backend)
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
+
 import { randomUUID } from 'crypto';
-import prisma from '@/lib/db/prisma';
 import { engagementScoringEngine } from './engagement-scoring-engine';
 
 // Import enums directly since the Prisma client may not have generated them yet
@@ -87,30 +89,40 @@ export async function trackAnonymousVisitor(
   } = {}
 ) {
   // Check if visitor already exists
-  const existingVisitor = await prisma.anonymousVisitor.findUnique({
-    where: { fingerprint }
-  });
-  
+  const checkResponse = await fetch(`${BACKEND_URL}/api/v2/anonymous-visitors?fingerprint=${fingerprint}&limit=1`);
+  if (!checkResponse.ok) {
+    throw new Error(`Failed to check visitor: ${checkResponse.status}`);
+  }
+  const existingVisitors = await checkResponse.json();
+  const existingVisitor = existingVisitors[0];
+
   if (existingVisitor) {
     // Update existing visitor with correct field names
-    return prisma.anonymousVisitor.update({
-      where: { id: existingVisitor.id },
-      data: {
+    const updateResponse = await fetch(`${BACKEND_URL}/api/v2/anonymous-visitors/${existingVisitor.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         lastVisit: new Date(),
-        totalVisits: { increment: 1 },
-        visitCount: { increment: 1 },
+        totalVisits: existingVisitor.totalVisits + 1,
+        visitCount: existingVisitor.visitCount + 1,
         ipAddress,
         userAgent: metadata.userAgent,
         referrer: metadata.referrer,
         city: metadata.city,
         country: metadata.country,
         region: metadata.region,
-      }
+      })
     });
+    if (!updateResponse.ok) {
+      throw new Error(`Failed to update visitor: ${updateResponse.status}`);
+    }
+    return updateResponse.json();
   } else {
     // Create new visitor with correct field names
-    return prisma.anonymousVisitor.create({
-      data: {
+    const createResponse = await fetch(`${BACKEND_URL}/api/v2/anonymous-visitors`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         id: randomUUID(),
         fingerprint,
         ipAddress,
@@ -126,8 +138,12 @@ export async function trackAnonymousVisitor(
         city: metadata.city,
         country: metadata.country,
         region: metadata.region,
-      }
+      })
     });
+    if (!createResponse.ok) {
+      throw new Error(`Failed to create visitor: ${createResponse.status}`);
+    }
+    return createResponse.json();
   }
 }
 
@@ -154,8 +170,10 @@ export async function recordTouchpoint(
   } = {},
   touchpointType: 'PAGEVIEW' | 'CLICK' | 'FORM_VIEW' | 'FORM_START' | 'FORM_SUBMIT' | 'CONVERSION' = 'PAGEVIEW'
 ) {
-  return prisma.leadPulseTouchpoint.create({
-    data: {
+  const response = await fetch(`${BACKEND_URL}/api/v2/touchpoints`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
       id: randomUUID(),
       anonymousVisitorId: visitorId, // Use correct field name
       url: pageUrl, // Use correct field name
@@ -165,8 +183,14 @@ export async function recordTouchpoint(
       value: 1,
       score: 1,
       metadata: touchpointData,
-    }
+    })
   });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create touchpoint: ${response.status}`);
+  }
+
+  return response.json();
 }
 
 /**
@@ -186,11 +210,13 @@ export async function updateVisitorEngagement(
   try {
     // Use the new engagement scoring engine for accurate scoring
     await engagementScoringEngine.updateVisitorScore(visitorId);
-    
+
     // Get the updated visitor record
-    return prisma.anonymousVisitor.findUnique({
-      where: { id: visitorId }
-    });
+    const response = await fetch(`${BACKEND_URL}/api/v2/anonymous-visitors/${visitorId}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch visitor: ${response.status}`);
+    }
+    return response.json();
   } catch (error) {
     // Fallback to simple scoring if new engine fails
     const actionScores: Record<string, number> = {
@@ -205,19 +231,27 @@ export async function updateVisitorEngagement(
     };
     
     const scoreIncrement = actionScores[action] * weight;
-    
-    return prisma.anonymousVisitor.update({
-      where: { id: visitorId },
-      data: {
-        engagementScore: {
-          increment: scoreIncrement
-        },
-        score: {
-          increment: scoreIncrement
-        },
+
+    // Get current visitor data
+    const visitorResponse = await fetch(`${BACKEND_URL}/api/v2/anonymous-visitors/${visitorId}`);
+    if (!visitorResponse.ok) {
+      throw new Error(`Failed to fetch visitor: ${visitorResponse.status}`);
+    }
+    const visitor = await visitorResponse.json();
+
+    const updateResponse = await fetch(`${BACKEND_URL}/api/v2/anonymous-visitors/${visitorId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        engagementScore: visitor.engagementScore + scoreIncrement,
+        score: visitor.score + scoreIncrement,
         lastVisit: new Date(),
-      }
+      })
     });
+    if (!updateResponse.ok) {
+      throw new Error(`Failed to update visitor engagement: ${updateResponse.status}`);
+    }
+    return updateResponse.json();
   }
 }
 
@@ -240,18 +274,22 @@ export async function convertVisitorToContact(
   }
 ) {
   // Get the visitor
-  const visitor = await prisma.anonymousVisitor.findUnique({
-    where: { id: visitorId }
-  });
-  
+  const visitorResponse = await fetch(`${BACKEND_URL}/api/v2/anonymous-visitors/${visitorId}`);
+  if (!visitorResponse.ok) {
+    throw new Error(`Failed to fetch visitor: ${visitorResponse.status}`);
+  }
+  const visitor = await visitorResponse.json();
+
   if (!visitor) {
     throw new Error(`Visitor not found: ${visitorId}`);
   }
-  
+
   // Create or update contact
   const contactId = randomUUID();
-  const contact = await prisma.contact.create({
-    data: {
+  const contactResponse = await fetch(`${BACKEND_URL}/api/v2/contacts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
       id: contactId,
       email: contactData.email || '',
       phone: contactData.phone,
@@ -261,19 +299,27 @@ export async function convertVisitorToContact(
       source: 'LeadPulse',
       createdAt: new Date(),
       updatedAt: new Date(),
-      // This assumes a system user or requires a user ID to be provided
       createdById: process.env.SYSTEM_USER_ID || 'default-user-id',
-    }
+    })
   });
-  
+  if (!contactResponse.ok) {
+    throw new Error(`Failed to create contact: ${contactResponse.status}`);
+  }
+  const contact = await contactResponse.json();
+
   // Update visitor with contact ID (removed conversionStatus and convertedAt)
-  const updatedVisitor = await prisma.anonymousVisitor.update({
-    where: { id: visitorId },
-    data: {
+  const updateResponse = await fetch(`${BACKEND_URL}/api/v2/anonymous-visitors/${visitorId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
       contactId: contact.id,
       lastVisit: new Date(),
-    }
+    })
   });
+  if (!updateResponse.ok) {
+    throw new Error(`Failed to update visitor: ${updateResponse.status}`);
+  }
+  const updatedVisitor = await updateResponse.json();
   
   // Return both entities
   return {
@@ -289,24 +335,31 @@ export async function convertVisitorToContact(
  * @returns Complete visitor journey information
  */
 export async function getVisitorJourney(visitorId: string) {
-  const visitor = await prisma.anonymousVisitor.findUnique({
-    where: { id: visitorId }
-  });
-  
+  const visitorResponse = await fetch(`${BACKEND_URL}/api/v2/anonymous-visitors/${visitorId}`);
+  if (!visitorResponse.ok) {
+    throw new Error(`Failed to fetch visitor: ${visitorResponse.status}`);
+  }
+  const visitor = await visitorResponse.json();
+
   if (!visitor) {
     throw new Error(`Visitor not found: ${visitorId}`);
   }
-  
+
   // Get all touchpoints for this visitor (use correct field name)
-  const touchpoints = await prisma.leadPulseTouchpoint.findMany({
-    where: { anonymousVisitorId: visitorId },
-    orderBy: { timestamp: 'asc' }
-  });
-  
+  const touchpointsResponse = await fetch(`${BACKEND_URL}/api/v2/touchpoints?anonymousVisitorId=${visitorId}&sortBy=timestamp&order=asc`);
+  if (!touchpointsResponse.ok) {
+    throw new Error(`Failed to fetch touchpoints: ${touchpointsResponse.status}`);
+  }
+  const touchpoints = await touchpointsResponse.json();
+
   // Get contact data if visitor has been converted
-  const contact = visitor.contactId ? await prisma.contact.findUnique({
-    where: { id: visitor.contactId }
-  }) : null;
+  let contact = null;
+  if (visitor.contactId) {
+    const contactResponse = await fetch(`${BACKEND_URL}/api/v2/contacts/${visitor.contactId}`);
+    if (contactResponse.ok) {
+      contact = await contactResponse.json();
+    }
+  }
   
   return {
     visitor,

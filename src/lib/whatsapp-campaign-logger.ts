@@ -1,5 +1,7 @@
 import { logger, LogLevel, type LogContext } from './logger';
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (AuditLog table exists in backend)
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 
 // WhatsApp Campaign specific log types
 export enum WhatsAppLogType {
@@ -429,9 +431,11 @@ export class WhatsAppCampaignLogger {
   // Persist log to database
   private async persistLog(level: LogLevel, type: WhatsAppLogType, message: string, context: WhatsAppLogContext) {
     try {
-      // Create audit log entry
-      await prisma.auditLog.create({
-        data: {
+      // Create audit log entry via backend API
+      const response = await fetch(`${BACKEND_URL}/api/v2/audit-logs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           action: type,
           entityType: 'WHATSAPP_CAMPAIGN',
           entityId: context.campaignId || null,
@@ -441,11 +445,15 @@ export class WhatsAppCampaignLogger {
             message,
             ...context,
             timestamp: new Date().toISOString(),
-          } as any,
+          },
           userAgent: 'WhatsApp Campaign System',
           ipAddress: '127.0.0.1', // Internal system
-        }
+        })
       });
+
+      if (!response.ok) {
+        console.error(`Failed to persist WhatsApp campaign log: ${response.status}`);
+      }
     } catch (error) {
       // Don't throw errors from logging - just log to console
       console.error('Failed to persist WhatsApp campaign log:', error);

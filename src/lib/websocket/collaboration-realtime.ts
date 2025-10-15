@@ -10,7 +10,10 @@
  */
 
 import type { Server as SocketServer, Socket } from 'socket.io';
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
 import { logger } from '@/lib/logger';
 import { EventEmitter } from 'events';
 
@@ -198,21 +201,19 @@ class CollaborationRealtimeService extends EventEmitter {
 
   private async authenticateUser(socket: Socket, userData: any) {
     try {
-      const user = await prisma.user.findUnique({
-        where: { id: userData.userId },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-          organizationId: true
-        }
+      const response = await fetch(`${BACKEND_URL}/api/users/${userData.userId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
-      if (!user) {
+      if (!response.ok) {
         socket.emit('auth_error', { message: 'User not found' });
         return;
       }
+
+      const user = await response.json();
 
       const collaborationUser: CollaborationUser = {
         id: user.id,
@@ -746,19 +747,27 @@ class CollaborationRealtimeService extends EventEmitter {
 
     // Store notification in database for persistence
     try {
-      await prisma.notification.create({
-        data: {
+      const response = await fetch(`${BACKEND_URL}/api/notifications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           id: notification.id,
           type: notification.type,
           title: notification.title,
           message: notification.message,
-          data: notification.data as any,
+          data: notification.data,
           userId: notification.toUserId,
           fromUserId: notification.fromUserId,
           read: false,
           createdAt: notification.timestamp
-        }
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to store notification: ${response.statusText}`);
+      }
     } catch (error) {
       logger.error('Error storing notification in database:', error);
     }
@@ -776,16 +785,17 @@ class CollaborationRealtimeService extends EventEmitter {
       socket.emit('active_users', orgUsers);
 
       // Send recent notifications
-      const notifications = await prisma.notification.findMany({
-        where: {
-          userId,
-          read: false
+      const response = await fetch(`${BACKEND_URL}/api/notifications?userId=${userId}&read=false&limit=10&orderBy=createdAt&order=desc`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        orderBy: { createdAt: 'desc' },
-        take: 10
       });
 
-      socket.emit('recent_notifications', notifications);
+      if (response.ok) {
+        const notifications = await response.json();
+        socket.emit('recent_notifications', notifications);
+      }
 
     } catch (error) {
       logger.error('Error sending initial collaboration data:', error);

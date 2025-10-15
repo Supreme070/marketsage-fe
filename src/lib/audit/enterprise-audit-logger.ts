@@ -4,7 +4,10 @@
  * Comprehensive audit trail with integrity protection and compliance features
  */
 
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
 import { logger } from '@/lib/logger';
 import { enterpriseEncryption } from '@/lib/encryption/enterprise-encryption';
 import crypto from 'crypto';
@@ -392,20 +395,30 @@ export class EnterpriseAuditLogger {
   }> {
     try {
       const whereClause = this.buildWhereClause(query);
-      
-      const [events, totalCount] = await Promise.all([
-        prisma.auditEvent.findMany({
+
+      // Fetch events from backend API
+      const response = await fetch(`${BACKEND_URL}/api/audit/logs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           where: whereClause,
           orderBy: { timestamp: 'desc' },
           take: query.limit || 100,
           skip: query.offset || 0
-        }),
-        prisma.auditEvent.count({ where: whereClause })
-      ]);
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch audit logs: ${response.statusText}`);
+      }
+
+      const { events, totalCount } = await response.json();
 
       // Decrypt and verify integrity
       const decryptedEvents = await Promise.all(
-        events.map(event => this.decryptAuditEvent(event))
+        events.map((event: any) => this.decryptAuditEvent(event))
       );
 
       return {
@@ -510,10 +523,19 @@ export class EnterpriseAuditLogger {
     lastVerifiedEvent: string;
   }> {
     try {
-      const events = await prisma.auditEvent.findMany({
-        where: { organizationId },
-        orderBy: { timestamp: 'asc' }
+      // Fetch events from backend API
+      const response = await fetch(`${BACKEND_URL}/api/audit/events?organizationId=${organizationId}&orderBy=timestamp:asc`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch audit events: ${response.statusText}`);
+      }
+
+      const { events } = await response.json();
 
       const corruptedEvents: string[] = [];
       let chainBreaks = 0;
@@ -524,7 +546,7 @@ export class EnterpriseAuditLogger {
         // Verify individual event integrity
         const decryptedEvent = await this.decryptAuditEvent(event);
         const isEventValid = await this.verifyEventIntegrity(decryptedEvent);
-        
+
         if (!isEventValid) {
           corruptedEvents.push(event.id);
         }
@@ -611,9 +633,14 @@ export class EnterpriseAuditLogger {
   private async storeInDatabase(event: AuditEvent): Promise<void> {
     // Encrypt sensitive data before storage
     const encryptedEvent = await this.encryptAuditEvent(event);
-    
-    await prisma.auditEvent.create({
-      data: {
+
+    // Create audit event via backend API
+    const response = await fetch(`${BACKEND_URL}/api/audit/events`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         id: encryptedEvent.id,
         timestamp: encryptedEvent.timestamp,
         eventType: encryptedEvent.eventType,
@@ -625,8 +652,12 @@ export class EnterpriseAuditLogger {
         complianceData: encryptedEvent.complianceData,
         integrityData: encryptedEvent.integrityData,
         organizationId: event.resource.organizationId
-      } as any
+      })
     });
+
+    if (!response.ok) {
+      throw new Error(`Failed to create audit event: ${response.statusText}`);
+    }
   }
 
   private async storeInSecureLog(event: AuditEvent): Promise<void> {
@@ -752,11 +783,28 @@ export class EnterpriseAuditLogger {
 
   // Additional helper methods for report generation...
   private async getOrganizationId(userId: string): Promise<string> {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { organizationId: true }
-    });
-    return user?.organizationId || 'unknown';
+    try {
+      // Fetch user from backend API
+      const response = await fetch(`${BACKEND_URL}/api/users/${userId}/organization`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        return 'unknown';
+      }
+
+      const { organizationId } = await response.json();
+      return organizationId || 'unknown';
+    } catch (error) {
+      logger.error('Failed to get organization ID', {
+        error: error instanceof Error ? error.message : String(error),
+        userId
+      });
+      return 'unknown';
+    }
   }
 
   private async getOrganizationIdByApiKey(apiKeyId: string): Promise<string> {

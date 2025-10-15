@@ -356,24 +356,41 @@ export async function PUT(request: NextRequest) {
       };
     }
 
-    if (Object.keys(updateFields).length > 0) {
-      updateFields.updatedAt = new Date();
-      
-      await prisma.aIActionPlan.update({
-        where: { id: actionPlanId },
-        data: updateFields
+    // Call backend to update action plan
+    if (Object.keys(updateFields).length > 0 || updateData.status) {
+      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
+      const url = `${BACKEND_URL}/api/v2/ai/action-plans/${actionPlanId}`;
+
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${session.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ...updateFields, ...updateData }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return NextResponse.json(data, { status: response.status });
+      }
+
+      logger.info('Action plan updated via API', {
+        actionPlanId,
+        updatedBy: session.user.id,
+        updateFields: Object.keys(updateFields)
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: 'Action plan updated successfully'
       });
     }
 
-    logger.info('Action plan updated via API', {
-      actionPlanId,
-      updatedBy: session.user.id,
-      updateFields: Object.keys(updateFields)
-    });
-
     return NextResponse.json({
       success: true,
-      message: 'Action plan updated successfully'
+      message: 'No updates required'
     });
 
   } catch (error) {

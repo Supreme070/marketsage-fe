@@ -36,7 +36,7 @@ import {
   Zap,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { getWorkflowRecommendations, suggestWorkflowTemplate, type WorkflowRecommendation, type WorkflowGoal } from "@/lib/advanced-ai/workflow-assistant";
+import { getWorkflowRecommendations, suggestWorkflowTemplate, type WorkflowRecommendation, type WorkflowGoal } from "@/lib/advanced-ai/workflow-assistant-client";
 
 interface WorkflowAssistantPanelProps {
   isOpen?: boolean;

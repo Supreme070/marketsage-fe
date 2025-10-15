@@ -12,7 +12,11 @@
  * 🌍 African market campaign optimization
  */
 
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
+
 import { logger } from '@/lib/logger';
 import { workflowEngine } from '@/lib/workflow/execution-engine';
 import { aiTaskEngine } from '@/lib/ai/task-automation-engine';
@@ -279,12 +283,11 @@ export class WorkflowCampaignBridge {
   ): Promise<ContactJourneyIntegration> {
     try {
       // Get contact details
-      const contact = await prisma.contact.findUnique({
-        where: { id: contactId },
-        include: {
-          lists: true
-        }
+      const response = await fetch(`${BACKEND_URL}/api/v2/contacts/${contactId}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const contact = response.ok ? await response.json() : null;
 
       if (!contact) {
         throw new Error(`Contact not found: ${contactId}`);
@@ -414,19 +417,23 @@ export class WorkflowCampaignBridge {
 
   private async getCampaignDetails(campaignId: string): Promise<any> {
     // Try email campaign first
-    const emailCampaign = await prisma.emailCampaign.findUnique({
-      where: { id: campaignId }
+    const emailResponse = await fetch(`${BACKEND_URL}/api/v2/email-campaigns/${campaignId}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
-    
+    const emailCampaign = emailResponse.ok ? await emailResponse.json() : null;
+
     if (emailCampaign) return { ...emailCampaign, type: 'email' };
-    
+
     // Try SMS campaign
-    const smsCampaign = await prisma.sMSCampaign.findUnique({
-      where: { id: campaignId }
+    const smsResponse = await fetch(`${BACKEND_URL}/api/v2/sms-campaigns/${campaignId}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
-    
+    const smsCampaign = smsResponse.ok ? await smsResponse.json() : null;
+
     if (smsCampaign) return { ...smsCampaign, type: 'sms' };
-    
+
     return null;
   }
 
@@ -491,8 +498,10 @@ export class WorkflowCampaignBridge {
   private async storeIntegrationConfig(integration: CampaignTaskIntegration): Promise<void> {
     try {
       // Store in workflow events for now (would need dedicated table in real implementation)
-      await prisma.workflowEvent.create({
-        data: {
+      await fetch(`${BACKEND_URL}/api/v2/workflow-events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           id: integration.integrationId,
           workflowId: integration.workflowId || 'campaign-integration',
           contactId: 'system',
@@ -504,7 +513,7 @@ export class WorkflowCampaignBridge {
             automation_rules_count: integration.automationRules.length,
             african_market_enabled: integration.african_market_config.timezone_awareness
           })
-        }
+        })
       });
     } catch (error) {
       logger.warn('Failed to store integration config', {
@@ -705,14 +714,13 @@ export class WorkflowCampaignBridge {
   private async calculateEngagementLevel(contactId: string): Promise<'low' | 'medium' | 'high'> {
     try {
       // Get recent activities
-      const activities = await prisma.emailActivity.count({
-        where: {
-          contactId,
-          timestamp: {
-            gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
-          }
-        }
+      const timestamp = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const response = await fetch(`${BACKEND_URL}/api/v2/email-activities/count?contactId=${contactId}&timestamp_gte=${timestamp}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const data = response.ok ? await response.json() : { count: 0 };
+      const activities = data.count || 0;
 
       if (activities > 10) return 'high';
       if (activities > 3) return 'medium';
@@ -724,10 +732,11 @@ export class WorkflowCampaignBridge {
 
   private async calculateChurnRisk(contactId: string): Promise<number> {
     try {
-      const lastActivity = await prisma.emailActivity.findFirst({
-        where: { contactId },
-        orderBy: { timestamp: 'desc' }
+      const response = await fetch(`${BACKEND_URL}/api/v2/email-activities/first?contactId=${contactId}&orderBy=timestamp&order=desc`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const lastActivity = response.ok ? await response.json() : null;
 
       if (!lastActivity) return 0.8; // High risk if no activity
 
@@ -742,17 +751,13 @@ export class WorkflowCampaignBridge {
 
   private async getActiveContactCampaigns(contactId: string): Promise<string[]> {
     try {
-      const campaigns = await prisma.emailCampaign.findMany({
-        where: {
-          activities: {
-            some: { contactId }
-          },
-          status: 'SENT'
-        },
-        select: { id: true }
+      const response = await fetch(`${BACKEND_URL}/api/v2/email-campaigns?contactId=${contactId}&status=SENT&select=id`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const campaigns = response.ok ? await response.json() : [];
 
-      return campaigns.map(c => c.id);
+      return campaigns.map((c: any) => c.id);
     } catch (error) {
       return [];
     }
@@ -760,15 +765,13 @@ export class WorkflowCampaignBridge {
 
   private async getActiveContactWorkflows(contactId: string): Promise<string[]> {
     try {
-      const workflows = await prisma.workflowExecution.findMany({
-        where: {
-          contactId,
-          status: 'RUNNING'
-        },
-        select: { workflowId: true }
+      const response = await fetch(`${BACKEND_URL}/api/v2/workflow-executions?contactId=${contactId}&status=RUNNING&select=workflowId`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const workflows = response.ok ? await response.json() : [];
 
-      return workflows.map(w => w.workflowId);
+      return workflows.map((w: any) => w.workflowId);
     } catch (error) {
       return [];
     }
@@ -776,15 +779,13 @@ export class WorkflowCampaignBridge {
 
   private async getActiveContactTasks(contactId: string): Promise<string[]> {
     try {
-      const tasks = await prisma.task.findMany({
-        where: {
-          contactId,
-          status: { in: ['TODO', 'IN_PROGRESS'] }
-        },
-        select: { id: true }
+      const response = await fetch(`${BACKEND_URL}/api/v2/tasks?contactId=${contactId}&status_in=TODO,IN_PROGRESS&select=id`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const tasks = response.ok ? await response.json() : [];
 
-      return tasks.map(t => t.id);
+      return tasks.map((t: any) => t.id);
     } catch (error) {
       return [];
     }
@@ -838,8 +839,10 @@ export class WorkflowCampaignBridge {
 
   private async storeContactJourneyIntegration(integration: ContactJourneyIntegration): Promise<void> {
     try {
-      await prisma.workflowEvent.create({
-        data: {
+      await fetch(`${BACKEND_URL}/api/v2/workflow-events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           id: `journey-${integration.contactId}-${Date.now()}`,
           workflowId: 'contact-journey',
           contactId: integration.contactId,
@@ -851,7 +854,7 @@ export class WorkflowCampaignBridge {
             churn_risk: integration.churn_risk,
             african_context: integration.african_market_context
           })
-        }
+        })
       });
     } catch (error) {
       logger.warn('Failed to store contact journey integration', {

@@ -16,7 +16,11 @@
  * Based on user's blueprint: Build Birthday Campaign Auto-Detection
  */
 
-import { prisma } from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
+
 import { logger } from '@/lib/logger';
 import { getCustomerEventBus } from '@/lib/events/event-bus';
 import { getActionDispatcher } from '@/lib/actions/action-dispatcher';
@@ -206,24 +210,24 @@ export class BirthdayAutoDetectionSystem {
     const twoWeeksLater = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000);
 
     // Query contacts with birthdays
-    const contacts = await prisma.contact.findMany({
-      where: {
-        organizationId,
-        dateOfBirth: { not: null },
-        isDeleted: false
-      },
-      include: {
-        customerProfile: true,
-        emailCampaigns: {
-          where: {
-            sentAt: { gte: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) }, // Last year
-            subject: { contains: 'birthday', mode: 'insensitive' }
-          },
-          orderBy: { sentAt: 'desc' },
-          take: 1
-        }
-      }
+    const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+    const params = new URLSearchParams({
+      organizationId,
+      dateOfBirthNotNull: 'true',
+      isDeleted: 'false',
+      includeCustomerProfile: 'true',
+      includeEmailCampaigns: 'true',
+      emailCampaignsSentAtGte: oneYearAgo.toISOString(),
+      emailCampaignsSubjectContains: 'birthday',
+      emailCampaignsOrderBy: 'sentAt',
+      emailCampaignsOrder: 'desc',
+      emailCampaignsTake: '1'
     });
+    const contactsResponse = await fetch(`${BACKEND_URL}/api/v2/contacts?${params}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const contacts = contactsResponse.ok ? await contactsResponse.json() : [];
 
     const enrichedContacts: BirthdayContact[] = await Promise.all(
       contacts
@@ -661,21 +665,19 @@ export class BirthdayAutoDetectionSystem {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     
     // Find contacts whose birthdays were in the last 30 days but didn't receive campaigns
-    const contacts = await prisma.contact.findMany({
-      where: {
-        organizationId,
-        dateOfBirth: { not: null },
-        isDeleted: false
-      },
-      include: {
-        emailCampaigns: {
-          where: {
-            sentAt: { gte: thirtyDaysAgo },
-            subject: { contains: 'birthday', mode: 'insensitive' }
-          }
-        }
-      }
+    const missedParams = new URLSearchParams({
+      organizationId,
+      dateOfBirthNotNull: 'true',
+      isDeleted: 'false',
+      includeEmailCampaigns: 'true',
+      emailCampaignsSentAtGte: thirtyDaysAgo.toISOString(),
+      emailCampaignsSubjectContains: 'birthday'
     });
+    const missedContactsResponse = await fetch(`${BACKEND_URL}/api/v2/contacts?${missedParams}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const contacts = missedContactsResponse.ok ? await missedContactsResponse.json() : [];
 
     const missed: BirthdayContact[] = [];
     

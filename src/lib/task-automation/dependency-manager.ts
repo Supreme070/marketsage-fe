@@ -12,7 +12,11 @@
  * 🔄 Dynamic dependency updates
  */
 
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
+
 import { logger } from '@/lib/logger';
 import { SupremeAI } from '@/lib/ai/supreme-ai-engine';
 
@@ -441,15 +445,11 @@ export class AutomatedTaskDependencyManager {
   // Private helper methods
 
   private async getTaskWithContext(taskId: string): Promise<any> {
-    return await prisma.task.findUnique({
-      where: { id: taskId },
-      include: {
-        assignee: true,
-        creator: true,
-        dependencies: true,
-        dependents: true
-      }
+    const response = await fetch(`${BACKEND_URL}/api/v2/tasks/${taskId}?include=assignee,creator,dependencies,dependents`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
+    return response.ok ? await response.json() : null;
   }
 
   private async detectDependencies(task: any): Promise<DetectedDependency[]> {

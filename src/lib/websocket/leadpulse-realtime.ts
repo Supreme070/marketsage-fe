@@ -11,7 +11,10 @@
 import type { Server as SocketServer } from 'socket.io';
 import { NextApiRequest } from 'next';
 import { NextApiResponseServerIO } from '@/types/socket';
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
 import { logger } from '@/lib/logger';
 import { selectiveBroadcastManager, type SelectiveUpdate } from './selective-broadcast';
 
@@ -214,20 +217,11 @@ class LeadPulseRealtimeService {
 
     try {
       // Optimized: Get visitor without includes to avoid N+1
-      const visitor = await prisma.leadPulseVisitor.findUnique({
-        where: { id: visitorId },
-        select: {
-          id: true,
-          fingerprint: true,
-          city: true,
-          country: true,
-          device: true,
-          browser: true,
-          isActive: true,
-          lastVisit: true,
-          engagementScore: true
-        }
+      const response = await fetch(`${BACKEND_URL}/api/v2/leadpulse/visitors/${visitorId}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const visitor = response.ok ? await response.json() : null;
 
       if (!visitor) return;
 
@@ -366,52 +360,40 @@ class LeadPulseRealtimeService {
 
     try {
       // Use parallel queries but avoid includes
-      const [totalVisitors, activeVisitors, conversions, countryData, recentTouchpoints] = await Promise.all([
-        prisma.leadPulseVisitor.count(),
-        prisma.leadPulseVisitor.count({
-          where: { isActive: true }
+      const [totalVisitorsResp, activeVisitorsResp, conversionsResp, countryDataResp, recentTouchpointsResp] = await Promise.all([
+        fetch(`${BACKEND_URL}/api/v2/leadpulse/visitors/count`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
         }),
-        prisma.leadPulseTouchpoint.count({
-          where: {
-            type: 'CONVERSION',
-            timestamp: {
-              gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
-            }
-          }
+        fetch(`${BACKEND_URL}/api/v2/leadpulse/visitors/count?isActive=true`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
         }),
-        prisma.leadPulseVisitor.groupBy({
-          by: ['country'],
-          _count: { country: true },
-          where: {
-            country: { not: null }
-          },
-          orderBy: { _count: { country: 'desc' } },
-          take: 5
+        fetch(`${BACKEND_URL}/api/v2/leadpulse/touchpoints/count?type=CONVERSION&timestamp_gte=${new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
         }),
-        // Optimized: Get touchpoints without visitor includes
-        prisma.leadPulseTouchpoint.findMany({
-          where: {
-            timestamp: {
-              gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
-            }
-          },
-          select: {
-            id: true,
-            type: true,
-            url: true,
-            timestamp: true,
-            visitorId: true
-          },
-          orderBy: { timestamp: 'desc' },
-          take: 10
+        fetch(`${BACKEND_URL}/api/v2/leadpulse/visitors/group-by-country?limit=5`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        }),
+        fetch(`${BACKEND_URL}/api/v2/leadpulse/touchpoints?timestamp_gte=${new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()}&orderBy=timestamp&order=desc&limit=10`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
         })
       ]);
 
+      const totalVisitors = totalVisitorsResp.ok ? await totalVisitorsResp.json() : 0;
+      const activeVisitors = activeVisitorsResp.ok ? await activeVisitorsResp.json() : 0;
+      const conversions = conversionsResp.ok ? await conversionsResp.json() : 0;
+      const countryData = countryDataResp.ok ? await countryDataResp.json() : [];
+      const recentTouchpoints = recentTouchpointsResp.ok ? await recentTouchpointsResp.json() : [];
+
       const conversionRate = totalVisitors > 0 ? (conversions / totalVisitors) * 100 : 0;
-      
-      const topCountries = countryData.map(item => ({
+
+      const topCountries = countryData.map((item: any) => ({
         country: item.country || 'Unknown',
-        count: item._count.country
+        count: item.count || item._count?.country || 0
       }));
 
       const analytics: AnalyticsUpdate = {
@@ -437,42 +419,24 @@ class LeadPulseRealtimeService {
   private async getRecentVisitorsOptimized() {
     try {
       // First get visitors without includes
-      const visitors = await prisma.leadPulseVisitor.findMany({
-        orderBy: { lastVisit: 'desc' },
-        take: 20,
-        select: {
-          id: true,
-          fingerprint: true,
-          city: true,
-          country: true,
-          device: true,
-          browser: true,
-          isActive: true,
-          lastVisit: true,
-          engagementScore: true
-        }
+      const visitorsResp = await fetch(`${BACKEND_URL}/api/v2/leadpulse/visitors?orderBy=lastVisit&order=desc&limit=20`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const visitors = visitorsResp.ok ? await visitorsResp.json() : [];
 
       // Get touchpoints separately to avoid N+1
       if (visitors.length > 0) {
-        const visitorIds = visitors.map(v => v.id);
-        const touchpoints = await prisma.leadPulseTouchpoint.findMany({
-          where: {
-            visitorId: { in: visitorIds }
-          },
-          select: {
-            id: true,
-            visitorId: true,
-            type: true,
-            url: true,
-            timestamp: true
-          },
-          orderBy: { timestamp: 'desc' }
+        const visitorIds = visitors.map((v: any) => v.id);
+        const touchpointsResp = await fetch(`${BACKEND_URL}/api/v2/leadpulse/touchpoints?visitorIds=${visitorIds.join(',')}&orderBy=timestamp&order=desc`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
         });
+        const touchpoints = touchpointsResp.ok ? await touchpointsResp.json() : [];
 
         // Group touchpoints by visitor ID (limit 3 per visitor)
         const touchpointsMap = new Map();
-        touchpoints.forEach(tp => {
+        touchpoints.forEach((tp: any) => {
           if (!touchpointsMap.has(tp.visitorId)) {
             touchpointsMap.set(tp.visitorId, []);
           }
@@ -483,7 +447,7 @@ class LeadPulseRealtimeService {
         });
 
         // Add touchpoints to visitors
-        return visitors.map(visitor => ({
+        return visitors.map((visitor: any) => ({
           ...visitor,
           touchpoints: touchpointsMap.get(visitor.id) || []
         }));
@@ -500,26 +464,12 @@ class LeadPulseRealtimeService {
   private async getActiveVisitorsOptimized() {
     try {
       // Limit active visitors to prevent overwhelming real-time updates
-      const visitors = await prisma.leadPulseVisitor.findMany({
-        where: { 
-          isActive: true,
-          lastVisit: {
-            gte: new Date(Date.now() - 30 * 60 * 1000) // Last 30 minutes
-          }
-        },
-        select: {
-          id: true,
-          fingerprint: true,
-          city: true,
-          country: true,
-          device: true,
-          browser: true,
-          lastVisit: true,
-          engagementScore: true
-        },
-        orderBy: { lastVisit: 'desc' },
-        take: 50 // Limit to prevent performance issues
+      const lastVisitGte = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+      const visitorsResp = await fetch(`${BACKEND_URL}/api/v2/leadpulse/visitors?isActive=true&lastVisit_gte=${lastVisitGte}&orderBy=lastVisit&order=desc&limit=50`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const visitors = visitorsResp.ok ? await visitorsResp.json() : [];
 
       return visitors;
     } catch (error) {
@@ -703,13 +653,18 @@ class LeadPulseRealtimeService {
     const inactiveThreshold = new Date(Date.now() - 30 * 60 * 1000); // 30 minutes
 
     try {
-      const result = await prisma.leadPulseVisitor.updateMany({
-        where: {
-          isActive: true,
-          lastVisit: { lt: inactiveThreshold }
-        },
-        data: { isActive: false }
+      const response = await fetch(`${BACKEND_URL}/api/v2/leadpulse/visitors/bulk-update`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          where: {
+            isActive: true,
+            lastVisit_lt: inactiveThreshold.toISOString()
+          },
+          data: { isActive: false }
+        })
       });
+      const result = response.ok ? await response.json() : { count: 0 };
 
       if (result.count > 0) {
         logger.info(`Marked ${result.count} visitors as inactive`);

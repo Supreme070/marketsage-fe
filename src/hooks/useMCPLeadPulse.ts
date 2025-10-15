@@ -18,21 +18,26 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
-import { 
+import {
   getMCPVisitorData,
   getMCPVisitorInsights,
   getMCPVisitorLocations,
   type MCPLeadPulseDataProvider
 } from '@/lib/leadpulse/mcp-data-provider';
-import type { 
-  VisitorLocation, 
-  VisitorJourney, 
+import type {
+  VisitorLocation,
+  VisitorJourney,
   InsightItem,
-  VisitorSegment 
+  VisitorSegment
 } from '@/lib/leadpulse/dataProvider';
-import type { 
-  MCPAuthContext
-} from '../mcp/types/mcp-types';
+
+// Minimal type definition (backend has full implementation)
+interface MCPAuthContext {
+  userId: string;
+  organizationId: string;
+  permissions: string[];
+  role: string;
+}
 
 interface UseMCPLeadPulseOptions {
   timeRange?: string;

@@ -18,7 +18,10 @@
 
 import { type CustomerEvent, CustomerEventType, EventPriority } from '../event-bus';
 import { SupremeAIv3 } from '@/lib/ai/supreme-ai-v3-engine';
-import { prisma } from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
 import { logger } from '@/lib/logger';
 import { 
   type ActionPlan, 
@@ -158,52 +161,37 @@ export class AIDecisionHandler {
    * Build comprehensive customer context for AI decision making
    */
   private static async buildCustomerContext(
-    contactId: string, 
+    contactId: string,
     organizationId: string
   ): Promise<CustomerContext> {
     try {
-      // Get customer profile with comprehensive data
-      const customerProfile = await prisma.customerProfile.findUnique({
-        where: { contactId },
-        include: {
-          contact: {
-            include: {
-              lists: true,
-              segments: true,
-              journeys: {
-                include: {
-                  journey: true
-                }
-              },
-              emailCampaigns: {
-                orderBy: { createdAt: 'desc' },
-                take: 5
-              },
-              smsCampaigns: {
-                orderBy: { createdAt: 'desc' },
-                take: 5
-              },
-              whatsAppCampaigns: {
-                orderBy: { createdAt: 'desc' },
-                take: 5
-              }
-            }
-          }
-        }
+      // Get customer profile with comprehensive data via backend API
+      const customerProfileResponse = await fetch(`${BACKEND_URL}/api/customer-profiles/${contactId}?organizationId=${organizationId}&include=contact,lists,segments,journeys,campaigns`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
-      // Get recent AI action plans for this customer
-      const recentActions = await prisma.aIActionPlan.findMany({
-        where: {
-          contactId,
-          organizationId,
-          createdAt: {
-            gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
-          }
+      if (!customerProfileResponse.ok) {
+        throw new Error(`Failed to fetch customer profile: ${customerProfileResponse.statusText}`);
+      }
+
+      const customerProfile = await customerProfileResponse.json();
+
+      // Get recent AI action plans for this customer via backend API
+      const recentActionsResponse = await fetch(`${BACKEND_URL}/api/ai-action-plans?contactId=${contactId}&organizationId=${organizationId}&limit=10&daysBack=30`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        orderBy: { createdAt: 'desc' },
-        take: 10
       });
+
+      if (!recentActionsResponse.ok) {
+        throw new Error(`Failed to fetch recent actions: ${recentActionsResponse.statusText}`);
+      }
+
+      const recentActions = await recentActionsResponse.json();
 
       // Analyze customer journey stage
       const journeyStage = AIDecisionHandler.determineJourneyStage(customerProfile);
@@ -806,10 +794,20 @@ export class AIDecisionHandler {
   
   private static async getMarketContext(organizationId: string): Promise<CustomerContext['marketContext']> {
     try {
-      const organization = await prisma.organization.findUnique({
-        where: { id: organizationId }
+      // Get organization data via backend API
+      const organizationResponse = await fetch(`${BACKEND_URL}/api/organizations/${organizationId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
-      
+
+      if (!organizationResponse.ok) {
+        throw new Error(`Failed to fetch organization: ${organizationResponse.statusText}`);
+      }
+
+      const organization = await organizationResponse.json();
+
       // Default to Nigerian context
       return {
         country: organization?.country || 'NG',

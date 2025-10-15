@@ -6,7 +6,11 @@
 
 import { redisService } from './redis';
 import { logger } from '@/lib/logger';
-import prisma from '@/lib/db/prisma';
+
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
 
 export class LeadPulseCacheService {
   // Get Redis client from service
@@ -90,13 +94,23 @@ export class LeadPulseCacheService {
         return Number.parseInt(cached);
       }
 
-      const count = await prisma.leadPulseVisitor.count();
+      const response = await fetch(`${BACKEND_URL}/api/v2/leadpulse/visitors/count`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = response.ok ? await response.json() : { count: 0 };
+      const count = data.count || 0;
       await this.redis.set(this.KEYS.VISITOR_COUNT, count, 'EX', this.TTL.REAL_TIME_METRICS);
-      
+
       return count;
     } catch (error) {
       logger.error('Error getting visitor count from cache:', error);
-      return await prisma.leadPulseVisitor.count();
+      const response = await fetch(`${BACKEND_URL}/api/v2/leadpulse/visitors/count`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = response.ok ? await response.json() : { count: 0 };
+      return data.count || 0;
     }
   }
 
@@ -116,16 +130,11 @@ export class LeadPulseCacheService {
         return JSON.parse(cached);
       }
 
-      const activeVisitors = await prisma.leadPulseVisitor.findMany({
-        where: { isActive: true },
-        include: {
-          touchpoints: {
-            orderBy: { timestamp: 'desc' },
-            take: 3
-          }
-        },
-        orderBy: { lastVisit: 'desc' }
+      const response = await fetch(`${BACKEND_URL}/api/v2/leadpulse/visitors?isActive=true&include=touchpoints&orderBy=lastVisit:desc`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const activeVisitors = response.ok ? await response.json() : [];
 
       await this.redis.set(this.KEYS.ACTIVE_VISITORS, JSON.stringify(activeVisitors), 'EX', this.TTL.REAL_TIME_METRICS);
       return activeVisitors;
@@ -174,16 +183,11 @@ export class LeadPulseCacheService {
         return JSON.parse(cached);
       }
 
-      const recentVisitors = await prisma.leadPulseVisitor.findMany({
-        orderBy: { lastVisit: 'desc' },
-        take: 20,
-        include: {
-          touchpoints: {
-            orderBy: { timestamp: 'desc' },
-            take: 3
-          }
-        }
+      const response = await fetch(`${BACKEND_URL}/api/v2/leadpulse/visitors?limit=20&include=touchpoints&orderBy=lastVisit:desc`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const recentVisitors = response.ok ? await response.json() : [];
 
       await this.redis.set(this.KEYS.RECENT_VISITORS, JSON.stringify(recentVisitors), 'EX', this.TTL.VISITOR_DATA);
       return recentVisitors;
@@ -213,16 +217,16 @@ export class LeadPulseCacheService {
         return Number.parseFloat(cached);
       }
 
+      const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const [totalVisitors, conversions] = await Promise.all([
-        prisma.leadPulseVisitor.count(),
-        prisma.leadPulseTouchpoint.count({
-          where: {
-            type: 'CONVERSION',
-            timestamp: {
-              gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
-            }
-          }
-        })
+        fetch(`${BACKEND_URL}/api/v2/leadpulse/visitors/count`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        }).then(res => res.ok ? res.json() : { count: 0 }).then(data => data.count || 0),
+        fetch(`${BACKEND_URL}/api/v2/leadpulse/touchpoints/count?type=CONVERSION&timestamp_gte=${last24Hours}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        }).then(res => res.ok ? res.json() : { count: 0 }).then(data => data.count || 0)
       ]);
 
       const rate = totalVisitors > 0 ? (conversions / totalVisitors) * 100 : 0;
@@ -244,17 +248,11 @@ export class LeadPulseCacheService {
         return JSON.parse(cached);
       }
 
-      const countryData = await prisma.leadPulseVisitor.groupBy({
-        by: ['country'],
-        _count: { country: true },
-        orderBy: { _count: { country: 'desc' } },
-        take: 10
+      const response = await fetch(`${BACKEND_URL}/api/v2/leadpulse/visitors/geo?limit=10`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
-
-      const topCountries = countryData.map(item => ({
-        country: item.country || 'Unknown',
-        count: item._count.country
-      }));
+      const topCountries = response.ok ? await response.json() : [];
 
       await this.redis.set(this.KEYS.GEOGRAPHIC_DATA, JSON.stringify(topCountries), 'EX', this.TTL.GEOGRAPHIC_DATA);
       return topCountries;
@@ -272,16 +270,12 @@ export class LeadPulseCacheService {
         return cached.map(item => JSON.parse(item));
       }
 
-      const recentTouchpoints = await prisma.leadPulseTouchpoint.findMany({
-        where: {
-          timestamp: {
-            gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
-          }
-        },
-        include: { visitor: true },
-        orderBy: { timestamp: 'desc' },
-        take: 10
+      const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const response = await fetch(`${BACKEND_URL}/api/v2/leadpulse/touchpoints?timestamp_gte=${last24Hours}&include=visitor&orderBy=timestamp:desc&limit=10`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const recentTouchpoints = response.ok ? await response.json() : [];
 
       // Store in Redis list
       for (const touchpoint of recentTouchpoints.reverse()) {
@@ -319,11 +313,11 @@ export class LeadPulseCacheService {
         return JSON.parse(cached);
       }
 
-      const journey = await prisma.leadPulseTouchpoint.findMany({
-        where: { visitorId },
-        orderBy: { timestamp: 'asc' },
-        include: { visitor: true }
+      const response = await fetch(`${BACKEND_URL}/api/v2/leadpulse/touchpoints?visitorId=${visitorId}&include=visitor&orderBy=timestamp:asc`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const journey = response.ok ? await response.json() : [];
 
       await this.redis.set(this.KEYS.VISITOR_JOURNEY(visitorId), JSON.stringify(journey), 'EX', this.TTL.VISITOR_JOURNEY);
       return journey;
@@ -353,14 +347,11 @@ export class LeadPulseCacheService {
         return JSON.parse(cached);
       }
 
-      const visitor = await prisma.leadPulseVisitor.findUnique({
-        where: { id: visitorId },
-        include: {
-          touchpoints: {
-            orderBy: { timestamp: 'desc' }
-          }
-        }
+      const response = await fetch(`${BACKEND_URL}/api/v2/leadpulse/visitors/${visitorId}?include=touchpoints`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const visitor = response.ok ? await response.json() : null;
 
       if (visitor) {
         await this.redis.set(this.KEYS.VISITOR_PROFILE(visitorId), JSON.stringify(visitor), 'EX', this.TTL.VISITOR_DATA);
@@ -387,31 +378,18 @@ export class LeadPulseCacheService {
       endOfDay.setHours(23, 59, 59, 999);
 
       const [visitors, touchpoints, conversions] = await Promise.all([
-        prisma.leadPulseVisitor.count({
-          where: {
-            firstVisit: {
-              gte: startOfDay,
-              lte: endOfDay
-            }
-          }
-        }),
-        prisma.leadPulseTouchpoint.count({
-          where: {
-            timestamp: {
-              gte: startOfDay,
-              lte: endOfDay
-            }
-          }
-        }),
-        prisma.leadPulseTouchpoint.count({
-          where: {
-            type: 'CONVERSION',
-            timestamp: {
-              gte: startOfDay,
-              lte: endOfDay
-            }
-          }
-        })
+        fetch(`${BACKEND_URL}/api/v2/leadpulse/visitors/count?firstVisit_gte=${startOfDay.toISOString()}&firstVisit_lte=${endOfDay.toISOString()}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        }).then(res => res.ok ? res.json() : { count: 0 }).then(data => data.count || 0),
+        fetch(`${BACKEND_URL}/api/v2/leadpulse/touchpoints/count?timestamp_gte=${startOfDay.toISOString()}&timestamp_lte=${endOfDay.toISOString()}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        }).then(res => res.ok ? res.json() : { count: 0 }).then(data => data.count || 0),
+        fetch(`${BACKEND_URL}/api/v2/leadpulse/touchpoints/count?type=CONVERSION&timestamp_gte=${startOfDay.toISOString()}&timestamp_lte=${endOfDay.toISOString()}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        }).then(res => res.ok ? res.json() : { count: 0 }).then(data => data.count || 0)
       ]);
 
       const stats = {

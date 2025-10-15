@@ -3,7 +3,11 @@
  * Creates and manages security events in the database
  */
 
-import { prisma } from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
+
 import { getIPLocation } from './security-utils';
 
 export interface SecurityEventData {
@@ -66,9 +70,11 @@ export class SecurityEventLogger {
         location = await getIPLocation(eventData.ipAddress);
       }
 
-      // Create the security event
-      const securityEvent = await prisma.securityEvent.create({
-        data: {
+      // Create the security event via backend API
+      const response = await fetch(`${BACKEND_URL}/api/v2/security-events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           eventType: eventData.eventType,
           severity: eventData.severity,
           title: eventData.title,
@@ -80,8 +86,14 @@ export class SecurityEventLogger {
           resolved: eventData.autoResolve === true,
           resolvedAt: eventData.autoResolve === true ? new Date() : null,
           metadata: eventData.metadata || {}
-        }
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create security event: ${response.status}`);
+      }
+
+      const securityEvent = await response.json();
 
       // Update rate limiting cache
       if (eventData.ipAddress) {

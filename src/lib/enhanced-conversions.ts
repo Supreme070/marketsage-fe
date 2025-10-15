@@ -10,10 +10,12 @@ import {
   type ConversionCategory,
   type ConversionValueType,
   type EntityType,
-} from '@prisma/client';
-import prisma from '@/lib/db/prisma';
+} from '@/types/prisma-types';
+// NOTE: Prisma removed - using backend API (all conversion tables exist in backend)
 import { logger } from '@/lib/logger';
 import { randomUUID } from 'crypto';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 
 // Types for conversion tracking
 export interface ConversionEventData {
@@ -104,8 +106,12 @@ export async function createConversionEvent(
   userId: string
 ): Promise<string> {
   try {
-    const event = await prisma.conversionEvent.create({
-      data: {
+    const response = await fetch(`${BACKEND_URL}/api/v2/conversion-events`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         id: randomUUID(),
         name: data.name,
         description: data.description,
@@ -116,11 +122,17 @@ export async function createConversionEvent(
         createdById: userId,
         createdAt: new Date(),
         updatedAt: new Date(),
-      },
+      }),
     });
-    
+
+    if (!response.ok) {
+      throw new Error(`Failed to create conversion event: ${response.status}`);
+    }
+
+    const event = await response.json();
+
     logger.info(`Created conversion event: ${event.id}`, { eventId: event.id, name: data.name });
-    
+
     return event.id;
   } catch (error) {
     logger.error('Error creating conversion event', error);
@@ -135,10 +147,14 @@ export async function trackConversion(data: ConversionTrackingData): Promise<boo
   try {
     // Get attribution settings for default values
     const attributionSettings = await getAttributionSettings();
-    
+
     // Create the conversion record
-    await prisma.conversionTracking.create({
-      data: {
+    const response = await fetch(`${BACKEND_URL}/api/v2/conversion-tracking`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         id: randomUUID(),
         eventId: data.eventId,
         entityType: data.entityType,
@@ -149,9 +165,13 @@ export async function trackConversion(data: ConversionTrackingData): Promise<boo
         attributionModel: data.attributionModel || attributionSettings.defaultModel,
         touchPoints: data.touchPoints ? JSON.stringify(data.touchPoints) : null,
         occurredAt: new Date(),
-      },
+      }),
     });
-    
+
+    if (!response.ok) {
+      throw new Error(`Failed to track conversion: ${response.status}`);
+    }
+
     return true;
   } catch (error) {
     logger.error('Error tracking conversion', error);
@@ -169,8 +189,15 @@ export async function getAttributionSettings(): Promise<{
 }> {
   try {
     // Look for existing settings
-    const settings = await prisma.attributionSettings.findFirst();
-    
+    const response = await fetch(`${BACKEND_URL}/api/v2/attribution-settings?limit=1`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to get attribution settings: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const settings = data[0];
+
     if (settings) {
       return {
         defaultModel: settings.defaultModel,
@@ -178,18 +205,28 @@ export async function getAttributionSettings(): Promise<{
         lookbackWindow: settings.lookbackWindow,
       };
     }
-    
+
     // Create default settings if none exist
-    const defaultSettings = await prisma.attributionSettings.create({
-      data: {
+    const createResponse = await fetch(`${BACKEND_URL}/api/v2/attribution-settings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         id: randomUUID(),
         defaultModel: AttributionModel.LAST_TOUCH,
         lookbackWindow: 30,
         createdAt: new Date(),
         updatedAt: new Date(),
-      },
+      }),
     });
-    
+
+    if (!createResponse.ok) {
+      throw new Error(`Failed to create attribution settings: ${createResponse.status}`);
+    }
+
+    const defaultSettings = await createResponse.json();
+
     return {
       defaultModel: defaultSettings.defaultModel,
       lookbackWindow: defaultSettings.lookbackWindow,
@@ -214,32 +251,54 @@ export async function updateAttributionSettings(
 ): Promise<boolean> {
   try {
     // Look for existing settings
-    const settings = await prisma.attributionSettings.findFirst();
-    
-    const data = {
+    const response = await fetch(`${BACKEND_URL}/api/v2/attribution-settings?limit=1`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to get attribution settings: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const settings = data[0];
+
+    const payload = {
       defaultModel,
       lookbackWindow,
       customWeights: customWeights ? JSON.stringify(customWeights) : null,
       updatedAt: new Date(),
     };
-    
+
     if (settings) {
       // Update existing settings
-      await prisma.attributionSettings.update({
-        where: { id: settings.id },
-        data,
+      const updateResponse = await fetch(`${BACKEND_URL}/api/v2/attribution-settings/${settings.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
       });
+
+      if (!updateResponse.ok) {
+        throw new Error(`Failed to update attribution settings: ${updateResponse.status}`);
+      }
     } else {
       // Create new settings
-      await prisma.attributionSettings.create({
-        data: {
-          id: randomUUID(),
-          ...data,
-          createdAt: new Date(),
+      const createResponse = await fetch(`${BACKEND_URL}/api/v2/attribution-settings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          id: randomUUID(),
+          ...payload,
+          createdAt: new Date(),
+        }),
       });
+
+      if (!createResponse.ok) {
+        throw new Error(`Failed to create attribution settings: ${createResponse.status}`);
+      }
     }
-    
+
     return true;
   } catch (error) {
     logger.error('Error updating attribution settings', error);
@@ -257,8 +316,12 @@ export async function createConversionFunnel(
   description?: string
 ): Promise<string> {
   try {
-    const funnel = await prisma.conversionFunnel.create({
-      data: {
+    const response = await fetch(`${BACKEND_URL}/api/v2/conversion-funnels`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         id: randomUUID(),
         name,
         description,
@@ -266,11 +329,17 @@ export async function createConversionFunnel(
         createdById: userId,
         createdAt: new Date(),
         updatedAt: new Date(),
-      },
+      }),
     });
-    
+
+    if (!response.ok) {
+      throw new Error(`Failed to create conversion funnel: ${response.status}`);
+    }
+
+    const funnel = await response.json();
+
     logger.info(`Created conversion funnel: ${funnel.id}`, { funnelId: funnel.id, name });
-    
+
     return funnel.id;
   } catch (error) {
     logger.error('Error creating conversion funnel', error);
@@ -288,53 +357,52 @@ export async function generateFunnelReport(
 ): Promise<FunnelData | null> {
   try {
     // Get the funnel
-    const funnel = await prisma.conversionFunnel.findUnique({
-      where: { id: funnelId },
-    });
-    
+    const funnelResponse = await fetch(`${BACKEND_URL}/api/v2/conversion-funnels/${funnelId}`);
+
+    if (!funnelResponse.ok) {
+      throw new Error(`Failed to get conversion funnel: ${funnelResponse.status}`);
+    }
+
+    const funnel = await funnelResponse.json();
+
     if (!funnel) {
       logger.warn(`Funnel not found: ${funnelId}`);
       return null;
     }
-    
+
     // Parse stages
     const stageIds = JSON.parse(funnel.stages) as string[];
-    
+
     // Get the events for these stages
-    const events = await prisma.conversionEvent.findMany({
-      where: {
-        id: { in: stageIds },
-      },
-      select: {
-        id: true,
-        name: true,
-      },
-    });
-    
+    const eventsResponse = await fetch(
+      `${BACKEND_URL}/api/v2/conversion-events?${stageIds.map(id => `id=${id}`).join('&')}`
+    );
+
+    if (!eventsResponse.ok) {
+      throw new Error(`Failed to get conversion events: ${eventsResponse.status}`);
+    }
+
+    const events = await eventsResponse.json();
+
     // Create a map of event IDs to names
-    const eventMap = new Map(events.map(event => [event.id, event.name]));
-    
+    const eventMap = new Map(events.map((event: any) => [event.id, event.name]));
+
     // Get conversion counts for each stage
     const stageCounts = await Promise.all(
       stageIds.map(async (eventId) => {
-        const conversions = await prisma.conversionTracking.findMany({
-          where: {
-            eventId,
-            occurredAt: {
-              gte: startDate,
-              lte: endDate,
-            },
-          },
-          select: {
-            id: true,
-            contactId: true,
-            value: true,
-          },
-        });
-        
-        const uniqueContacts = new Set(conversions.map(c => c.contactId).filter(Boolean));
-        const totalValue = conversions.reduce((sum, c) => sum + (c.value || 0), 0);
-        
+        const conversionsResponse = await fetch(
+          `${BACKEND_URL}/api/v2/conversion-tracking?eventId=${eventId}&startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`
+        );
+
+        if (!conversionsResponse.ok) {
+          throw new Error(`Failed to get conversion tracking: ${conversionsResponse.status}`);
+        }
+
+        const conversions = await conversionsResponse.json();
+
+        const uniqueContacts = new Set(conversions.map((c: any) => c.contactId).filter(Boolean));
+        const totalValue = conversions.reduce((sum: number, c: any) => sum + (c.value || 0), 0);
+
         return {
           eventId,
           name: eventMap.get(eventId) || 'Unknown Event',
@@ -343,17 +411,17 @@ export async function generateFunnelReport(
         };
       })
     );
-    
+
     // Calculate drop-off and conversion rates
     const stages: FunnelStage[] = [];
     let previousCount = stageCounts[0]?.count || 0;
     const totalEntries = previousCount;
-    
+
     for (let i = 0; i < stageCounts.length; i++) {
       const stage = stageCounts[i];
       const dropOffRate = i > 0 ? (previousCount - stage.count) / previousCount : 0;
       const conversionRate = totalEntries > 0 ? stage.count / totalEntries : 0;
-      
+
       stages.push({
         eventId: stage.eventId,
         name: stage.name,
@@ -362,15 +430,15 @@ export async function generateFunnelReport(
         conversionRate,
         totalValue: stage.totalValue,
       });
-      
+
       previousCount = stage.count;
     }
-    
+
     // Calculate overall funnel metrics
     const totalConversions = stages[stages.length - 1]?.count || 0;
     const conversionRate = totalEntries > 0 ? totalConversions / totalEntries : 0;
     const totalValue = stages.reduce((sum, stage) => sum + (stage.totalValue || 0), 0);
-    
+
     // Create a report record in the database
     const reportData = {
       stages,
@@ -379,18 +447,26 @@ export async function generateFunnelReport(
       conversionRate,
       totalValue,
     };
-    
-    await prisma.conversionFunnelReport.create({
-      data: {
+
+    const reportResponse = await fetch(`${BACKEND_URL}/api/v2/conversion-funnel-reports`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         id: randomUUID(),
         funnelId,
         startDate,
         endDate,
         data: JSON.stringify(reportData),
         createdAt: new Date(),
-      },
+      }),
     });
-    
+
+    if (!reportResponse.ok) {
+      throw new Error(`Failed to create conversion funnel report: ${reportResponse.status}`);
+    }
+
     return {
       name: funnel.name,
       ...reportData,
@@ -516,24 +592,28 @@ export async function getConversionAttribution(
   conversionTrackingId: string
 ): Promise<TouchPoint[] | null> {
   try {
-    const conversion = await prisma.conversionTracking.findUnique({
-      where: { id: conversionTrackingId },
-    });
-    
+    const response = await fetch(`${BACKEND_URL}/api/v2/conversion-tracking/${conversionTrackingId}`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to get conversion tracking: ${response.status}`);
+    }
+
+    const conversion = await response.json();
+
     if (!conversion || !conversion.touchPoints) {
       return null;
     }
-    
+
     const touchPoints = JSON.parse(conversion.touchPoints) as TouchPoint[];
     const attributionSettings = await getAttributionSettings();
-    
+
     // Apply the attribution model
     const attributedPoints = applyAttributionModel(
       touchPoints,
       conversion.attributionModel || attributionSettings.defaultModel,
       attributionSettings.customWeights
     );
-    
+
     return attributedPoints;
   } catch (error) {
     logger.error(`Error getting conversion attribution: ${conversionTrackingId}`, error);
@@ -549,22 +629,17 @@ export async function getConversionEvents(): Promise<{
   custom: Array<{ id: string; name: string; eventType: string; category: ConversionCategory }>;
 }> {
   try {
-    const events = await prisma.conversionEvent.findMany({
-      select: {
-        id: true,
-        name: true,
-        eventType: true,
-        category: true,
-        isSystem: true,
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    });
-    
+    const response = await fetch(`${BACKEND_URL}/api/v2/conversion-events?orderBy=name&order=asc`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to get conversion events: ${response.status}`);
+    }
+
+    const events = await response.json();
+
     return {
-      system: events.filter(e => e.isSystem).map(({ isSystem, ...rest }) => rest),
-      custom: events.filter(e => !e.isSystem).map(({ isSystem, ...rest }) => rest),
+      system: events.filter((e: any) => e.isSystem).map(({ isSystem, ...rest }: any) => rest),
+      custom: events.filter((e: any) => !e.isSystem).map(({ isSystem, ...rest }: any) => rest),
     };
   } catch (error) {
     logger.error('Error getting conversion events', error);
@@ -582,49 +657,43 @@ export async function getEntityConversions(
   endDate?: Date
 ): Promise<Record<string, { count: number; value: number }>> {
   try {
-    const dateFilter = {};
-    
-    if (startDate || endDate) {
-      dateFilter.occurredAt = {};
-      
-      if (startDate) {
-        dateFilter.occurredAt.gte = startDate;
-      }
-      
-      if (endDate) {
-        dateFilter.occurredAt.lte = endDate;
-      }
-    }
-    
-    const conversions = await prisma.conversionTracking.findMany({
-      where: {
-        entityType,
-        entityId,
-        ...dateFilter,
-      },
-      include: {
-        event: {
-          select: {
-            eventType: true,
-          },
-        },
-      },
+    const params = new URLSearchParams({
+      entityType,
+      entityId,
     });
-    
+
+    if (startDate) {
+      params.append('startDate', startDate.toISOString());
+    }
+
+    if (endDate) {
+      params.append('endDate', endDate.toISOString());
+    }
+
+    params.append('include', 'event');
+
+    const response = await fetch(`${BACKEND_URL}/api/v2/conversion-tracking?${params.toString()}`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to get entity conversions: ${response.status}`);
+    }
+
+    const conversions = await response.json();
+
     // Group by event type
     const results: Record<string, { count: number; value: number }> = {};
-    
-    conversions.forEach(conversion => {
+
+    conversions.forEach((conversion: any) => {
       const eventType = conversion.event.eventType;
-      
+
       if (!results[eventType]) {
         results[eventType] = { count: 0, value: 0 };
       }
-      
+
       results[eventType].count += 1;
       results[eventType].value += conversion.value || 0;
     });
-    
+
     return results;
   } catch (error) {
     logger.error(`Error getting entity conversions: ${entityType}/${entityId}`, error);

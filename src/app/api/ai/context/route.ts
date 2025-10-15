@@ -11,8 +11,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { aiContextAwarenessSystem } from '@/lib/ai/ai-context-awareness-system';
 import { logger } from '@/lib/logger';
-import { MCPClient } from '@/mcp/clients/mcp-client';
-import { getMCPConfig } from '@/mcp/config/mcp-config';
+
+// Backend MCP API base URL
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
 
 export async function GET(request: NextRequest) {
   try {
@@ -364,70 +367,43 @@ async function setPreferences(userId: string, preferences: any) {
 
 // MCP Integration Functions
 
-// Get customer insights via MCP
+// Get customer insights via Backend MCP API
 async function getCustomerInsights(userId: string, body: any) {
   try {
-    const config = getMCPConfig();
-    if (!config.features.customerDataEnabled) {
-      return NextResponse.json({
-        success: false,
-        error: 'Customer data MCP server not enabled'
-      }, { status: 503 });
-    }
-
-    const mcpClient = new MCPClient();
     const { query, options = {} } = body;
-    
-    // Get customer insights from MCP Customer Data Server
-    const result = await mcpClient.callTool('customer', 'search_customers', {
-      query: query || 'all',
-      limit: options.limit || 10,
-      includeSegments: options.includeSegments || true,
-      includePredictions: options.includePredictions || true
+
+    // Call backend MCP API
+    const response = await fetch(`${BACKEND_URL}/api/mcp/customers/search`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: query || '',
+        limit: options.limit || 10,
+        includeSegments: options.includeSegments ?? true,
+        includePredictions: options.includePredictions ?? true
+      })
     });
 
-    // Process and format the results
-    const insights = {
-      segments: [],
-      preferences: [],
-      engagement: {
-        optimal_time: '1:00 PM',
-        best_channels: ['email', 'sms'],
-        engagement_rate: 0.048
-      },
-      predictions: {
-        churn_risk: 0.15,
-        lifetime_value: 1250,
-        next_purchase_probability: 0.35
-      },
-      demographics: {
-        age_groups: { '25-34': 0.40, '35-44': 0.35, '18-24': 0.15, '45+': 0.10 },
-        locations: { 'Nigeria': 0.60, 'Ghana': 0.20, 'Kenya': 0.15, 'Other': 0.05 }
-      }
-    };
-
-    // Parse MCP results if available
-    if (result.success && result.data) {
-      const customers = JSON.parse(result.data.content[0].text);
-      if (customers.results && customers.results.length > 0) {
-        insights.segments = customers.results.slice(0, 5).flatMap(c => c.segments || []);
-        insights.preferences = ['digital marketing', 'social media', 'automation', 'analytics'];
-      }
+    if (!response.ok) {
+      throw new Error(`Backend MCP API error: ${response.status}`);
     }
+
+    const data = await response.json();
 
     return NextResponse.json({
       success: true,
-      data: insights,
+      data: data,
       meta: {
-        source: 'mcp_customer_server',
-        timestamp: new Date().toISOString(),
-        fallback_used: !result.success
+        source: 'backend_mcp_api',
+        timestamp: new Date().toISOString()
       }
     });
 
   } catch (error) {
-    logger.error('Error getting customer insights via MCP', { userId, error });
-    
+    logger.error('Error getting customer insights via backend MCP', { userId, error });
+
     // Fallback response
     return NextResponse.json({
       success: true,
@@ -458,60 +434,42 @@ async function getCustomerInsights(userId: string, body: any) {
   }
 }
 
-// Get campaign analytics via MCP
+// Get campaign analytics via Backend MCP API
 async function getCampaignAnalytics(userId: string, body: any) {
   try {
-    const config = getMCPConfig();
-    if (!config.features.campaignAnalyticsEnabled) {
-      return NextResponse.json({
-        success: false,
-        error: 'Campaign analytics MCP server not enabled'
-      }, { status: 503 });
-    }
+    const { limit = 10, offset = 0 } = body;
 
-    const mcpClient = new MCPClient();
-    const { platforms, time_range } = body;
-    
-    // Get campaign analytics from MCP Campaign Analytics Server
-    const result = await mcpClient.callTool('campaign', 'get_campaign_performance', {
-      platforms: platforms || ['facebook', 'instagram', 'twitter', 'linkedin'],
-      time_range: time_range || {
-        start_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-        end_date: new Date().toISOString()
+    // Call backend MCP API
+    const response = await fetch(`${BACKEND_URL}/api/mcp/campaigns/analytics`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      metrics: ['reach', 'engagement', 'clicks', 'conversions', 'roi']
+      body: JSON.stringify({
+        limit,
+        offset,
+        includeABTests: false
+      })
     });
 
-    // Default analytics response
-    const analytics = platforms?.map((platform: string) => ({
-      platform,
-      metrics: {
-        reach: 15000 + Math.floor(Math.random() * 10000),
-        engagement: 750 + Math.floor(Math.random() * 500),
-        clicks: 450 + Math.floor(Math.random() * 300),
-        conversions: 25 + Math.floor(Math.random() * 20),
-        roi: 2.5 + Math.random() * 1.5
-      },
-      performance: {
-        engagement_rate: 0.045 + Math.random() * 0.02,
-        conversion_rate: 0.055 + Math.random() * 0.02,
-        cost_per_click: 0.85 + Math.random() * 0.5
-      }
-    })) || [];
+    if (!response.ok) {
+      throw new Error(`Backend MCP API error: ${response.status}`);
+    }
+
+    const data = await response.json();
 
     return NextResponse.json({
       success: true,
-      data: analytics,
+      data: data,
       meta: {
-        source: 'mcp_campaign_server',
-        timestamp: new Date().toISOString(),
-        fallback_used: !result.success
+        source: 'backend_mcp_api',
+        timestamp: new Date().toISOString()
       }
     });
 
   } catch (error) {
-    logger.error('Error getting campaign analytics via MCP', { userId, error });
-    
+    logger.error('Error getting campaign analytics via backend MCP', { userId, error });
+
     // Fallback response
     const platforms = body.platforms || ['facebook', 'instagram', 'twitter', 'linkedin'];
     return NextResponse.json({
@@ -540,64 +498,42 @@ async function getCampaignAnalytics(userId: string, body: any) {
   }
 }
 
-// Get monitoring metrics via MCP
+// Get monitoring metrics via Backend MCP API
 async function getMonitoringMetrics(userId: string, body: any) {
   try {
-    const config = getMCPConfig();
-    if (!config.features.monitoringEnabled) {
-      return NextResponse.json({
-        success: false,
-        error: 'Monitoring MCP server not enabled'
-      }, { status: 503 });
-    }
+    const { metric = 'system_health', timeRange = '1h', aggregation = 'avg' } = body;
 
-    const mcpClient = new MCPClient();
-    const { metrics, time_range } = body;
-    
-    // Get monitoring metrics from MCP Monitoring Server
-    const result = await mcpClient.callTool('monitoring', 'get_metrics', {
-      metrics: metrics || ['social_media_performance', 'engagement_rates', 'conversion_metrics'],
-      time_range: time_range || {
-        start_date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        end_date: new Date().toISOString()
-      }
+    // Call backend MCP API
+    const response = await fetch(`${BACKEND_URL}/api/mcp/monitoring/data`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        metric,
+        timeRange,
+        aggregation
+      })
     });
 
-    // Default monitoring response
-    const monitoringData = {
-      social_media: {
-        total_posts: 45,
-        total_engagement: 2850,
-        average_engagement_rate: 0.048,
-        top_performing_platform: 'instagram'
-      },
-      system_health: {
-        uptime: 99.8,
-        response_time: 245,
-        error_rate: 0.02,
-        active_campaigns: 8
-      },
-      business_metrics: {
-        conversion_rate: 0.065,
-        revenue_generated: 8450,
-        cost_per_acquisition: 25.50,
-        return_on_ad_spend: 3.2
-      }
-    };
+    if (!response.ok) {
+      throw new Error(`Backend MCP API error: ${response.status}`);
+    }
+
+    const data = await response.json();
 
     return NextResponse.json({
       success: true,
-      data: monitoringData,
+      data: data,
       meta: {
-        source: 'mcp_monitoring_server',
-        timestamp: new Date().toISOString(),
-        fallback_used: !result.success
+        source: 'backend_mcp_api',
+        timestamp: new Date().toISOString()
       }
     });
 
   } catch (error) {
-    logger.error('Error getting monitoring metrics via MCP', { userId, error });
-    
+    logger.error('Error getting monitoring metrics via backend MCP', { userId, error });
+
     // Fallback response
     return NextResponse.json({
       success: true,

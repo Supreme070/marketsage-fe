@@ -5,8 +5,10 @@
  * dynamic form builder functionality and processing form submissions.
  */
 
+// NOTE: Prisma removed - using backend API (LeadPulseForm, AnonymousVisitor, Contact exist in backend)
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
+
 import { randomUUID } from 'crypto';
-import prisma from '@/lib/db/prisma';
 
 /**
  * Form field type definitions
@@ -112,8 +114,10 @@ export async function createForm(
   }
   
   // Create the form
-  return prisma.leadPulseForm.create({
-    data: {
+  const response = await fetch(`${BACKEND_URL}/api/v2/leadpulse-forms`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
       id: randomUUID(),
       name: data.name,
       description: data.description,
@@ -128,8 +132,14 @@ export async function createForm(
       conversionRate: 0,
       submissions: 0,
       views: 0
-    }
+    })
   });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create form: ${response.status}`);
+  }
+
+  return response.json();
 }
 
 /**
@@ -174,10 +184,17 @@ export async function updateForm(
   if (data.isActive !== undefined) updateData.isActive = data.isActive;
   
   // Update the form
-  return prisma.leadPulseForm.update({
-    where: { id: formId },
-    data: updateData
+  const response = await fetch(`${BACKEND_URL}/api/v2/leadpulse-forms/${formId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updateData)
   });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update form: ${response.status}`);
+  }
+
+  return response.json();
 }
 
 /**
@@ -188,24 +205,22 @@ export async function updateForm(
  */
 export async function trackFormView(formId: string, visitorId: string) {
   // Increment form view count
-  await prisma.leadPulseForm.update({
-    where: { id: formId },
-    data: {
-      views: {
-        increment: 1
-      }
-    }
+  const formResponse = await fetch(`${BACKEND_URL}/api/v2/leadpulse-forms/${formId}/increment-views`, {
+    method: 'PATCH'
   });
-  
+  if (!formResponse.ok) {
+    throw new Error(`Failed to increment form views: ${formResponse.status}`);
+  }
+
   // Associate the visitor with the form
-  await prisma.anonymousVisitor.update({
-    where: { id: visitorId },
-    data: {
-      LeadPulseForm: {
-        connect: { id: formId }
-      }
-    }
+  const visitorResponse = await fetch(`${BACKEND_URL}/api/v2/anonymous-visitors/${visitorId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ formId })
   });
+  if (!visitorResponse.ok) {
+    throw new Error(`Failed to associate visitor with form: ${visitorResponse.status}`);
+  }
 }
 
 /**
@@ -221,29 +236,32 @@ export async function processFormSubmission(
   visitorId: string,
   formData: Record<string, any>
 ) {
-  // Get the form configuration
-  const form = await prisma.leadPulseForm.update({
-    where: { id: formId },
-    data: {
-      submissions: {
-        increment: 1
-      }
-    }
+  // Increment submission count
+  const formUpdateResponse = await fetch(`${BACKEND_URL}/api/v2/leadpulse-forms/${formId}/increment-submissions`, {
+    method: 'PATCH'
   });
-  
+  if (!formUpdateResponse.ok) {
+    throw new Error(`Failed to increment submissions: ${formUpdateResponse.status}`);
+  }
+  const form = await formUpdateResponse.json();
+
   // Update conversion rate
   const conversionRate = form.submissions / (form.views || 1);
-  await prisma.leadPulseForm.update({
-    where: { id: formId },
-    data: {
-      conversionRate
-    }
+  const conversionResponse = await fetch(`${BACKEND_URL}/api/v2/leadpulse-forms/${formId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ conversionRate })
   });
-  
+  if (!conversionResponse.ok) {
+    throw new Error(`Failed to update conversion rate: ${conversionResponse.status}`);
+  }
+
   // Get the visitor
-  const visitor = await prisma.anonymousVisitor.findUnique({
-    where: { id: visitorId }
-  });
+  const visitorResponse = await fetch(`${BACKEND_URL}/api/v2/anonymous-visitors/${visitorId}`);
+  if (!visitorResponse.ok) {
+    throw new Error(`Failed to fetch visitor: ${visitorResponse.status}`);
+  }
+  const visitor = await visitorResponse.json();
   
   if (!visitor) {
     throw new Error(`Visitor not found: ${visitorId}`);
@@ -303,39 +321,47 @@ export async function processFormSubmission(
     // Check if visitor is already associated with a contact
     if (visitor.contactId) {
       // Update existing contact with new information
-      const contact = await prisma.contact.update({
-        where: { id: visitor.contactId },
-        data: {
-          ...contactData,
-          updatedAt: new Date()
-        }
+      const updateResponse = await fetch(`${BACKEND_URL}/api/v2/contacts/${visitor.contactId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...contactData, updatedAt: new Date() })
       });
-      
+      if (!updateResponse.ok) {
+        throw new Error(`Failed to update contact: ${updateResponse.status}`);
+      }
+      const contact = await updateResponse.json();
+
       return { success: true, contact };
     } else {
       // Create a new contact
       const contactId = randomUUID();
-      const contact = await prisma.contact.create({
-        data: {
+      const createResponse = await fetch(`${BACKEND_URL}/api/v2/contacts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           id: contactId,
           ...contactData,
           source: 'LeadPulse Form',
           createdAt: new Date(),
           updatedAt: new Date(),
-          // This assumes a system user or requires a user ID to be provided
           createdById: process.env.SYSTEM_USER_ID || 'default-user-id',
-        }
+        })
       });
-      
+      if (!createResponse.ok) {
+        throw new Error(`Failed to create contact: ${createResponse.status}`);
+      }
+      const contact = await createResponse.json();
+
       // Update visitor with contact ID
-      await prisma.anonymousVisitor.update({
-        where: { id: visitorId },
-        data: {
-          contactId: contact.id,
-          conversionStatus: 'CONVERTED', // Update conversion status
-        }
+      const visitorUpdateResponse = await fetch(`${BACKEND_URL}/api/v2/anonymous-visitors/${visitorId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contactId: contact.id, conversionStatus: 'CONVERTED' })
       });
-      
+      if (!visitorUpdateResponse.ok) {
+        throw new Error(`Failed to update visitor with contact: ${visitorUpdateResponse.status}`);
+      }
+
       return { success: true, contact };
     }
   }
@@ -352,9 +378,11 @@ export async function processFormSubmission(
  */
 export async function generateFormHtml(formId: string, pixelId: string): Promise<string> {
   // Get the form configuration
-  const form = await prisma.leadPulseForm.findUnique({
-    where: { id: formId }
-  });
+  const response = await fetch(`${BACKEND_URL}/api/v2/leadpulse-forms/${formId}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch form: ${response.status}`);
+  }
+  const form = await response.json();
   
   if (!form) {
     throw new Error(`Form not found: ${formId}`);

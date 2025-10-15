@@ -1,12 +1,16 @@
 /**
  * AI Campaign Recommender System
- * 
- * Provides intelligent recommendations for campaign improvements, 
+ *
+ * Provides intelligent recommendations for campaign improvements,
  * next-best-actions, and optimization opportunities based on
  * user data and campaign performance metrics.
  */
 
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
+
 import { logger } from '@/lib/logger';
 
 // Campaign and engagement types
@@ -58,23 +62,22 @@ export async function generateCampaignRecommendations(
   campaignId: string
 ): Promise<RecommendationResult[]> {
   try {
-    // Fetch campaign data from custom analytics
-    const analyticsData = await prisma.analytics.findFirst({
-      where: {
-        entityType: 'EMAIL_CAMPAIGN',
-        entityId: campaignId
-      }
+    // Fetch campaign data from custom analytics via backend API
+    const analyticsResponse = await fetch(`${BACKEND_URL}/api/v2/analytics/first?entityType=EMAIL_CAMPAIGN&entityId=${campaignId}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
-    
+    const analyticsData = analyticsResponse.ok ? await analyticsResponse.json() : null;
+
     // If no data is found, return empty recommendations
     if (!analyticsData) {
       logger.warn(`Campaign analytics not found: ${campaignId}`);
       return [];
     }
-    
+
     // Parse metrics from analytics
     const metrics = JSON.parse(analyticsData.metrics || '{}');
-    
+
     // Construct campaign data object
     const campaign: CampaignData = {
       id: campaignId,
@@ -84,13 +87,13 @@ export async function generateCampaignRecommendations(
       industry: metrics.industry,
       engagements: []
     };
-    
-    // Fetch engagement data
-    const engagements = await prisma.emailActivity.findMany({
-      where: {
-        campaignId: campaignId
-      }
+
+    // Fetch engagement data via backend API
+    const engagementsResponse = await fetch(`${BACKEND_URL}/api/v2/email-activities?campaignId=${campaignId}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
+    const engagements = engagementsResponse.ok ? await engagementsResponse.json() : [];
     
     // Convert to our internal format
     campaign.engagements = engagements.map(e => ({

@@ -6,14 +6,16 @@
  * with comprehensive error handling, validation, and rollback capabilities.
  */
 
-import { 
+import {
   type ActionExecutionResult,
   type ActionType,
-  RiskLevel 
+  RiskLevel
 } from '../action-plan-interface';
 import type { ExecutionContext, ExecutorStrategy } from '../action-dispatcher';
-import { prisma } from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (Contact, Organization tables exist in backend)
 import { logger } from '@/lib/logger';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 
 /**
  * Base executor class with common functionality
@@ -50,14 +52,14 @@ export abstract class BaseExecutor implements ExecutorStrategy {
 
     // Check if contact exists
     try {
-      const contact = await prisma.contact.findUnique({
-        where: { id: context.actionPlan.contactId }
-      });
+      const response = await fetch(`${BACKEND_URL}/api/v2/contacts/${context.actionPlan.contactId}`);
 
-      if (!contact) {
+      if (!response.ok) {
         logger.warn('Contact not found', { contactId: context.actionPlan.contactId });
         return false;
       }
+
+      const contact = await response.json();
 
       // Check if contact belongs to the organization
       if (contact.organizationId !== context.organizationId) {
@@ -166,23 +168,26 @@ export abstract class BaseExecutor implements ExecutorStrategy {
    * Get contact information
    */
   protected async getContact(contactId: string): Promise<any> {
-    return prisma.contact.findUnique({
-      where: { id: contactId },
-      include: {
-        organization: true,
-        lists: true,
-        segments: true
-      }
-    });
+    const response = await fetch(`${BACKEND_URL}/api/v2/contacts/${contactId}?include=organization,lists,segments`);
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return await response.json();
   }
 
   /**
    * Get organization information
    */
   protected async getOrganization(organizationId: string): Promise<any> {
-    return prisma.organization.findUnique({
-      where: { id: organizationId }
-    });
+    const response = await fetch(`${BACKEND_URL}/api/v2/organizations/${organizationId}`);
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return await response.json();
   }
 
   /**

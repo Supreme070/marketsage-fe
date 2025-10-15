@@ -12,7 +12,10 @@
  * 🔔 Smart notification scheduling
  */
 
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
 import { logger } from '@/lib/logger';
 
 export interface MobileTaskNotification {
@@ -134,17 +137,18 @@ export class MobileTaskNotificationSystem {
       });
 
       // Get task details
-      const task = await prisma.task.findUnique({
-        where: { id: taskId },
-        include: {
-          assignee: true,
-          creator: true
-        }
+      const taskResponse = await fetch(`${BACKEND_URL}/api/tasks/${taskId}?include=assignee,creator`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
-      if (!task) {
+      if (!taskResponse.ok) {
         throw new Error(`Task not found: ${taskId}`);
       }
+
+      const task = await taskResponse.json();
 
       const results = {
         notifications_sent: 0,
@@ -313,13 +317,21 @@ export class MobileTaskNotificationSystem {
   }> {
     try {
       // Get pending notifications
-      const pendingNotifications = await prisma.$queryRaw<any[]>`
-        SELECT * FROM task_notifications 
-        WHERE delivery_status = 'pending' 
-        AND scheduled_for <= NOW()
-        ORDER BY scheduled_for ASC
-        LIMIT ${this.NOTIFICATION_BATCH_SIZE}
-      `;
+      const notificationsResponse = await fetch(
+        `${BACKEND_URL}/api/notifications/pending?limit=${this.NOTIFICATION_BATCH_SIZE}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!notificationsResponse.ok) {
+        throw new Error('Failed to fetch pending notifications');
+      }
+
+      const pendingNotifications = await notificationsResponse.json();
 
       const results = {
         processed: 0,
@@ -656,18 +668,23 @@ export class MobileTaskNotificationSystem {
   }
 
   private async getUserTasksForSync(userId: string): Promise<TaskOfflineData[]> {
-    const tasks = await prisma.task.findMany({
-      where: {
-        OR: [
-          { assigneeId: userId },
-          { createdBy: userId }
-        ]
-      },
-      orderBy: { updatedAt: 'desc' },
-      take: this.SYNC_BATCH_SIZE
-    });
+    const tasksResponse = await fetch(
+      `${BACKEND_URL}/api/tasks?userId=${userId}&limit=${this.SYNC_BATCH_SIZE}&orderBy=updatedAt&order=desc`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
-    return tasks.map(task => ({
+    if (!tasksResponse.ok) {
+      throw new Error('Failed to fetch user tasks for sync');
+    }
+
+    const tasks = await tasksResponse.json();
+
+    return tasks.map((task: any) => ({
       id: task.id,
       title: task.title,
       description: task.description || '',

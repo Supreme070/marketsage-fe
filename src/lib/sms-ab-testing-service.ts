@@ -1,11 +1,13 @@
 /**
  * SMS A/B Testing Service
- * 
+ *
  * Handles creation, management, and analysis of A/B tests for SMS campaigns
  * with statistical significance testing and comprehensive analytics.
  */
 
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (SMSABTest, SMSABTestVariant, SMSABTestAssignment, SMSABTestActivity exist in backend)
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
+
 import { smsLogger } from '@/lib/sms-campaign-logger';
 import { logger } from '@/lib/logger';
 
@@ -77,8 +79,10 @@ export class SMSABTestingService {
       }
 
       // Create A/B test record
-      const abTest = await prisma.sMSABTest.create({
-        data: {
+      const createResponse = await fetch(`${BACKEND_URL}/api/v2/sms-ab-tests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           name: config.name,
           description: config.description,
           status: 'DRAFT',
@@ -92,13 +96,19 @@ export class SMSABTestingService {
             createdAt: new Date().toISOString(),
             createdBy: config.userId
           })
-        }
+        }),
       });
+      if (!createResponse.ok) {
+        throw new Error(`Failed to create AB test: ${createResponse.status}`);
+      }
+      const abTest = await createResponse.json();
 
       // Create variants
-      const variantPromises = config.variants.map((variant, index) => 
-        prisma.sMSABTestVariant.create({
-          data: {
+      const variantPromises = config.variants.map(async (variant, index) => {
+        const response = await fetch(`${BACKEND_URL}/api/v2/sms-ab-test-variants`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             abTestId: abTest.id,
             name: variant.name,
             description: variant.description,
@@ -107,9 +117,13 @@ export class SMSABTestingService {
             templateId: variant.templateId,
             trafficPercentage: config.trafficSplit[index],
             variantIndex: index
-          }
-        })
-      );
+          }),
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to create variant: ${response.status}`);
+        }
+        return response.json();
+      });
 
       await Promise.all(variantPromises);
 
@@ -137,14 +151,11 @@ export class SMSABTestingService {
    */
   async startABTest(testId: string, userId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const abTest = await prisma.sMSABTest.findUnique({
-        where: { id: testId },
-        include: { variants: true }
-      });
-
-      if (!abTest) {
+      const response = await fetch(`${BACKEND_URL}/api/v2/sms-ab-tests/${testId}?include=variants`);
+      if (!response.ok) {
         return { success: false, error: 'A/B test not found' };
       }
+      const abTest = await response.json();
 
       if (abTest.status !== 'DRAFT') {
         return { success: false, error: `Cannot start test with status: ${abTest.status}` };
@@ -155,13 +166,17 @@ export class SMSABTestingService {
       }
 
       // Update test status
-      await prisma.sMSABTest.update({
-        where: { id: testId },
-        data: {
+      const updateResponse = await fetch(`${BACKEND_URL}/api/v2/sms-ab-tests/${testId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           status: 'RUNNING',
           startedAt: new Date()
-        }
+        }),
       });
+      if (!updateResponse.ok) {
+        throw new Error(`Failed to update test: ${updateResponse.status}`);
+      }
 
       await smsLogger.logABTestStarted(testId, abTest.name, {
         userId,
@@ -182,26 +197,28 @@ export class SMSABTestingService {
    */
   async stopABTest(testId: string, userId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const abTest = await prisma.sMSABTest.findUnique({
-        where: { id: testId }
-      });
-
-      if (!abTest) {
+      const response = await fetch(`${BACKEND_URL}/api/v2/sms-ab-tests/${testId}`);
+      if (!response.ok) {
         return { success: false, error: 'A/B test not found' };
       }
+      const abTest = await response.json();
 
       if (abTest.status !== 'RUNNING') {
         return { success: false, error: `Cannot stop test with status: ${abTest.status}` };
       }
 
       // Update test status
-      await prisma.sMSABTest.update({
-        where: { id: testId },
-        data: {
+      const updateResponse = await fetch(`${BACKEND_URL}/api/v2/sms-ab-tests/${testId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           status: 'STOPPED',
           completedAt: new Date()
-        }
+        }),
       });
+      if (!updateResponse.ok) {
+        throw new Error(`Failed to update test: ${updateResponse.status}`);
+      }
 
       await smsLogger.logABTestStopped(testId, abTest.name, {
         userId,
@@ -222,43 +239,43 @@ export class SMSABTestingService {
    */
   async assignContactToVariant(testId: string, contactId: string): Promise<{ success: boolean; variantId?: string; error?: string }> {
     try {
-      const abTest = await prisma.sMSABTest.findUnique({
-        where: { id: testId },
-        include: { variants: true }
-      });
-
-      if (!abTest) {
+      const response = await fetch(`${BACKEND_URL}/api/v2/sms-ab-tests/${testId}?include=variants`);
+      if (!response.ok) {
         return { success: false, error: 'A/B test not found' };
       }
+      const abTest = await response.json();
 
       if (abTest.status !== 'RUNNING') {
         return { success: false, error: 'A/B test is not running' };
       }
 
       // Check if contact is already assigned
-      const existingAssignment = await prisma.sMSABTestAssignment.findFirst({
-        where: {
-          abTestId: testId,
-          contactId
+      const assignmentResponse = await fetch(`${BACKEND_URL}/api/v2/sms-ab-test-assignments?abTestId=${testId}&contactId=${contactId}&limit=1`);
+      if (assignmentResponse.ok) {
+        const assignments = await assignmentResponse.json();
+        const existingAssignment = assignments[0];
+        if (existingAssignment) {
+          return { success: true, variantId: existingAssignment.variantId };
         }
-      });
-
-      if (existingAssignment) {
-        return { success: true, variantId: existingAssignment.variantId };
       }
 
       // Assign contact to variant based on traffic split
       const selectedVariant = this.selectVariantForContact(abTest.variants, contactId);
 
       // Create assignment record
-      await prisma.sMSABTestAssignment.create({
-        data: {
+      const createResponse = await fetch(`${BACKEND_URL}/api/v2/sms-ab-test-assignments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           abTestId: testId,
           contactId,
           variantId: selectedVariant.id,
           assignedAt: new Date()
-        }
+        }),
       });
+      if (!createResponse.ok) {
+        throw new Error(`Failed to create assignment: ${createResponse.status}`);
+      }
 
       return { success: true, variantId: selectedVariant.id };
     } catch (error) {
@@ -278,16 +295,21 @@ export class SMSABTestingService {
     metadata?: any
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      await prisma.sMSABTestActivity.create({
-        data: {
+      const response = await fetch(`${BACKEND_URL}/api/v2/sms-ab-test-activities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           abTestId: testId,
           variantId,
           contactId,
           activityType,
           timestamp: new Date(),
           metadata: metadata ? JSON.stringify(metadata) : null
-        }
+        }),
       });
+      if (!response.ok) {
+        throw new Error(`Failed to record activity: ${response.status}`);
+      }
 
       return { success: true };
     } catch (error) {
@@ -301,18 +323,11 @@ export class SMSABTestingService {
    */
   async getABTestResults(testId: string): Promise<{ success: boolean; results?: ABTestResult; error?: string }> {
     try {
-      const abTest = await prisma.sMSABTest.findUnique({
-        where: { id: testId },
-        include: {
-          variants: true,
-          activities: true,
-          assignments: true
-        }
-      });
-
-      if (!abTest) {
+      const response = await fetch(`${BACKEND_URL}/api/v2/sms-ab-tests/${testId}?include=variants&include=activities&include=assignments`);
+      if (!response.ok) {
         return { success: false, error: 'A/B test not found' };
       }
+      const abTest = await response.json();
 
       // Calculate metrics for each variant
       const variantResults = await Promise.all(
@@ -376,26 +391,14 @@ export class SMSABTestingService {
   async processAutomaticCompletion(): Promise<void> {
     try {
       const now = new Date();
-      
+
       // Find running tests that should be completed
-      const testsToComplete = await prisma.sMSABTest.findMany({
-        where: {
-          status: 'RUNNING',
-          OR: [
-            // Tests that have reached their duration
-            {
-              startedAt: {
-                lte: new Date(now.getTime() - 24 * 60 * 60 * 1000) // Default 24 hours ago
-              }
-            }
-          ]
-        },
-        include: {
-          variants: true,
-          activities: true,
-          assignments: true
-        }
-      });
+      const cutoffDate = new Date(now.getTime() - 24 * 60 * 60 * 1000); // Default 24 hours ago
+      const response = await fetch(`${BACKEND_URL}/api/v2/sms-ab-tests?status=RUNNING&startedAtLte=${cutoffDate.toISOString()}&include=variants&include=activities&include=assignments`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch tests: ${response.status}`);
+      }
+      const testsToComplete = await response.json();
 
       for (const test of testsToComplete) {
         // Check if test has enough sample size
@@ -410,13 +413,18 @@ export class SMSABTestingService {
         }
 
         // Mark test as completed
-        await prisma.sMSABTest.update({
-          where: { id: test.id },
-          data: {
+        const updateResponse = await fetch(`${BACKEND_URL}/api/v2/sms-ab-tests/${test.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             status: 'COMPLETED',
             completedAt: now
-          }
+          }),
         });
+        if (!updateResponse.ok) {
+          logger.error('Failed to update test status', { testId: test.id });
+          continue;
+        }
 
         await smsLogger.logABTestCompleted(test.id, test.name, {
           reason: 'automatic_completion',

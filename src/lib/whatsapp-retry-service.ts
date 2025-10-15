@@ -1,11 +1,13 @@
 /**
  * WhatsApp Campaign Retry Service
- * 
+ *
  * Handles automatic retry of failed WhatsApp sends with exponential backoff
  * and comprehensive logging for debugging and monitoring.
  */
 
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (WhatsAppHistory exists in backend)
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
+
 import { whatsappService } from '@/lib/whatsapp-service';
 import { whatsappLogger } from '@/lib/whatsapp-campaign-logger';
 import { logger } from '@/lib/logger';
@@ -72,29 +74,28 @@ export class WhatsAppRetryService {
       }
 
       // Check if we already have a retry job for this message
-      const existingJob = await prisma.whatsAppHistory.findFirst({
-        where: {
-          contactId,
-          campaignId: campaignId,
-          status: 'RETRY_PENDING'
+      const existingJobResponse = await fetch(`${BACKEND_URL}/api/v2/whatsapp-history?contactId=${contactId}&campaignId=${campaignId}&status=RETRY_PENDING&limit=1`);
+      if (existingJobResponse.ok) {
+        const existingJobs = await existingJobResponse.json();
+        const existingJob = existingJobs[0];
+        if (existingJob) {
+          logger.warn('WhatsApp retry job already exists', {
+            campaignId,
+            contactId,
+            existingJobId: existingJob.id
+          });
+          return false;
         }
-      });
-
-      if (existingJob) {
-        logger.warn('WhatsApp retry job already exists', { 
-          campaignId, 
-          contactId, 
-          existingJobId: existingJob.id 
-        });
-        return false;
       }
 
       // Calculate next retry time
       const nextRetryAt = new Date(Date.now() + this.config.initialDelayMs);
 
       // Create retry job in WhatsApp history
-      await prisma.whatsAppHistory.create({
-        data: {
+      const createResponse = await fetch(`${BACKEND_URL}/api/v2/whatsapp-history`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           contactId,
           userId,
           to: phoneNumber,
@@ -108,8 +109,11 @@ export class WhatsAppRetryService {
             originalError: error,
             retryConfig: this.config
           })
-        }
+        }),
       });
+      if (!createResponse.ok) {
+        throw new Error(`Failed to create retry job: ${createResponse.status}`);
+      }
 
       await whatsappLogger.logMessageFailed(
         campaignId,
@@ -142,15 +146,12 @@ export class WhatsAppRetryService {
    */
   async processRetryQueue(): Promise<void> {
     try {
-      const pendingRetries = await prisma.whatsAppHistory.findMany({
-        where: {
-          status: 'RETRY_PENDING',
-          nextRetryAt: { lte: new Date() },
-          retryCount: { lt: this.config.maxRetries }
-        },
-        orderBy: { nextRetryAt: 'asc' },
-        take: 50 // Process in batches
-      });
+      const now = new Date();
+      const response = await fetch(`${BACKEND_URL}/api/v2/whatsapp-history?status=RETRY_PENDING&nextRetryAtLte=${now.toISOString()}&retryCountLt=${this.config.maxRetries}&orderBy=nextRetryAt&limit=50`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch retry queue: ${response.status}`);
+      }
+      const pendingRetries = await response.json();
 
       if (pendingRetries.length === 0) {
         return;
@@ -182,13 +183,14 @@ export class WhatsAppRetryService {
 
       if (result.success) {
         // Success - update status and log
-        await prisma.whatsAppHistory.update({
-          where: { id: retryJob.id },
-          data: {
+        await fetch(`${BACKEND_URL}/api/v2/whatsapp-history/${retryJob.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             status: 'SENT',
             deliveredAt: new Date(),
             messageId: result.messageId
-          }
+          }),
         });
 
         await whatsappLogger.logMessageSent(
@@ -227,13 +229,14 @@ export class WhatsAppRetryService {
 
     if (newRetryCount >= this.config.maxRetries || !this.isRetryableError(error)) {
       // Max retries reached or non-retryable error - mark as failed
-      await prisma.whatsAppHistory.update({
-        where: { id: retryJob.id },
-        data: {
+      await fetch(`${BACKEND_URL}/api/v2/whatsapp-history/${retryJob.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           status: 'FAILED',
           errorMessage: error?.message || String(error),
           retryCount: newRetryCount
-        }
+        }),
       });
 
       await whatsappLogger.logMessageFailed(
@@ -262,13 +265,14 @@ export class WhatsAppRetryService {
       );
       const nextRetryAt = new Date(Date.now() + delay);
 
-      await prisma.whatsAppHistory.update({
-        where: { id: retryJob.id },
-        data: {
+      await fetch(`${BACKEND_URL}/api/v2/whatsapp-history/${retryJob.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           retryCount: newRetryCount,
           nextRetryAt,
           errorMessage: error?.message || String(error)
-        }
+        }),
       });
 
       logger.info('WhatsApp retry rescheduled', {
@@ -324,25 +328,18 @@ export class WhatsAppRetryService {
     succeeded: number;
   }> {
     try {
+      const [pendingRes, processingRes, failedRes, succeededRes] = await Promise.all([
+        fetch(`${BACKEND_URL}/api/v2/whatsapp-history/count?status=RETRY_PENDING`),
+        fetch(`${BACKEND_URL}/api/v2/whatsapp-history/count?status=RETRY_PROCESSING`),
+        fetch(`${BACKEND_URL}/api/v2/whatsapp-history/count?status=FAILED&retryCountGt=0`),
+        fetch(`${BACKEND_URL}/api/v2/whatsapp-history/count?status=SENT&retryCountGt=0`)
+      ]);
+
       const [pending, processing, failed, succeeded] = await Promise.all([
-        prisma.whatsAppHistory.count({
-          where: { status: 'RETRY_PENDING' }
-        }),
-        prisma.whatsAppHistory.count({
-          where: { status: 'RETRY_PROCESSING' }
-        }),
-        prisma.whatsAppHistory.count({
-          where: { 
-            status: 'FAILED',
-            retryCount: { gt: 0 }
-          }
-        }),
-        prisma.whatsAppHistory.count({
-          where: { 
-            status: 'SENT',
-            retryCount: { gt: 0 }
-          }
-        })
+        pendingRes.ok ? pendingRes.json() : 0,
+        processingRes.ok ? processingRes.json() : 0,
+        failedRes.ok ? failedRes.json() : 0,
+        succeededRes.ok ? succeededRes.json() : 0
       ]);
 
       return { pending, processing, failed, succeeded };
@@ -360,17 +357,22 @@ export class WhatsAppRetryService {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
 
-      const result = await prisma.whatsAppHistory.deleteMany({
-        where: {
-          OR: [
-            { status: 'FAILED', updatedAt: { lt: cutoffDate } },
-            { status: 'SENT', retryCount: { gt: 0 }, updatedAt: { lt: cutoffDate } }
-          ]
-        }
+      // Delete failed retries
+      const failedResponse = await fetch(`${BACKEND_URL}/api/v2/whatsapp-history?status=FAILED&updatedAtLt=${cutoffDate.toISOString()}`, {
+        method: 'DELETE',
       });
+      const failedCount = failedResponse.ok ? await failedResponse.json() : 0;
 
-      logger.info(`Cleaned up ${result.count} old WhatsApp retry records`);
-      return result.count;
+      // Delete successful retries
+      const sentResponse = await fetch(`${BACKEND_URL}/api/v2/whatsapp-history?status=SENT&retryCountGt=0&updatedAtLt=${cutoffDate.toISOString()}`, {
+        method: 'DELETE',
+      });
+      const sentCount = sentResponse.ok ? await sentResponse.json() : 0;
+
+      const totalCount = (failedCount?.count || 0) + (sentCount?.count || 0);
+
+      logger.info(`Cleaned up ${totalCount} old WhatsApp retry records`);
+      return totalCount;
     } catch (error) {
       logger.error('Error cleaning up old WhatsApp retries', { error });
       return 0;

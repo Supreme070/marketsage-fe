@@ -31,7 +31,8 @@
  * - Customer lifetime value journey optimization
  */
 
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API (workflowExecution, emailActivity, workflow, workflowEvent tables exist in backend)
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NESTJS_BACKEND_URL || 'http://localhost:3006';
 import { logger } from '@/lib/logger';
 import { SupremeAI } from '@/lib/ai/supreme-ai-engine';
 import { workflowEngine } from '@/lib/workflow/execution-engine';
@@ -1621,12 +1622,11 @@ export class RealTimeWorkflowPerformanceOptimizer {
       }
 
       // Get workflow executions
-      const executions = await prisma.workflowExecution.findMany({
-        where: { workflowId },
-        include: { contact: true },
-        orderBy: { startedAt: 'desc' },
-        take: 1000 // Last 1000 executions for analysis
+      const response = await fetch(`${BACKEND_URL}/api/workflows/${workflowId}/executions?limit=1000&orderBy=startedAt&order=desc&include=contact`, {
+        headers: { 'Content-Type': 'application/json' }
       });
+      if (!response.ok) throw new Error(`Failed to fetch executions: ${response.statusText}`);
+      const executions = await response.json();
 
       if (executions.length === 0) {
         // Return default metrics for workflows with no executions
@@ -1963,16 +1963,11 @@ export class RealTimeWorkflowPerformanceOptimizer {
     for (const execution of executions.slice(0, 100)) { // Sample recent executions
       try {
         // Check for email engagements
-        const emailEngagements = await prisma.emailActivity.count({
-          where: {
-            contactId: execution.contactId,
-            type: { in: ['OPENED', 'CLICKED'] },
-            timestamp: {
-              gte: execution.startedAt,
-              lte: execution.completedAt || new Date()
-            }
-          }
+        const emailResponse = await fetch(`${BACKEND_URL}/api/email/activities/count?contactId=${execution.contactId}&types=OPENED,CLICKED&startDate=${execution.startedAt.toISOString()}&endDate=${(execution.completedAt || new Date()).toISOString()}`, {
+          headers: { 'Content-Type': 'application/json' }
         });
+        if (!emailResponse.ok) throw new Error(`Failed to fetch email engagements: ${emailResponse.statusText}`);
+        const emailEngagements = await emailResponse.json();
 
         totalEngagements += emailEngagements;
         totalOpportunities += 1;
@@ -1987,16 +1982,11 @@ export class RealTimeWorkflowPerformanceOptimizer {
   private async detectBottleneckSteps(workflowId: string): Promise<string[]> {
     try {
       // Get workflow execution steps with high failure rates
-      const steps = await prisma.workflowExecutionStep.findMany({
-        where: {
-          execution: { workflowId }
-        },
-        select: {
-          stepId: true,
-          stepType: true,
-          status: true
-        }
+      const stepsResponse = await fetch(`${BACKEND_URL}/api/workflows/${workflowId}/steps?fields=stepId,stepType,status`, {
+        headers: { 'Content-Type': 'application/json' }
       });
+      if (!stepsResponse.ok) throw new Error(`Failed to fetch steps: ${stepsResponse.statusText}`);
+      const steps = await stepsResponse.json();
 
       // Group by step and calculate failure rates
       const stepStats: Record<string, { total: number; failed: number }> = {};
@@ -2232,8 +2222,10 @@ export class RealTimeWorkflowPerformanceOptimizer {
     recommendation: OptimizationRecommendation
   ): Promise<void> {
     try {
-      await prisma.workflowEvent.create({
-        data: {
+      const eventResponse = await fetch(`${BACKEND_URL}/api/workflows/events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           id: `optimization-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           workflowId,
           contactId: 'system',
@@ -2245,8 +2237,9 @@ export class RealTimeWorkflowPerformanceOptimizer {
             confidence: recommendation.confidence,
             african_market_specific: recommendation.african_market_specific
           })
-        }
+        })
       });
+      if (!eventResponse.ok) throw new Error(`Failed to create optimization event: ${eventResponse.statusText}`);
     } catch (error) {
       logger.warn('Failed to log optimization application', {
         error: error instanceof Error ? error.message : String(error),
@@ -2257,8 +2250,10 @@ export class RealTimeWorkflowPerformanceOptimizer {
 
   private async storeOptimizationAnalytics(result: WorkflowOptimizationResult): Promise<void> {
     try {
-      await prisma.workflowEvent.create({
-        data: {
+      const analysisResponse = await fetch(`${BACKEND_URL}/api/workflows/events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           id: `analysis-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           workflowId: result.workflowId,
           contactId: 'system',
@@ -2269,8 +2264,9 @@ export class RealTimeWorkflowPerformanceOptimizer {
             predicted_improvements: result.predicted_improvements,
             african_market_insights: result.african_market_insights
           })
-        }
+        })
       });
+      if (!analysisResponse.ok) throw new Error(`Failed to create analysis event: ${analysisResponse.statusText}`);
     } catch (error) {
       logger.warn('Failed to store optimization analytics', {
         error: error instanceof Error ? error.message : String(error),

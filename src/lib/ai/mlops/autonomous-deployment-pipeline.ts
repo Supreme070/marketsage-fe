@@ -7,7 +7,6 @@
 
 import { logger } from '@/lib/logger';
 import { trace } from '@opentelemetry/api';
-import prisma from '@/lib/db/prisma';
 import { modelRegistry } from './model-registry';
 import { performanceMonitor } from './performance-monitor';
 import { autoTrainer } from './auto-trainer';

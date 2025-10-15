@@ -10,7 +10,11 @@
  * - Historical success rates
  */
 
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
+
 import { MasterAccountManager, masterAccountsConfig, type MasterAccountConfig } from '@/lib/config/master-accounts';
 import { logger } from '@/lib/logger';
 
@@ -136,18 +140,19 @@ export class ProviderOptimizationEngine {
     }
 
     try {
-      // Get metrics from database
-      const dbMetrics = await prisma.providerMetrics.findMany({
-        where: {
-          channel,
-          region: {
-            in: [region, 'global']
-          }
+      // Get metrics from database via backend API
+      const response = await fetch(`${BACKEND_URL}/api/provider-metrics?channel=${channel}&regions=${region},global&orderBy=lastUpdated&order=desc`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        orderBy: {
-          lastUpdated: 'desc'
-        }
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch provider metrics: ${response.statusText}`);
+      }
+
+      const dbMetrics = await response.json();
 
       // Convert to our format and merge with master account config
       const metrics: ProviderMetrics[] = [];
@@ -468,21 +473,27 @@ export class ProviderOptimizationEngine {
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
-      const usage = await prisma.messagingUsage.aggregate({
-        where: {
+
+      const response = await fetch(`${BACKEND_URL}/api/messaging-usage/aggregate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           provider,
           channel,
-          timestamp: {
-            gte: today
-          }
-        },
-        _sum: {
-          messageCount: true
-        }
+          timestampGte: today.toISOString(),
+          aggregateField: 'messageCount'
+        }),
       });
-      
-      return usage._sum.messageCount || 0;
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch current usage: ${response.statusText}`);
+      }
+
+      const usage = await response.json();
+
+      return usage._sum?.messageCount || 0;
     } catch (error) {
       logger.error('Failed to get current usage:', error);
       return 0;
@@ -504,47 +515,57 @@ export class ProviderOptimizationEngine {
     try {
       const deliveryRate = successCount / messageCount;
       const errorRate = failCount / messageCount;
-      
-      await prisma.providerMetrics.upsert({
-        where: {
-          provider_channel_region: {
+
+      const response = await fetch(`${BACKEND_URL}/api/provider-metrics/upsert`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          where: {
+            provider_channel_region: {
+              provider,
+              channel,
+              region
+            }
+          },
+          create: {
             provider,
             channel,
-            region
+            region,
+            deliveryRate,
+            averageDeliveryTime,
+            errorRate,
+            totalMessagesSent: messageCount,
+            totalSuccessful: successCount,
+            totalFailed: failCount,
+            lastUpdated: new Date()
+          },
+          update: {
+            deliveryRate: (deliveryRate * 0.3) + (deliveryRate * 0.7), // Weighted average
+            averageDeliveryTime: (averageDeliveryTime * 0.3) + (averageDeliveryTime * 0.7),
+            errorRate: (errorRate * 0.3) + (errorRate * 0.7),
+            totalMessagesSent: {
+              increment: messageCount
+            },
+            totalSuccessful: {
+              increment: successCount
+            },
+            totalFailed: {
+              increment: failCount
+            },
+            lastUpdated: new Date()
           }
-        },
-        create: {
-          provider,
-          channel,
-          region,
-          deliveryRate,
-          averageDeliveryTime,
-          errorRate,
-          totalMessagesSent: messageCount,
-          totalSuccessful: successCount,
-          totalFailed: failCount,
-          lastUpdated: new Date()
-        },
-        update: {
-          deliveryRate: (deliveryRate * 0.3) + (deliveryRate * 0.7), // Weighted average
-          averageDeliveryTime: (averageDeliveryTime * 0.3) + (averageDeliveryTime * 0.7),
-          errorRate: (errorRate * 0.3) + (errorRate * 0.7),
-          totalMessagesSent: {
-            increment: messageCount
-          },
-          totalSuccessful: {
-            increment: successCount
-          },
-          totalFailed: {
-            increment: failCount
-          },
-          lastUpdated: new Date()
-        }
+        }),
       });
-      
+
+      if (!response.ok) {
+        throw new Error(`Failed to update provider metrics: ${response.statusText}`);
+      }
+
       // Clear cache for this provider
       this.metricsCache.delete(`${channel}-${region}`);
-      
+
     } catch (error) {
       logger.error('Failed to update provider metrics:', error);
     }
@@ -564,18 +585,20 @@ export class ProviderOptimizationEngine {
     totalPotentialSavings: number;
   }> {
     try {
-      // Get organization's recent usage
-      const recentUsage = await prisma.messagingUsage.findMany({
-        where: {
-          organizationId,
-          timestamp: {
-            gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
-          }
+      // Get organization's recent usage via backend API
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const response = await fetch(`${BACKEND_URL}/api/messaging-usage?organizationId=${organizationId}&timestampGte=${thirtyDaysAgo.toISOString()}&orderBy=timestamp&order=desc`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        orderBy: {
-          timestamp: 'desc'
-        }
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch messaging usage: ${response.statusText}`);
+      }
+
+      const recentUsage = await response.json();
 
       const recommendations = [];
       let totalPotentialSavings = 0;
@@ -589,11 +612,19 @@ export class ProviderOptimizationEngine {
         return acc;
       }, {} as Record<string, any[]>);
 
-      // Get org config for region
-      const orgConfig = await prisma.organization.findUnique({
-        where: { id: organizationId },
-        select: { region: true }
+      // Get org config for region via backend API
+      const orgResponse = await fetch(`${BACKEND_URL}/api/organizations/${organizationId}?select=region`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
+
+      if (!orgResponse.ok) {
+        throw new Error(`Failed to fetch organization: ${orgResponse.statusText}`);
+      }
+
+      const orgConfig = await orgResponse.json();
 
       for (const [channel, usageData] of Object.entries(channelUsage)) {
         const totalMessages = usageData.reduce((sum, u) => sum + u.messageCount, 0);

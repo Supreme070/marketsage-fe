@@ -11,7 +11,11 @@
 import { logger } from '@/lib/logger';
 import { leadPulseCache } from '@/lib/cache/leadpulse-cache';
 import { leadPulseErrorHandler, LeadPulseErrorType } from '../error-handler';
-import prisma from '@/lib/db/prisma';
+
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
 
 // CRM Integration Types
 export interface CRMContact {
@@ -717,9 +721,10 @@ export class CRMIntegrationManager {
       }
 
       // Store configuration (encrypted)
-      await prisma.user.update({
-        where: { id: userId },
-        data: {
+      const response = await fetch(`${BACKEND_URL}/api/v2/users/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           crmIntegrations: {
             [config.platform]: {
               ...config,
@@ -728,7 +733,7 @@ export class CRMIntegrationManager {
               status: 'active',
             },
           },
-        },
+        }),
       });
 
       this.connectors.set(`${userId}-${config.platform}`, connector);
@@ -789,19 +794,22 @@ export class CRMIntegrationManager {
       }
 
       // Get visitor data
-      const visitor = await prisma.leadPulseVisitor.findUnique({
-        where: { id: visitorId },
-        include: { touchpoints: true }
+      const visitorResponse = await fetch(`${BACKEND_URL}/api/v2/leadpulse-visitors/${visitorId}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
       });
+      const visitor = visitorResponse.ok ? await visitorResponse.json() : null;
 
       if (!visitor || !visitor.contactId) {
         return { success: false, error: 'Visitor not found or not converted to contact' };
       }
 
       // Get contact data
-      const contact = await prisma.contact.findUnique({
-        where: { id: visitor.contactId }
+      const contactResponse = await fetch(`${BACKEND_URL}/api/v2/contacts/${visitor.contactId}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
       });
+      const contact = contactResponse.ok ? await contactResponse.json() : null;
 
       if (!contact) {
         return { success: false, error: 'Contact not found' };
@@ -837,14 +845,16 @@ export class CRMIntegrationManager {
       
       if (result.success) {
         // Log the deal creation
-        await prisma.leadPulseAuditLog.create({
-          data: {
+        await fetch(`${BACKEND_URL}/api/v2/leadpulse-audit-logs`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             userId,
             action: 'CREATE',
             resource: 'crm_deal',
             resourceId: result.id!,
             details: { visitorId, platform, dealData },
-          },
+          }),
         });
       }
 

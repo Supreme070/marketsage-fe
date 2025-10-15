@@ -10,7 +10,10 @@
 
 import { getCustomerEventBus, CustomerEventType, EventPriority } from '@/lib/events/event-bus';
 import { ContactEventListener } from '@/lib/events/listeners/contact-event-listener';
-import { prisma } from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
 import { logger } from '@/lib/logger';
 
 export interface TouchpointData {
@@ -565,8 +568,12 @@ export class DataIngestionService {
   private static async storeTouchpointData(touchpointType: string, data: TouchpointData): Promise<void> {
     try {
       // Store in CustomerEvent table for persistent tracking
-      await prisma.customerEvent.create({
-        data: {
+      const response = await fetch(`${BACKEND_URL}/api/customer-events`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           contactId: data.contactId,
           organizationId: data.organizationId,
           eventType: `${touchpointType}_${(data as any).action}`,
@@ -579,8 +586,12 @@ export class DataIngestionService {
           eventSource: touchpointType,
           priority: 'normal',
           processedAt: new Date()
-        }
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`Backend API error: ${response.status} ${response.statusText}`);
+      }
 
     } catch (error) {
       logger.warn('Failed to store touchpoint data in database', {
@@ -596,34 +607,49 @@ export class DataIngestionService {
    * Update contact engagement metrics
    */
   private static async updateContactEngagement(
-    contactId: string, 
-    channel: string, 
+    contactId: string,
+    channel: string,
     action: string
   ): Promise<void> {
     try {
       // Update engagement counters in customer profile
-      await prisma.customerProfile.updateMany({
-        where: { contactId },
-        data: {
+      const response = await fetch(`${BACKEND_URL}/api/customer-profiles/update-engagement`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contactId,
           lastInteraction: new Date(),
-          [`${channel}Interactions`]: {
+          channelInteractions: {
+            channel,
             increment: 1
           }
-        }
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`Backend API error: ${response.status} ${response.statusText}`);
+      }
 
       // For high-engagement actions, update engagement score
       const highEngagementActions = ['clicked', 'replied', 'converted', 'purchase', 'form_submission'];
-      
+
       if (highEngagementActions.includes(action)) {
-        await prisma.customerProfile.updateMany({
-          where: { contactId },
-          data: {
-            engagementScore: {
-              increment: 0.01 // Small incremental boost
-            }
-          }
+        const scoreResponse = await fetch(`${BACKEND_URL}/api/customer-profiles/update-engagement-score`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contactId,
+            increment: 0.01 // Small incremental boost
+          })
         });
+
+        if (!scoreResponse.ok) {
+          throw new Error(`Backend API error: ${scoreResponse.status} ${scoreResponse.statusText}`);
+        }
       }
 
     } catch (error) {

@@ -8,7 +8,10 @@ import { errorBoundary } from '../utils/error-boundary';
 import { NeuralNetworkPredictor, type NetworkConfig } from '../supreme-ai-engine';
 import type { ModelRegistry } from './model-registry';
 import type { PerformanceMonitor } from './performance-monitor';
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
 
 interface BehavioralFeatures {
   // Engagement Features
@@ -135,20 +138,13 @@ export class BehavioralPredictor {
   }
 
   private async extractBehavioralFeatures(userId: string): Promise<BehavioralFeatures> {
-    // Get user activities from the last 90 days
-    const activities = await prisma.userActivity.findMany({
-      where: {
-        userId,
-        timestamp: {
-          gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
-        }
-      },
-      include: {
-        purchases: true,
-        sessions: true,
-        interactions: true
-      }
+    // Get user activities from the last 90 days via backend API
+    const timestamp = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+    const response = await fetch(`${BACKEND_URL}/api/v2/user-activities?userId=${userId}&timestampGte=${timestamp}&include=purchases,sessions,interactions`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
+    const activities = response.ok ? await response.json() : [];
 
     // Calculate engagement metrics
     const engagementMetrics = this.calculateEngagementMetrics(activities);

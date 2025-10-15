@@ -6,7 +6,10 @@
  */
 
 import { engagementScoringEngine } from '@/lib/leadpulse/engagement-scoring-engine';
-import prisma from '@/lib/db/prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
 import { logger } from '@/lib/logger';
 
 export interface EngagementScoreUpdateResult {
@@ -43,15 +46,19 @@ export class EngagementScoreUpdater {
       // Get active visitors (visited in last 30 days)
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
-      const activeVisitors = await prisma.anonymousVisitor.findMany({
-        where: {
-          isActive: true,
-          lastVisit: { gte: thirtyDaysAgo }
+
+      const response = await fetch(`${BACKEND_URL}/api/leadpulse/visitors?isActive=true&lastVisitGte=${thirtyDaysAgo.toISOString()}&select=id&orderBy=lastVisit:desc`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        select: { id: true },
-        orderBy: { lastVisit: 'desc' }
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch active visitors: ${response.statusText}`);
+      }
+
+      const activeVisitors = await response.json();
       
       result.totalVisitors = activeVisitors.length;
       logger.info(`Starting engagement score update for ${result.totalVisitors} visitors`);
@@ -68,9 +75,12 @@ export class EngagementScoreUpdater {
           // Update each visitor's score
           for (const [visitorId, score] of scores) {
             try {
-              await prisma.anonymousVisitor.update({
-                where: { id: visitorId },
-                data: {
+              const updateResponse = await fetch(`${BACKEND_URL}/api/leadpulse/visitors/${visitorId}`, {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
                   engagementScore: score.score,
                   score: score.score,
                   metadata: {
@@ -79,8 +89,13 @@ export class EngagementScoreUpdater {
                     engagementSignals: score.signals,
                     lastScoreUpdate: new Date().toISOString()
                   }
-                }
+                }),
               });
+
+              if (!updateResponse.ok) {
+                throw new Error(`Failed to update visitor: ${updateResponse.statusText}`);
+              }
+
               result.updated++;
             } catch (error) {
               logger.error(`Failed to update score for visitor ${visitorId}:`, error);
@@ -128,20 +143,20 @@ export class EngagementScoreUpdater {
     
     try {
       // Get high-value visitors (score > 50 or recent high activity)
-      const highValueVisitors = await prisma.anonymousVisitor.findMany({
-        where: {
-          OR: [
-            { engagementScore: { gte: 50 } },
-            { 
-              lastVisit: { 
-                gte: new Date(Date.now() - 60 * 60 * 1000) // Active in last hour
-              }
-            }
-          ],
-          isActive: true
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
+      const response = await fetch(`${BACKEND_URL}/api/leadpulse/visitors?isActive=true&engagementScoreGte=50&lastVisitGte=${oneHourAgo}&select=id`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        select: { id: true }
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch high-value visitors: ${response.statusText}`);
+      }
+
+      const highValueVisitors = await response.json();
       
       result.totalVisitors = highValueVisitors.length;
       const visitorIds = highValueVisitors.map(v => v.id);
@@ -151,9 +166,12 @@ export class EngagementScoreUpdater {
       
       for (const [visitorId, score] of scores) {
         try {
-          await prisma.anonymousVisitor.update({
-            where: { id: visitorId },
-            data: {
+          const updateResponse = await fetch(`${BACKEND_URL}/api/leadpulse/visitors/${visitorId}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
               engagementScore: score.score,
               score: score.score,
               metadata: {
@@ -163,8 +181,13 @@ export class EngagementScoreUpdater {
                 isHighValue: score.score >= 75,
                 lastScoreUpdate: new Date().toISOString()
               }
-            }
+            }),
           });
+
+          if (!updateResponse.ok) {
+            throw new Error(`Failed to update high-value visitor: ${updateResponse.statusText}`);
+          }
+
           result.updated++;
         } catch (error) {
           logger.error(`Failed to update high-value visitor ${visitorId}:`, error);
@@ -189,19 +212,31 @@ export class EngagementScoreUpdater {
     try {
       const ninetyDaysAgo = new Date();
       ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-      
+
       // Reset scores for visitors inactive for 90+ days
-      const result = await prisma.anonymousVisitor.updateMany({
-        where: {
-          lastVisit: { lt: ninetyDaysAgo },
-          engagementScore: { gt: 0 }
+      const response = await fetch(`${BACKEND_URL}/api/leadpulse/visitors/bulk-update`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        data: {
-          engagementScore: 0,
-          score: 0
-        }
+        body: JSON.stringify({
+          where: {
+            lastVisit: { lt: ninetyDaysAgo.toISOString() },
+            engagementScore: { gt: 0 }
+          },
+          data: {
+            engagementScore: 0,
+            score: 0
+          }
+        }),
       });
-      
+
+      if (!response.ok) {
+        throw new Error(`Failed to cleanup stale scores: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
       logger.info(`Reset engagement scores for ${result.count} inactive visitors`);
     } catch (error) {
       logger.error('Error cleaning up stale scores:', error);

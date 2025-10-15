@@ -4,7 +4,11 @@
  * Advanced query optimization for high-performance database operations
  */
 
-import prisma from './prisma';
+// NOTE: Prisma removed - using backend API
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+                    process.env.NESTJS_BACKEND_URL ||
+                    'http://localhost:3006';
+
 import { logger } from '@/lib/logger';
 import { leadPulseCache } from '@/lib/cache/leadpulse-cache';
 
@@ -79,40 +83,55 @@ export class LeadPulseQueryOptimizer {
       }
 
       // Execute optimized queries in parallel
-      const [visitors, totalCount] = await Promise.all([
+      const [visitorsResponse, countResponse] = await Promise.all([
         // Optimized: First get visitors without includes to avoid N+1
-        prisma.leadPulseVisitor.findMany({
-          where,
-          orderBy: [
+        fetch(`${BACKEND_URL}/api/v2/leadpulse/visitors?${new URLSearchParams({
+          where: JSON.stringify(where),
+          orderBy: JSON.stringify([
             { lastVisit: 'desc' },
             { engagementScore: 'desc' }
-          ],
+          ]),
           ...(enablePagination && {
-            skip: (page - 1) * limit,
-            take: limit
+            skip: String((page - 1) * limit),
+            take: String(limit)
           })
+        })}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
         }),
-        prisma.leadPulseVisitor.count({ where })
+        fetch(`${BACKEND_URL}/api/v2/leadpulse/visitors/count?${new URLSearchParams({
+          where: JSON.stringify(where)
+        })}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        })
       ]);
+
+      const visitors = visitorsResponse.ok ? await visitorsResponse.json() : [];
+      const totalCount = countResponse.ok ? (await countResponse.json()).count : 0;
 
       // Optimized: Fetch touchpoints separately to avoid N+1 queries
       const touchpointsMap = new Map();
       if (visitors.length > 0) {
         const visitorIds = visitors.map(v => v.id);
-        const touchpoints = await prisma.leadPulseTouchpoint.findMany({
-          where: {
+        const touchpointsResponse = await fetch(`${BACKEND_URL}/api/v2/leadpulse/touchpoints?${new URLSearchParams({
+          where: JSON.stringify({
             visitorId: { in: visitorIds }
-          },
-          select: {
+          }),
+          select: JSON.stringify({
             id: true,
             visitorId: true,
             timestamp: true,
             type: true,
             url: true,
             value: true
-          },
-          orderBy: { timestamp: 'desc' }
+          }),
+          orderBy: JSON.stringify({ timestamp: 'desc' })
+        })}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
         });
+        const touchpoints = touchpointsResponse.ok ? await touchpointsResponse.json() : [];
 
         // Group touchpoints by visitor ID and limit to 5 per visitor
         touchpoints.forEach(tp => {
@@ -180,54 +199,78 @@ export class LeadPulseQueryOptimizer {
     try {
       // Use raw SQL for complex aggregations (much faster than Prisma for large datasets)
       const analyticsQuery = `
-        SELECT 
+        SELECT
           DATE_TRUNC('${groupBy}', timestamp) as period,
           COUNT(DISTINCT visitor_id) as unique_visitors,
           COUNT(*) as total_pageviews,
           COUNT(CASE WHEN action = 'conversion' THEN 1 END) as conversions,
           AVG(CASE WHEN action = 'page_view' THEN duration ELSE NULL END) as avg_session_duration
         FROM "LeadPulseTouchpoint"
-        WHERE user_id = $1 
-          AND timestamp >= $2 
+        WHERE user_id = $1
+          AND timestamp >= $2
           AND timestamp <= $3
         GROUP BY DATE_TRUNC('${groupBy}', timestamp)
         ORDER BY period ASC
       `;
 
-      const analytics = await prisma.$queryRawUnsafe(analyticsQuery, userId, timeRange.from, timeRange.to);
+      const analyticsResponse = await fetch(`${BACKEND_URL}/api/v2/database/query-raw`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: analyticsQuery,
+          params: [userId, timeRange.from, timeRange.to]
+        })
+      });
+      const analytics = analyticsResponse.ok ? await analyticsResponse.json() : [];
 
       // Get conversion funnel data
       const funnelQuery = `
-        SELECT 
+        SELECT
           action,
           COUNT(DISTINCT visitor_id) as unique_count,
           COUNT(*) as total_count
         FROM "LeadPulseTouchpoint"
-        WHERE user_id = $1 
-          AND timestamp >= $2 
+        WHERE user_id = $1
+          AND timestamp >= $2
           AND timestamp <= $3
           AND action IN ('page_view', 'form_start', 'form_submit', 'conversion')
         GROUP BY action
       `;
 
-      const funnel = await prisma.$queryRawUnsafe(funnelQuery, userId, timeRange.from, timeRange.to);
+      const funnelResponse = await fetch(`${BACKEND_URL}/api/v2/database/query-raw`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: funnelQuery,
+          params: [userId, timeRange.from, timeRange.to]
+        })
+      });
+      const funnel = funnelResponse.ok ? await funnelResponse.json() : [];
 
       // Get top sources
       const sourcesQuery = `
-        SELECT 
+        SELECT
           acquisition_source as source,
           COUNT(DISTINCT id) as visitors,
           COUNT(DISTINCT CASE WHEN status = 'converted' THEN id END) as conversions
         FROM "LeadPulseVisitor"
-        WHERE user_id = $1 
-          AND first_seen >= $2 
+        WHERE user_id = $1
+          AND first_seen >= $2
           AND first_seen <= $3
         GROUP BY acquisition_source
         ORDER BY visitors DESC
         LIMIT 10
       `;
 
-      const sources = await prisma.$queryRawUnsafe(sourcesQuery, userId, timeRange.from, timeRange.to);
+      const sourcesResponse = await fetch(`${BACKEND_URL}/api/v2/database/query-raw`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: sourcesQuery,
+          params: [userId, timeRange.from, timeRange.to]
+        })
+      });
+      const sources = sourcesResponse.ok ? await sourcesResponse.json() : [];
 
       const result = {
         timeline: analytics,
@@ -269,17 +312,17 @@ export class LeadPulseQueryOptimizer {
       for (const batch of batches) {
         // Use raw SQL for efficient bulk updates
         const updateQuery = `
-          UPDATE "LeadPulseVisitor" 
+          UPDATE "LeadPulseVisitor"
           SET score = (
             SELECT COALESCE(
-              (touchpoint_count * 10) + 
-              (conversion_count * 50) + 
+              (touchpoint_count * 10) +
+              (conversion_count * 50) +
               (CASE WHEN email IS NOT NULL THEN 25 ELSE 0 END) +
               (CASE WHEN company IS NOT NULL THEN 15 ELSE 0 END),
               0
             )
             FROM (
-              SELECT 
+              SELECT
                 visitor_id,
                 COUNT(*) as touchpoint_count,
                 COUNT(CASE WHEN action = 'conversion' THEN 1 END) as conversion_count
@@ -290,8 +333,18 @@ export class LeadPulseQueryOptimizer {
           WHERE user_id = ANY($1)
         `;
 
-        await prisma.$queryRawUnsafe(updateQuery, batch);
-        processed += batch.length;
+        const updateResponse = await fetch(`${BACKEND_URL}/api/v2/database/execute-raw`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: updateQuery,
+            params: [batch]
+          })
+        });
+
+        if (updateResponse.ok) {
+          processed += batch.length;
+        }
 
         logger.info(`Batch score update completed: ${processed}/${userIds.length}`);
       }
@@ -314,7 +367,15 @@ export class LeadPulseQueryOptimizer {
     try {
       // Get query execution plan
       const explainQuery = `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${query}`;
-      const plan = await prisma.$queryRawUnsafe(explainQuery, ...params);
+      const planResponse = await fetch(`${BACKEND_URL}/api/v2/database/query-raw`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: explainQuery,
+          params: params
+        })
+      });
+      const plan = planResponse.ok ? await planResponse.json() : [];
 
       // Extract performance metrics
       const execution = (plan as any)[0]['Plan'];
@@ -360,23 +421,43 @@ export class LeadPulseQueryOptimizer {
    */
   async getConnectionPoolStats() {
     try {
-      const stats = await prisma.$queryRaw`
-        SELECT 
+      const statsQuery = `
+        SELECT
           state,
           COUNT(*) as count
-        FROM pg_stat_activity 
+        FROM pg_stat_activity
         WHERE datname = current_database()
         GROUP BY state
       `;
 
-      const poolInfo = await prisma.$queryRaw`
-        SELECT 
+      const statsResponse = await fetch(`${BACKEND_URL}/api/v2/database/query-raw`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: statsQuery,
+          params: []
+        })
+      });
+      const stats = statsResponse.ok ? await statsResponse.json() : [];
+
+      const poolInfoQuery = `
+        SELECT
           max_connections,
           current_setting('shared_buffers') as shared_buffers,
           current_setting('effective_cache_size') as effective_cache_size
-        FROM pg_settings 
+        FROM pg_settings
         WHERE name = 'max_connections'
       `;
+
+      const poolInfoResponse = await fetch(`${BACKEND_URL}/api/v2/database/query-raw`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: poolInfoQuery,
+          params: []
+        })
+      });
+      const poolInfo = poolInfoResponse.ok ? await poolInfoResponse.json() : [];
 
       return {
         connectionsByState: stats,
@@ -417,12 +498,16 @@ export class LeadPulseQueryOptimizer {
       );
 
       // Warm recent forms analytics
-      const recentForms = await prisma.leadPulseForm.findMany({
-        where: { createdBy: userId },
-        select: { id: true },
-        take: 5,
-        orderBy: { updatedAt: 'desc' }
+      const recentFormsResponse = await fetch(`${BACKEND_URL}/api/v2/leadpulse/forms?${new URLSearchParams({
+        where: JSON.stringify({ createdBy: userId }),
+        select: JSON.stringify({ id: true }),
+        take: '5',
+        orderBy: JSON.stringify({ updatedAt: 'desc' })
+      })}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
+      const recentForms = recentFormsResponse.ok ? await recentFormsResponse.json() : [];
 
       for (const form of recentForms) {
         const cacheKey = `form_analytics:${form.id}:30d`;
