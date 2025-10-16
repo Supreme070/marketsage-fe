@@ -56,13 +56,27 @@ export async function middleware(request: NextRequest) {
         return handlePreflightRequest(request);
       }
 
-      // Validate CORS for actual requests
-      const corsValidation = validateCors(request);
-      if (!corsValidation.isValid) {
-        return NextResponse.json(
-          { error: 'CORS policy violation', message: corsValidation.error },
-          { status: 403 }
-        );
+      // Skip CORS validation for analytics and monitoring endpoints (same-origin)
+      const publicApiEndpoints = [
+        '/api/analytics/',
+        '/api/monitoring/',
+        '/api/health',
+        '/api/pixel.gif'
+      ];
+
+      const isPublicEndpoint = publicApiEndpoints.some(endpoint =>
+        request.nextUrl.pathname.startsWith(endpoint)
+      );
+
+      // Validate CORS for actual requests (except public endpoints)
+      if (!isPublicEndpoint) {
+        const corsValidation = validateCors(request);
+        if (!corsValidation.isValid) {
+          return NextResponse.json(
+            { error: 'CORS policy violation', message: corsValidation.error },
+            { status: 403 }
+          );
+        }
       }
 
       // Get token for tenant context

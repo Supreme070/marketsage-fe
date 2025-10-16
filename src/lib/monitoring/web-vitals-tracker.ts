@@ -1,18 +1,17 @@
 'use client';
 
-import { onCLS, onFCP, onFID, onINP, onLCP, onTTFB, type Metric } from 'web-vitals';
+import { onCLS, onFCP, onINP, onLCP, onTTFB, type Metric } from 'web-vitals';
 
 /**
  * Web Vitals Tracker
- * Tracks all 6 Core Web Vitals metrics and sends them to analytics endpoint
+ * Tracks all Core Web Vitals metrics and sends them to analytics endpoint
  *
  * Metrics tracked:
  * - LCP (Largest Contentful Paint): Loading performance
- * - FID (First Input Delay): Interactivity [deprecated in favor of INP]
+ * - INP (Interaction to Next Paint): Responsiveness (replaces deprecated FID)
  * - CLS (Cumulative Layout Shift): Visual stability
  * - FCP (First Contentful Paint): Initial rendering
  * - TTFB (Time to First Byte): Server response time
- * - INP (Interaction to Next Paint): Responsiveness
  */
 
 interface WebVitalMetric {
@@ -111,11 +110,10 @@ function sendToPrometheus(metric: Metric): void {
 export function initWebVitals(): void {
   // Track all Core Web Vitals
   onLCP(sendToAnalytics);
-  onFID(sendToAnalytics);
+  onINP(sendToAnalytics); // Replaces deprecated onFID
   onCLS(sendToAnalytics);
   onFCP(sendToAnalytics);
   onTTFB(sendToAnalytics);
-  onINP(sendToAnalytics);
 
   if (process.env.NODE_ENV === 'development') {
     console.log('[Web Vitals] Tracking initialized');
@@ -131,9 +129,9 @@ export const WEB_VITALS_THRESHOLDS = {
     good: 2500, // milliseconds
     needsImprovement: 4000,
   },
-  FID: {
-    good: 100, // milliseconds
-    needsImprovement: 300,
+  INP: {
+    good: 200, // milliseconds (replaces deprecated FID)
+    needsImprovement: 500,
   },
   CLS: {
     good: 0.1, // score
@@ -146,10 +144,6 @@ export const WEB_VITALS_THRESHOLDS = {
   TTFB: {
     good: 800, // milliseconds
     needsImprovement: 1800,
-  },
-  INP: {
-    good: 200, // milliseconds
-    needsImprovement: 500,
   },
 } as const;
 

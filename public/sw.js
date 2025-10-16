@@ -7,13 +7,11 @@ const API_CACHE = 'marketsage-api-v2';
 const IMAGE_CACHE = 'marketsage-images-v2';
 
 // Files to cache for offline functionality
+// Only cache essential files that actually exist
 const STATIC_FILES = [
   '/',
-  '/dashboard',
-  '/admin',
   '/manifest.json',
-  '/offline.html',
-  // Add critical CSS and JS files here
+  // Add critical CSS and JS files here as they are built
 ];
 
 // API endpoints to cache
@@ -29,11 +27,25 @@ const API_ENDPOINTS = [
 // Install event - cache static files
 self.addEventListener('install', (event) => {
   console.log('Service Worker installing...');
-  
+
   event.waitUntil(
     Promise.all([
       caches.open(STATIC_CACHE).then((cache) => {
-        return cache.addAll(STATIC_FILES);
+        // Add files one by one to avoid failing all if one fails
+        return Promise.all(
+          STATIC_FILES.map(file => {
+            return fetch(file)
+              .then(response => {
+                if (response.ok) {
+                  return cache.put(file, response);
+                }
+              })
+              .catch(err => {
+                console.warn(`Failed to cache ${file}:`, err.message);
+                // Don't fail installation if a file can't be cached
+              });
+          })
+        );
       }),
       caches.open(API_CACHE).then((cache) => {
         // Pre-cache some API endpoints
@@ -53,6 +65,10 @@ self.addEventListener('install', (event) => {
       })
     ]).then(() => {
       console.log('Service Worker installed and files cached');
+      return self.skipWaiting();
+    }).catch(err => {
+      console.error('Service Worker installation error:', err);
+      // Still skip waiting even if caching fails
       return self.skipWaiting();
     })
   );
